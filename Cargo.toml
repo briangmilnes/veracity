@@ -1,0 +1,76 @@
+[package]
+name = "veracity"
+version = "0.1.0"
+edition = "2021"
+authors = ["Veracity Contributors"]
+description = "Verus code analysis and verification tools - proof hole detection, axiom classification, and LOC counting"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/briangmilnes/veracity"
+readme = "README.md"
+
+[dependencies]
+ra_ap_syntax = "0.0.233"
+rowan = "0.15"
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+regex = "1.10"
+walkdir = "2.5"
+syn = { version = "2.0", features = ["full", "visit", "extra-traits"] }
+verus_syn = { path = "../verus-lang/dependencies/syn", features = ["full", "visit", "extra-traits"] }
+
+[dev-dependencies]
+serial_test = "3.0"
+
+# Veracity tools for Verus verification analysis
+# All tools default to Verus mode
+
+# WORKING BINARIES (5 total)
+
+[[bin]]
+name = "veracity-count-loc"
+path = "src/bin/count_loc.rs"
+
+[[bin]]
+name = "veracity-review-proof-holes"
+path = "src/bin/review_verus_proof_holes.rs"
+
+[[bin]]
+name = "veracity-review-axiom-purity"
+path = "src/bin/review_verus_axiom_purity.rs"
+
+[[bin]]
+name = "veracity-find-verus-files"
+path = "src/bin/find_verus_files.rs"
+
+[[bin]]
+name = "veracity-review"
+path = "src/bin/review.rs"
+
+[[bin]]
+name = "veracity-review-generic-equality"
+path = "src/bin/review_generic_equality.rs"
+
+[[bin]]
+name = "veracity-review-comparator-patterns"
+path = "src/bin/review_comparator_patterns.rs"
+
+# Additional review tools (all working)
+# - review_requires_ensures.rs - Check pre/post conditions
+# - review_invariants.rs - Check loop/struct invariants
+# - review_spec_exec_ratio.rs - Analyze spec vs exec ratios
+# - review_ghost_tracked_naming.rs - Check ghost/tracked naming
+# - review_broadcast_use.rs - Analyze broadcast use patterns
+# - review_datatype_invariants.rs - Check datatype invariants
+# - review_view_functions.rs - Check view functions
+# - review_termination.rs - Check termination measures
+# - review_trigger_patterns.rs - Check forall/exists triggers
+# - review_proof_structure.rs - Analyze proof organization
+# - review_mode_mixing.rs - Detect mode mixing issues
+# - review_exec_purity.rs - Check exec function purity
+# - metrics_proof_coverage.rs - Calculate proof coverage
+# - metrics_verification_time.rs - Track verification times (stub)
+# - fix_add_requires.rs - Auto-generate requires (stub)
+# - fix_add_ensures.rs - Auto-generate ensures (stub)
