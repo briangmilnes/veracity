@@ -57,6 +57,10 @@ path = "src/bin/review_generic_equality.rs"
 name = "veracity-review-comparator-patterns"
 path = "src/bin/review_comparator_patterns.rs"
 
+[[bin]]
+name = "veracity-count-default-trait-fns"
+path = "src/bin/count_default_trait_fns.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants

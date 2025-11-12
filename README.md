@@ -9,7 +9,7 @@
 Veracity is a sibling tool to [Rusticate](https://github.com/briangmilnes/rusticate). Since Verus is a **superset of Rust**, Veracity includes:
 
 1. **General Rust Tools** (~75 tools): All non-APAS tools from Rusticate, working on Verus as-is
-2. **Verus-Specific Tools** (17 tools): Verification analysis for proof holes, axioms, specifications, and more
+2. **Verus-Specific Tools** (20 tools): Verification analysis for proof holes, axioms, specifications, and more
 
 ### Key Features
 
@@ -97,6 +97,11 @@ Since Verus is a superset of Rust, all general Rusticate tools work on Verus cod
 - `veracity-review-ghost-tracked-naming`: Check ghost/tracked variable conventions
 - `veracity-review-broadcast-use`: Analyze axiom import patterns
 
+#### Code Pattern Analysis
+- `veracity-review-generic-equality`: Find generic functions with Eq bounds using == or !=
+- `veracity-review-comparator-patterns`: Find functions with comparator parameters using == or !=
+- `veracity-count-default-trait-fns`: Count trait methods with default implementations
+
 #### Metrics
 - `veracity-count-loc`: Count lines of code with spec/proof/exec breakdown
 - `veracity-metrics-verification-time`: Track per-function verification times (planned)
@@ -124,6 +129,9 @@ veracity-review all -d src/
 veracity-review-proof-holes -d src/
 veracity-review-axiom-purity -d src/
 veracity-count-loc -d src/
+veracity-review-generic-equality -d src/
+veracity-review-comparator-patterns -d src/
+veracity-count-default-trait-fns -d src/
 ```
 
 ---
@@ -248,6 +256,96 @@ Axiom Classification:
    68 machine math (32.9%)
    ─────────────────────
    207 total axioms
+```
+
+---
+
+### 4. `veracity-review-generic-equality`
+
+Find generic functions with `PartialEq` or `Eq` trait bounds that use `==` or `!=` operators.
+
+**Usage:**
+```bash
+veracity-review-generic-equality -d src/
+```
+
+**Detects:**
+- Generic type parameters with `Eq` or `PartialEq` bounds
+- Functions using `==` or `!=` operators in their bodies
+- Helps identify potential issues with generic equality semantics
+
+**Example:**
+```bash
+$ veracity-review-generic-equality -d src/
+
+⚠ src/collections.rs
+  fn compare_values<T>()
+    Eq-bounded generics: ["T"]
+    → Uses == operator (1 times)
+
+SUMMARY
+Functions with Eq-bounded generics using == or !=: 1
+```
+
+---
+
+### 5. `veracity-review-comparator-patterns`
+
+Find functions with comparator/predicate parameters that also use `==` or `!=` operators.
+
+**Usage:**
+```bash
+veracity-review-comparator-patterns -d src/
+```
+
+**Detects:**
+- Functions taking comparator functions (e.g., `Fn(&T, &T) -> Ordering`)
+- Use of `==` or `!=` in those functions
+- Shows context of where equality operators are used
+
+**Example:**
+```bash
+$ veracity-review-comparator-patterns -d src/
+
+⚠ src/ArraySeq.rs
+  fn collect()
+    Comparator parameters:
+      - cmp: impl Fn(&K, &K) -> O
+    ⚠ Uses == operator (1 times):
+      1. cmp(&existing.0, &key) == O::Equal
+
+SUMMARY
+Functions with comparator parameters using == or !=: 7
+```
+
+---
+
+### 6. `veracity-count-default-trait-fns`
+
+Count trait methods with default implementations.
+
+**Usage:**
+```bash
+veracity-count-default-trait-fns -d src/
+```
+
+**Output:**
+- Traits with default method implementations
+- Percentage of methods with defaults per trait
+- Names of default methods
+
+**Example:**
+```bash
+$ veracity-count-default-trait-fns -d src/
+
+📄 src/hash_table.rs
+  trait ChainedHashTable - 3/4 methods with defaults (75%)
+    Default methods: insert_chained, lookup_chained, delete_chained
+
+SUMMARY
+Total traits analyzed: 4
+Traits with default methods: 3
+Default implementation rate: 42%
 ```
 
 ---
