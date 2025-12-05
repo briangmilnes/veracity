@@ -892,7 +892,7 @@ dependencies = [
 
 [[package]]
 name = "verus_syn"
-version = "0.0.0-2025-11-09-0048"
+version = "0.0.0-2025-11-16-0050"
 dependencies = [
  "proc-macro2",
  "quote",

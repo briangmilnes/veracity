@@ -61,6 +61,14 @@ path = "src/bin/review_comparator_patterns.rs"
 name = "veracity-count-default-trait-fns"
 path = "src/bin/count_default_trait_fns.rs"
 
+[[bin]]
+name = "veracity-review-proof-state"
+path = "src/bin/review_proof_state.rs"
+
+[[bin]]
+name = "veracity-minimize-lib"
+path = "src/bin/minimize_lib.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants
