@@ -78,11 +78,13 @@ struct MinimizeArgs {
     library: PathBuf,
     dry_run: bool,
     max_lemmas: Option<usize>,
+    max_asserts: Option<usize>,
     exclude_dirs: Vec<String>,
     danger_mode: bool,
     fail_fast: bool,
     update_broadcasts: bool,
     apply_lib_broadcasts: bool,
+    assert_minimization: bool,
 }
 
 /// A discovered broadcast group from vstd
@@ -170,11 +172,13 @@ impl MinimizeArgs {
         let mut library: Option<PathBuf> = None;
         let mut dry_run = false;
         let mut max_lemmas: Option<usize> = None;
+        let mut max_asserts: Option<usize> = None;
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut update_broadcasts = false;
         let mut apply_lib_broadcasts = false;
         let mut danger_mode = false;
         let mut fail_fast = false;
+        let mut assert_minimization = false;
         
         let mut i = 1;
         while i < args.len() {
@@ -247,6 +251,20 @@ impl MinimizeArgs {
                     fail_fast = true;
                     i += 1;
                 }
+                "--assert-minimization" | "-a" => {
+                    assert_minimization = true;
+                    i += 1;
+                }
+                "--max-asserts" | "-A" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-A/--max-asserts requires a number"));
+                    }
+                    let n: usize = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid number: {}", args[i]))?;
+                    max_asserts = Some(n);
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -260,7 +278,7 @@ impl MinimizeArgs {
         let codebase = codebase.ok_or_else(|| anyhow::anyhow!("-c/--codebase is required"))?;
         let library = library.ok_or_else(|| anyhow::anyhow!("-l/--library is required"))?;
         
-        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode, fail_fast })
+        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, max_asserts, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode, fail_fast, assert_minimization })
     }
     
     fn print_usage(program_name: &str) {
@@ -277,6 +295,8 @@ impl MinimizeArgs {
         log!("  -c, --codebase DIR          Path to the codebase to verify");
         log!("  -l, --library DIR           Path to the library directory");
         log!("  -N, --number-of-lemmas N    Limit to testing N lemmas (for incremental runs)");
+        log!("  -a, --assert-minimization   Enable assert minimization (Phase 9 & 10)");
+        log!("  -A, --max-asserts N         Limit to testing N asserts (use with -a)");
         log!("  -e, --exclude DIR           Exclude directory from analysis (can use multiple times)");
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
@@ -290,6 +310,7 @@ impl MinimizeArgs {
         log!("  {} -c ./my-project -l ./vstd --dry-run", name);
         log!("  {} -c ./my-project -l ./vstd -N 5      # Test only 5 lemmas", name);
         log!("  {} -c ./my-project -l ./vstd -b        # Apply broadcast groups", name);
+        log!("  {} -c ./my-project -l ./vstd -a -A 20  # Test 20 asserts", name);
     }
 }
 
@@ -2401,6 +2422,8 @@ fn main() -> Result<()> {
     
     log!("Verus Library Minimizer");
     log!("=======================");
+    log!("This minimizer is only possible due to the phenomenal speed of verification");
+    log!("in Verus. Thanks Verus team!");
     log!();
     log!("Logging to: {}", log_path.display());
     log!();
@@ -2411,6 +2434,8 @@ fn main() -> Result<()> {
     log!("  -b, --broadcasts:   {}", args.update_broadcasts);
     log!("  -L, --lib-broadcasts: {}", args.apply_lib_broadcasts);
     log!("  -N, --max-lemmas:   {}", args.max_lemmas.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
+    log!("  -a, --asserts:      {}", args.assert_minimization);
+    log!("  -A, --max-asserts:  {}", args.max_asserts.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
     log!("  -e, --exclude:      {}", if args.exclude_dirs.is_empty() { "(none)".to_string() } else { args.exclude_dirs.join(", ") });
     log!("  -f, --fail-fast:    {}", args.fail_fast);
     log!("  --danger:           {}", args.danger_mode);
@@ -2638,9 +2663,29 @@ fn main() -> Result<()> {
     };
     let estimated_phase7 = initial_duration * (actual_to_test as u32);
     let estimated_phase8 = initial_duration * (actual_to_test as u32);
+    
+    // Count asserts for Phase 9/10 estimate (rough estimate: ~10 asserts per file)
+    let lib_file_count_for_asserts = find_rust_files(&args.library).len();
+    let codebase_file_count_for_asserts = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs).len();
+    let estimated_lib_asserts = lib_file_count_for_asserts * 10;
+    let estimated_codebase_asserts = codebase_file_count_for_asserts * 10;
+    let actual_lib_asserts_to_test = args.max_asserts.unwrap_or(estimated_lib_asserts).min(estimated_lib_asserts);
+    let actual_codebase_asserts_to_test = args.max_asserts.unwrap_or(estimated_codebase_asserts).min(estimated_codebase_asserts);
+    
+    let estimated_phase9 = if args.assert_minimization {
+        initial_duration * (actual_lib_asserts_to_test as u32)
+    } else {
+        Duration::from_secs(0)
+    };
+    let estimated_phase10 = if args.assert_minimization {
+        initial_duration * (actual_codebase_asserts_to_test as u32)
+    } else {
+        Duration::from_secs(0)
+    };
+    
     let estimated_total = estimated_phase1 + estimated_phase2 + estimated_phase3 + 
                           estimated_phase4 + estimated_phase5 + estimated_phase6 + 
-                          estimated_phase7 + estimated_phase8;
+                          estimated_phase7 + estimated_phase8 + estimated_phase9 + estimated_phase10;
     
     log!("Phase 4: Estimating time...");
     log!("  Time per verification:           {}", format_duration(initial_duration));
@@ -2648,11 +2693,16 @@ fn main() -> Result<()> {
     if num_module_unused > 0 {
         log!("  Lemmas to skip (unused modules): {}", num_module_unused);
     }
+    if args.assert_minimization {
+        log!("  Est. lib asserts to test:        ~{}", actual_lib_asserts_to_test);
+        log!("  Est. codebase asserts to test:   ~{}", actual_codebase_asserts_to_test);
+    }
     log!();
     log!("  Estimation formula:");
     log!("    Phase 5/6: verification_time × num_files");
     log!("    Phase 7:   verification_time × num_lemmas (empty body test)");
     log!("    Phase 8:   verification_time × num_lemmas (comment out test)");
+    log!("    Phase 9/10: verification_time × num_asserts (comment out test)");
     log!();
     log!("  Phase 1 (verify codebase):       {} (done)", format_duration(estimated_phase1));
     log!("  Phase 2 (analyze library):       ~0s (no verification)");
@@ -2670,6 +2720,13 @@ fn main() -> Result<()> {
     }
     log!("  Phase 7 (dependence test):       ~{} ({} × {} lemmas)", format_duration(estimated_phase7), format_duration(initial_duration), actual_to_test);
     log!("  Phase 8 (necessity test):        ~{} ({} × {} lemmas)", format_duration(estimated_phase8), format_duration(initial_duration), actual_to_test);
+    if args.assert_minimization {
+        log!("  Phase 9 (library asserts):       ~{} ({} × ~{} asserts)", format_duration(estimated_phase9), format_duration(initial_duration), actual_lib_asserts_to_test);
+        log!("  Phase 10 (codebase asserts):     ~{} ({} × ~{} asserts)", format_duration(estimated_phase10), format_duration(initial_duration), actual_codebase_asserts_to_test);
+    } else {
+        log!("  Phase 9 (library asserts):       skipped (no -a flag)");
+        log!("  Phase 10 (codebase asserts):     skipped (no -a flag)");
+    }
     log!("  ─────────────────────────────────────────");
     log!("  TOTAL ESTIMATED TIME:            ~{}", format_duration(estimated_total));
     log!();
@@ -3183,120 +3240,148 @@ fn main() -> Result<()> {
     }
     
     // ═══════════════════════════════════════════════════════════════════════
-    // PHASE 9: Test library asserts
+    // PHASE 9: Test library asserts (only if -a flag)
     // ═══════════════════════════════════════════════════════════════════════
-    log!();
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 9: Testing library asserts");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!();
-    log!("For each assert in library: comment out, verify, track time saved.");
-    log!();
-    
-    // Get baseline verification time for comparison
-    let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
-    
-    // Find all asserts in library files
-    let lib_files = find_rust_files(&args.library);
-    let mut lib_asserts: Vec<AssertInfo> = Vec::new();
-    for file in &lib_files {
-        if let Ok(asserts) = find_asserts_in_file(file) {
-            lib_asserts.extend(asserts);
-        }
-    }
-    
-    log!("Found {} asserts in library", lib_asserts.len());
-    
     let mut lib_asserts_tested = 0;
     let mut lib_asserts_removed = 0;
     let mut lib_time_saved = Duration::ZERO;
     
-    for (i, assert_info) in lib_asserts.iter().enumerate() {
-        log_no_newline!("[{}/{}] {} L{} in {}... ", 
-            i + 1, lib_asserts.len(),
-            assert_info.assert_type,
-            assert_info.line,
-            assert_info.context);
+    if args.assert_minimization {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 9: Testing library asserts");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        log!("For each assert: comment out, verify. NEEDED=restored, UNNEEDED=left commented.");
+        log!();
         
-        let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
-        lib_asserts_tested += 1;
+        // Get baseline verification time for comparison
+        let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
         
-        if needed {
-            log!("NEEDED [{}]", format_duration(verify_time));
-        } else {
-            lib_asserts_removed += 1;
-            lib_time_saved += time_saved;
-            let time_str = if time_saved > Duration::ZERO {
-                format!("saved {}", format_duration(time_saved))
+        // Find all asserts in library files
+        let lib_files = find_rust_files(&args.library);
+        let mut lib_asserts: Vec<AssertInfo> = Vec::new();
+        for file in &lib_files {
+            if let Ok(asserts) = find_asserts_in_file(file) {
+                lib_asserts.extend(asserts);
+            }
+        }
+        
+        // Apply max_asserts limit
+        let test_count = args.max_asserts.unwrap_or(lib_asserts.len()).min(lib_asserts.len());
+        log!("Found {} asserts in library, testing {}", lib_asserts.len(), test_count);
+        log!();
+        
+        for (i, assert_info) in lib_asserts.iter().take(test_count).enumerate() {
+            log_no_newline!("[{}/{}] {} L{} in {}... ", 
+                i + 1, test_count,
+                assert_info.assert_type,
+                assert_info.line,
+                assert_info.context);
+            
+            let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            lib_asserts_tested += 1;
+            
+            // Format: initial -> current (delta)
+            let delta_str = if time_saved > Duration::ZERO {
+                format!("-{}", format_duration(time_saved))
+            } else if verify_time > baseline_time {
+                format!("+{}", format_duration(verify_time - baseline_time))
             } else {
-                "no time change".to_string()
+                "~0s".to_string()
             };
-            log!("UNNEEDED [{}] ({})", format_duration(verify_time), time_str);
+            
+            if needed {
+                log!("NEEDED (restored) [{} -> {} ({})]", 
+                    format_duration(baseline_time), format_duration(verify_time), delta_str);
+            } else {
+                lib_asserts_removed += 1;
+                lib_time_saved += time_saved;
+                log!("UNNEEDED (commented) [{} -> {} ({})]", 
+                    format_duration(baseline_time), format_duration(verify_time), delta_str);
+            }
         }
+        
+        log!();
+        log!("Phase 9 Summary: {} tested, {} removed (commented), {} time saved", 
+            lib_asserts_tested, lib_asserts_removed, format_duration(lib_time_saved));
+    } else {
+        log!();
+        log!("Phase 9: Skipped (use -a flag to enable assert minimization)");
     }
     
-    log!();
-    log!("Phase 9 Summary: {} tested, {} removed, {} time saved", 
-        lib_asserts_tested, lib_asserts_removed, format_duration(lib_time_saved));
-    
     // ═══════════════════════════════════════════════════════════════════════
-    // PHASE 10: Test codebase asserts  
+    // PHASE 10: Test codebase asserts (only if -a flag)
     // ═══════════════════════════════════════════════════════════════════════
-    log!();
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 10: Testing codebase asserts");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!();
-    log!("For each assert in codebase: comment out, verify, track time saved.");
-    log!();
-    
-    // Get updated baseline after Phase 9 changes
-    let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
-    
-    // Find all asserts in codebase files (excluding library)
-    let codebase_files = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs);
-    let mut codebase_asserts: Vec<AssertInfo> = Vec::new();
-    for file in &codebase_files {
-        if let Ok(asserts) = find_asserts_in_file(file) {
-            codebase_asserts.extend(asserts);
-        }
-    }
-    
-    log!("Found {} asserts in codebase", codebase_asserts.len());
-    
     let mut codebase_asserts_tested = 0;
     let mut codebase_asserts_removed = 0;
     let mut codebase_time_saved = Duration::ZERO;
     
-    for (i, assert_info) in codebase_asserts.iter().enumerate() {
-        let rel_path = assert_info.file.strip_prefix(&args.codebase).unwrap_or(&assert_info.file);
-        log_no_newline!("[{}/{}] {} L{} in {} ({})... ", 
-            i + 1, codebase_asserts.len(),
-            assert_info.assert_type,
-            assert_info.line,
-            assert_info.context,
-            rel_path.display());
+    if args.assert_minimization {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 10: Testing codebase asserts");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        log!("For each assert: comment out, verify. NEEDED=restored, UNNEEDED=left commented.");
+        log!();
         
-        let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
-        codebase_asserts_tested += 1;
+        // Get updated baseline after Phase 9 changes
+        let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
         
-        if needed {
-            log!("NEEDED [{}]", format_duration(verify_time));
-        } else {
-            codebase_asserts_removed += 1;
-            codebase_time_saved += time_saved;
-            let time_str = if time_saved > Duration::ZERO {
-                format!("saved {}", format_duration(time_saved))
-            } else {
-                "no time change".to_string()
-            };
-            log!("UNNEEDED [{}] ({})", format_duration(verify_time), time_str);
+        // Find all asserts in codebase files (excluding library)
+        let codebase_files = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs);
+        let mut codebase_asserts: Vec<AssertInfo> = Vec::new();
+        for file in &codebase_files {
+            if let Ok(asserts) = find_asserts_in_file(file) {
+                codebase_asserts.extend(asserts);
+            }
         }
+        
+        // Apply max_asserts limit (shared with Phase 9)
+        let test_count = args.max_asserts.unwrap_or(codebase_asserts.len()).min(codebase_asserts.len());
+        log!("Found {} asserts in codebase, testing {}", codebase_asserts.len(), test_count);
+        log!();
+        
+        for (i, assert_info) in codebase_asserts.iter().take(test_count).enumerate() {
+            let rel_path = assert_info.file.strip_prefix(&args.codebase).unwrap_or(&assert_info.file);
+            log_no_newline!("[{}/{}] {} L{} in {} ({})... ", 
+                i + 1, test_count,
+                assert_info.assert_type,
+                assert_info.line,
+                assert_info.context,
+                rel_path.display());
+            
+            let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            codebase_asserts_tested += 1;
+            
+            // Format: initial -> current (delta)
+            let delta_str = if time_saved > Duration::ZERO {
+                format!("-{}", format_duration(time_saved))
+            } else if verify_time > baseline_time {
+                format!("+{}", format_duration(verify_time - baseline_time))
+            } else {
+                "~0s".to_string()
+            };
+            
+            if needed {
+                log!("NEEDED (restored) [{} -> {} ({})]", 
+                    format_duration(baseline_time), format_duration(verify_time), delta_str);
+            } else {
+                codebase_asserts_removed += 1;
+                codebase_time_saved += time_saved;
+                log!("UNNEEDED (commented) [{} -> {} ({})]", 
+                    format_duration(baseline_time), format_duration(verify_time), delta_str);
+            }
+        }
+        
+        log!();
+        log!("Phase 10 Summary: {} tested, {} removed (commented), {} time saved", 
+            codebase_asserts_tested, codebase_asserts_removed, format_duration(codebase_time_saved));
+    } else {
+        log!();
+        log!("Phase 10: Skipped (use -a flag to enable assert minimization)");
     }
-    
-    log!();
-    log!("Phase 10 Summary: {} tested, {} removed, {} time saved", 
-        codebase_asserts_tested, codebase_asserts_removed, format_duration(codebase_time_saved));
     
     // Update stats
     stats.total_time = total_start.elapsed();
