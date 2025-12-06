@@ -1002,29 +1002,27 @@ fn count_loc(codebase: &Path) -> Result<LocCounts> {
     
     let mut cmd = Command::new(&count_loc_bin);
     cmd.current_dir(codebase);
-    cmd.args(["-c"]); // Analyze codebase
+    cmd.args(["-c", "-l", "Verus"]); // Analyze codebase with Verus language mode
     
     let output = cmd.output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     
     let mut counts = LocCounts::default();
     
-    // Parse the output - last line is the TOTAL
-    // Format: "   spec/  proof/   exec filename" or "TOTAL:    spec/  proof/   exec"
+    // Parse the output - find the "total" line
+    // Format: "   1,940/  16,870/   8,560 total"
     for line in stdout.lines() {
-        if line.contains("TOTAL:") || line.starts_with("TOTAL:") {
-            // Parse: "TOTAL:    1,234/  5,678/  9,012"
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 {
-                // The counts are in format "spec/proof/exec"
-                let counts_str = parts[1];
-                let nums: Vec<&str> = counts_str.split('/').collect();
-                if nums.len() == 3 {
-                    counts.spec = nums[0].replace(',', "").parse().unwrap_or(0);
-                    counts.proof = nums[1].replace(',', "").parse().unwrap_or(0);
-                    counts.exec = nums[2].replace(',', "").parse().unwrap_or(0);
-                    counts.total = counts.spec + counts.proof + counts.exec;
-                }
+        let trimmed = line.trim();
+        if trimmed.ends_with(" total") && !trimmed.contains("total lines") {
+            // Parse: "   1,940/  16,870/   8,560 total"
+            // split_whitespace gives: ["1,940/", "16,870/", "8,560", "total"]
+            let parts: Vec<&str> = trimmed.split_whitespace().collect();
+            if parts.len() >= 4 {
+                // parts[0] = "1,940/", parts[1] = "16,870/", parts[2] = "8,560"
+                counts.spec = parts[0].trim_end_matches('/').replace(',', "").parse().unwrap_or(0);
+                counts.proof = parts[1].trim_end_matches('/').replace(',', "").parse().unwrap_or(0);
+                counts.exec = parts[2].replace(',', "").parse().unwrap_or(0);
+                counts.total = counts.spec + counts.proof + counts.exec;
             }
             break;
         }
