@@ -2117,7 +2117,7 @@ fn main() -> Result<()> {
     
     // Print reassurance and phase overview
     log!("═══════════════════════════════════════════════════════════════════════════════");
-    log!("IMPORTANT: No code will be harmed in the making of this production!");
+    log!("IMPORTANT: No code will be harmed in the improving of your codebase!");
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
     
