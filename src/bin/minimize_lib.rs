@@ -307,11 +307,20 @@ impl MinimizeArgs {
         log!("  -h, --help                  Show this help message");
         log!();
         log!("Examples:");
-        log!("  {} -c ./my-project -l ./vstd", name);
-        log!("  {} -c ./my-project -l ./vstd --dry-run", name);
-        log!("  {} -c ./my-project -l ./vstd -N 5      # Test only 5 lemmas", name);
-        log!("  {} -c ./my-project -l ./vstd -b        # Apply broadcast groups", name);
-        log!("  {} -c ./my-project -l ./vstd -a -A 20  # Test 20 asserts", name);
+        log!("  # Dry run to see what would be done:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -n", name);
+        log!();
+        log!("  # Test only 5 lemmas (for incremental development):");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -N 5", name);
+        log!();
+        log!("  # Full minimization with broadcast groups:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -L -b", name);
+        log!();
+        log!("  # Full minimization including assert testing:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a", name);
+        log!();
+        log!("  # The whole enchilada (all phases, all tests):");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a -e experiments", name);
     }
 }
 

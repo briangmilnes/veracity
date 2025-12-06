@@ -4,6 +4,48 @@
 
 ---
 
+## 🚀 Library Minimizer (Featured Tool)
+
+**`veracity-minimize-lib`** - Automatically minimize your vstd library dependencies!
+
+This tool iteratively tests each lemma in your library to determine:
+- **Dependence:** Can vstd's broadcast groups prove this lemma alone?
+- **Necessity:** Does your codebase actually need this lemma?
+- **Asserts:** Which asserts are unnecessary for verification?
+
+### Quick Start
+
+```bash
+# Full minimization (all 11 phases):
+veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -L -b -a -e experiments
+
+# Dry run first to see what would happen:
+veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -n
+
+# Quick test with only 5 lemmas:
+veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -N 5
+```
+
+### What It Does (11 Phases)
+
+| Phase | Description |
+|-------|-------------|
+| 1 | Analyze and verify codebase (initial LOC count) |
+| 2 | Analyze library structure (lemmas, modules, call sites) |
+| 3 | Discover vstd broadcast groups from verus installation |
+| 4 | Estimate time for all testing phases |
+| 5 | Apply broadcast groups to library (`-L` flag) |
+| 6 | Apply broadcast groups to codebase (`-b` flag) |
+| 7 | Test lemma dependence (can vstd prove it with empty body?) |
+| 8 | Test lemma necessity (can codebase verify without it?) |
+| 9 | Test library asserts (`-a` flag) |
+| 10 | Test codebase asserts (`-a` flag) |
+| 11 | Analyze and verify final codebase (final LOC count) |
+
+*This minimizer is only possible due to the phenomenal speed of verification in Verus. Thanks Verus team!*
+
+---
+
 ## Overview
 
 Veracity is a sibling tool to [Rusticate](https://github.com/briangmilnes/rusticate). Since Verus is a **superset of Rust**, Veracity includes:
