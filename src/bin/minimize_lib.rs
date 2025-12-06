@@ -2718,8 +2718,11 @@ fn main() -> Result<()> {
     log!("If verification fails, lemma is USED. If passes, lemma is UNUSED.");
     log!();
     
+    // Track which lemmas were commented out (UNUSED)
+    let mut unused_lemmas: Vec<(String, PathBuf, String)> = Vec::new(); // (name, file, type_info)
+    
     // Test each lemma GROUP (type variants tested together)
-    for (i, ((name, _file), variants)) in sorted_groups.iter().enumerate() {
+    for (i, ((name, file), variants)) in sorted_groups.iter().enumerate() {
         let variant_count = variants.len();
         let type_info = if variant_count > 1 {
             let types: Vec<String> = variants.iter()
@@ -2763,6 +2766,9 @@ fn main() -> Result<()> {
             log!("PASSED → UNUSED (kept commented) [{}]", format_duration(test_duration));
             stats.lemmas_unused += variant_count;
             stats.call_sites_commented += all_call_sites.len();
+            
+            // Track this unused lemma for summary
+            unused_lemmas.push((name.clone(), file.clone(), type_info.clone()));
             
             // Update module status for all variants
             for lr in variants {
@@ -2811,11 +2817,24 @@ fn main() -> Result<()> {
     log!("  Total time:              {}", format_duration(stats.total_time));
     log!("  Estimated time:          {}", format_duration(estimated_total));
     log!();
-    log!("Lemmas:");
+    log!("Phase 7 Results (dependence on vstd):");
+    log!("  DEPENDENT (vstd can prove):   {} (not yet implemented)", _dependent_count);
+    log!("  INDEPENDENT (unique logic):   {}", independent_count);
+    log!();
+    log!("Phase 8 Results (necessity for codebase):");
     log!("  Tested:                  {}", stats.lemmas_tested);
     log!("  Marked USED:             {}", stats.lemmas_used);
     log!("  Marked UNUSED:           {}", stats.lemmas_unused);
     log!("  Skipped (module unused): {}", stats.lemmas_module_unused);
+    
+    if !unused_lemmas.is_empty() {
+        log!();
+        log!("  Lemmas commented out (UNUSED):");
+        for (name, file, type_info) in &unused_lemmas {
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
+            log!("    - {}{} ({})", name, type_info, rel_path.display());
+        }
+    }
     log!();
     log!("Call Sites:");
     log!("  Commented out:           {}", stats.call_sites_commented);
