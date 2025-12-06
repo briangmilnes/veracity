@@ -2362,15 +2362,15 @@ fn main() -> Result<()> {
         log!("  3. If PASSES → Mark // Veracity: DEPENDENT (vstd proves it)");
         log!("  4. Restore (dependent lemmas may still be needed for context)");
         log!();
-        log!("PHASE 3: Test lemmas for REMOVAL (existing minimization)");
+        log!("PHASE 3: Test lemmas for commenting out");
         log!("  For each lemma:");
         log!("  1. Comment out lemma + call sites");
         log!("  2. Run verification");
         log!("  3. If FAILS  → Mark // Veracity: USED, restore");
-        log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented");
+        log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented out");
         log!();
-        log!("Note: DEPENDENT ≠ removable. A lemma may be DEPENDENT on vstd");
-        log!("      but still needed to bring the proof into context.");
+        log!("Note: All changes are comments only. Review marked lemmas and decide");
+        log!("      what to keep (e.g., for future development) or actually delete.");
         log!();
         log!("Lemmas to test (sorted by codebase call count, type variants grouped):");
         
