@@ -3131,12 +3131,23 @@ fn main() -> Result<()> {
         // Test if vstd can prove this lemma with an empty body
         let (is_dependent, test_duration) = test_dependence_group(&group_lemmas, &args.codebase)?;
         
+        // Format: [initial N -> now N (incremental N)]
+        let delta_str = if test_duration < initial_duration {
+            format!("incremental -{}", format_duration(initial_duration - test_duration))
+        } else if test_duration > initial_duration {
+            format!("incremental +{}", format_duration(test_duration - initial_duration))
+        } else {
+            "incremental ~0s".to_string()
+        };
+        
         if is_dependent {
-            log!("PASSED → DEPENDENT [{}]", format_duration(test_duration));
+            log!("PASSED → DEPENDENT [initial {} -> now {} ({})]", 
+                format_duration(initial_duration), format_duration(test_duration), delta_str);
             dependent_count += variant_count;
             dependent_lemmas.push((name.clone(), file.clone(), type_info.clone()));
         } else {
-            log!("FAILED → INDEPENDENT [{}]", format_duration(test_duration));
+            log!("FAILED → INDEPENDENT [initial {} -> now {} ({})]", 
+                format_duration(initial_duration), format_duration(test_duration), delta_str);
             independent_count += variant_count;
         }
     }
@@ -3207,8 +3218,18 @@ fn main() -> Result<()> {
         stats.lemmas_tested += variant_count;
         let is_dependent = dependent_names.contains(name);
         
+        // Format: [initial N -> now N (incremental N)]
+        let delta_str = if test_duration < initial_duration {
+            format!("incremental -{}", format_duration(initial_duration - test_duration))
+        } else if test_duration > initial_duration {
+            format!("incremental +{}", format_duration(test_duration - initial_duration))
+        } else {
+            "incremental ~0s".to_string()
+        };
+        
         if needed {
-            log!("FAILED → USED (restored) [{}]", format_duration(test_duration));
+            log!("FAILED → USED (restored) [initial {} -> now {} ({})]", 
+                format_duration(initial_duration), format_duration(test_duration), delta_str);
             stats.lemmas_used += variant_count;
             
             // If this lemma was DEPENDENT but still USED, track it
@@ -3216,7 +3237,8 @@ fn main() -> Result<()> {
                 dependent_but_used.push((name.clone(), file.clone(), type_info.clone()));
             }
         } else {
-            log!("PASSED → UNUSED (kept commented) [{}]", format_duration(test_duration));
+            log!("PASSED → UNUSED (kept commented) [initial {} -> now {} ({})]", 
+                format_duration(initial_duration), format_duration(test_duration), delta_str);
             stats.lemmas_unused += variant_count;
             stats.call_sites_commented += all_call_sites.len();
             
