@@ -59,6 +59,7 @@ struct MinimizeArgs {
     dry_run: bool,
     max_lemmas: Option<usize>,
     exclude_dirs: Vec<String>,
+    danger_mode: bool,
     update_broadcasts: bool,
     apply_lib_broadcasts: bool,
 }
@@ -151,6 +152,7 @@ impl MinimizeArgs {
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut update_broadcasts = false;
         let mut apply_lib_broadcasts = false;
+        let mut danger_mode = false;
         
         let mut i = 1;
         while i < args.len() {
@@ -215,6 +217,10 @@ impl MinimizeArgs {
                     apply_lib_broadcasts = true;
                     i += 1;
                 }
+                "--danger" => {
+                    danger_mode = true;
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -228,7 +234,7 @@ impl MinimizeArgs {
         let codebase = codebase.ok_or_else(|| anyhow::anyhow!("-c/--codebase is required"))?;
         let library = library.ok_or_else(|| anyhow::anyhow!("-l/--library is required"))?;
         
-        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, exclude_dirs, update_broadcasts, apply_lib_broadcasts })
+        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode })
     }
     
     fn print_usage(program_name: &str) {
@@ -249,6 +255,7 @@ impl MinimizeArgs {
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
         log!("  -n, --dry-run               Show what would be done without modifying files");
+        log!("  --danger                    Run even with uncommitted changes (DANGEROUS!)");
         log!("  -h, --help                  Show this help message");
         log!();
         log!("Examples:");
@@ -2207,27 +2214,47 @@ fn main() -> Result<()> {
             log!("✓ Codebase is in git and committed. Proceeding safely.");
         }
         GitStatus::Uncommitted => {
-            log!("✗ Codebase is in git but has uncommitted changes. Exiting.");
+            log!("✗ Codebase is in git but has uncommitted changes.");
             log!();
             log!("  Please commit your changes first:");
             log!("    cd {} && git add -A && git commit -m 'Before Veracity'", args.codebase.display());
             if args.dry_run {
                 log!();
                 log!("  (Continuing anyway because this is a dry run...)");
+            } else if args.danger_mode {
+                log!();
+                log!("  ╔══════════════════════════════════════════════════════════════╗");
+                log!("  ║  ⚠️  DANGER MODE ACTIVATED - UNCOMMITTED CHANGES AT RISK! ⚠️   ║");
+                log!("  ║                                                              ║");
+                log!("  ║  You have uncommitted changes. Veracity will modify files.   ║");
+                log!("  ║  If something goes wrong, you may LOSE YOUR WORK!            ║");
+                log!("  ║                                                              ║");
+                log!("  ║  Proceeding anyway because you asked for --danger...         ║");
+                log!("  ╚══════════════════════════════════════════════════════════════╝");
             } else {
-                return Err(anyhow::anyhow!("Please commit changes before running Veracity"));
+                return Err(anyhow::anyhow!("Please commit changes before running Veracity (or use --danger to override)"));
             }
         }
         GitStatus::NotInGit => {
-            log!("✗ Codebase is not in git. Exiting.");
+            log!("✗ Codebase is not in git.");
             log!();
             log!("  Please initialize git first:");
             log!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", args.codebase.display());
             if args.dry_run {
                 log!();
                 log!("  (Continuing anyway because this is a dry run...)");
+            } else if args.danger_mode {
+                log!();
+                log!("  ╔══════════════════════════════════════════════════════════════╗");
+                log!("  ║  ⚠️  DANGER MODE ACTIVATED - NO VERSION CONTROL! ⚠️            ║");
+                log!("  ║                                                              ║");
+                log!("  ║  This codebase is not in git. Veracity will modify files.    ║");
+                log!("  ║  If something goes wrong, THERE IS NO UNDO!                  ║");
+                log!("  ║                                                              ║");
+                log!("  ║  Proceeding anyway because you asked for --danger...         ║");
+                log!("  ╚══════════════════════════════════════════════════════════════╝");
             } else {
-                return Err(anyhow::anyhow!("Codebase must be in git before running Veracity"));
+                return Err(anyhow::anyhow!("Codebase must be in git before running Veracity (or use --danger to override)"));
             }
         }
         GitStatus::Unknown => {
