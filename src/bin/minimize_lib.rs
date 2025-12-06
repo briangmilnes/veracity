@@ -978,6 +978,61 @@ fn format_duration(d: Duration) -> String {
     }
 }
 
+/// LOC counts from veracity-count-loc
+#[derive(Debug, Default, Clone, Copy)]
+struct LocCounts {
+    spec: usize,
+    proof: usize,
+    exec: usize,
+    total: usize,
+}
+
+impl LocCounts {
+    fn sum(&self) -> usize {
+        self.spec + self.proof + self.exec
+    }
+}
+
+/// Run veracity-count-loc and parse the output to get LOC counts (comments are not counted)
+fn count_loc(codebase: &Path) -> Result<LocCounts> {
+    // Find our own binary directory to locate veracity-count-loc
+    let current_exe = std::env::current_exe()?;
+    let bin_dir = current_exe.parent().ok_or_else(|| anyhow::anyhow!("Cannot find binary directory"))?;
+    let count_loc_bin = bin_dir.join("veracity-count-loc");
+    
+    let mut cmd = Command::new(&count_loc_bin);
+    cmd.current_dir(codebase);
+    cmd.args(["-c"]); // Analyze codebase
+    
+    let output = cmd.output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    let mut counts = LocCounts::default();
+    
+    // Parse the output - last line is the TOTAL
+    // Format: "   spec/  proof/   exec filename" or "TOTAL:    spec/  proof/   exec"
+    for line in stdout.lines() {
+        if line.contains("TOTAL:") || line.starts_with("TOTAL:") {
+            // Parse: "TOTAL:    1,234/  5,678/  9,012"
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                // The counts are in format "spec/proof/exec"
+                let counts_str = parts[1];
+                let nums: Vec<&str> = counts_str.split('/').collect();
+                if nums.len() == 3 {
+                    counts.spec = nums[0].replace(',', "").parse().unwrap_or(0);
+                    counts.proof = nums[1].replace(',', "").parse().unwrap_or(0);
+                    counts.exec = nums[2].replace(',', "").parse().unwrap_or(0);
+                    counts.total = counts.spec + counts.proof + counts.exec;
+                }
+            }
+            break;
+        }
+    }
+    
+    Ok(counts)
+}
+
 /// Find lemmas with duplicate names (same name in different locations)
 /// Filter unused spec functions, but keep type variants together
 /// If ANY variant (e.g., obeys_feq<u8>, obeys_feq<u32>) is used, don't report ANY of them
@@ -2506,16 +2561,17 @@ fn main() -> Result<()> {
     log!("You will need to review each // Veracity: line and decide what to keep.");
     log!();
     log!("Phases:");
-    log!("  Phase 1: Verify codebase compiles and verifies");
-    log!("  Phase 2: Analyze library structure (lemmas, modules, call sites, spec fns)");
-    log!("  Phase 3: Discover vstd broadcast groups from verus installation");
-    log!("  Phase 4: Estimate time for testing");
-    log!("  Phase 5: Apply broadcast groups to library (-L flag)");
-    log!("  Phase 6: Apply broadcast groups to codebase (-b flag)");
-    log!("  Phase 7: Test lemma dependence on vstd (can vstd prove it alone?)");
-    log!("  Phase 8: Test lemma necessity (can codebase verify without it?)");
-    log!("  Phase 9: Test library asserts (can we remove any?)");
+    log!("  Phase 1:  Analyze and verify codebase");
+    log!("  Phase 2:  Analyze library structure (lemmas, modules, call sites, spec fns)");
+    log!("  Phase 3:  Discover vstd broadcast groups from verus installation");
+    log!("  Phase 4:  Estimate time for testing");
+    log!("  Phase 5:  Apply broadcast groups to library (-L flag)");
+    log!("  Phase 6:  Apply broadcast groups to codebase (-b flag)");
+    log!("  Phase 7:  Test lemma dependence on vstd (can vstd prove it alone?)");
+    log!("  Phase 8:  Test lemma necessity (can codebase verify without it?)");
+    log!("  Phase 9:  Test library asserts (can we remove any?)");
     log!("  Phase 10: Test codebase asserts (can we remove any?)");
+    log!("  Phase 11: Analyze and verify final codebase");
     log!();
     log!("Comment markers inserted:");
     log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
@@ -2530,7 +2586,21 @@ fn main() -> Result<()> {
     log!();
     
     // Phase 1: Verify codebase
-    log!("Phase 1: Verifying codebase...");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 1: Analyzing and verifying codebase");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    
+    // Count initial LOC (comments not counted)
+    let initial_loc = count_loc(&args.codebase)?;
+    log!("  Initial LOC (comments not counted):");
+    log!("    Spec:  {:>6}", initial_loc.spec);
+    log!("    Proof: {:>6}", initial_loc.proof);
+    log!("    Exec:  {:>6}", initial_loc.exec);
+    log!("    Total: {:>6}", initial_loc.sum());
+    log!();
+    
+    log!("  Verifying...");
     let (initial_success, initial_stderr, initial_duration) = run_verus_timed(&args.codebase)?;
     if initial_success {
         log!("  ✓ Verification passed in {}. Continuing.", format_duration(initial_duration));
@@ -3416,9 +3486,41 @@ fn main() -> Result<()> {
         }
     }
     
-    // Final verification
+    // Phase 11: Final verification and LOC count
     log!();
-    log!("Running final verification...");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 11: Analyzing and verifying final codebase");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    
+    // Count final LOC (comments not counted)
+    let final_loc = count_loc(&args.codebase)?;
+    log!("  Final LOC (comments not counted):");
+    log!("    Spec:  {:>6}", final_loc.spec);
+    log!("    Proof: {:>6}", final_loc.proof);
+    log!("    Exec:  {:>6}", final_loc.exec);
+    log!("    Total: {:>6}", final_loc.sum());
+    log!();
+    
+    // Show LOC difference
+    let loc_diff = initial_loc.sum() as i64 - final_loc.sum() as i64;
+    let loc_pct = if initial_loc.sum() > 0 {
+        (loc_diff.abs() as f64 / initial_loc.sum() as f64) * 100.0
+    } else {
+        0.0
+    };
+    let loc_diff_str = if loc_diff > 0 {
+        format!("-{} lines ({:.1}% reduction)", loc_diff, loc_pct)
+    } else if loc_diff < 0 {
+        format!("+{} lines ({:.1}% increase, from Veracity comments)", -loc_diff, loc_pct)
+    } else {
+        "no change".to_string()
+    };
+    log!("  LOC change: {}", loc_diff_str);
+    log!("  (excluding manual module removal)");
+    log!();
+    
+    log!("  Verifying...");
     let (final_success, final_stderr, final_duration) = run_verus_timed(&args.codebase)?;
     
     // Calculate time difference
@@ -3472,6 +3574,18 @@ fn main() -> Result<()> {
     log!("  Estimated time:          {}", format_duration(estimated_total));
     log!("  Estimation error:        {}{:.1}s ({}{:.1}%)", 
          error_sign, error_secs, error_sign, error_pct);
+    log!();
+    log!("Verification:");
+    log!("  Initial: {} ({})", format_duration(initial_duration), if initial_success { "passed" } else { "failed" });
+    log!("  Final:   {} ({})", format_duration(final_duration), if final_success { "passed" } else { "failed" });
+    log!("  Change:  {}", time_diff);
+    log!();
+    log!("Lines of Code (comments not counted):");
+    log!("  Initial: {:>6} (spec: {}, proof: {}, exec: {})", 
+         initial_loc.sum(), initial_loc.spec, initial_loc.proof, initial_loc.exec);
+    log!("  Final:   {:>6} (spec: {}, proof: {}, exec: {})", 
+         final_loc.sum(), final_loc.spec, final_loc.proof, final_loc.exec);
+    log!("  Change:  {} (excluding manual module removal)", loc_diff_str);
     log!();
     log!("Phase 7 (dependence): {} DEPENDENT, {} INDEPENDENT", dependent_count, independent_count);
     log!("Phase 8 (necessity):  {} USED, {} UNUSED, {} skipped", stats.lemmas_used, stats.lemmas_unused, stats.lemmas_module_unused);
