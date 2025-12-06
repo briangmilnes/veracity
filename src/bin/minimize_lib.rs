@@ -357,6 +357,12 @@ fn find_rust_files_excluding(dir: &Path, exclude_path: &Path, exclude_dirs: &[St
                 continue;
             }
             
+            // Skip test and bench directories - we don't minimize tests!
+            if path_str.contains("/tests/") || path_str.contains("/test/") 
+                || path_str.contains("/benches/") || path_str.contains("/bench/") {
+                continue;
+            }
+            
             // Skip the excluded path (library)
             if path_str.starts_with(&exclude_str) {
                 continue;

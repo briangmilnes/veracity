@@ -12,15 +12,22 @@
 //!
 //! PATTERN SYNTAX (free-form, order matters):
 //!   proof fn NAME          Match proof fn with NAME pattern (any modifier: open/closed/broadcast)
-//!   args TYPE, TYPE        Match argument types (comma-separated)
-//!   types TYPE, TYPE       Match generic type bounds (comma-separated)  
+//!   generics T, T          Match generic type parameters only (the <T, A: Clone> part)
+//!   types TYPE, TYPE       Match types anywhere (generics, args, requires, ensures)
 //!   requires PATTERN       Match requires clause content
 //!   ensures PATTERN        Match ensures clause content
+//!   TYPE^+                 Same as "types TYPE" - must be present somewhere
+//!   \(A\|B\|C\)            OR pattern - matches A or B or C
+//!   \(A\&B\&C\)            AND pattern - matches if A and B and C all present
+//!   \(A\|B\&C\)            Mixed - AND has precedence: A OR (B AND C)
 //!
 //! EXAMPLES:
 //!   veracity-lemma-search -v proof fn array
-//!   veracity-lemma-search -v proof fn lemma types Seq, int
-//!   veracity-lemma-search -v requires int ensures int
+//!   veracity-lemma-search -v generics A               # has generic parameter A in <>
+//!   veracity-lemma-search -v types Seq                # Seq appears anywhere
+//!   veracity-lemma-search -v Seq^+                    # same as "types Seq"
+//!   veracity-lemma-search -v proof fn '\(add\|sub\)'  # name contains add OR sub
+//!   veracity-lemma-search -v types '\(Seq\&int\)'     # has both Seq AND int
 //!   veracity-lemma-search -c proof fn add requires nat
 
 use anyhow::Result;
@@ -71,10 +78,10 @@ struct FnArg {
 struct SearchPattern {
     /// Function name pattern (substring match)
     name: Option<String>,
-    /// Argument type patterns (all must match)
-    arg_types: Vec<String>,
-    /// Generic type/bound patterns (all must match)
-    type_bounds: Vec<String>,
+    /// Generic parameter patterns - only matches <T, A: Clone> part
+    generics_patterns: Vec<String>,
+    /// Type patterns - matches anywhere (generics, args, requires, ensures)
+    types_patterns: Vec<String>,
     /// Requires clause patterns (all must match)
     requires_patterns: Vec<String>,
     /// Ensures clause patterns (all must match)
@@ -173,14 +180,16 @@ impl SearchArgs {
         println!("Pattern syntax (free-form, parsed left to right):");
         println!("  proof fn NAME         Match proof fn with NAME (any: open/closed/broadcast)");
         println!("  args TYPE, TYPE       Match argument types (comma-separated)");
-        println!("  types TYPE, TYPE      Match generic types/bounds (comma-separated)");
+        println!("  generics TYPE, TYPE   Match generic type bounds (comma-separated)");
         println!("  requires PATTERN      Match content in requires clause");
         println!("  ensures PATTERN       Match content in ensures clause");
+        println!("  TYPE^+                TYPE must be present (anywhere in signature)");
         println!();
         println!("Examples:");
         println!("  {} -v proof fn array", name);
-        println!("  {} -v proof fn lemma types Seq, int", name);
-        println!("  {} -v args int requires nat ensures nat", name);
+        println!("  {} -v proof fn lemma generics Seq", name);
+        println!("  {} -v Seq^+                          # Seq must appear somewhere", name);
+        println!("  {} -v proof fn seq Seq^+             # name has seq AND Seq in types", name);
         println!("  {} -c -v proof fn add", name);
     }
 }
@@ -227,14 +236,23 @@ fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
     let mut i = 0;
     
     while i < tokens.len() {
-        let token = tokens[i].to_lowercase();
+        let token = &tokens[i];
+        let token_lower = token.to_lowercase();
         
-        match token.as_str() {
+        // Check for TYPE^+ suffix (type must be present anywhere)
+        if token.ends_with("^+") {
+            let ty = token.trim_end_matches("^+");
+            pattern.types_patterns.push(ty.to_string());
+            i += 1;
+            continue;
+        }
+        
+        match token_lower.as_str() {
             "proof" => {
                 // Expect "proof fn NAME"
                 if i + 1 < tokens.len() && tokens[i + 1].to_lowercase() == "fn" {
                     i += 2; // skip "proof fn"
-                    if i < tokens.len() {
+                    if i < tokens.len() && !is_keyword(&tokens[i]) {
                         pattern.name = Some(tokens[i].clone());
                         i += 1;
                     }
@@ -245,23 +263,23 @@ fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
             "fn" => {
                 // Just "fn NAME" without "proof"
                 i += 1;
-                if i < tokens.len() {
+                if i < tokens.len() && !is_keyword(&tokens[i]) {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
                 }
             }
-            "args" => {
-                // Collect comma-separated types until next keyword
+            "generics" => {
+                // Collect comma-separated generic parameters until next keyword
                 i += 1;
                 let types = collect_comma_separated(&tokens[i..]);
-                pattern.arg_types.extend(types.iter().cloned());
+                pattern.generics_patterns.extend(types.iter().cloned());
                 i += count_tokens_consumed(&tokens[i..], &types);
             }
             "types" => {
-                // Collect comma-separated types until next keyword
+                // Collect comma-separated types until next keyword (matches anywhere)
                 i += 1;
                 let types = collect_comma_separated(&tokens[i..]);
-                pattern.type_bounds.extend(types.iter().cloned());
+                pattern.types_patterns.extend(types.iter().cloned());
                 i += count_tokens_consumed(&tokens[i..], &types);
             }
             "requires" => {
@@ -296,7 +314,7 @@ fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
 /// Check if a token is a keyword
 fn is_keyword(token: &str) -> bool {
     let lower = token.to_lowercase();
-    matches!(lower.as_str(), "proof" | "fn" | "args" | "types" | "requires" | "ensures")
+    matches!(lower.as_str(), "proof" | "fn" | "generics" | "types" | "requires" | "ensures")
 }
 
 /// Collect comma-separated values until a keyword is hit
@@ -650,52 +668,110 @@ fn extract_clauses(text: &str, keyword: &str) -> Vec<String> {
     clauses
 }
 
+/// Match a pattern string against text, supporting:
+/// - Simple substring match
+/// - OR patterns: \(A\|B\|C\) 
+/// - AND patterns: \(A\&B\&C\)
+/// - Mixed with AND precedence: \(A\|B\&C\) = A OR (B AND C)
+fn pattern_matches(pattern: &str, text: &str) -> bool {
+    let pattern = pattern.trim();
+    let text_lower = text.to_lowercase();
+    
+    // Check for \(...\) pattern syntax
+    if pattern.starts_with("\\(") && pattern.ends_with("\\)") {
+        let inner = &pattern[2..pattern.len()-2];
+        return eval_pattern_expr(inner, &text_lower);
+    }
+    
+    // Simple substring match (case-insensitive)
+    text_lower.contains(&pattern.to_lowercase())
+}
+
+/// Evaluate a pattern expression with OR (|) and AND (&)
+/// AND has higher precedence than OR
+fn eval_pattern_expr(expr: &str, text: &str) -> bool {
+    // Split by \| (OR) first (lower precedence)
+    let or_parts: Vec<&str> = expr.split("\\|").collect();
+    
+    if or_parts.len() > 1 {
+        // OR: any part matching is success
+        return or_parts.iter().any(|part| eval_and_expr(part, text));
+    }
+    
+    // No OR, evaluate as AND expression
+    eval_and_expr(expr, text)
+}
+
+/// Evaluate AND expression - all parts must match
+fn eval_and_expr(expr: &str, text: &str) -> bool {
+    let and_parts: Vec<&str> = expr.split("\\&").collect();
+    
+    // AND: all parts must match
+    and_parts.iter().all(|part| {
+        let part = part.trim();
+        if part.is_empty() {
+            true
+        } else {
+            text.contains(&part.to_lowercase())
+        }
+    })
+}
+
 /// Check if a lemma matches the search pattern
 fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
-    // Check name pattern (case-insensitive substring match)
+    // Check name pattern (case-insensitive substring match, supports OR/AND)
     if let Some(ref name_pat) = pattern.name {
-        if !lemma.name.to_lowercase().contains(&name_pat.to_lowercase()) {
+        if !pattern_matches(name_pat, &lemma.name) {
             return false;
         }
     }
     
-    // Check argument types (all must match)
-    for required in &pattern.arg_types {
-        let found = lemma.args.iter().any(|a| 
-            a.ty.to_lowercase().contains(&required.to_lowercase())
-        );
-        if !found {
+    // Check generics patterns - only matches the <T, A: Clone> part
+    for required in &pattern.generics_patterns {
+        // Combine all generic info into one string to match against
+        let generics_text: String = lemma.generics.iter()
+            .map(|g| format!("{} {}", g.name, g.bounds.join(" ")))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !pattern_matches(required, &generics_text) {
             return false;
         }
     }
     
-    // Check generic type bounds (all must match)
-    for required in &pattern.type_bounds {
-        let req_lower = required.to_lowercase();
-        let found = lemma.generics.iter().any(|g| {
-            g.name.to_lowercase().contains(&req_lower) || 
-            g.bounds.iter().any(|b| b.to_lowercase().contains(&req_lower))
-        }) || lemma.args.iter().any(|a| a.ty.to_lowercase().contains(&req_lower));
+    // Check types patterns - matches anywhere (generics, args, requires, ensures)
+    for required in &pattern.types_patterns {
+        // Combine all type-related info
+        let all_text: String = [
+            // Generics
+            lemma.generics.iter()
+                .map(|g| format!("{} {}", g.name, g.bounds.join(" ")))
+                .collect::<Vec<_>>()
+                .join(" "),
+            // Args
+            lemma.args.iter().map(|a| a.ty.clone()).collect::<Vec<_>>().join(" "),
+            // Requires
+            lemma.requires.join(" "),
+            // Ensures
+            lemma.ensures.join(" "),
+        ].join(" ");
         
-        if !found {
+        if !pattern_matches(required, &all_text) {
             return false;
         }
     }
     
     // Check requires patterns (all must match)
     for required in &pattern.requires_patterns {
-        let req_lower = required.to_lowercase();
-        let found = lemma.requires.iter().any(|r| r.to_lowercase().contains(&req_lower));
-        if !found {
+        let requires_text = lemma.requires.join(" ");
+        if !pattern_matches(required, &requires_text) {
             return false;
         }
     }
     
     // Check ensures patterns (all must match)
     for required in &pattern.ensures_patterns {
-        let req_lower = required.to_lowercase();
-        let found = lemma.ensures.iter().any(|e| e.to_lowercase().contains(&req_lower));
-        if !found {
+        let ensures_text = lemma.ensures.join(" ");
+        if !pattern_matches(required, &ensures_text) {
             return false;
         }
     }
@@ -873,8 +949,8 @@ mod tests {
         
         assert_eq!(pattern, SearchPattern::default());
         assert!(pattern.name.is_none());
-        assert!(pattern.arg_types.is_empty());
-        assert!(pattern.type_bounds.is_empty());
+        assert!(pattern.generics_patterns.is_empty());
+        assert!(pattern.types_patterns.is_empty());
         assert!(pattern.requires_patterns.is_empty());
         assert!(pattern.ensures_patterns.is_empty());
     }
@@ -920,17 +996,17 @@ mod tests {
     }
 
     // =========================================================================
-    // Test: Pattern parsing - "args TYPE"
+    // Test: Pattern parsing - "generics T"
     // =========================================================================
     #[test]
-    fn test_parse_args_single_type() {
+    fn test_parse_generics_single() {
         let tokens: Vec<String> = vec![
-            "args".to_string(),
-            "int".to_string(),
+            "generics".to_string(),
+            "T".to_string(),
         ];
         let pattern = parse_search_pattern(&tokens).unwrap();
         
-        assert_eq!(pattern.arg_types, vec!["int".to_string()]);
+        assert_eq!(pattern.generics_patterns, vec!["T".to_string()]);
     }
 
     // =========================================================================
@@ -945,8 +1021,21 @@ mod tests {
         ];
         let pattern = parse_search_pattern(&tokens).unwrap();
         
-        assert!(pattern.type_bounds.contains(&"Seq".to_string()));
-        assert!(pattern.type_bounds.contains(&"int".to_string()));
+        assert!(pattern.types_patterns.contains(&"Seq".to_string()));
+        assert!(pattern.types_patterns.contains(&"int".to_string()));
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "TYPE^+" suffix
+    // =========================================================================
+    #[test]
+    fn test_parse_type_caret_plus() {
+        let tokens: Vec<String> = vec![
+            "Seq^+".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.types_patterns, vec!["Seq".to_string()]);
     }
 
     // =========================================================================
@@ -996,7 +1085,7 @@ mod tests {
         let pattern = parse_search_pattern(&tokens).unwrap();
         
         assert_eq!(pattern.name, Some("lemma".to_string()));
-        assert!(pattern.type_bounds.contains(&"Seq".to_string()));
+        assert!(pattern.types_patterns.contains(&"Seq".to_string()));
         assert_eq!(pattern.requires_patterns, vec!["nat".to_string()]);
         assert_eq!(pattern.ensures_patterns, vec!["int".to_string()]);
     }
@@ -1009,7 +1098,7 @@ mod tests {
         assert!(is_keyword("proof"));
         assert!(is_keyword("PROOF"));  // case insensitive
         assert!(is_keyword("fn"));
-        assert!(is_keyword("args"));
+        assert!(is_keyword("generics"));
         assert!(is_keyword("types"));
         assert!(is_keyword("requires"));
         assert!(is_keyword("ensures"));
@@ -1017,5 +1106,50 @@ mod tests {
         assert!(!is_keyword("lemma"));
         assert!(!is_keyword("int"));
         assert!(!is_keyword("Seq"));
+        assert!(!is_keyword("args")); // not a keyword anymore
+    }
+
+    // =========================================================================
+    // Test: Pattern matching - simple substring
+    // =========================================================================
+    #[test]
+    fn test_pattern_matches_simple() {
+        assert!(pattern_matches("seq", "lemma_seq_add"));
+        assert!(pattern_matches("SEQ", "lemma_seq_add")); // case insensitive
+        assert!(!pattern_matches("map", "lemma_seq_add"));
+    }
+
+    // =========================================================================
+    // Test: Pattern matching - OR pattern
+    // =========================================================================
+    #[test]
+    fn test_pattern_matches_or() {
+        assert!(pattern_matches("\\(add\\|sub\\)", "lemma_add"));
+        assert!(pattern_matches("\\(add\\|sub\\)", "lemma_sub"));
+        assert!(!pattern_matches("\\(add\\|sub\\)", "lemma_mul"));
+    }
+
+    // =========================================================================
+    // Test: Pattern matching - AND pattern
+    // =========================================================================
+    #[test]
+    fn test_pattern_matches_and() {
+        assert!(pattern_matches("\\(seq\\&int\\)", "Seq<int> value"));
+        assert!(!pattern_matches("\\(seq\\&int\\)", "Seq<nat> value"));
+        assert!(!pattern_matches("\\(seq\\&int\\)", "Set<int> value"));
+    }
+
+    // =========================================================================
+    // Test: Pattern matching - AND has precedence over OR
+    // =========================================================================
+    #[test]
+    fn test_pattern_matches_precedence() {
+        // \(A\|B\&C\) means A OR (B AND C)
+        // Should match "just_a" (matches A)
+        assert!(pattern_matches("\\(apple\\|banana\\&cherry\\)", "apple pie"));
+        // Should match "banana cherry" (matches B AND C)
+        assert!(pattern_matches("\\(apple\\|banana\\&cherry\\)", "banana cherry pie"));
+        // Should NOT match just "banana" (doesn't match A, and B&C requires both)
+        assert!(!pattern_matches("\\(apple\\|banana\\&cherry\\)", "banana pie"));
     }
 }
