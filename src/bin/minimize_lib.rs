@@ -1887,6 +1887,135 @@ fn restore_line(file: &Path, line_num: usize, original: &str) -> Result<()> {
     Ok(())
 }
 
+/// Replace a lemma's body with empty {} to test if vstd can prove it
+/// Returns the original file content for restoration
+fn replace_body_with_empty(file: &Path, start_line: usize, end_line: usize) -> Result<String> {
+    let original_content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = original_content.lines().collect();
+    
+    // Get the lines for this lemma
+    let lemma_lines: Vec<&str> = lines[start_line - 1..end_line].to_vec();
+    
+    // Find the signature (everything before the body)
+    // The body starts after the first '{' that opens the function body
+    let mut signature_parts: Vec<String> = Vec::new();
+    let mut found_body_start = false;
+    let mut brace_depth = 0;
+    
+    for line in &lemma_lines {
+        if !found_body_start {
+            // Look for the opening brace of the function body
+            for (idx, ch) in line.char_indices() {
+                if ch == '{' {
+                    brace_depth += 1;
+                    if brace_depth == 1 {
+                        // This is the start of the function body
+                        // Include everything up to and including this brace, then close it
+                        signature_parts.push(format!("{}{{}}", &line[..=idx]));
+                        found_body_start = true;
+                        break;
+                    }
+                }
+            }
+            if !found_body_start {
+                signature_parts.push(line.to_string());
+            }
+        }
+        // Skip the rest of the body - we've already closed it with {}
+    }
+    
+    if !found_body_start {
+        // No body found, this might be an abstract function - don't modify
+        return Ok(original_content);
+    }
+    
+    // Build the new file content, keeping same line count by adding empty lines
+    let mut new_lines: Vec<String> = Vec::new();
+    new_lines.extend(lines[..start_line - 1].iter().map(|s| s.to_string()));
+    
+    // Add the signature with empty body on first line
+    new_lines.extend(signature_parts);
+    
+    // Add empty lines to maintain line count (important for restoration)
+    let lines_used = new_lines.len() - (start_line - 1);
+    let lines_needed = end_line - start_line + 1;
+    for _ in lines_used..lines_needed {
+        new_lines.push("// Veracity: TESTING-EMPTY-BODY".to_string());
+    }
+    
+    new_lines.extend(lines[end_line..].iter().map(|s| s.to_string()));
+    
+    std::fs::write(file, new_lines.join("\n") + "\n")?;
+    
+    Ok(original_content)
+}
+
+/// Restore a file from its original content
+fn restore_file_content(file: &Path, original_content: &str) -> Result<()> {
+    std::fs::write(file, original_content)?;
+    Ok(())
+}
+
+/// Test if a lemma's proof is dependent on vstd broadcast groups
+/// Returns (is_dependent, duration) where is_dependent=true means vstd can prove it
+#[allow(dead_code)]
+fn test_dependence(
+    lemma: &ProofFn,
+    codebase: &Path,
+) -> Result<(bool, Duration)> {
+    let start = Instant::now();
+    
+    // Step 1: Replace lemma body with empty {}
+    let original_content = replace_body_with_empty(&lemma.file, lemma.start_line, lemma.end_line)?;
+    
+    // Step 2: Run verification
+    let success = run_verus(codebase)?;
+    
+    let duration = start.elapsed();
+    
+    // Step 3: Restore original file content
+    restore_file_content(&lemma.file, &original_content)?;
+    
+    // is_dependent = verification passed with empty body (vstd can prove it)
+    Ok((success, duration))
+}
+
+/// Test if a GROUP of lemmas (type variants) is dependent on vstd
+fn test_dependence_group(
+    lemmas: &[&ProofFn],
+    codebase: &Path,
+) -> Result<(bool, Duration)> {
+    let start = Instant::now();
+    
+    // Step 1: Replace ALL lemma bodies with empty {}
+    // Track original file contents by file path (multiple lemmas may be in same file)
+    let mut file_originals: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
+    
+    for lemma in lemmas {
+        // Save original content before first modification to each file
+        if !file_originals.contains_key(&lemma.file) {
+            let content = std::fs::read_to_string(&lemma.file)?;
+            file_originals.insert(lemma.file.clone(), content);
+        }
+        
+        // Now modify the file (replace body with empty)
+        replace_body_with_empty(&lemma.file, lemma.start_line, lemma.end_line)?;
+    }
+    
+    // Step 2: Run verification
+    let success = run_verus(codebase)?;
+    
+    let duration = start.elapsed();
+    
+    // Step 3: Restore ALL original file contents
+    for (file, original_content) in &file_originals {
+        restore_file_content(file, original_content)?;
+    }
+    
+    // is_dependent = verification passed with empty bodies (vstd can prove them)
+    Ok((success, duration))
+}
+
 /// Test if a lemma is needed by commenting it out and verifying
 #[allow(dead_code)]
 fn test_lemma(
@@ -2675,10 +2804,13 @@ fn main() -> Result<()> {
     log!("If verification passes, vstd broadcast groups can prove it (DEPENDENT).");
     log!();
     
-    let mut _dependent_count: usize = 0;  // TODO: increment when dependence test implemented
+    let mut dependent_count: usize = 0;
     let mut independent_count: usize = 0;
     
-    for (i, ((name, _file), variants)) in sorted_groups.iter().enumerate() {
+    // Track dependent lemmas: (name, file, type_info)
+    let mut dependent_lemmas: Vec<(String, PathBuf, String)> = Vec::new();
+    
+    for (i, ((name, file), variants)) in sorted_groups.iter().enumerate() {
         let variant_count = variants.len();
         let type_info = if variant_count > 1 {
             let types: Vec<String> = variants.iter()
@@ -2694,18 +2826,35 @@ fn main() -> Result<()> {
         };
         
         log_no_newline!("[{}/{}] Testing dependence of {}{}... ", i + 1, sorted_groups.len(), name, type_info);
+        log_no_newline!("emptying body... ");
+        log_no_newline!("verifying... ");
         
-        // For now, skip Phase 7 dependence testing - just mark as INDEPENDENT
-        // TODO: Implement body replacement with {} and verification
-        log!("INDEPENDENT (dependence test not yet implemented)");
-        independent_count += variant_count;
+        // Collect all lemmas in this group
+        let group_lemmas: Vec<_> = variants.iter().map(|lr| &lr.lemma).collect();
+        
+        // Test if vstd can prove this lemma with an empty body
+        let (is_dependent, test_duration) = test_dependence_group(&group_lemmas, &args.codebase)?;
+        
+        if is_dependent {
+            log!("PASSED → DEPENDENT [{}]", format_duration(test_duration));
+            dependent_count += variant_count;
+            dependent_lemmas.push((name.clone(), file.clone(), type_info.clone()));
+        } else {
+            log!("FAILED → INDEPENDENT [{}]", format_duration(test_duration));
+            independent_count += variant_count;
+        }
     }
     
     log!();
     log!("Phase 7 Summary:");
-    log!("  DEPENDENT (vstd can prove):   {}", _dependent_count);
+    log!("  DEPENDENT (vstd can prove):   {}", dependent_count);
     log!("  INDEPENDENT (unique logic):   {}", independent_count);
     log!();
+    
+    // Create a set of dependent lemma names for cross-referencing with Phase 8
+    let dependent_names: std::collections::HashSet<String> = dependent_lemmas.iter()
+        .map(|(name, _, _)| name.clone())
+        .collect();
     
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 8: Test lemma necessity
@@ -2720,6 +2869,8 @@ fn main() -> Result<()> {
     
     // Track which lemmas were commented out (UNUSED)
     let mut unused_lemmas: Vec<(String, PathBuf, String)> = Vec::new(); // (name, file, type_info)
+    // Track dependent lemmas that are still needed (DEPENDENT but USED)
+    let mut dependent_but_used: Vec<(String, PathBuf, String)> = Vec::new();
     
     // Test each lemma GROUP (type variants tested together)
     for (i, ((name, file), variants)) in sorted_groups.iter().enumerate() {
@@ -2758,10 +2909,16 @@ fn main() -> Result<()> {
         )?;
         
         stats.lemmas_tested += variant_count;
+        let is_dependent = dependent_names.contains(name);
         
         if needed {
             log!("FAILED → USED (restored) [{}]", format_duration(test_duration));
             stats.lemmas_used += variant_count;
+            
+            // If this lemma was DEPENDENT but still USED, track it
+            if is_dependent {
+                dependent_but_used.push((name.clone(), file.clone(), type_info.clone()));
+            }
         } else {
             log!("PASSED → UNUSED (kept commented) [{}]", format_duration(test_duration));
             stats.lemmas_unused += variant_count;
@@ -2817,24 +2974,60 @@ fn main() -> Result<()> {
     log!("  Total time:              {}", format_duration(stats.total_time));
     log!("  Estimated time:          {}", format_duration(estimated_total));
     log!();
-    log!("Phase 7 Results (dependence on vstd):");
-    log!("  DEPENDENT (vstd can prove):   {} (not yet implemented)", _dependent_count);
-    log!("  INDEPENDENT (unique logic):   {}", independent_count);
+    log!("Phase 7 (dependence): {} DEPENDENT, {} INDEPENDENT", dependent_count, independent_count);
+    log!("Phase 8 (necessity):  {} USED, {} UNUSED, {} skipped", stats.lemmas_used, stats.lemmas_unused, stats.lemmas_module_unused);
     log!();
-    log!("Phase 8 Results (necessity for codebase):");
-    log!("  Tested:                  {}", stats.lemmas_tested);
-    log!("  Marked USED:             {}", stats.lemmas_used);
-    log!("  Marked UNUSED:           {}", stats.lemmas_unused);
-    log!("  Skipped (module unused): {}", stats.lemmas_module_unused);
     
-    if !unused_lemmas.is_empty() {
-        log!();
-        log!("  Lemmas commented out (UNUSED):");
-        for (name, file, type_info) in &unused_lemmas {
+    // Table 1: Dependent lemmas (vstd can prove these)
+    log!("┌─────────────────────────────────────────────────────────────────┐");
+    log!("│ DEPENDENT LEMMAS (vstd broadcast groups can prove these)       │");
+    log!("├─────────────────────────────────────────────────────────────────┤");
+    if dependent_lemmas.is_empty() {
+        log!("│ (none found - dependence testing not yet implemented)         │");
+    } else {
+        for (name, file, type_info) in &dependent_lemmas {
             let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("    - {}{} ({})", name, type_info, rel_path.display());
+            log!("│ {}{}", name, type_info);
+            log!("│   └─ {}", rel_path.display());
         }
     }
+    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!();
+    
+    // Table 2: Unneeded lemmas commented out
+    log!("┌─────────────────────────────────────────────────────────────────┐");
+    log!("│ UNNEEDED LEMMAS (commented out, codebase verifies without)     │");
+    log!("├─────────────────────────────────────────────────────────────────┤");
+    if unused_lemmas.is_empty() {
+        log!("│ (none - all tested lemmas are needed)                          │");
+    } else {
+        for (name, file, type_info) in &unused_lemmas {
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
+            log!("│ {}{}", name, type_info);
+            log!("│   └─ {}", rel_path.display());
+        }
+    }
+    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!();
+    
+    // Table 3: Dependent lemmas needed to guide validation
+    log!("┌─────────────────────────────────────────────────────────────────┐");
+    log!("│ DEPENDENT BUT NEEDED (guide verification, keep for now)        │");
+    log!("├─────────────────────────────────────────────────────────────────┤");
+    if dependent_but_used.is_empty() {
+        if dependent_lemmas.is_empty() {
+            log!("│ (none - dependence testing not yet implemented)               │");
+        } else {
+            log!("│ (none - all dependent lemmas were also unneeded)              │");
+        }
+    } else {
+        for (name, file, type_info) in &dependent_but_used {
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
+            log!("│ {}{}", name, type_info);
+            log!("│   └─ {}", rel_path.display());
+        }
+    }
+    log!("└─────────────────────────────────────────────────────────────────┘");
     log!();
     log!("Call Sites:");
     log!("  Commented out:           {}", stats.call_sites_commented);
