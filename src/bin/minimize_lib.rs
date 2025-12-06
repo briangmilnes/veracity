@@ -310,6 +310,42 @@ fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
     files
 }
 
+/// Find rust files in dir, excluding library path and specified directories
+fn find_rust_files_excluding(dir: &Path, exclude_path: &Path, exclude_dirs: &[String]) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    let exclude_str = exclude_path.to_string_lossy().to_string();
+    
+    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
+            let path_str = path.to_string_lossy();
+            
+            // Skip attic and target
+            if path_str.contains("/attic/") || path_str.contains("/target/") {
+                continue;
+            }
+            
+            // Skip the excluded path (library)
+            if path_str.starts_with(&exclude_str) {
+                continue;
+            }
+            
+            // Skip excluded directories
+            let should_skip = exclude_dirs.iter().any(|excl| {
+                path_str.contains(&format!("/{}/", excl)) ||
+                path_str.ends_with(&format!("/{}", excl))
+            });
+            
+            if !should_skip {
+                files.push(path.to_path_buf());
+            }
+        }
+    }
+    
+    files.sort();
+    files
+}
+
 fn get_module_name(file: &Path, library: &Path) -> String {
     let rel_path = file.strip_prefix(library).unwrap_or(file);
     let stem = rel_path.file_stem()
@@ -2175,6 +2211,143 @@ fn test_lemma_group(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Assert detection and testing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct AssertInfo {
+    file: PathBuf,
+    line: usize,
+    assert_type: String,  // "assert", "assert_by", "assert_forall_by"
+    content: String,      // The full assert statement (may span multiple lines)
+    context: String,      // Function/lemma name it's in
+}
+
+/// Find all assert statements in a file using AST parsing
+fn find_asserts_in_file(file: &Path) -> Result<Vec<AssertInfo>> {
+    let content = std::fs::read_to_string(file)?;
+    let mut asserts = Vec::new();
+    
+    // Use token-based detection for assert patterns
+    // We look for: assert(...), assert_by(...), assert_forall_by(...)
+    let lines: Vec<&str> = content.lines().collect();
+    
+    let mut current_context = String::from("unknown");
+    
+    for (i, line) in lines.iter().enumerate() {
+        let line_num = i + 1;
+        let trimmed = line.trim();
+        
+        // Track context (function we're in)
+        if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") ||
+           trimmed.starts_with("proof fn ") || trimmed.starts_with("pub proof fn ") ||
+           trimmed.contains(" fn ") {
+            // Extract function name
+            if let Some(fn_start) = trimmed.find("fn ") {
+                let after_fn = &trimmed[fn_start + 3..];
+                if let Some(paren) = after_fn.find('(') {
+                    current_context = after_fn[..paren].trim().to_string();
+                } else if let Some(lt) = after_fn.find('<') {
+                    current_context = after_fn[..lt].trim().to_string();
+                }
+            }
+        }
+        
+        // Check for assert patterns (but not inside comments)
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        
+        let assert_patterns = ["assert_forall_by", "assert_by", "assert"];
+        for pattern in &assert_patterns {
+            // Look for the pattern followed by ( or whitespace
+            if let Some(pos) = trimmed.find(pattern) {
+                // Make sure it's at word boundary (not part of longer identifier)
+                let before_ok = pos == 0 || !trimmed.chars().nth(pos - 1).map_or(false, |c| c.is_alphanumeric() || c == '_');
+                let after_char = trimmed.chars().nth(pos + pattern.len());
+                let after_ok = after_char.map_or(false, |c| c == '(' || c == '!' || c.is_whitespace());
+                
+                if before_ok && after_ok {
+                    asserts.push(AssertInfo {
+                        file: file.to_path_buf(),
+                        line: line_num,
+                        assert_type: pattern.to_string(),
+                        content: trimmed.to_string(),
+                        context: current_context.clone(),
+                    });
+                    break; // Only count each assert once
+                }
+            }
+        }
+    }
+    
+    Ok(asserts)
+}
+
+/// Comment out an assert and run verification
+/// Returns (needed, time_saved) where needed=true means verification failed
+fn test_assert(
+    assert_info: &AssertInfo,
+    codebase: &Path,
+    baseline_time: Duration,
+) -> Result<(bool, Duration, Duration)> {
+    // Read the file
+    let content = std::fs::read_to_string(&assert_info.file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    
+    // Find the full extent of the assert (may span multiple lines with parentheses)
+    let start_line = assert_info.line;
+    let mut end_line = start_line;
+    let mut paren_depth = 0;
+    let mut found_open_paren = false;
+    
+    for i in (start_line - 1)..lines.len() {
+        let line = lines[i];
+        for ch in line.chars() {
+            if ch == '(' {
+                paren_depth += 1;
+                found_open_paren = true;
+            } else if ch == ')' {
+                paren_depth -= 1;
+            }
+        }
+        end_line = i + 1;
+        if found_open_paren && paren_depth == 0 {
+            break;
+        }
+    }
+    
+    // Comment out the assert
+    let original = comment_out_lines(&assert_info.file, start_line, end_line, "TESTING assert")?;
+    
+    // Run verification with timing
+    let start = Instant::now();
+    let (success, _stderr) = run_verus(codebase)?;
+    let verify_time = start.elapsed();
+    
+    if success {
+        // Verification passed without this assert - it's unneeded
+        // Update the marker to permanent
+        restore_lines(&assert_info.file, start_line, &original)?;
+        comment_out_lines(&assert_info.file, start_line, end_line, "UNNEEDED assert")?;
+        
+        let time_saved = if baseline_time > verify_time {
+            baseline_time - verify_time
+        } else {
+            Duration::ZERO
+        };
+        
+        Ok((false, verify_time, time_saved)) // false = not needed
+    } else {
+        // Verification failed - assert is needed
+        restore_lines(&assert_info.file, start_line, &original)?;
+        
+        Ok((true, verify_time, Duration::ZERO)) // true = needed
+    }
+}
+
 enum GitStatus {
     Clean,           // In git, committed
     Uncommitted,     // In git, has uncommitted changes
@@ -2315,6 +2488,8 @@ fn main() -> Result<()> {
     log!("  Phase 6: Apply broadcast groups to codebase (-b flag)");
     log!("  Phase 7: Test lemma dependence on vstd (can vstd prove it alone?)");
     log!("  Phase 8: Test lemma necessity (can codebase verify without it?)");
+    log!("  Phase 9: Test library asserts (can we remove any?)");
+    log!("  Phase 10: Test codebase asserts (can we remove any?)");
     log!();
     log!("Comment markers inserted:");
     log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
@@ -2322,6 +2497,7 @@ fn main() -> Result<()> {
     log!("  // Veracity: INDEPENDENT            - Phase 7: Lemma provides unique proof logic");
     log!("  // Veracity: USED                   - Phase 8: Lemma required, restored after test");
     log!("  // Veracity: UNUSED                 - Phase 8: Lemma not needed, left commented out");
+    log!("  // Veracity: UNNEEDED assert        - Phase 9/10: Assert not needed, left commented");
     log!("  // Veracity: UNNEEDED               - Phase 8: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
@@ -2668,7 +2844,21 @@ fn main() -> Result<()> {
         log!("  3. If FAILS  → Mark // Veracity: USED, restore original code");
         log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented out");
         log!();
-        log!("Note: All changes are comments only. Review marked lemmas and decide");
+        log!("Phase 9: Test library asserts");
+        log!("  For each assert in library lemmas:");
+        log!("  1. Comment out the assert");
+        log!("  2. Run Verus verification");
+        log!("  3. If FAILS  → Restore (assert is needed)");
+        log!("  4. If PASSES → Mark // Veracity: UNNEEDED assert, log time saved");
+        log!();
+        log!("Phase 10: Test codebase asserts");
+        log!("  For each assert in codebase proofs (trait fns, impls, proof blocks):");
+        log!("  1. Comment out the assert");
+        log!("  2. Run Verus verification");
+        log!("  3. If FAILS  → Restore (assert is needed)");
+        log!("  4. If PASSES → Mark // Veracity: UNNEEDED assert, log time saved");
+        log!();
+        log!("Note: All changes are comments only. Review marked items and decide");
         log!("      what to keep (e.g., for future development) or actually delete.");
         log!();
         log!("Lemmas to test (sorted by codebase call count, type variants grouped):");
@@ -2992,6 +3182,123 @@ fn main() -> Result<()> {
         }
     }
     
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 9: Test library asserts
+    // ═══════════════════════════════════════════════════════════════════════
+    log!();
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 9: Testing library asserts");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    log!("For each assert in library: comment out, verify, track time saved.");
+    log!();
+    
+    // Get baseline verification time for comparison
+    let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
+    
+    // Find all asserts in library files
+    let lib_files = find_rust_files(&args.library);
+    let mut lib_asserts: Vec<AssertInfo> = Vec::new();
+    for file in &lib_files {
+        if let Ok(asserts) = find_asserts_in_file(file) {
+            lib_asserts.extend(asserts);
+        }
+    }
+    
+    log!("Found {} asserts in library", lib_asserts.len());
+    
+    let mut lib_asserts_tested = 0;
+    let mut lib_asserts_removed = 0;
+    let mut lib_time_saved = Duration::ZERO;
+    
+    for (i, assert_info) in lib_asserts.iter().enumerate() {
+        log_no_newline!("[{}/{}] {} L{} in {}... ", 
+            i + 1, lib_asserts.len(),
+            assert_info.assert_type,
+            assert_info.line,
+            assert_info.context);
+        
+        let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+        lib_asserts_tested += 1;
+        
+        if needed {
+            log!("NEEDED [{}]", format_duration(verify_time));
+        } else {
+            lib_asserts_removed += 1;
+            lib_time_saved += time_saved;
+            let time_str = if time_saved > Duration::ZERO {
+                format!("saved {}", format_duration(time_saved))
+            } else {
+                "no time change".to_string()
+            };
+            log!("UNNEEDED [{}] ({})", format_duration(verify_time), time_str);
+        }
+    }
+    
+    log!();
+    log!("Phase 9 Summary: {} tested, {} removed, {} time saved", 
+        lib_asserts_tested, lib_asserts_removed, format_duration(lib_time_saved));
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 10: Test codebase asserts  
+    // ═══════════════════════════════════════════════════════════════════════
+    log!();
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 10: Testing codebase asserts");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    log!("For each assert in codebase: comment out, verify, track time saved.");
+    log!();
+    
+    // Get updated baseline after Phase 9 changes
+    let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
+    
+    // Find all asserts in codebase files (excluding library)
+    let codebase_files = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs);
+    let mut codebase_asserts: Vec<AssertInfo> = Vec::new();
+    for file in &codebase_files {
+        if let Ok(asserts) = find_asserts_in_file(file) {
+            codebase_asserts.extend(asserts);
+        }
+    }
+    
+    log!("Found {} asserts in codebase", codebase_asserts.len());
+    
+    let mut codebase_asserts_tested = 0;
+    let mut codebase_asserts_removed = 0;
+    let mut codebase_time_saved = Duration::ZERO;
+    
+    for (i, assert_info) in codebase_asserts.iter().enumerate() {
+        let rel_path = assert_info.file.strip_prefix(&args.codebase).unwrap_or(&assert_info.file);
+        log_no_newline!("[{}/{}] {} L{} in {} ({})... ", 
+            i + 1, codebase_asserts.len(),
+            assert_info.assert_type,
+            assert_info.line,
+            assert_info.context,
+            rel_path.display());
+        
+        let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+        codebase_asserts_tested += 1;
+        
+        if needed {
+            log!("NEEDED [{}]", format_duration(verify_time));
+        } else {
+            codebase_asserts_removed += 1;
+            codebase_time_saved += time_saved;
+            let time_str = if time_saved > Duration::ZERO {
+                format!("saved {}", format_duration(time_saved))
+            } else {
+                "no time change".to_string()
+            };
+            log!("UNNEEDED [{}] ({})", format_duration(verify_time), time_str);
+        }
+    }
+    
+    log!();
+    log!("Phase 10 Summary: {} tested, {} removed, {} time saved", 
+        codebase_asserts_tested, codebase_asserts_removed, format_duration(codebase_time_saved));
+    
+    // Update stats
     stats.total_time = total_start.elapsed();
     
     // Check which modules are now fully removable
@@ -3006,8 +3313,24 @@ fn main() -> Result<()> {
     log!("Running final verification...");
     let (final_success, final_stderr, final_duration) = run_verus_timed(&args.codebase)?;
     
+    // Calculate time difference
+    let time_diff = if final_duration < initial_duration {
+        let saved = initial_duration - final_duration;
+        let pct = (saved.as_secs_f64() / initial_duration.as_secs_f64()) * 100.0;
+        format!("-{} ({:.1}% faster)", format_duration(saved), pct)
+    } else if final_duration > initial_duration {
+        let added = final_duration - initial_duration;
+        let pct = (added.as_secs_f64() / initial_duration.as_secs_f64()) * 100.0;
+        format!("+{} ({:.1}% slower)", format_duration(added), pct)
+    } else {
+        "no change".to_string()
+    };
+    
     if final_success {
-        log!("✓ Final verification succeeded in {}", format_duration(final_duration));
+        log!("✓ Final verification: {} (was {}, {})", 
+            format_duration(final_duration), 
+            format_duration(initial_duration),
+            time_diff);
     } else {
         log!("✗ Final verification FAILED - something went wrong!");
         log!();
