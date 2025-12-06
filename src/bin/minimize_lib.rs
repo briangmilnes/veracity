@@ -3035,13 +3035,13 @@ fn main() -> Result<()> {
     }
     log!("└─────────────────────────────────────────────────────────────────┘");
     log!();
-    log!("Spec Functions:");
-    log!("  Total in library:        {}", stats.spec_fns_total);
-    log!("  Unused (0 references):   {}", stats.spec_fns_unused);
-    if stats.spec_fns_unused > 0 {
-        log!();
-        log!("  Unused spec functions after minimization (review manually):");
-        
+    // Table 4: Spec functions without explicit calls
+    log!("┌─────────────────────────────────────────────────────────────────┐");
+    log!("│ SPEC FUNCTIONS (after minimization, {} total, {} unused)      │", stats.spec_fns_total, stats.spec_fns_unused);
+    log!("├─────────────────────────────────────────────────────────────────┤");
+    if stats.spec_fns_unused == 0 {
+        log!("│ (all spec functions have explicit calls)                       │");
+    } else {
         // Group by file and then by base name to consolidate type variants
         let mut by_file: std::collections::HashMap<PathBuf, std::collections::HashMap<String, Vec<String>>> = 
             std::collections::HashMap::new();
@@ -3061,7 +3061,6 @@ fn main() -> Result<()> {
         files.sort();
         for file in files {
             let name_map = &by_file[file];
-            log!("    {}:", file.display());
             
             let mut names: Vec<_> = name_map.keys().collect();
             names.sort();
@@ -3069,10 +3068,10 @@ fn main() -> Result<()> {
                 let type_variants = &name_map[name];
                 if type_variants.len() == 1 && type_variants[0].is_empty() {
                     // No type variant, just the base name
-                    log!("      - {}", name);
+                    log!("│ {} -> {}", file.display(), name);
                 } else if type_variants.iter().all(|t| t.is_empty()) {
                     // Multiple instances but no type variants
-                    log!("      - {} ({} instances)", name, type_variants.len());
+                    log!("│ {} -> {} ({} instances)", file.display(), name, type_variants.len());
                 } else {
                     // Has type variants - group them
                     let types: Vec<_> = type_variants.iter()
@@ -3080,23 +3079,29 @@ fn main() -> Result<()> {
                         .map(|t| t.trim_start_matches('<').trim_end_matches('>'))
                         .collect();
                     if types.is_empty() {
-                        log!("      - {}", name);
+                        log!("│ {} -> {}", file.display(), name);
                     } else {
-                        // Show (N type variants, 0 used) - only shown when ALL are unused
-                        log!("      - {}<{}> ({} type variants, 0 used)", name, types.join(", "), types.len());
+                        log!("│ {} -> {}<{}> ({} variants, 0 used)", file.display(), name, types.join(", "), types.len());
                     }
                 }
             }
         }
     }
+    log!("└─────────────────────────────────────────────────────────────────┘");
     log!();
-    log!("Modules:");
-    log!("  Fully removable:         {}", stats.modules_removable.len());
-    if !stats.modules_removable.is_empty() {
+    
+    // Table 5: Removable modules
+    log!("┌─────────────────────────────────────────────────────────────────┐");
+    log!("│ REMOVABLE MODULES ({} can be removed entirely)                 │", stats.modules_removable.len());
+    log!("├─────────────────────────────────────────────────────────────────┤");
+    if stats.modules_removable.is_empty() {
+        log!("│ (none - all modules are needed)                                │");
+    } else {
         for m in &stats.modules_removable {
-            log!("    - {}", m);
+            log!("│ {}", m);
         }
     }
+    log!("└─────────────────────────────────────────────────────────────────┘");
     log!();
     
     if final_success {
