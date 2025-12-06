@@ -3282,22 +3282,22 @@ fn main() -> Result<()> {
             let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
             lib_asserts_tested += 1;
             
-            // Format: initial -> current (delta)
+            // Format: [initial N -> now N (incremental N)]
             let delta_str = if time_saved > Duration::ZERO {
-                format!("-{}", format_duration(time_saved))
+                format!("incremental -{}", format_duration(time_saved))
             } else if verify_time > baseline_time {
-                format!("+{}", format_duration(verify_time - baseline_time))
+                format!("incremental +{}", format_duration(verify_time - baseline_time))
             } else {
-                "~0s".to_string()
+                "incremental ~0s".to_string()
             };
             
             if needed {
-                log!("NEEDED (restored) [{} -> {} ({})]", 
+                log!("NEEDED (restored) [initial {} -> now {} ({})]", 
                     format_duration(baseline_time), format_duration(verify_time), delta_str);
             } else {
                 lib_asserts_removed += 1;
                 lib_time_saved += time_saved;
-                log!("UNNEEDED (commented) [{} -> {} ({})]", 
+                log!("UNNEEDED (commented) [initial {} -> now {} ({})]", 
                     format_duration(baseline_time), format_duration(verify_time), delta_str);
             }
         }
@@ -3355,22 +3355,22 @@ fn main() -> Result<()> {
             let (needed, verify_time, time_saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
             codebase_asserts_tested += 1;
             
-            // Format: initial -> current (delta)
+            // Format: [initial N -> now N (incremental N)]
             let delta_str = if time_saved > Duration::ZERO {
-                format!("-{}", format_duration(time_saved))
+                format!("incremental -{}", format_duration(time_saved))
             } else if verify_time > baseline_time {
-                format!("+{}", format_duration(verify_time - baseline_time))
+                format!("incremental +{}", format_duration(verify_time - baseline_time))
             } else {
-                "~0s".to_string()
+                "incremental ~0s".to_string()
             };
             
             if needed {
-                log!("NEEDED (restored) [{} -> {} ({})]", 
+                log!("NEEDED (restored) [initial {} -> now {} ({})]", 
                     format_duration(baseline_time), format_duration(verify_time), delta_str);
             } else {
                 codebase_asserts_removed += 1;
                 codebase_time_saved += time_saved;
-                log!("UNNEEDED (commented) [{} -> {} ({})]", 
+                log!("UNNEEDED (commented) [initial {} -> now {} ({})]", 
                     format_duration(baseline_time), format_duration(verify_time), delta_str);
             }
         }
