@@ -21,7 +21,23 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use walkdir::WalkDir;
 
-const LOG_FILE: &str = "analyses/veracity-minimize-lib.log";
+use std::cell::RefCell;
+
+thread_local! {
+    static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+}
+
+fn init_logging(codebase: &Path) -> PathBuf {
+    let analyses_dir = codebase.join("analyses");
+    let _ = std::fs::create_dir_all(&analyses_dir);
+    let log_path = analyses_dir.join("veracity-minimize-lib.log");
+    // Clear the log file
+    let _ = std::fs::write(&log_path, "");
+    LOG_FILE_PATH.with(|p| {
+        *p.borrow_mut() = Some(log_path.clone());
+    });
+    log_path
+}
 
 fn log_impl(msg: &str, newline: bool) {
     use std::io::Write;
@@ -31,17 +47,21 @@ fn log_impl(msg: &str, newline: bool) {
         print!("{}", msg);
         let _ = std::io::stdout().flush();
     }
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(LOG_FILE)
-    {
-        if newline {
-            let _ = writeln!(file, "{}", msg);
-        } else {
-            let _ = write!(file, "{}", msg);
+    LOG_FILE_PATH.with(|p| {
+        if let Some(ref log_path) = *p.borrow() {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_path)
+            {
+                if newline {
+                    let _ = writeln!(file, "{}", msg);
+                } else {
+                    let _ = write!(file, "{}", msg);
+                }
+            }
         }
-    }
+    });
 }
 
 macro_rules! log {
@@ -2183,14 +2203,15 @@ fn check_git_status(codebase: &Path) -> GitStatus {
 }
 
 fn main() -> Result<()> {
-    // Create analyses directory and clear log file
-    let _ = std::fs::create_dir_all("analyses");
-    let _ = std::fs::write(LOG_FILE, "");
-    
     let args = MinimizeArgs::parse()?;
+    
+    // Initialize logging to codebase/analyses/
+    let log_path = init_logging(&args.codebase);
     
     log!("Verus Library Minimizer");
     log!("=======================");
+    log!();
+    log!("Logging to: {}", log_path.display());
     log!();
     log!("Arguments:");
     log!("  -c, --codebase:     {}", args.codebase.display());
