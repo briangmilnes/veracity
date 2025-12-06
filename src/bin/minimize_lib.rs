@@ -1443,179 +1443,91 @@ fn analyze_library_broadcast_groups(
     Ok(recommendations)
 }
 
-/// Find lemmas with empty bodies using AST traversal
-/// These can potentially be removed if broadcast groups provide the needed axioms
-fn find_empty_body_lemmas(library: &Path) -> Result<Vec<(PathBuf, String, usize)>> {
-    let mut empty_lemmas = Vec::new();
+/// Get the body of a function (lines from start to end)
+#[allow(dead_code)]
+fn get_function_body(file: &Path, start_line: usize, end_line: usize) -> Result<Vec<String>> {
+    let content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = content.lines().collect();
     
-    for entry in WalkDir::new(library).into_iter().filter_map(|e| e.ok()) {
-        let path = entry.path();
-        if !path.is_file() || path.extension().map_or(true, |ext| ext != "rs") {
-            continue;
-        }
-        
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        
-        let parsed = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
-        let tree = parsed.tree();
-        
-        // Find verus! macro calls
-        for node in tree.syntax().descendants() {
-            if node.kind() == SyntaxKind::MACRO_CALL {
-                if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
-                    if let Some(macro_path) = macro_call.path() {
-                        let path_str = macro_path.to_string();
-                        if path_str == "verus" || path_str == "verus!" {
-                            if let Some(token_tree) = macro_call.token_tree() {
-                                let fns = find_empty_proof_fns_in_verus_macro(
-                                    token_tree.syntax(),
-                                    path,
-                                    &content,
-                                );
-                                empty_lemmas.extend(fns);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    Ok(empty_lemmas)
+    Ok(lines.get((start_line - 1)..end_line)
+        .unwrap_or(&[])
+        .iter()
+        .map(|s| s.to_string())
+        .collect())
 }
 
-/// Find proof fns with empty bodies in a verus! macro using token traversal
-/// Only finds TOP-LEVEL lemmas, not those inside trait or impl blocks
-fn find_empty_proof_fns_in_verus_macro(
-    tree: &ra_ap_syntax::SyntaxNode,
-    file: &Path,
-    content: &str,
-) -> Vec<(PathBuf, String, usize)> {
-    let tokens: Vec<_> = tree.descendants_with_tokens()
-        .filter_map(|n| n.into_token())
-        .collect();
+/// Replace a function's body with {} 
+#[allow(dead_code)]
+fn replace_function_body_with_empty(file: &Path, start_line: usize, end_line: usize) -> Result<()> {
+    let content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = content.lines().collect();
     
-    let mut results = Vec::new();
-    let mut i = 0;
-    
-    // Track nesting: are we inside a trait or impl block?
-    // We use a stack of brace depths: when we enter an impl/trait, we push the current depth
-    let mut impl_trait_start_depths: Vec<i32> = Vec::new();
-    let mut brace_depth: i32 = 0;
-    
-    while i < tokens.len() {
-        let token = &tokens[i];
-        
-        // Track all braces
-        if token.kind() == SyntaxKind::L_CURLY {
-            brace_depth += 1;
-        } else if token.kind() == SyntaxKind::R_CURLY {
-            brace_depth -= 1;
-            // Check if we're closing an impl/trait block
-            if let Some(&start_depth) = impl_trait_start_depths.last() {
-                if brace_depth == start_depth {
-                    impl_trait_start_depths.pop();
-                }
-            }
+    // Find the opening brace in the function
+    let mut brace_line = None;
+    for i in (start_line - 1)..std::cmp::min(end_line, lines.len()) {
+        if lines[i].contains('{') {
+            brace_line = Some(i);
+            break;
         }
-        
-        // Track impl/trait blocks
-        if token.kind() == SyntaxKind::IMPL_KW || token.kind() == SyntaxKind::TRAIT_KW {
-            // Record that we're entering an impl/trait at this brace depth
-            impl_trait_start_depths.push(brace_depth);
-            i += 1;
-            continue;
-        }
-        
-        // Are we inside an impl/trait block?
-        let in_impl_or_trait = !impl_trait_start_depths.is_empty();
-        
-        // Look for "fn" keyword - but only at top level (not inside impl/trait)
-        if token.kind() == SyntaxKind::FN_KW && !in_impl_or_trait {
-            // Check if preceded by "proof" identifier
-            let start_idx = i.saturating_sub(10);
-            let mut is_proof = false;
-            
-            for j in start_idx..i {
-                if tokens[j].kind() == SyntaxKind::IDENT && tokens[j].text() == "proof" {
-                    is_proof = true;
-                    break;
-                }
-            }
-            
-            if is_proof {
-                // Get function name
-                if let Some(name) = get_next_ident(&tokens, i) {
-                    // Find the function body - look for { and }
-                    let mut j = i + 1;
-                    let mut found_semicolon_before_brace = false;
-                    let mut brace_start = None;
-                    let mut paren_depth = 0;
-                    
-                    // Skip to after the parameter list
-                    while j < tokens.len() {
-                        match tokens[j].kind() {
-                            SyntaxKind::L_PAREN => paren_depth += 1,
-                            SyntaxKind::R_PAREN => paren_depth -= 1,
-                            SyntaxKind::SEMICOLON if paren_depth == 0 => {
-                                // Trait declaration, not implementation
-                                found_semicolon_before_brace = true;
-                                break;
-                            }
-                            SyntaxKind::L_CURLY if paren_depth == 0 => {
-                                brace_start = Some(j);
-                                break;
-                            }
-                            _ => {}
-                        }
-                        j += 1;
-                    }
-                    
-                    if found_semicolon_before_brace {
-                        i += 1;
-                        continue;
-                    }
-                    
-                    if let Some(brace_idx) = brace_start {
-                        // Find matching closing brace
-                        let mut depth = 1;
-                        let mut k = brace_idx + 1;
-                        let mut brace_end = None;
-                        let mut has_non_whitespace = false;
-                        
-                        while k < tokens.len() && depth > 0 {
-                            match tokens[k].kind() {
-                                SyntaxKind::L_CURLY => depth += 1,
-                                SyntaxKind::R_CURLY => {
-                                    depth -= 1;
-                                    if depth == 0 {
-                                        brace_end = Some(k);
-                                    }
-                                }
-                                SyntaxKind::WHITESPACE | SyntaxKind::COMMENT => {}
-                                _ => has_non_whitespace = true,
-                            }
-                            k += 1;
-                        }
-                        
-                        // If body is empty (only whitespace/comments between braces)
-                        if brace_end.is_some() && !has_non_whitespace {
-                            let start_offset: usize = token.text_range().start().into();
-                            let line_num = offset_to_line(content, start_offset);
-                            results.push((file.to_path_buf(), name, line_num));
-                        }
-                    }
-                }
-            }
-        }
-        
-        i += 1;
     }
     
-    results
+    let brace_idx = brace_line.ok_or_else(|| anyhow::anyhow!("No opening brace found"))?;
+    
+    // Build new content: keep everything up to and including the line with {, 
+    // but replace from { to end with {}
+    let mut new_lines: Vec<String> = Vec::new();
+    
+    for (i, line) in lines.iter().enumerate() {
+        if i < brace_idx {
+            new_lines.push(line.to_string());
+        } else if i == brace_idx {
+            // Replace everything after { with just {}
+            if let Some(brace_pos) = line.find('{') {
+                let prefix = &line[..brace_pos];
+                new_lines.push(format!("{}{{}} // Veracity: Testing for dependence", prefix));
+            } else {
+                new_lines.push(line.to_string());
+            }
+        } else if i >= end_line {
+            new_lines.push(line.to_string());
+        }
+        // Skip lines between brace_idx and end_line (the old body)
+    }
+    
+    std::fs::write(file, new_lines.join("\n") + "\n")?;
+    Ok(())
+}
+
+/// Restore a function's original body
+#[allow(dead_code)]
+fn restore_function_body(file: &Path, start_line: usize, original_lines: &[String]) -> Result<()> {
+    let content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    
+    let mut new_lines: Vec<String> = Vec::new();
+    let mut i = 0;
+    
+    while i < lines.len() {
+        if i + 1 == start_line {
+            // Insert original lines
+            for orig in original_lines {
+                new_lines.push(orig.clone());
+            }
+            // Skip the replacement line(s)
+            while i < lines.len() && !lines[i].contains("Veracity: Testing for dependence") {
+                i += 1;
+            }
+            if i < lines.len() {
+                i += 1; // Skip the TESTING-EMPTY-BODY line
+            }
+        } else {
+            new_lines.push(lines[i].to_string());
+            i += 1;
+        }
+    }
+    
+    std::fs::write(file, new_lines.join("\n") + "\n")?;
+    Ok(())
 }
 
 /// Find vstd source directory from verus binary location
@@ -1900,7 +1812,7 @@ fn comment_out_lines(file: &Path, start_line: usize, end_line: usize, marker: &s
         let line_num = i + 1;
         if line_num >= start_line && line_num <= end_line {
             original_lines.push(line.to_string());
-            new_lines.push(format!("// {} {}", marker, line));
+            new_lines.push(format!("// Veracity: {} {}", marker, line));
         } else {
             new_lines.push(line.to_string());
         }
@@ -1924,7 +1836,7 @@ fn comment_out_line(file: &Path, line_num: usize, marker: &str) -> Result<String
             if line.trim().starts_with("//") {
                 new_lines.push(line.to_string());
             } else {
-                new_lines.push(format!("// {} {}", marker, line));
+                new_lines.push(format!("// Veracity: {} {}", marker, line));
             }
         } else {
             new_lines.push(line.to_string());
@@ -2029,7 +1941,7 @@ fn test_lemma(
         
         for (i, line) in lines.iter().enumerate() {
             if i + 1 == lemma.start_line {
-                new_lines.push("// USED".to_string());
+                new_lines.push("// Veracity: USED".to_string());
             }
             new_lines.push(line.to_string());
         }
@@ -2127,7 +2039,7 @@ fn test_lemma_group(
                 
                 for (i, line) in file_lines.iter().enumerate() {
                     if i + 1 == target_line {
-                        new_lines.push("// USED".to_string());
+                        new_lines.push("// Veracity: USED".to_string());
                     }
                     new_lines.push(line.to_string());
                 }
@@ -2218,20 +2130,19 @@ fn main() -> Result<()> {
         log!();
     }
     
-    // Step 0c: Find lemmas with empty bodies (not independent of vstd)
-    log!("Step 0c: Finding lemmas not independent of vstd (empty body, prove via broadcast groups)...");
-    let empty_lemmas = find_empty_body_lemmas(&args.library)?;
-    if empty_lemmas.is_empty() {
-        log!("  All library lemmas are independent of vstd.");
-    } else {
-        log!("  {} lemmas prove with empty body (rely on vstd broadcast groups):", empty_lemmas.len());
-        log!("  Note: These are often trait implementations - can't be removed, but don't add independent value.");
-        for (file, name, line) in &empty_lemmas {
-            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("    {}:{} - {}", rel_path.display(), line, name);
+    // Step 0c: Verify after applying broadcast groups
+    if args.apply_lib_broadcasts && !args.dry_run {
+        log!("Step 0c: Verifying after broadcast group updates...");
+        let success = run_verus(&args.codebase)?;
+        if success {
+            log!("  ✓ Verification passes with new broadcast groups");
+        } else {
+            log!("  ✗ Verification FAILED - broadcast groups may have broken something");
+            log!("  Stopping here. Fix issues before testing lemma dependencies.");
+            return Ok(());
         }
+        log!();
     }
-    log!();
     
     // Step 1: Find all proof functions
     log!("Step 1: Scanning library for proof functions (lemmas)...");
@@ -2443,8 +2354,8 @@ fn main() -> Result<()> {
         log!("  1. Comment out the lemma definition");
         log!("  2. Comment out all call sites in codebase");
         log!("  3. Run verus verification");
-        log!("  4. If FAILS  → Mark as // USED, restore");
-        log!("  5. If PASSES → Mark as // UNUSED, keep commented");
+        log!("  4. If FAILS  → Mark as // Veracity: USED, restore");
+        log!("  5. If PASSES → Mark as // Veracity: UNUSED, keep commented");
         log!();
         log!("Lemmas to test (sorted by codebase call count, type variants grouped):");
         
