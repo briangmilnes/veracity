@@ -2225,23 +2225,14 @@ fn main() -> Result<()> {
     log!("Verus Library Minimizer");
     log!("=======================");
     log!();
-    log!("Codebase: {}", args.codebase.display());
-    log!("Library:  {}", args.library.display());
-    if args.dry_run {
-        log!("Mode:     DRY RUN (no files will be modified)");
-    }
-    if args.update_broadcasts {
-        log!("Mode:     UPDATE BROADCASTS (will apply recommended groups to codebase)");
-    }
-    if args.apply_lib_broadcasts {
-        log!("Mode:     APPLY LIB BROADCASTS (will add broadcast groups to library)");
-    }
-    if let Some(n) = args.max_lemmas {
-        log!("Limit:    {} lemmas", n);
-    }
-    if !args.exclude_dirs.is_empty() {
-        log!("Exclude:  {}", args.exclude_dirs.join(", "));
-    }
+    log!("Arguments:");
+    log!("  -c, --codebase:     {}", args.codebase.display());
+    log!("  -l, --library:      {}", args.library.display());
+    log!("  -n, --dry-run:      {}", args.dry_run);
+    log!("  -b, --broadcasts:   {}", args.update_broadcasts);
+    log!("  -L, --lib-broadcasts: {}", args.apply_lib_broadcasts);
+    log!("  -N, --max-lemmas:   {}", args.max_lemmas.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
+    log!("  -e, --exclude:      {}", if args.exclude_dirs.is_empty() { "(none)".to_string() } else { args.exclude_dirs.join(", ") });
     log!();
     
     // Print reassurance and phase overview
@@ -2449,22 +2440,27 @@ fn main() -> Result<()> {
         log!("  Lemmas to skip (unused modules): {}", num_module_unused);
     }
     log!();
+    log!("  Estimation formula:");
+    log!("    Phase 5/6: verification_time × num_files");
+    log!("    Phase 7:   verification_time × num_lemmas (empty body test)");
+    log!("    Phase 8:   verification_time × num_lemmas (comment out test)");
+    log!();
     log!("  Phase 1 (verify codebase):       {} (done)", format_duration(estimated_phase1));
     log!("  Phase 2 (analyze library):       ~0s (no verification)");
     log!("  Phase 3 (discover broadcasts):   ~0s (no verification)");
     log!("  Phase 4 (estimate time):         ~0s (no verification)");
     if args.apply_lib_broadcasts {
-        log!("  Phase 5 (library broadcasts):    ~{} ({} files)", format_duration(estimated_phase5), lib_file_count);
+        log!("  Phase 5 (library broadcasts):    ~{} ({} × {} files)", format_duration(estimated_phase5), format_duration(initial_duration), lib_file_count);
     } else {
         log!("  Phase 5 (library broadcasts):    skipped (no -L flag)");
     }
     if args.update_broadcasts {
-        log!("  Phase 6 (codebase broadcasts):   ~{} ({} files)", format_duration(estimated_phase6), codebase_file_count);
+        log!("  Phase 6 (codebase broadcasts):   ~{} ({} × {} files)", format_duration(estimated_phase6), format_duration(initial_duration), codebase_file_count);
     } else {
         log!("  Phase 6 (codebase broadcasts):   skipped (no -b flag)");
     }
-    log!("  Phase 7 (dependence test):       ~{} ({} lemmas)", format_duration(estimated_phase7), actual_to_test);
-    log!("  Phase 8 (necessity test):        ~{} ({} lemmas)", format_duration(estimated_phase8), actual_to_test);
+    log!("  Phase 7 (dependence test):       ~{} ({} × {} lemmas)", format_duration(estimated_phase7), format_duration(initial_duration), actual_to_test);
+    log!("  Phase 8 (necessity test):        ~{} ({} × {} lemmas)", format_duration(estimated_phase8), format_duration(initial_duration), actual_to_test);
     log!("  ─────────────────────────────────────────");
     log!("  TOTAL ESTIMATED TIME:            ~{}", format_duration(estimated_total));
     log!();
@@ -2970,9 +2966,22 @@ fn main() -> Result<()> {
     log!("MINIMIZATION SUMMARY");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
+    // Calculate estimation error
+    let actual_secs = stats.total_time.as_secs_f64();
+    let estimated_secs = estimated_total.as_secs_f64();
+    let error_secs = actual_secs - estimated_secs;
+    let error_pct = if estimated_secs > 0.0 {
+        ((actual_secs - estimated_secs) / estimated_secs) * 100.0
+    } else {
+        0.0
+    };
+    let error_sign = if error_secs >= 0.0 { "+" } else { "" };
+    
     log!("Time:");
-    log!("  Total time:              {}", format_duration(stats.total_time));
+    log!("  Actual time:             {}", format_duration(stats.total_time));
     log!("  Estimated time:          {}", format_duration(estimated_total));
+    log!("  Estimation error:        {}{:.1}s ({}{:.1}%)", 
+         error_sign, error_secs, error_sign, error_pct);
     log!();
     log!("Phase 7 (dependence): {} DEPENDENT, {} INDEPENDENT", dependent_count, independent_count);
     log!("Phase 8 (necessity):  {} USED, {} UNUSED, {} skipped", stats.lemmas_used, stats.lemmas_unused, stats.lemmas_module_unused);
