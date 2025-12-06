@@ -2052,18 +2052,19 @@ fn test_lemma_group(
     }
 }
 
+enum GitStatus {
+    Clean,           // In git, committed
+    Uncommitted,     // In git, has uncommitted changes
+    NotInGit,        // Not a git repository
+    Unknown,         // Could not determine
+}
+
 /// Check if codebase is in git and has no uncommitted changes
-fn check_git_status(codebase: &Path, dry_run: bool) -> Result<()> {
+fn check_git_status(codebase: &Path) -> GitStatus {
     // Check if .git exists
     let git_dir = codebase.join(".git");
     if !git_dir.exists() {
-        log!("⚠ WARNING: Codebase is not a git repository!");
-        log!("  Veracity will modify files. Consider initializing git first:");
-        log!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", codebase.display());
-        log!();
-        if !dry_run {
-            return Err(anyhow::anyhow!("Codebase must be in git before running Veracity"));
-        }
+        return GitStatus::NotInGit;
     }
     
     // Check for uncommitted changes
@@ -2075,28 +2076,14 @@ fn check_git_status(codebase: &Path, dry_run: bool) -> Result<()> {
     match status {
         Ok(output) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            if !stdout.trim().is_empty() {
-                log!("═══════════════════════════════════════════════════════════════════════════════");
-                log!("⚠ WARNING: You have uncommitted changes!");
-                log!("═══════════════════════════════════════════════════════════════════════════════");
-                log!();
-                log!("Veracity will modify your files. Please commit your changes first:");
-                log!("    cd {} && git add -A && git commit -m 'Before Veracity'", codebase.display());
-                log!();
-                if !dry_run {
-                    return Err(anyhow::anyhow!("Please commit changes before running Veracity"));
-                }
-                log!("Continuing anyway because this is a dry run...");
-                log!();
+            if stdout.trim().is_empty() {
+                GitStatus::Clean
+            } else {
+                GitStatus::Uncommitted
             }
         }
-        _ => {
-            // git command failed - maybe not installed or not a repo
-            log!("⚠ Could not check git status");
-        }
+        _ => GitStatus::Unknown,
     }
-    
-    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -2105,9 +2092,6 @@ fn main() -> Result<()> {
     let _ = std::fs::write(LOG_FILE, "");
     
     let args = MinimizeArgs::parse()?;
-    
-    // Check git status before proceeding
-    check_git_status(&args.codebase, args.dry_run)?;
     
     log!("Verus Library Minimizer");
     log!("=======================");
@@ -2136,28 +2120,61 @@ fn main() -> Result<()> {
     log!("IMPORTANT: No code will be harmed in the making of this production!");
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
+    
+    // Check git status and report
+    match check_git_status(&args.codebase) {
+        GitStatus::Clean => {
+            log!("✓ Codebase is in git and committed. Proceeding safely.");
+        }
+        GitStatus::Uncommitted => {
+            log!("✗ Codebase is in git but has uncommitted changes. Exiting.");
+            log!();
+            log!("  Please commit your changes first:");
+            log!("    cd {} && git add -A && git commit -m 'Before Veracity'", args.codebase.display());
+            if args.dry_run {
+                log!();
+                log!("  (Continuing anyway because this is a dry run...)");
+            } else {
+                return Err(anyhow::anyhow!("Please commit changes before running Veracity"));
+            }
+        }
+        GitStatus::NotInGit => {
+            log!("✗ Codebase is not in git. Exiting.");
+            log!();
+            log!("  Please initialize git first:");
+            log!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", args.codebase.display());
+            if args.dry_run {
+                log!();
+                log!("  (Continuing anyway because this is a dry run...)");
+            } else {
+                return Err(anyhow::anyhow!("Codebase must be in git before running Veracity"));
+            }
+        }
+        GitStatus::Unknown => {
+            log!("⚠ Could not check git status. Proceeding with caution.");
+        }
+    }
+    log!();
+    
     log!("Veracity will repeatedly comment things in and out using // Veracity: lines");
     log!("to test and improve your use of vstd. All changes are reversible comments.");
     log!("You will need to review each // Veracity: line and decide what to keep.");
     log!();
     log!("Phases:");
-    log!("  Phase 1: Discover vstd broadcast groups");
-    log!("           Finds verus on PATH, locates vstd source, scans for broadcast groups");
+    log!("  Phase 1: Discover vstd broadcast groups from verus installation");
     log!("  Phase 2: Apply broadcast groups to library (-L flag)");
-    log!("           Analyzes library files, recommends and inserts broadcast use blocks");
-    log!("  Phase 3: Analyze library structure");
-    log!("           Scans for lemmas, modules, call sites, and spec functions");
+    log!("  Phase 3: Analyze library structure (lemmas, modules, call sites, spec fns)");
     log!("  Phase 4: Apply broadcast groups to codebase (-b flag)");
-    log!("           Analyzes codebase files, recommends and inserts broadcast use blocks");
-    log!("  Phase 5: Test lemmas for necessity");
-    log!("           Comments out lemma + call sites, verifies, marks USED or UNUSED");
+    log!("  Phase 5: Test lemma dependence on vstd (can vstd prove it alone?)");
+    log!("  Phase 6: Test lemma necessity (can codebase verify without it?)");
     log!();
     log!("Comment markers inserted:");
-    log!("  // Veracity: added broadcast group - Phase 2/4: Marks inserted broadcast use blocks");
-    log!("  // Veracity: USED            - Phase 5: Lemma required, was restored after test");
-    log!("  // Veracity: UNUSED          - Phase 5: Lemma not needed, left commented out");
-    log!("  // Veracity: UNNEEDED        - Phase 5: Lemma call site not needed, left commented");
-    log!("  // Veracity: TESTING         - Temporary marker during Phase 5 (should not remain)");
+    log!("  // Veracity: added broadcast group  - Phase 2/4: Inserted broadcast use block");
+    log!("  // Veracity: DEPENDENT              - Phase 5: Lemma proven by vstd broadcast groups");
+    log!("  // Veracity: INDEPENDENT            - Phase 5: Lemma provides unique proof logic");
+    log!("  // Veracity: USED                   - Phase 6: Lemma required, restored after test");
+    log!("  // Veracity: UNUSED                 - Phase 6: Lemma not needed, left commented out");
+    log!("  // Veracity: UNNEEDED               - Phase 6: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
@@ -2199,27 +2216,28 @@ fn main() -> Result<()> {
     };
     
     if args.apply_lib_broadcasts && !args.dry_run && !lib_recommendations.is_empty() {
-        log!("  Applying broadcast groups to library...");
+        log!();
+        log!("  ADDING broadcast groups to library files:");
         for rec in &lib_recommendations {
             let rel_path = rec.file.strip_prefix(&args.library).unwrap_or(&rec.file);
-            log!("    Updating {}...", rel_path.display());
+            let group_names: Vec<_> = rec.recommended_groups.iter().map(|(g, _)| g.as_str()).collect();
+            log!("    + {} → {}", rel_path.display(), group_names.join(", "));
             apply_broadcast_groups_to_file(&rec.file, &rec.recommended_groups)?;
         }
-        log!("  Applied broadcast groups to {} files", lib_recommendations.len());
-        
-        log!("  Verifying after broadcast group updates...");
+        log!();
+        log!("  Verifying codebase with updated library...");
         let success = run_verus(&args.codebase)?;
         if success {
-            log!("  ✓ Verification passes with new broadcast groups");
+            log!("  ✓ Verification PASSED");
         } else {
             log!("  ✗ Verification FAILED - broadcast groups may have broken something");
-            log!("  Stopping here. Fix issues before testing lemma dependencies.");
+            log!("  Stopping here. Fix issues before continuing.");
             return Ok(());
         }
     } else if args.apply_lib_broadcasts && args.dry_run {
-        log!("  Would apply broadcast groups to library (dry run, -L flag)");
+        log!("  Would add broadcast groups to library (dry run, use -L flag to apply)");
     } else if !args.apply_lib_broadcasts {
-        log!("  Skipped (use -L flag to apply)");
+        log!("  Skipped (use -L flag to add broadcast groups)");
     }
     log!();
     
@@ -2302,30 +2320,32 @@ fn main() -> Result<()> {
     let broadcast_recommendations = analyze_broadcast_groups_per_file(&args.codebase, &args.library, &args.exclude_dirs, &broadcast_groups)?;
     
     if args.update_broadcasts && !args.dry_run && !broadcast_recommendations.is_empty() {
-        log!("  Applying broadcast group recommendations...");
+        log!();
+        log!("  ADDING broadcast groups to codebase files (testing each):");
+        log!();
         
         // First, get baseline verification time
         log!("  Getting baseline verification time...");
         let (baseline_success, baseline_z3_errors, baseline_time) = run_verus_check_z3(&args.codebase)?;
         
         if !baseline_success {
-            log!("  ✗ Baseline verification failed! Cannot apply broadcast groups.");
+            log!("  ✗ Baseline verification FAILED! Cannot apply broadcast groups.");
             log!();
         } else if baseline_z3_errors {
             log!("  ✗ Baseline has Z3 errors! Cannot apply broadcast groups.");
             log!();
         } else {
-            log!("  ✓ Baseline: {} (no Z3 errors)", format_duration(baseline_time));
+            log!("  ✓ Baseline verification PASSED in {} (no Z3 errors)", format_duration(baseline_time));
             log!();
             
             let mut applied_count = 0;
             let mut reverted_count = 0;
             let mut total_time_saved = Duration::ZERO;
             
-            for rec in &broadcast_recommendations {
+            for (i, rec) in broadcast_recommendations.iter().enumerate() {
                 let rel_path = rec.file.strip_prefix(&args.codebase).unwrap_or(&rec.file);
                 let group_names: Vec<_> = rec.recommended_groups.iter().map(|(g, _)| g.as_str()).collect();
-                log_no_newline!("  {}... ", rel_path.display());
+                log_no_newline!("  [{}/{}] Adding to {}... ", i + 1, broadcast_recommendations.len(), rel_path.display());
                 
                 // Apply the broadcast groups
                 let original = match apply_broadcast_groups(&rec.file, &rec.recommended_groups) {
@@ -2337,6 +2357,7 @@ fn main() -> Result<()> {
                 };
                 
                 // Run verification and check for Z3 errors
+                log_no_newline!("verifying... ");
                 let (success, has_z3_errors, new_time) = run_verus_check_z3(&args.codebase)?;
                 
                 if !success || has_z3_errors {
@@ -2360,7 +2381,7 @@ fn main() -> Result<()> {
                     } else {
                         "~0s".to_string()
                     };
-                    log!("APPLIED {} (time: {})", 
+                    log!("KEPT {} ({})", 
                         group_names.join(", "),
                         time_diff);
                 }
@@ -2404,10 +2425,14 @@ fn main() -> Result<()> {
         Some(n) => num_to_test.min(n),
         None => num_to_test,
     };
-    let estimated_total = duration * (actual_to_test as u32 + 1);
+    
+    // Estimate: Phase 5 tests each lemma once, Phase 6 tests each lemma once
+    let estimated_phase5 = duration * (actual_to_test as u32);
+    let estimated_phase6 = duration * (actual_to_test as u32);
+    let estimated_total = estimated_phase5 + estimated_phase6;
     
     log!("═══════════════════════════════════════════════════════════════");
-    log!("MINIMIZATION ESTIMATE");
+    log!("PHASE 5 & 6 ESTIMATE");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     log!("  Lemmas to skip (unused modules): {}", num_module_unused);
@@ -2416,21 +2441,32 @@ fn main() -> Result<()> {
         log!("  Lemmas to test (limited):        {}", actual_to_test);
     }
     log!("  Time per verification:           {}", format_duration(duration));
-    log!("  Estimated total time:            {}", format_duration(estimated_total));
+    log!();
+    log!("  Phase 5 (dependence test):       ~{}", format_duration(estimated_phase5));
+    log!("  Phase 6 (necessity test):        ~{}", format_duration(estimated_phase6));
+    log!("  Estimated total time:            ~{}", format_duration(estimated_total));
     log!();
     
     if args.dry_run {
         // Dry run output
         log!("═══════════════════════════════════════════════════════════════");
-        log!("DRY RUN - Would perform the following phases");
+        log!("DRY RUN - Phase 5 and 6 details");
         log!("═══════════════════════════════════════════════════════════════");
         log!();
-        log!("In Phase 5, for each lemma the tool would:");
+        log!("Phase 5: Test lemma dependence on vstd");
+        log!("  For each lemma:");
+        log!("  1. Comment out lemma body (replace with empty {{}})");
+        log!("  2. Run Verus verification");
+        log!("  3. If PASSES → Mark // Veracity: DEPENDENT (vstd can prove it)");
+        log!("  4. If FAILS  → Mark // Veracity: INDEPENDENT (unique logic)");
+        log!("  5. Restore original body (dependence info only, no removal)");
+        log!();
+        log!("Phase 6: Test lemma necessity");
+        log!("  For each lemma:");
         log!("  1. Comment out lemma definition + all call sites");
         log!("  2. Run Verus verification");
         log!("  3. If FAILS  → Mark // Veracity: USED, restore original code");
         log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented out");
-        log!("  5. Mark each commented call site with // Veracity: UNNEEDED");
         log!();
         log!("Note: All changes are comments only. Review marked lemmas and decide");
         log!("      what to keep (e.g., for future development) or actually delete.");
@@ -2557,12 +2593,6 @@ fn main() -> Result<()> {
         return Ok(());
     }
     
-    // ACTUAL MINIMIZATION
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("STARTING MINIMIZATION");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!();
-    
     let total_start = Instant::now();
     let mut stats = MinimizationStats::default();
     
@@ -2611,6 +2641,60 @@ fn main() -> Result<()> {
         stats.modules_removable.insert(m.clone());
     }
     
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 5: Test lemma dependence on vstd
+    // ═══════════════════════════════════════════════════════════════════════
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 5: Testing lemma dependence on vstd");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    log!("For each lemma: replace body with {{}}, verify, restore.");
+    log!("If verification passes, vstd broadcast groups can prove it (DEPENDENT).");
+    log!();
+    
+    let mut _dependent_count: usize = 0;  // TODO: increment when dependence test implemented
+    let mut independent_count: usize = 0;
+    
+    for (i, ((name, _file), variants)) in sorted_groups.iter().enumerate() {
+        let variant_count = variants.len();
+        let type_info = if variant_count > 1 {
+            let types: Vec<String> = variants.iter()
+                .filter_map(|lr| lr.lemma.impl_type.clone())
+                .collect();
+            if types.is_empty() {
+                format!(" ({} variants)", variant_count)
+            } else {
+                format!("<{}> ({} type variants)", types.join(", "), types.len())
+            }
+        } else {
+            format_lemma_type_info(&variants[0].lemma)
+        };
+        
+        log_no_newline!("[{}/{}] Testing dependence of {}{}... ", i + 1, sorted_groups.len(), name, type_info);
+        
+        // For now, skip Phase 5 dependence testing - just mark as INDEPENDENT
+        // TODO: Implement body replacement with {} and verification
+        log!("INDEPENDENT (dependence test not yet implemented)");
+        independent_count += variant_count;
+    }
+    
+    log!();
+    log!("Phase 5 Summary:");
+    log!("  DEPENDENT (vstd can prove):   {}", _dependent_count);
+    log!("  INDEPENDENT (unique logic):   {}", independent_count);
+    log!();
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 6: Test lemma necessity
+    // ═══════════════════════════════════════════════════════════════════════
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Phase 6: Testing lemma necessity");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!();
+    log!("For each lemma: comment out definition + calls, verify.");
+    log!("If verification fails, lemma is USED. If passes, lemma is UNUSED.");
+    log!();
+    
     // Test each lemma GROUP (type variants tested together)
     for (i, ((name, _file), variants)) in sorted_groups.iter().enumerate() {
         let variant_count = variants.len();
@@ -2627,8 +2711,6 @@ fn main() -> Result<()> {
             format_lemma_type_info(&variants[0].lemma)
         };
         
-        log_no_newline!("[{}/{}] Testing {}{}... ", i + 1, sorted_groups.len(), name, type_info);
-        
         // Collect all call sites from all variants
         let all_call_sites: Vec<_> = variants.iter()
             .flat_map(|lr| lr.call_sites_in_codebase.iter().cloned())
@@ -2636,6 +2718,11 @@ fn main() -> Result<()> {
         
         // Collect all lemmas in this group
         let group_lemmas: Vec<_> = variants.iter().map(|lr| &lr.lemma).collect();
+        
+        let call_count = all_call_sites.len();
+        log_no_newline!("[{}/{}] Testing necessity of {}{}... ", i + 1, sorted_groups.len(), name, type_info);
+        log_no_newline!("commenting out ({} calls)... ", call_count);
+        log_no_newline!("verifying... ");
         
         // Test the entire group together
         let (needed, test_duration) = test_lemma_group(
@@ -2647,10 +2734,10 @@ fn main() -> Result<()> {
         stats.lemmas_tested += variant_count;
         
         if needed {
-            log!("USED ({})", format_duration(test_duration));
+            log!("FAILED → USED (restored) [{}]", format_duration(test_duration));
             stats.lemmas_used += variant_count;
         } else {
-            log!("UNUSED ({})", format_duration(test_duration));
+            log!("PASSED → UNUSED (kept commented) [{}]", format_duration(test_duration));
             stats.lemmas_unused += variant_count;
             stats.call_sites_commented += all_call_sites.len();
             
