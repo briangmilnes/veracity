@@ -1,4 +1,5 @@
-// Copyright (C) Brian G. Milnes 2025
+// Copyright (c) 2025 Brian G. Milnes
+// SPDX-License-Identifier: MIT
 
 //! Veracity Review dispatcher - run review tools by name or all at once
 //! Supports both general Rust tools (ported from rusticate) and Verus-specific tools

@@ -1,15 +1,27 @@
-// Copyright (C) Brian G. Milnes 2025
+// Copyright (c) 2025 Brian G. Milnes
+// SPDX-License-Identifier: MIT
 
 //! Lemma Search - Find lemmas in vstd or codebase by type-based pattern matching
 //!
-//! This tool parses proof functions and allows searching by:
-//! - Function name patterns
-//! - Generic type bounds
-//! - Argument types
-//! - Requires clauses
-//! - Ensures clauses
+//! Usage: veracity-lemma-search [OPTIONS] [PATTERN...]
 //!
-//! Pattern syntax uses X^+ (must have) and X^* (may have) modifiers.
+//! OPTIONS:
+//!   -v, --vstd [PATH]      Search vstd (auto-discovers if no path, or use PATH)
+//!   -c, --codebase [PATH]  Search codebase (defaults to ./src or ./source)
+//!   -h, --help             Show help
+//!
+//! PATTERN SYNTAX (free-form, order matters):
+//!   proof fn NAME          Match proof fn with NAME pattern (any modifier: open/closed/broadcast)
+//!   args TYPE, TYPE        Match argument types (comma-separated)
+//!   types TYPE, TYPE       Match generic type bounds (comma-separated)  
+//!   requires PATTERN       Match requires clause content
+//!   ensures PATTERN        Match ensures clause content
+//!
+//! EXAMPLES:
+//!   veracity-lemma-search -v proof fn array
+//!   veracity-lemma-search -v proof fn lemma types Seq, int
+//!   veracity-lemma-search -v requires int ensures int
+//!   veracity-lemma-search -c proof fn add requires nat
 
 use anyhow::Result;
 use std::path::{Path, PathBuf};
@@ -55,20 +67,18 @@ struct FnArg {
 }
 
 /// Search pattern specification
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 struct SearchPattern {
-    /// Name pattern (substring match for now)
+    /// Function name pattern (substring match)
     name: Option<String>,
-    /// Required generic bounds (X^+ semantics)
-    required_bounds: Vec<String>,
-    /// Optional generic bounds (X^* semantics)
-    optional_bounds: Vec<String>,
-    /// Required argument types
-    required_arg_types: Vec<String>,
-    /// Required types in requires clauses
-    required_requires_types: Vec<String>,
-    /// Required types in ensures clauses
-    required_ensures_types: Vec<String>,
+    /// Argument type patterns (all must match)
+    arg_types: Vec<String>,
+    /// Generic type/bound patterns (all must match)
+    type_bounds: Vec<String>,
+    /// Requires clause patterns (all must match)
+    requires_patterns: Vec<String>,
+    /// Ensures clause patterns (all must match)
+    ensures_patterns: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -151,27 +161,27 @@ impl SearchArgs {
             .and_then(|n| n.to_str())
             .unwrap_or(program_name);
         
-        println!("Usage: {} [OPTIONS] <pattern>", name);
+        println!("Usage: {} [OPTIONS] [PATTERN...]", name);
         println!();
         println!("Search for lemmas/proof functions by type-based pattern matching");
         println!();
         println!("Options:");
-        println!("  -v, --vstd [PATH]     Search in vstd (auto-discovers if no path given)");
-        println!("  -c, --codebase PATH   Search in codebase directory");
+        println!("  -v, --vstd [PATH]     Search vstd (auto-discovers from verus if no path)");
+        println!("  -c, --codebase [PATH] Search codebase (defaults to ./src or ./source)");
         println!("  -h, --help            Show this help message");
         println!();
-        println!("Pattern syntax:");
-        println!("  name              Match lemma name (substring)");
-        println!("  T^+               Type T must be present");
-        println!("  T^*               Type T may be present");
-        println!("  requires:T        Type T in requires clause");
-        println!("  ensures:T         Type T in ensures clause");
+        println!("Pattern syntax (free-form, parsed left to right):");
+        println!("  proof fn NAME         Match proof fn with NAME (any: open/closed/broadcast)");
+        println!("  args TYPE, TYPE       Match argument types (comma-separated)");
+        println!("  types TYPE, TYPE      Match generic types/bounds (comma-separated)");
+        println!("  requires PATTERN      Match content in requires clause");
+        println!("  ensures PATTERN       Match content in ensures clause");
         println!();
         println!("Examples:");
-        println!("  {} -v array                    # Find lemmas with 'array' in name", name);
-        println!("  {} -v Seq^+ int^+              # Must have Seq and int types", name);
-        println!("  {} -v requires:int ensures:int # int in requires and ensures", name);
-        println!("  {} -c . -v lemma_add           # Search codebase and vstd", name);
+        println!("  {} -v proof fn array", name);
+        println!("  {} -v proof fn lemma types Seq, int", name);
+        println!("  {} -v args int requires nat ensures nat", name);
+        println!("  {} -c -v proof fn add", name);
     }
 }
 
@@ -204,41 +214,142 @@ fn discover_vstd_path() -> Result<PathBuf> {
     Err(anyhow::anyhow!("Could not find vstd source relative to verus binary"))
 }
 
-/// Parse a search pattern from the command line
-fn parse_search_pattern(raw: &str) -> Result<SearchPattern> {
+/// Parse a search pattern from the command line tokens
+/// 
+/// Syntax:
+///   proof fn NAME          - match function name
+///   args TYPE, TYPE        - match argument types
+///   types TYPE, TYPE       - match generic types/bounds
+///   requires PATTERN       - match requires clause
+///   ensures PATTERN        - match ensures clause
+fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
     let mut pattern = SearchPattern::default();
+    let mut i = 0;
     
-    for part in raw.split_whitespace() {
-        if part.ends_with("^+") {
-            // Required type
-            let ty = part.trim_end_matches("^+");
-            pattern.required_bounds.push(ty.to_string());
-        } else if part.ends_with("^*") {
-            // Optional type
-            let ty = part.trim_end_matches("^*");
-            pattern.optional_bounds.push(ty.to_string());
-        } else if part.starts_with("requires:") {
-            let ty = part.trim_start_matches("requires:");
-            pattern.required_requires_types.push(ty.to_string());
-        } else if part.starts_with("ensures:") {
-            let ty = part.trim_start_matches("ensures:");
-            pattern.required_ensures_types.push(ty.to_string());
-        } else if part.starts_with("arg:") {
-            let ty = part.trim_start_matches("arg:");
-            pattern.required_arg_types.push(ty.to_string());
-        } else {
-            // Treat as name pattern
-            if pattern.name.is_some() {
-                // Append to existing name pattern
-                let existing = pattern.name.take().unwrap();
-                pattern.name = Some(format!("{} {}", existing, part));
-            } else {
-                pattern.name = Some(part.to_string());
+    while i < tokens.len() {
+        let token = tokens[i].to_lowercase();
+        
+        match token.as_str() {
+            "proof" => {
+                // Expect "proof fn NAME"
+                if i + 1 < tokens.len() && tokens[i + 1].to_lowercase() == "fn" {
+                    i += 2; // skip "proof fn"
+                    if i < tokens.len() {
+                        pattern.name = Some(tokens[i].clone());
+                        i += 1;
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+            "fn" => {
+                // Just "fn NAME" without "proof"
+                i += 1;
+                if i < tokens.len() {
+                    pattern.name = Some(tokens[i].clone());
+                    i += 1;
+                }
+            }
+            "args" => {
+                // Collect comma-separated types until next keyword
+                i += 1;
+                let types = collect_comma_separated(&tokens[i..]);
+                pattern.arg_types.extend(types.iter().cloned());
+                i += count_tokens_consumed(&tokens[i..], &types);
+            }
+            "types" => {
+                // Collect comma-separated types until next keyword
+                i += 1;
+                let types = collect_comma_separated(&tokens[i..]);
+                pattern.type_bounds.extend(types.iter().cloned());
+                i += count_tokens_consumed(&tokens[i..], &types);
+            }
+            "requires" => {
+                // Collect patterns until next keyword
+                i += 1;
+                while i < tokens.len() && !is_keyword(&tokens[i]) {
+                    pattern.requires_patterns.push(tokens[i].clone());
+                    i += 1;
+                }
+            }
+            "ensures" => {
+                // Collect patterns until next keyword
+                i += 1;
+                while i < tokens.len() && !is_keyword(&tokens[i]) {
+                    pattern.ensures_patterns.push(tokens[i].clone());
+                    i += 1;
+                }
+            }
+            _ => {
+                // If no keyword, treat as name pattern if none set
+                if pattern.name.is_none() {
+                    pattern.name = Some(tokens[i].clone());
+                }
+                i += 1;
             }
         }
     }
     
     Ok(pattern)
+}
+
+/// Check if a token is a keyword
+fn is_keyword(token: &str) -> bool {
+    let lower = token.to_lowercase();
+    matches!(lower.as_str(), "proof" | "fn" | "args" | "types" | "requires" | "ensures")
+}
+
+/// Collect comma-separated values until a keyword is hit
+fn collect_comma_separated(tokens: &[String]) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    
+    for token in tokens {
+        if is_keyword(token) {
+            break;
+        }
+        
+        let token = token.trim_matches(',');
+        if token.is_empty() {
+            continue;
+        }
+        
+        if token.ends_with(',') {
+            current.push_str(token.trim_end_matches(','));
+            if !current.is_empty() {
+                result.push(current.trim().to_string());
+                current = String::new();
+            }
+        } else {
+            if !current.is_empty() {
+                current.push(' ');
+            }
+            current.push_str(token);
+            
+            // Check if this completes an item (next token starts fresh or is keyword)
+            result.push(current.trim().to_string());
+            current = String::new();
+        }
+    }
+    
+    if !current.is_empty() {
+        result.push(current.trim().to_string());
+    }
+    
+    result
+}
+
+/// Count how many tokens were consumed to produce the given results
+fn count_tokens_consumed(tokens: &[String], results: &[String]) -> usize {
+    let mut count = 0;
+    for token in tokens {
+        if is_keyword(token) {
+            break;
+        }
+        count += 1;
+    }
+    // At minimum consume as many tokens as results (1 per result)
+    count.max(results.len())
 }
 
 /// Find all Rust files in a directory

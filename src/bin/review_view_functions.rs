@@ -1,4 +1,5 @@
-// Copyright (C) Brian G. Milnes 2025
+// Copyright (c) 2025 Brian G. Milnes
+// SPDX-License-Identifier: MIT
 
 //! Review view functions
 //!
