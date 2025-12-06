@@ -1309,7 +1309,8 @@ fn apply_broadcast_groups_to_file(
         new_lines.push(String::new());
     }
     
-    // Add broadcast use statement with proper indentation
+    // Add broadcast use statement with Veracity marker and proper indentation
+    new_lines.push(format!("{}// Veracity: added broadcast group", indent));
     new_lines.push(format!("{}broadcast use {{", indent));
     for (group_path, desc) in groups {
         new_lines.push(format!("{}    {},  // {}", indent, group_path, desc));
@@ -1751,13 +1752,13 @@ fn apply_broadcast_groups(file: &Path, groups: &[(String, String)]) -> Result<St
     // Build the new broadcast use block
     let mut broadcast_lines = vec![
         String::new(),
-        "    // Auto-added by veracity-minimize-lib".to_string(),
+        "    // Veracity: added broadcast group".to_string(),
         "    broadcast use {".to_string(),
     ];
     for (group, _desc) in groups {
         broadcast_lines.push(format!("        {},", group));
     }
-    broadcast_lines.push("    }".to_string());
+    broadcast_lines.push("    };".to_string());
     
     // Insert the broadcast block
     let mut new_lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
@@ -2051,12 +2052,62 @@ fn test_lemma_group(
     }
 }
 
+/// Check if codebase is in git and has no uncommitted changes
+fn check_git_status(codebase: &Path, dry_run: bool) -> Result<()> {
+    // Check if .git exists
+    let git_dir = codebase.join(".git");
+    if !git_dir.exists() {
+        log!("⚠ WARNING: Codebase is not a git repository!");
+        log!("  Veracity will modify files. Consider initializing git first:");
+        log!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", codebase.display());
+        log!();
+        if !dry_run {
+            return Err(anyhow::anyhow!("Codebase must be in git before running Veracity"));
+        }
+    }
+    
+    // Check for uncommitted changes
+    let status = Command::new("git")
+        .current_dir(codebase)
+        .args(["status", "--porcelain"])
+        .output();
+    
+    match status {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if !stdout.trim().is_empty() {
+                log!("═══════════════════════════════════════════════════════════════════════════════");
+                log!("⚠ WARNING: You have uncommitted changes!");
+                log!("═══════════════════════════════════════════════════════════════════════════════");
+                log!();
+                log!("Veracity will modify your files. Please commit your changes first:");
+                log!("    cd {} && git add -A && git commit -m 'Before Veracity'", codebase.display());
+                log!();
+                if !dry_run {
+                    return Err(anyhow::anyhow!("Please commit changes before running Veracity"));
+                }
+                log!("Continuing anyway because this is a dry run...");
+                log!();
+            }
+        }
+        _ => {
+            // git command failed - maybe not installed or not a repo
+            log!("⚠ Could not check git status");
+        }
+    }
+    
+    Ok(())
+}
+
 fn main() -> Result<()> {
     // Create analyses directory and clear log file
     let _ = std::fs::create_dir_all("analyses");
     let _ = std::fs::write(LOG_FILE, "");
     
     let args = MinimizeArgs::parse()?;
+    
+    // Check git status before proceeding
+    check_git_status(&args.codebase, args.dry_run)?;
     
     log!("Verus Library Minimizer");
     log!("=======================");
@@ -2089,19 +2140,24 @@ fn main() -> Result<()> {
     log!("to test and improve your use of vstd. All changes are reversible comments.");
     log!("You will need to review each // Veracity: line and decide what to keep.");
     log!();
-    log!("Comment markers used:");
-    log!("  // Veracity: USED            - Lemma is needed, was restored after test");
-    log!("  // Veracity: UNUSED          - Lemma not needed, left commented out");
-    log!("  // Veracity: UNNEEDED        - Call site not needed, left commented out");
-    log!("  // Veracity: DEPENDENT       - Lemma proven by vstd broadcast groups");
-    log!("  // Veracity: TESTING         - Temporary marker during testing (should not remain)");
-    log!();
     log!("Phases:");
     log!("  Phase 1: Discover vstd broadcast groups");
-    log!("  Phase 2: Apply broadcast groups to library (with -L flag)");
-    log!("  Phase 3: Analyze library (lemmas, modules, call sites, spec functions)");
-    log!("  Phase 4: Apply broadcast groups to codebase (with -b flag)");
-    log!("  Phase 5: Comment out unused lemmas");
+    log!("           Finds verus on PATH, locates vstd source, scans for broadcast groups");
+    log!("  Phase 2: Apply broadcast groups to library (-L flag)");
+    log!("           Analyzes library files, recommends and inserts broadcast use blocks");
+    log!("  Phase 3: Analyze library structure");
+    log!("           Scans for lemmas, modules, call sites, and spec functions");
+    log!("  Phase 4: Apply broadcast groups to codebase (-b flag)");
+    log!("           Analyzes codebase files, recommends and inserts broadcast use blocks");
+    log!("  Phase 5: Test lemmas for necessity");
+    log!("           Comments out lemma + call sites, verifies, marks USED or UNUSED");
+    log!();
+    log!("Comment markers inserted:");
+    log!("  // Veracity: added broadcast group - Phase 2/4: Marks inserted broadcast use blocks");
+    log!("  // Veracity: USED            - Phase 5: Lemma required, was restored after test");
+    log!("  // Veracity: UNUSED          - Phase 5: Lemma not needed, left commented out");
+    log!("  // Veracity: UNNEEDED        - Phase 5: Lemma call site not needed, left commented");
+    log!("  // Veracity: TESTING         - Temporary marker during Phase 5 (should not remain)");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
@@ -2122,9 +2178,10 @@ fn main() -> Result<()> {
     };
     log!();
     
-    // Phase 2: Propose and apply broadcast groups for library modules
+    // Phase 2: Recommend and apply broadcast groups to library
+    log!("Phase 2: Library broadcast groups...");
     let lib_recommendations = if !broadcast_groups.is_empty() {
-        log!("Phase 2a: Analyzing library for broadcast group recommendations...");
+        log!("  Analyzing library for broadcast group recommendations...");
         let recs = analyze_library_broadcast_groups(
             &args.library,
             &args.exclude_dirs,
@@ -2135,30 +2192,22 @@ fn main() -> Result<()> {
         } else {
             log!("  {} library files could benefit from broadcast groups", recs.len());
         }
-        log!();
         recs
     } else {
+        log!("  Skipped (no broadcast groups discovered)");
         Vec::new()
     };
     
-    // Phase 2b: Apply broadcast groups to library if requested
     if args.apply_lib_broadcasts && !args.dry_run && !lib_recommendations.is_empty() {
-        log!("Phase 2b: Applying broadcast groups to library...");
+        log!("  Applying broadcast groups to library...");
         for rec in &lib_recommendations {
             let rel_path = rec.file.strip_prefix(&args.library).unwrap_or(&rec.file);
-            log!("  Updating {}...", rel_path.display());
+            log!("    Updating {}...", rel_path.display());
             apply_broadcast_groups_to_file(&rec.file, &rec.recommended_groups)?;
         }
         log!("  Applied broadcast groups to {} files", lib_recommendations.len());
-        log!();
-    } else if args.apply_lib_broadcasts && args.dry_run {
-        log!("Phase 2b: Would apply broadcast groups to library (dry run)");
-        log!();
-    }
-    
-    // Phase 2c: Verify after applying broadcast groups
-    if args.apply_lib_broadcasts && !args.dry_run {
-        log!("Phase 2c: Verifying after broadcast group updates...");
+        
+        log!("  Verifying after broadcast group updates...");
         let success = run_verus(&args.codebase)?;
         if success {
             log!("  ✓ Verification passes with new broadcast groups");
@@ -2167,20 +2216,24 @@ fn main() -> Result<()> {
             log!("  Stopping here. Fix issues before testing lemma dependencies.");
             return Ok(());
         }
-        log!();
+    } else if args.apply_lib_broadcasts && args.dry_run {
+        log!("  Would apply broadcast groups to library (dry run, -L flag)");
+    } else if !args.apply_lib_broadcasts {
+        log!("  Skipped (use -L flag to apply)");
     }
+    log!();
     
-    // Phase 3a: Find all proof functions
-    log!("Phase 3a: Scanning library for proof functions (lemmas)...");
+    // Phase 3: Analyze library structure
+    log!("Phase 3: Analyzing library structure...");
+    
+    log!("  Scanning library for proof functions (lemmas)...");
     let proof_fns = list_library_proof_functions(&args.library)?;
     log!("  Found {} proof functions", proof_fns.len());
     
     let modules: HashSet<String> = proof_fns.iter().map(|pf| pf.module.clone()).collect();
     log!("  In {} modules", modules.len());
-    log!();
     
-    // Phase 3b: Check module usage
-    log!("Phase 3b: Checking which library modules are used in codebase...");
+    log!("  Checking which library modules are used in codebase...");
     let used_modules = find_used_modules(&args.codebase, &args.library, &modules)?;
     let unused_modules: Vec<_> = modules.difference(&used_modules).cloned().collect();
     
@@ -2188,17 +2241,14 @@ fn main() -> Result<()> {
     log!("  {} modules NOT used in codebase", unused_modules.len());
     
     if !unused_modules.is_empty() {
-        log!();
         log!("  Unused modules (can skip all their lemmas):");
         for m in &unused_modules {
             let count = proof_fns.iter().filter(|pf| &pf.module == m).count();
             log!("    - {} ({} lemmas)", m, count);
         }
     }
-    log!();
     
-    // Phase 3c: Find call sites
-    log!("Phase 3c: Scanning for lemma call sites...");
+    log!("  Scanning for lemma call sites...");
     let mut lemma_results: Vec<LemmaResult> = Vec::new();
     let mut total_lib_calls = 0;
     let mut total_codebase_calls = 0;
@@ -2246,15 +2296,13 @@ fn main() -> Result<()> {
     log!("  {} spec functions without explicit calls (excluding type variants where any is used)", unused_spec_fns.len());
     log!();
     
-    // Phase 4a: Analyze broadcast groups per file
-    log!("Phase 4a: Analyzing broadcast groups per file...");
+    // Phase 4: Apply broadcast groups to codebase
+    log!("Phase 4: Codebase broadcast groups...");
+    log!("  Analyzing broadcast groups per file...");
     let broadcast_recommendations = analyze_broadcast_groups_per_file(&args.codebase, &args.library, &args.exclude_dirs, &broadcast_groups)?;
-    log!();
     
-    // Phase 4b: Apply broadcast groups if requested (skip in dry-run mode)
     if args.update_broadcasts && !args.dry_run && !broadcast_recommendations.is_empty() {
-        log!("Phase 4b: Applying broadcast group recommendations...");
-        log!();
+        log!("  Applying broadcast group recommendations...");
         
         // First, get baseline verification time
         log!("  Getting baseline verification time...");
@@ -2338,8 +2386,9 @@ fn main() -> Result<()> {
     log!("  {} lemmas in used modules (need testing)", num_to_test);
     log!();
     
-    // Phase 5a: Time verification
-    log!("Phase 5a: Timing verification...");
+    // Phase 5: Test lemmas for necessity
+    log!("Phase 5: Testing lemmas for necessity...");
+    log!("  Timing verification...");
     let (success, duration) = run_verus_timed(&args.codebase)?;
     
     if !success {
@@ -2376,24 +2425,12 @@ fn main() -> Result<()> {
         log!("DRY RUN - Would perform the following phases");
         log!("═══════════════════════════════════════════════════════════════");
         log!();
-        log!("PHASE 1: Broadcast group updates (with -L and -b flags)");
-        log!("  - Apply broadcast groups to library files (-L)");
-        log!("  - Apply broadcast groups to codebase files (-b)");
-        log!("  - Verify everything still works");
-        log!();
-        log!("PHASE 2: Test lemmas for DEPENDENCE (with -L flag)");
-        log!("  For each top-level lemma:");
-        log!("  1. Comment out lemma + all call sites");
-        log!("  2. Run verification");
-        log!("  3. If PASSES → Mark // Veracity: DEPENDENT (vstd proves it)");
-        log!("  4. Restore (dependent lemmas may still be needed for context)");
-        log!();
-        log!("PHASE 3: Test lemmas for commenting out");
-        log!("  For each lemma:");
-        log!("  1. Comment out lemma + call sites");
-        log!("  2. Run verification");
-        log!("  3. If FAILS  → Mark // Veracity: USED, restore");
+        log!("In Phase 5, for each lemma the tool would:");
+        log!("  1. Comment out lemma definition + all call sites");
+        log!("  2. Run Verus verification");
+        log!("  3. If FAILS  → Mark // Veracity: USED, restore original code");
         log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented out");
+        log!("  5. Mark each commented call site with // Veracity: UNNEEDED");
         log!();
         log!("Note: All changes are comments only. Review marked lemmas and decide");
         log!("      what to keep (e.g., for future development) or actually delete.");
