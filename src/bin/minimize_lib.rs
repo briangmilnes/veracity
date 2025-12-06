@@ -2517,7 +2517,7 @@ fn main() -> Result<()> {
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
     
-    // Log the git status (already checked above)
+    // Check git status and handle based on danger_mode
     match git_status {
         GitStatus::Clean => {
             log!("✓ Codebase is in git and committed. Proceeding safely.");
@@ -2527,12 +2527,11 @@ fn main() -> Result<()> {
             log!();
             log!("  Please commit your changes first:");
             log!("    cd {} && git add -A && git commit -m 'Before Veracity'", args.codebase.display());
+            log!();
+            
             if args.dry_run {
-                log!();
                 log!("  (Continuing anyway because this is a dry run...)");
-            } else {
-                // Must be danger_mode since we checked above
-                log!();
+            } else if args.danger_mode {
                 log!("  ╔════════════════════════════════════════════════════════════╗");
                 log!("  ║  !!!  DANGER MODE - UNCOMMITTED CHANGES AT RISK!  !!!      ║");
                 log!("  ║                                                            ║");
@@ -2541,6 +2540,9 @@ fn main() -> Result<()> {
                 log!("  ║                                                            ║");
                 log!("  ║  Proceeding anyway because you asked for --danger...       ║");
                 log!("  ╚════════════════════════════════════════════════════════════╝");
+            } else {
+                log!("  Exiting. Use --danger to proceed anyway (not recommended).");
+                return Ok(());
             }
         }
         GitStatus::NotInGit => {
@@ -2548,12 +2550,11 @@ fn main() -> Result<()> {
             log!();
             log!("  Please initialize git first:");
             log!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", args.codebase.display());
+            log!();
+            
             if args.dry_run {
-                log!();
                 log!("  (Continuing anyway because this is a dry run...)");
-            } else {
-                // Must be danger_mode since we checked above
-                log!();
+            } else if args.danger_mode {
                 log!("  ╔════════════════════════════════════════════════════════════╗");
                 log!("  ║  !!!  DANGER MODE - NO VERSION CONTROL!  !!!               ║");
                 log!("  ║                                                            ║");
@@ -2562,6 +2563,9 @@ fn main() -> Result<()> {
                 log!("  ║                                                            ║");
                 log!("  ║  Proceeding anyway because you asked for --danger...       ║");
                 log!("  ╚════════════════════════════════════════════════════════════╝");
+            } else {
+                log!("  Exiting. Use --danger to proceed anyway (not recommended).");
+                return Ok(());
             }
         }
         GitStatus::Unknown => {
