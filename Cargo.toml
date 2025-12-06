@@ -69,6 +69,10 @@ path = "src/bin/review_proof_state.rs"
 name = "veracity-minimize-lib"
 path = "src/bin/minimize_lib.rs"
 
+[[bin]]
+name = "veracity-lemma-search"
+path = "src/bin/lemma_search.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants
