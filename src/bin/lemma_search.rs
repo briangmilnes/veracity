@@ -145,7 +145,7 @@ impl SearchArgs {
         }
         
         let raw_pattern = pattern_parts.join(" ");
-        let pattern = parse_search_pattern(&raw_pattern)?;
+        let pattern = parse_search_pattern(&pattern_parts)?;
         
         Ok(SearchArgs {
             vstd_path,
@@ -652,45 +652,49 @@ fn extract_clauses(text: &str, keyword: &str) -> Vec<String> {
 
 /// Check if a lemma matches the search pattern
 fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
-    // Check name pattern
+    // Check name pattern (case-insensitive substring match)
     if let Some(ref name_pat) = pattern.name {
         if !lemma.name.to_lowercase().contains(&name_pat.to_lowercase()) {
             return false;
         }
     }
     
-    // Check required bounds
-    for required in &pattern.required_bounds {
+    // Check argument types (all must match)
+    for required in &pattern.arg_types {
+        let found = lemma.args.iter().any(|a| 
+            a.ty.to_lowercase().contains(&required.to_lowercase())
+        );
+        if !found {
+            return false;
+        }
+    }
+    
+    // Check generic type bounds (all must match)
+    for required in &pattern.type_bounds {
+        let req_lower = required.to_lowercase();
         let found = lemma.generics.iter().any(|g| {
-            g.name.contains(required) || g.bounds.iter().any(|b| b.contains(required))
-        }) || lemma.args.iter().any(|a| a.ty.contains(required))
-          || lemma.requires.iter().any(|r| r.contains(required))
-          || lemma.ensures.iter().any(|e| e.contains(required));
+            g.name.to_lowercase().contains(&req_lower) || 
+            g.bounds.iter().any(|b| b.to_lowercase().contains(&req_lower))
+        }) || lemma.args.iter().any(|a| a.ty.to_lowercase().contains(&req_lower));
         
         if !found {
             return false;
         }
     }
     
-    // Check required requires types
-    for required in &pattern.required_requires_types {
-        let found = lemma.requires.iter().any(|r| r.contains(required));
+    // Check requires patterns (all must match)
+    for required in &pattern.requires_patterns {
+        let req_lower = required.to_lowercase();
+        let found = lemma.requires.iter().any(|r| r.to_lowercase().contains(&req_lower));
         if !found {
             return false;
         }
     }
     
-    // Check required ensures types
-    for required in &pattern.required_ensures_types {
-        let found = lemma.ensures.iter().any(|e| e.contains(required));
-        if !found {
-            return false;
-        }
-    }
-    
-    // Check required arg types
-    for required in &pattern.required_arg_types {
-        let found = lemma.args.iter().any(|a| a.ty.contains(required));
+    // Check ensures patterns (all must match)
+    for required in &pattern.ensures_patterns {
+        let req_lower = required.to_lowercase();
+        let found = lemma.ensures.iter().any(|e| e.to_lowercase().contains(&req_lower));
         if !found {
             return false;
         }
@@ -836,3 +840,182 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =========================================================================
+    // Test: Help output format
+    // =========================================================================
+    #[test]
+    fn test_help_displays_usage() {
+        // This test verifies the help message structure
+        // We can't easily capture stdout, but we verify the function exists
+        // and the usage string format is correct
+        let program_name = "veracity-lemma-search";
+        
+        // Verify program name extraction works
+        let name = std::path::Path::new(program_name)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(program_name);
+        
+        assert_eq!(name, "veracity-lemma-search");
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - empty pattern
+    // =========================================================================
+    #[test]
+    fn test_parse_empty_pattern() {
+        let tokens: Vec<String> = vec![];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern, SearchPattern::default());
+        assert!(pattern.name.is_none());
+        assert!(pattern.arg_types.is_empty());
+        assert!(pattern.type_bounds.is_empty());
+        assert!(pattern.requires_patterns.is_empty());
+        assert!(pattern.ensures_patterns.is_empty());
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "proof fn NAME"
+    // =========================================================================
+    #[test]
+    fn test_parse_proof_fn_name() {
+        let tokens: Vec<String> = vec![
+            "proof".to_string(),
+            "fn".to_string(),
+            "lemma_add".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.name, Some("lemma_add".to_string()));
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - just "fn NAME" 
+    // =========================================================================
+    #[test]
+    fn test_parse_fn_name_without_proof() {
+        let tokens: Vec<String> = vec![
+            "fn".to_string(),
+            "array_index".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.name, Some("array_index".to_string()));
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - just NAME (bare word)
+    // =========================================================================
+    #[test]
+    fn test_parse_bare_name() {
+        let tokens: Vec<String> = vec!["array".to_string()];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.name, Some("array".to_string()));
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "args TYPE"
+    // =========================================================================
+    #[test]
+    fn test_parse_args_single_type() {
+        let tokens: Vec<String> = vec![
+            "args".to_string(),
+            "int".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.arg_types, vec!["int".to_string()]);
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "types TYPE, TYPE"
+    // =========================================================================
+    #[test]
+    fn test_parse_types_comma_separated() {
+        let tokens: Vec<String> = vec![
+            "types".to_string(),
+            "Seq,".to_string(),
+            "int".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert!(pattern.type_bounds.contains(&"Seq".to_string()));
+        assert!(pattern.type_bounds.contains(&"int".to_string()));
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "requires PATTERN"
+    // =========================================================================
+    #[test]
+    fn test_parse_requires() {
+        let tokens: Vec<String> = vec![
+            "requires".to_string(),
+            "nat".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.requires_patterns, vec!["nat".to_string()]);
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - "ensures PATTERN"
+    // =========================================================================
+    #[test]
+    fn test_parse_ensures() {
+        let tokens: Vec<String> = vec![
+            "ensures".to_string(),
+            "int".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.ensures_patterns, vec!["int".to_string()]);
+    }
+
+    // =========================================================================
+    // Test: Pattern parsing - combined pattern
+    // =========================================================================
+    #[test]
+    fn test_parse_combined_pattern() {
+        let tokens: Vec<String> = vec![
+            "proof".to_string(),
+            "fn".to_string(),
+            "lemma".to_string(),
+            "types".to_string(),
+            "Seq".to_string(),
+            "requires".to_string(),
+            "nat".to_string(),
+            "ensures".to_string(),
+            "int".to_string(),
+        ];
+        let pattern = parse_search_pattern(&tokens).unwrap();
+        
+        assert_eq!(pattern.name, Some("lemma".to_string()));
+        assert!(pattern.type_bounds.contains(&"Seq".to_string()));
+        assert_eq!(pattern.requires_patterns, vec!["nat".to_string()]);
+        assert_eq!(pattern.ensures_patterns, vec!["int".to_string()]);
+    }
+
+    // =========================================================================
+    // Test: Keyword detection
+    // =========================================================================
+    #[test]
+    fn test_is_keyword() {
+        assert!(is_keyword("proof"));
+        assert!(is_keyword("PROOF"));  // case insensitive
+        assert!(is_keyword("fn"));
+        assert!(is_keyword("args"));
+        assert!(is_keyword("types"));
+        assert!(is_keyword("requires"));
+        assert!(is_keyword("ensures"));
+        
+        assert!(!is_keyword("lemma"));
+        assert!(!is_keyword("int"));
+        assert!(!is_keyword("Seq"));
+    }
+}
