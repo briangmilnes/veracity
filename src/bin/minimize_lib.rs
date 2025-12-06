@@ -2224,14 +2224,14 @@ fn main() -> Result<()> {
                 log!("  (Continuing anyway because this is a dry run...)");
             } else if args.danger_mode {
                 log!();
-                log!("  ╔════════════════════════════════════════════════════════════════╗");
-                log!("  ║  ⚠️  DANGER MODE ACTIVATED - UNCOMMITTED CHANGES AT RISK! ⚠️  ║");
-                log!("  ║                                                                ║");
-                log!("  ║  You have uncommitted changes. Veracity will modify files.    ║");
-                log!("  ║  If something goes wrong, you may LOSE YOUR WORK!             ║");
-                log!("  ║                                                                ║");
-                log!("  ║  Proceeding anyway because you asked for --danger...          ║");
-                log!("  ╚════════════════════════════════════════════════════════════════╝");
+                log!("  ╔════════════════════════════════════════════════════════════╗");
+                log!("  ║  !!!  DANGER MODE - UNCOMMITTED CHANGES AT RISK!  !!!      ║");
+                log!("  ║                                                            ║");
+                log!("  ║  You have uncommitted changes. Veracity will modify files. ║");
+                log!("  ║  If something goes wrong, you may LOSE YOUR WORK!          ║");
+                log!("  ║                                                            ║");
+                log!("  ║  Proceeding anyway because you asked for --danger...       ║");
+                log!("  ╚════════════════════════════════════════════════════════════╝");
             } else {
                 return Err(anyhow::anyhow!("Please commit changes before running Veracity (or use --danger to override)"));
             }
@@ -2246,14 +2246,14 @@ fn main() -> Result<()> {
                 log!("  (Continuing anyway because this is a dry run...)");
             } else if args.danger_mode {
                 log!();
-                log!("  ╔════════════════════════════════════════════════════════════════╗");
-                log!("  ║  ⚠️  DANGER MODE ACTIVATED - NO VERSION CONTROL! ⚠️           ║");
-                log!("  ║                                                                ║");
-                log!("  ║  This codebase is not in git. Veracity will modify files.     ║");
-                log!("  ║  If something goes wrong, THERE IS NO UNDO!                   ║");
-                log!("  ║                                                                ║");
-                log!("  ║  Proceeding anyway because you asked for --danger...          ║");
-                log!("  ╚════════════════════════════════════════════════════════════════╝");
+                log!("  ╔════════════════════════════════════════════════════════════╗");
+                log!("  ║  !!!  DANGER MODE - NO VERSION CONTROL!  !!!               ║");
+                log!("  ║                                                            ║");
+                log!("  ║  This codebase is not in git. Veracity will modify files.  ║");
+                log!("  ║  If something goes wrong, THERE IS NO UNDO!                ║");
+                log!("  ║                                                            ║");
+                log!("  ║  Proceeding anyway because you asked for --danger...       ║");
+                log!("  ╚════════════════════════════════════════════════════════════╝");
             } else {
                 return Err(anyhow::anyhow!("Codebase must be in git before running Veracity (or use --danger to override)"));
             }
