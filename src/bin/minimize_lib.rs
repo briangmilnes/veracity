@@ -622,7 +622,7 @@ fn list_library_spec_functions(library: &Path) -> Result<Vec<SpecFn>> {
     Ok(all_spec_fns)
 }
 
-/// Count usage of a spec function in the codebase
+/// Count usage of a spec function in the codebase using AST traversal
 fn count_spec_fn_usage(spec_fn_name: &str, codebase: &Path, library: &Path, exclude_dirs: &[String]) -> Result<(usize, usize)> {
     let all_files = find_rust_files(codebase);
     
@@ -643,34 +643,90 @@ fn count_spec_fn_usage(spec_fn_name: &str, codebase: &Path, library: &Path, excl
     for file in &filtered_files {
         if let Ok(content) = std::fs::read_to_string(file) {
             let in_library = file.starts_with(library);
+            let uses = count_identifier_uses_in_file(&content, spec_fn_name);
             
-            for line in content.lines() {
-                // Look for function calls: name( or name::< (turbofish)
-                // Also look for references in specs: name@, name.view()
-                if line.contains(&format!("{}(", spec_fn_name)) ||
-                   line.contains(&format!("{}::<", spec_fn_name)) ||
-                   line.contains(&format!("{}@", spec_fn_name))
-                {
-                    // Skip the definition line itself
-                    if line.contains("spec fn ") || line.contains("open spec fn ") {
-                        continue;
-                    }
-                    // Skip comments
-                    if line.trim().starts_with("//") {
-                        continue;
-                    }
-                    
-                    if in_library {
-                        lib_uses += 1;
-                    } else {
-                        codebase_uses += 1;
+            if in_library {
+                lib_uses += uses;
+            } else {
+                codebase_uses += uses;
+            }
+        }
+    }
+    
+    Ok((lib_uses, codebase_uses))
+}
+
+/// Count uses of an identifier in a file using token traversal
+fn count_identifier_uses_in_file(content: &str, name: &str) -> usize {
+    let parsed = ra_ap_syntax::SourceFile::parse(content, ra_ap_syntax::Edition::Edition2021);
+    let tree = parsed.tree();
+    
+    let mut count = 0;
+    
+    // Search in verus! macros
+    for node in tree.syntax().descendants() {
+        if node.kind() == SyntaxKind::MACRO_CALL {
+            if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
+                if let Some(macro_path) = macro_call.path() {
+                    let path_str = macro_path.to_string();
+                    if path_str == "verus" || path_str == "verus!" {
+                        if let Some(token_tree) = macro_call.token_tree() {
+                            count += count_ident_uses_in_tokens(token_tree.syntax(), name);
+                        }
                     }
                 }
             }
         }
     }
     
-    Ok((lib_uses, codebase_uses))
+    count
+}
+
+/// Count identifier uses in a token tree, excluding definitions
+fn count_ident_uses_in_tokens(tree: &ra_ap_syntax::SyntaxNode, name: &str) -> usize {
+    let tokens: Vec<_> = tree.descendants_with_tokens()
+        .filter_map(|n| n.into_token())
+        .collect();
+    
+    let mut count = 0;
+    let mut i = 0;
+    
+    while i < tokens.len() {
+        let token = &tokens[i];
+        
+        // Look for our identifier
+        if token.kind() == SyntaxKind::IDENT && token.text() == name {
+            // Check if this is a definition (preceded by "fn" or "spec fn")
+            let is_definition = {
+                let start = i.saturating_sub(5);
+                let mut found_fn = false;
+                for j in start..i {
+                    if tokens[j].kind() == SyntaxKind::FN_KW {
+                        found_fn = true;
+                        break;
+                    }
+                }
+                found_fn
+            };
+            
+            if !is_definition {
+                // Check if followed by ( or ::< or @ (actual usage)
+                let next_idx = i + 1;
+                if next_idx < tokens.len() {
+                    let next = &tokens[next_idx];
+                    if next.kind() == SyntaxKind::L_PAREN || 
+                       next.kind() == SyntaxKind::COLON2 ||
+                       next.text() == "@" {
+                        count += 1;
+                    }
+                }
+            }
+        }
+        
+        i += 1;
+    }
+    
+    count
 }
 
 fn find_function_end_line(tokens: &[ra_ap_syntax::SyntaxToken], fn_idx: usize, content: &str) -> usize {
@@ -1387,66 +1443,8 @@ fn analyze_library_broadcast_groups(
     Ok(recommendations)
 }
 
-/// Comment out an empty-body lemma by finding the full lemma definition and commenting it
-fn comment_out_empty_body_lemma(file: &Path, body_line: usize) -> Result<()> {
-    let content = std::fs::read_to_string(file)?;
-    let lines: Vec<&str> = content.lines().collect();
-    
-    // Find the start of the lemma (look backwards for "proof fn" or "pub proof fn")
-    let mut start_line = body_line;
-    while start_line > 1 {
-        start_line -= 1;
-        let line = lines.get(start_line - 1).unwrap_or(&"");
-        if line.contains("proof fn ") || line.contains("pub proof fn ") {
-            break;
-        }
-        // Also check for attributes like #[verifier::...]
-        if line.trim().starts_with("#[") {
-            // Keep going back to include attributes
-            continue;
-        }
-        // Check for doc comments
-        if line.trim().starts_with("///") || line.trim().starts_with("//!") {
-            continue;
-        }
-    }
-    
-    // Find the end of the lemma (the closing brace)
-    let mut end_line = body_line;
-    let mut brace_depth = 0;
-    for i in (start_line - 1)..lines.len() {
-        let line = lines[i];
-        brace_depth += line.matches('{').count() as i32;
-        brace_depth -= line.matches('}').count() as i32;
-        if brace_depth == 0 && line.contains('}') {
-            end_line = i + 1;
-            break;
-        }
-    }
-    
-    // Comment out lines from start_line to end_line
-    let mut new_lines: Vec<String> = Vec::new();
-    for (i, line) in lines.iter().enumerate() {
-        let line_num = i + 1;
-        if line_num >= start_line && line_num <= end_line {
-            if line_num == start_line {
-                new_lines.push(format!("// NOT-INDEPENDENT-OF-VSTD {}", line));
-            } else {
-                new_lines.push(format!("// {}", line));
-            }
-        } else {
-            new_lines.push(line.to_string());
-        }
-    }
-    
-    std::fs::write(file, new_lines.join("\n") + "\n")?;
-    Ok(())
-}
-
-/// Find lemmas with empty bodies (just `{}` or `{ }`)
+/// Find lemmas with empty bodies using AST traversal
 /// These can potentially be removed if broadcast groups provide the needed axioms
-/// Only finds actual implementations, not trait method declarations (which end with `;`)
-/// TODO: This uses string hacking - should be rewritten to use ra_ap_syntax AST traversal
 fn find_empty_body_lemmas(library: &Path) -> Result<Vec<(PathBuf, String, usize)>> {
     let mut empty_lemmas = Vec::new();
     
@@ -1461,79 +1459,163 @@ fn find_empty_body_lemmas(library: &Path) -> Result<Vec<(PathBuf, String, usize)
             Err(_) => continue,
         };
         
-        let lines: Vec<&str> = content.lines().collect();
-        let mut i = 0;
+        let parsed = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+        let tree = parsed.tree();
         
-        while i < lines.len() {
-            let line = lines[i].trim();
-            
-            // Look for "proof fn name"
-            if line.contains("proof fn ") || 
-               (line.contains("proof") && i + 1 < lines.len() && lines[i + 1].trim().starts_with("fn ")) {
-                
-                // Extract function name
-                let fn_line = if line.contains("fn ") { line } else { lines[i + 1].trim() };
-                let name = fn_line
-                    .split("fn ")
-                    .nth(1)
-                    .and_then(|s| s.split(['(', '<', ' ']).next())
-                    .unwrap_or("unknown")
-                    .to_string();
-                
-                // Find the opening brace, but stop if we hit a standalone semicolon (trait declaration)
-                // Also limit search to 20 lines to avoid matching wrong functions
-                let mut j = i;
-                let mut found_brace = false;
-                let max_search = std::cmp::min(i + 20, lines.len());
-                
-                while j < max_search {
-                    let search_line = lines[j].trim();
-                    
-                    // A standalone `;` or line ending with `;` (after requires/ensures) means trait declaration
-                    if search_line == ";" || 
-                       (search_line.ends_with(';') && !search_line.contains("let ")) {
-                        // This is a trait method declaration, not an implementation
-                        break;
-                    }
-                    
-                    // If we hit another function definition, stop
-                    if j > i && (search_line.starts_with("fn ") || 
-                                 search_line.starts_with("proof fn ") ||
-                                 search_line.starts_with("pub fn ") ||
-                                 search_line.starts_with("pub proof fn ") ||
-                                 search_line.starts_with("spec fn ") ||
-                                 search_line.starts_with("pub spec fn ")) {
-                        break;
-                    }
-                    
-                    if search_line.contains('{') {
-                        found_brace = true;
-                        break;
-                    }
-                    j += 1;
-                }
-                
-                if found_brace && j < max_search {
-                    let brace_line = lines[j].trim();
-                    // Check if it's an empty body: ends with {} or { }
-                    if brace_line.ends_with("{}") || brace_line.ends_with("{ }") {
-                        empty_lemmas.push((path.to_path_buf(), name, j + 1));
-                    } else if brace_line.ends_with("{") {
-                        // Check next line for just }
-                        if j + 1 < lines.len() {
-                            let next = lines[j + 1].trim();
-                            if next == "}" {
-                                empty_lemmas.push((path.to_path_buf(), name, j + 1));
+        // Find verus! macro calls
+        for node in tree.syntax().descendants() {
+            if node.kind() == SyntaxKind::MACRO_CALL {
+                if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
+                    if let Some(macro_path) = macro_call.path() {
+                        let path_str = macro_path.to_string();
+                        if path_str == "verus" || path_str == "verus!" {
+                            if let Some(token_tree) = macro_call.token_tree() {
+                                let fns = find_empty_proof_fns_in_verus_macro(
+                                    token_tree.syntax(),
+                                    path,
+                                    &content,
+                                );
+                                empty_lemmas.extend(fns);
                             }
                         }
                     }
                 }
             }
-            i += 1;
         }
     }
     
     Ok(empty_lemmas)
+}
+
+/// Find proof fns with empty bodies in a verus! macro using token traversal
+/// Only finds TOP-LEVEL lemmas, not those inside trait or impl blocks
+fn find_empty_proof_fns_in_verus_macro(
+    tree: &ra_ap_syntax::SyntaxNode,
+    file: &Path,
+    content: &str,
+) -> Vec<(PathBuf, String, usize)> {
+    let tokens: Vec<_> = tree.descendants_with_tokens()
+        .filter_map(|n| n.into_token())
+        .collect();
+    
+    let mut results = Vec::new();
+    let mut i = 0;
+    
+    // Track nesting: are we inside a trait or impl block?
+    // We use a stack of brace depths: when we enter an impl/trait, we push the current depth
+    let mut impl_trait_start_depths: Vec<i32> = Vec::new();
+    let mut brace_depth: i32 = 0;
+    
+    while i < tokens.len() {
+        let token = &tokens[i];
+        
+        // Track all braces
+        if token.kind() == SyntaxKind::L_CURLY {
+            brace_depth += 1;
+        } else if token.kind() == SyntaxKind::R_CURLY {
+            brace_depth -= 1;
+            // Check if we're closing an impl/trait block
+            if let Some(&start_depth) = impl_trait_start_depths.last() {
+                if brace_depth == start_depth {
+                    impl_trait_start_depths.pop();
+                }
+            }
+        }
+        
+        // Track impl/trait blocks
+        if token.kind() == SyntaxKind::IMPL_KW || token.kind() == SyntaxKind::TRAIT_KW {
+            // Record that we're entering an impl/trait at this brace depth
+            impl_trait_start_depths.push(brace_depth);
+            i += 1;
+            continue;
+        }
+        
+        // Are we inside an impl/trait block?
+        let in_impl_or_trait = !impl_trait_start_depths.is_empty();
+        
+        // Look for "fn" keyword - but only at top level (not inside impl/trait)
+        if token.kind() == SyntaxKind::FN_KW && !in_impl_or_trait {
+            // Check if preceded by "proof" identifier
+            let start_idx = i.saturating_sub(10);
+            let mut is_proof = false;
+            
+            for j in start_idx..i {
+                if tokens[j].kind() == SyntaxKind::IDENT && tokens[j].text() == "proof" {
+                    is_proof = true;
+                    break;
+                }
+            }
+            
+            if is_proof {
+                // Get function name
+                if let Some(name) = get_next_ident(&tokens, i) {
+                    // Find the function body - look for { and }
+                    let mut j = i + 1;
+                    let mut found_semicolon_before_brace = false;
+                    let mut brace_start = None;
+                    let mut paren_depth = 0;
+                    
+                    // Skip to after the parameter list
+                    while j < tokens.len() {
+                        match tokens[j].kind() {
+                            SyntaxKind::L_PAREN => paren_depth += 1,
+                            SyntaxKind::R_PAREN => paren_depth -= 1,
+                            SyntaxKind::SEMICOLON if paren_depth == 0 => {
+                                // Trait declaration, not implementation
+                                found_semicolon_before_brace = true;
+                                break;
+                            }
+                            SyntaxKind::L_CURLY if paren_depth == 0 => {
+                                brace_start = Some(j);
+                                break;
+                            }
+                            _ => {}
+                        }
+                        j += 1;
+                    }
+                    
+                    if found_semicolon_before_brace {
+                        i += 1;
+                        continue;
+                    }
+                    
+                    if let Some(brace_idx) = brace_start {
+                        // Find matching closing brace
+                        let mut depth = 1;
+                        let mut k = brace_idx + 1;
+                        let mut brace_end = None;
+                        let mut has_non_whitespace = false;
+                        
+                        while k < tokens.len() && depth > 0 {
+                            match tokens[k].kind() {
+                                SyntaxKind::L_CURLY => depth += 1,
+                                SyntaxKind::R_CURLY => {
+                                    depth -= 1;
+                                    if depth == 0 {
+                                        brace_end = Some(k);
+                                    }
+                                }
+                                SyntaxKind::WHITESPACE | SyntaxKind::COMMENT => {}
+                                _ => has_non_whitespace = true,
+                            }
+                            k += 1;
+                        }
+                        
+                        // If body is empty (only whitespace/comments between braces)
+                        if brace_end.is_some() && !has_non_whitespace {
+                            let start_offset: usize = token.text_range().start().into();
+                            let line_num = offset_to_line(content, start_offset);
+                            results.push((file.to_path_buf(), name, line_num));
+                        }
+                    }
+                }
+            }
+        }
+        
+        i += 1;
+    }
+    
+    results
 }
 
 /// Find vstd source directory from verus binary location
@@ -2142,45 +2224,14 @@ fn main() -> Result<()> {
     if empty_lemmas.is_empty() {
         log!("  All library lemmas are independent of vstd.");
     } else {
-        log!("  {} lemmas not independent of vstd (prove with empty body, can be removed):", empty_lemmas.len());
+        log!("  {} lemmas prove with empty body (rely on vstd broadcast groups):", empty_lemmas.len());
+        log!("  Note: These are often trait implementations - can't be removed, but don't add independent value.");
         for (file, name, line) in &empty_lemmas {
             let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
             log!("    {}:{} - {}", rel_path.display(), line, name);
         }
     }
     log!();
-    
-    // Step 0c.2: Comment out non-independent lemmas if -L is set
-    if args.apply_lib_broadcasts && !args.dry_run && !empty_lemmas.is_empty() {
-        log!("Step 0c.2: Commenting out non-independent lemmas...");
-        let mut commented_count = 0;
-        for (file, name, line) in &empty_lemmas {
-            match comment_out_empty_body_lemma(file, *line) {
-                Ok(_) => {
-                    commented_count += 1;
-                }
-                Err(e) => {
-                    let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-                    log!("  ⚠ Failed to comment out {} in {}: {}", name, rel_path.display(), e);
-                }
-            }
-        }
-        log!("  Commented out {} non-independent lemmas", commented_count);
-        
-        // Verify the code still compiles after commenting out lemmas
-        log!("  Verifying after commenting out lemmas...");
-        let success = run_verus(&args.codebase)?;
-        if success {
-            log!("  ✓ Verification still passes");
-        } else {
-            log!("  ✗ Verification failed - some lemmas may still be needed");
-            log!("    Run without -L to see which lemmas are needed");
-        }
-        log!();
-    } else if args.apply_lib_broadcasts && args.dry_run && !empty_lemmas.is_empty() {
-        log!("Step 0c.2: Would comment out {} non-independent lemmas (dry run)", empty_lemmas.len());
-        log!();
-    }
     
     // Step 1: Find all proof functions
     log!("Step 1: Scanning library for proof functions (lemmas)...");
