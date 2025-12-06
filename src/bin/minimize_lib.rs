@@ -263,6 +263,7 @@ impl MinimizeArgs {
                     let n: usize = args[i].parse()
                         .map_err(|_| anyhow::anyhow!("Invalid number: {}", args[i]))?;
                     max_asserts = Some(n);
+                    assert_minimization = true; // -A implies -a
                     i += 1;
                 }
                 "--help" | "-h" => {
@@ -296,7 +297,7 @@ impl MinimizeArgs {
         log!("  -l, --library DIR           Path to the library directory");
         log!("  -N, --number-of-lemmas N    Limit to testing N lemmas (for incremental runs)");
         log!("  -a, --assert-minimization   Enable assert minimization (Phase 9 & 10)");
-        log!("  -A, --max-asserts N         Limit to testing N asserts (use with -a)");
+        log!("  -A, --max-asserts N         Limit to testing N asserts (implies -a)");
         log!("  -e, --exclude DIR           Exclude directory from analysis (can use multiple times)");
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
