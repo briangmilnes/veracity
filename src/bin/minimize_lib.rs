@@ -2183,6 +2183,7 @@ enum GitStatus {
 }
 
 /// Check if codebase is in git and has no uncommitted changes
+/// Ignores the veracity log file (analyses/veracity-minimize-lib.log)
 fn check_git_status(codebase: &Path) -> GitStatus {
     // Check if .git exists
     let git_dir = codebase.join(".git");
@@ -2199,7 +2200,12 @@ fn check_git_status(codebase: &Path) -> GitStatus {
     match status {
         Ok(output) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            if stdout.trim().is_empty() {
+            // Filter out our own log file from the status
+            let significant_changes: Vec<&str> = stdout
+                .lines()
+                .filter(|line| !line.ends_with("veracity-minimize-lib.log"))
+                .collect();
+            if significant_changes.is_empty() {
                 GitStatus::Clean
             } else {
                 GitStatus::Uncommitted
@@ -2212,30 +2218,13 @@ fn check_git_status(codebase: &Path) -> GitStatus {
 fn main() -> Result<()> {
     let args = MinimizeArgs::parse()?;
     
-    // Check git status BEFORE creating any files
-    let git_status = check_git_status(&args.codebase);
-    
-    // Handle git check failures before we create the log file
-    match &git_status {
-        GitStatus::Uncommitted if !args.dry_run && !args.danger_mode => {
-            println!("✗ Codebase is in git but has uncommitted changes.");
-            println!();
-            println!("  Please commit your changes first:");
-            println!("    cd {} && git add -A && git commit -m 'Before Veracity'", args.codebase.display());
-            return Err(anyhow::anyhow!("Please commit changes before running Veracity (or use --danger to override)"));
-        }
-        GitStatus::NotInGit if !args.dry_run && !args.danger_mode => {
-            println!("✗ Codebase is not in git.");
-            println!();
-            println!("  Please initialize git first:");
-            println!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", args.codebase.display());
-            return Err(anyhow::anyhow!("Codebase must be in git before running Veracity (or use --danger to override)"));
-        }
-        _ => {}
-    }
-    
-    // Now safe to initialize logging
+    // Initialize logging first so all output goes to the log
+    // Note: This creates a log file which may show as untracked in git.
+    // Add *.log to your .gitignore in the analyses/ directory.
     let log_path = init_logging(&args.codebase);
+    
+    // Check git status (ignore our log file - it's expected to be untracked)
+    let git_status = check_git_status(&args.codebase);
     
     log!("Verus Library Minimizer");
     log!("=======================");
