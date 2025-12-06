@@ -319,7 +319,7 @@ impl MinimizeArgs {
         log!("  # Full minimization including assert testing:");
         log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a", name);
         log!();
-        log!("  # The whole enchilada (all phases, all tests):");
+        log!("  # Full minimization (all phases, all tests):");
         log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a -e experiments", name);
     }
 }
