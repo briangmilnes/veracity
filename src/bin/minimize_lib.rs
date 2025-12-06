@@ -80,6 +80,7 @@ struct MinimizeArgs {
     max_lemmas: Option<usize>,
     exclude_dirs: Vec<String>,
     danger_mode: bool,
+    fail_fast: bool,
     update_broadcasts: bool,
     apply_lib_broadcasts: bool,
 }
@@ -173,6 +174,7 @@ impl MinimizeArgs {
         let mut update_broadcasts = false;
         let mut apply_lib_broadcasts = false;
         let mut danger_mode = false;
+        let mut fail_fast = false;
         
         let mut i = 1;
         while i < args.len() {
@@ -241,6 +243,10 @@ impl MinimizeArgs {
                     danger_mode = true;
                     i += 1;
                 }
+                "--fail-fast" | "-f" => {
+                    fail_fast = true;
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -254,7 +260,7 @@ impl MinimizeArgs {
         let codebase = codebase.ok_or_else(|| anyhow::anyhow!("-c/--codebase is required"))?;
         let library = library.ok_or_else(|| anyhow::anyhow!("-l/--library is required"))?;
         
-        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode })
+        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode, fail_fast })
     }
     
     fn print_usage(program_name: &str) {
@@ -275,6 +281,7 @@ impl MinimizeArgs {
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
         log!("  -n, --dry-run               Show what would be done without modifying files");
+        log!("  -f, --fail-fast             Exit on first verification failure (for debugging)");
         log!("  --danger                    Run even with uncommitted changes (DANGEROUS!)");
         log!("  -h, --help                  Show this help message");
         log!();
@@ -2205,7 +2212,29 @@ fn check_git_status(codebase: &Path) -> GitStatus {
 fn main() -> Result<()> {
     let args = MinimizeArgs::parse()?;
     
-    // Initialize logging to codebase/analyses/
+    // Check git status BEFORE creating any files
+    let git_status = check_git_status(&args.codebase);
+    
+    // Handle git check failures before we create the log file
+    match &git_status {
+        GitStatus::Uncommitted if !args.dry_run && !args.danger_mode => {
+            println!("✗ Codebase is in git but has uncommitted changes.");
+            println!();
+            println!("  Please commit your changes first:");
+            println!("    cd {} && git add -A && git commit -m 'Before Veracity'", args.codebase.display());
+            return Err(anyhow::anyhow!("Please commit changes before running Veracity (or use --danger to override)"));
+        }
+        GitStatus::NotInGit if !args.dry_run && !args.danger_mode => {
+            println!("✗ Codebase is not in git.");
+            println!();
+            println!("  Please initialize git first:");
+            println!("    cd {} && git init && git add -A && git commit -m 'Initial commit'", args.codebase.display());
+            return Err(anyhow::anyhow!("Codebase must be in git before running Veracity (or use --danger to override)"));
+        }
+        _ => {}
+    }
+    
+    // Now safe to initialize logging
     let log_path = init_logging(&args.codebase);
     
     log!("Verus Library Minimizer");
@@ -2221,6 +2250,7 @@ fn main() -> Result<()> {
     log!("  -L, --lib-broadcasts: {}", args.apply_lib_broadcasts);
     log!("  -N, --max-lemmas:   {}", args.max_lemmas.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
     log!("  -e, --exclude:      {}", if args.exclude_dirs.is_empty() { "(none)".to_string() } else { args.exclude_dirs.join(", ") });
+    log!("  -f, --fail-fast:    {}", args.fail_fast);
     log!("  --danger:           {}", args.danger_mode);
     log!();
     
@@ -2230,8 +2260,8 @@ fn main() -> Result<()> {
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
     
-    // Check git status and report
-    match check_git_status(&args.codebase) {
+    // Log the git status (already checked above)
+    match git_status {
         GitStatus::Clean => {
             log!("✓ Codebase is in git and committed. Proceeding safely.");
         }
@@ -2243,7 +2273,8 @@ fn main() -> Result<()> {
             if args.dry_run {
                 log!();
                 log!("  (Continuing anyway because this is a dry run...)");
-            } else if args.danger_mode {
+            } else {
+                // Must be danger_mode since we checked above
                 log!();
                 log!("  ╔════════════════════════════════════════════════════════════╗");
                 log!("  ║  !!!  DANGER MODE - UNCOMMITTED CHANGES AT RISK!  !!!      ║");
@@ -2253,8 +2284,6 @@ fn main() -> Result<()> {
                 log!("  ║                                                            ║");
                 log!("  ║  Proceeding anyway because you asked for --danger...       ║");
                 log!("  ╚════════════════════════════════════════════════════════════╝");
-            } else {
-                return Err(anyhow::anyhow!("Please commit changes before running Veracity (or use --danger to override)"));
             }
         }
         GitStatus::NotInGit => {
@@ -2265,7 +2294,8 @@ fn main() -> Result<()> {
             if args.dry_run {
                 log!();
                 log!("  (Continuing anyway because this is a dry run...)");
-            } else if args.danger_mode {
+            } else {
+                // Must be danger_mode since we checked above
                 log!();
                 log!("  ╔════════════════════════════════════════════════════════════╗");
                 log!("  ║  !!!  DANGER MODE - NO VERSION CONTROL!  !!!               ║");
@@ -2275,8 +2305,6 @@ fn main() -> Result<()> {
                 log!("  ║                                                            ║");
                 log!("  ║  Proceeding anyway because you asked for --danger...       ║");
                 log!("  ╚════════════════════════════════════════════════════════════╝");
-            } else {
-                return Err(anyhow::anyhow!("Codebase must be in git before running Veracity (or use --danger to override)"));
             }
         }
         GitStatus::Unknown => {
@@ -2589,7 +2617,7 @@ fn main() -> Result<()> {
                     } else {
                         log!("REVERTED (verification failed)");
                     }
-                    // Show the error and exit on first failure for debugging
+                    // Always show the error details
                     log!();
                     log!("Verus output on failure:");
                     log!("─────────────────────────────────────────────────────────────────");
@@ -2597,8 +2625,10 @@ fn main() -> Result<()> {
                         log!("{}", line);
                     }
                     log!("─────────────────────────────────────────────────────────────────");
-                    log!("Exiting after first revert for debugging.");
-                    return Ok(());
+                    if args.fail_fast {
+                        log!("Exiting after first failure (--fail-fast enabled).");
+                        return Ok(());
+                    }
                 } else {
                     // Keep the changes
                     applied_count += 1;
