@@ -853,7 +853,8 @@ fn find_call_sites(lemma_name: &str, codebase: &Path, library: &Path) -> Result<
     Ok((lib_calls, codebase_calls))
 }
 
-fn run_verus(codebase: &Path) -> Result<bool> {
+/// Run verus verification and return (success, stderr_output)
+fn run_verus(codebase: &Path) -> Result<(bool, String)> {
     let mut cmd = Command::new("verus");
     cmd.current_dir(codebase);
     cmd.args([
@@ -865,13 +866,14 @@ fn run_verus(codebase: &Path) -> Result<bool> {
     ]);
     
     let output = cmd.output()?;
-    Ok(output.status.success())
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    Ok((output.status.success(), stderr))
 }
 
-fn run_verus_timed(codebase: &Path) -> Result<(bool, Duration)> {
+fn run_verus_timed(codebase: &Path) -> Result<(bool, String, Duration)> {
     let start = Instant::now();
-    let success = run_verus(codebase)?;
-    Ok((success, start.elapsed()))
+    let (success, stderr) = run_verus(codebase)?;
+    Ok((success, stderr, start.elapsed()))
 }
 
 fn format_duration(d: Duration) -> String {
@@ -942,7 +944,7 @@ fn format_lemma_type_info(lemma: &ProofFn) -> String {
 /// - Type annotations (: Type)
 /// - Return types (-> Type)
 /// - Generic instantiations (Type<T>)
-/// - Path types (path::Type)
+/// - Path types (path::Type) - NOT from use statements
 /// - Types inside verus! macro blocks (via token analysis)
 fn extract_type_usages_from_file(content: &str) -> HashSet<String> {
     let mut types = HashSet::new();
@@ -955,8 +957,9 @@ fn extract_type_usages_from_file(content: &str) -> HashSet<String> {
     for node in root.descendants() {
         match node.kind() {
             // Type paths like `Seq<T>`, `Set<int>`, `Map<K, V>`
-            SyntaxKind::PATH_TYPE | SyntaxKind::PATH => {
-                // Get the first identifier (the type name)
+            // But NOT paths inside use statements
+            SyntaxKind::PATH_TYPE => {
+                // PATH_TYPE is specifically for type annotations, not use paths
                 for child in node.children_with_tokens() {
                     if let Some(token) = child.into_token() {
                         if token.kind() == SyntaxKind::IDENT {
@@ -965,7 +968,7 @@ fn extract_type_usages_from_file(content: &str) -> HashSet<String> {
                     }
                 }
             }
-            // Also check inside generic argument lists
+            // Also check inside generic argument lists (these are type contexts)
             SyntaxKind::GENERIC_ARG_LIST => {
                 for child in node.descendants_with_tokens() {
                     if let Some(token) = child.into_token() {
@@ -1392,22 +1395,12 @@ fn analyze_library_broadcast_groups(
                 continue;
             }
             
-            // Check for actual type usage via relevant_types
+            // Check for actual type usage via relevant_types ONLY
+            // (keywords are too loose - would match "ensures" as a type)
             let mut usage_score = 0;
             for type_name in &bg.relevant_types {
                 if type_usages.contains(type_name) {
                     usage_score += 3;
-                }
-            }
-            
-            // Also check keywords for broader matching
-            for keyword in &bg.keywords {
-                let keyword_lower = keyword.to_lowercase();
-                for type_name in &type_usages {
-                    let type_lower = type_name.to_lowercase();
-                    if type_lower == keyword_lower || type_lower.starts_with(&keyword_lower) {
-                        usage_score += 2;
-                    }
                 }
             }
             
@@ -1969,7 +1962,7 @@ fn test_dependence(
     let original_content = replace_body_with_empty(&lemma.file, lemma.start_line, lemma.end_line)?;
     
     // Step 2: Run verification
-    let success = run_verus(codebase)?;
+    let (success, _stderr) = run_verus(codebase)?;
     
     let duration = start.elapsed();
     
@@ -2003,7 +1996,7 @@ fn test_dependence_group(
     }
     
     // Step 2: Run verification
-    let success = run_verus(codebase)?;
+    let (success, _stderr) = run_verus(codebase)?;
     
     let duration = start.elapsed();
     
@@ -2043,7 +2036,7 @@ fn test_lemma(
     }
     
     // Step 3: Run verification
-    let success = run_verus(codebase)?;
+    let (success, _stderr) = run_verus(codebase)?;
     
     let duration = start.elapsed();
     
@@ -2115,7 +2108,7 @@ fn test_lemma_group(
     }
     
     // Step 3: Run verification
-    let success = run_verus(codebase)?;
+    let (success, _stderr) = run_verus(codebase)?;
     
     let duration = start.elapsed();
     
@@ -2303,12 +2296,19 @@ fn main() -> Result<()> {
     
     // Phase 1: Verify codebase
     log!("Phase 1: Verifying codebase...");
-    let (initial_success, initial_duration) = run_verus_timed(&args.codebase)?;
+    let (initial_success, initial_stderr, initial_duration) = run_verus_timed(&args.codebase)?;
     if initial_success {
         log!("  ✓ Verification passed in {}. Continuing.", format_duration(initial_duration));
     } else {
         log!("  ✗ Verification failed. Exiting.");
         log!("  Fix verification errors before running Veracity.");
+        log!();
+        log!("Verus output:");
+        log!("─────────────────────────────────────────────────────────────────");
+        for line in initial_stderr.lines() {
+            log!("{}", line);
+        }
+        log!("─────────────────────────────────────────────────────────────────");
         return Ok(());
     }
     log!();
@@ -2496,12 +2496,19 @@ fn main() -> Result<()> {
         }
         log!();
         log!("  Verifying codebase with updated library...");
-        let success = run_verus(&args.codebase)?;
+        let (success, stderr) = run_verus(&args.codebase)?;
         if success {
             log!("  ✓ Verification PASSED");
         } else {
             log!("  ✗ Verification FAILED - broadcast groups may have broken something");
             log!("  Stopping here. Fix issues before continuing.");
+            log!();
+            log!("Verus output:");
+            log!("─────────────────────────────────────────────────────────────────");
+            for line in stderr.lines() {
+                log!("{}", line);
+            }
+            log!("─────────────────────────────────────────────────────────────────");
             return Ok(());
         }
     } else if args.apply_lib_broadcasts && args.dry_run {
@@ -2952,12 +2959,19 @@ fn main() -> Result<()> {
     // Final verification
     log!();
     log!("Running final verification...");
-    let (final_success, final_duration) = run_verus_timed(&args.codebase)?;
+    let (final_success, final_stderr, final_duration) = run_verus_timed(&args.codebase)?;
     
     if final_success {
         log!("✓ Final verification succeeded in {}", format_duration(final_duration));
     } else {
         log!("✗ Final verification FAILED - something went wrong!");
+        log!();
+        log!("Verus output:");
+        log!("─────────────────────────────────────────────────────────────────");
+        for line in final_stderr.lines() {
+            log!("{}", line);
+        }
+        log!("─────────────────────────────────────────────────────────────────");
     }
     
     // Summary
