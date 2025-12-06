@@ -17,12 +17,15 @@
 //!   requires PATTERN       Match requires clause content
 //!   ensures PATTERN        Match ensures clause content
 //!   TYPE^+                 Same as "types TYPE" - must be present somewhere
+//!   .*                     Wildcard (lemma_.*_len matches lemma_seq_len)
 //!   \(A\|B\|C\)            OR pattern - matches A or B or C
 //!   \(A\&B\&C\)            AND pattern - matches if A and B and C all present
 //!   \(A\|B\&C\)            Mixed - AND has precedence: A OR (B AND C)
 //!
 //! EXAMPLES:
 //!   veracity-lemma-search -v proof fn array
+//!   veracity-lemma-search -v proof fn set             # matches set but not multiset/subset
+//!   veracity-lemma-search -v proof fn lemma_.*_len    # wildcard matching
 //!   veracity-lemma-search -v generics A               # has generic parameter A in <>
 //!   veracity-lemma-search -v types Seq                # Seq appears anywhere
 //!   veracity-lemma-search -v Seq^+                    # same as "types Seq"
@@ -92,6 +95,7 @@ struct SearchPattern {
 struct SearchArgs {
     vstd_path: Option<PathBuf>,
     codebase_path: Option<PathBuf>,
+    exclude_dirs: Vec<String>,
     pattern: SearchPattern,
     raw_pattern: String,
 }
@@ -107,11 +111,19 @@ impl SearchArgs {
         
         let mut vstd_path: Option<PathBuf> = None;
         let mut codebase_path: Option<PathBuf> = None;
+        let mut exclude_dirs: Vec<String> = Vec::new();
         let mut pattern_parts: Vec<String> = Vec::new();
         
         let mut i = 1;
         while i < args.len() {
             match args[i].as_str() {
+                "--exclude" | "-e" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-e/--exclude requires a directory name"));
+                    }
+                    exclude_dirs.push(args[i].clone());
+                }
                 "--vstd" | "-v" => {
                     // If a path follows that exists as a directory, use it
                     // Otherwise auto-discover vstd from verus binary
@@ -157,6 +169,7 @@ impl SearchArgs {
         Ok(SearchArgs {
             vstd_path,
             codebase_path,
+            exclude_dirs,
             pattern,
             raw_pattern,
         })
@@ -174,7 +187,8 @@ impl SearchArgs {
         println!();
         println!("Options:");
         println!("  -v, --vstd [PATH]     Search vstd (auto-discovers from verus if no path)");
-        println!("  -c, --codebase [PATH] Search codebase (defaults to ./src or ./source)");
+        println!("  -c, --codebase PATH   Search codebase directory");
+        println!("  -e, --exclude DIR     Exclude directory from search (can use multiple times)");
         println!("  -h, --help            Show this help message");
         println!();
         println!("Pattern syntax (free-form, parsed left to right):");
@@ -371,7 +385,7 @@ fn count_tokens_consumed(tokens: &[String], results: &[String]) -> usize {
 }
 
 /// Find all Rust files in a directory
-fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
+fn find_rust_files(dir: &Path, exclude_dirs: &[String]) -> Vec<PathBuf> {
     let mut files = Vec::new();
     
     for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
@@ -382,7 +396,13 @@ fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
             if !path_str.contains("/target/") 
                 && !path_str.contains("/attic/")
                 && !path_str.contains("/.git/") {
-                files.push(path.to_path_buf());
+                // Check user-specified exclusions
+                let excluded = exclude_dirs.iter().any(|excl| {
+                    path_str.contains(&format!("/{}/", excl)) || path_str.ends_with(&format!("/{}", excl))
+                });
+                if !excluded {
+                    files.push(path.to_path_buf());
+                }
             }
         }
     }
@@ -668,8 +688,31 @@ fn extract_clauses(text: &str, keyword: &str) -> Vec<String> {
     clauses
 }
 
+/// Match a name pattern against a lemma name using word boundaries
+/// This is the default for name matching - "set" matches _set_ but NOT multiset
+/// Supports .* as wildcard
+fn name_pattern_matches(pattern: &str, name: &str) -> bool {
+    let pattern = pattern.trim();
+    let name_lower = name.to_lowercase();
+    
+    // Check for \(...\) pattern syntax - evaluate with word boundaries
+    if pattern.starts_with("\\(") && pattern.ends_with("\\)") {
+        let inner = &pattern[2..pattern.len()-2];
+        return eval_name_pattern_expr(inner, &name_lower);
+    }
+    
+    // If pattern contains .*, use regex-style matching
+    if pattern.contains(".*") {
+        return wildcard_match(&pattern.to_lowercase(), &name_lower);
+    }
+    
+    // Word boundary match by default for names
+    word_boundary_match(&pattern.to_lowercase(), &name_lower)
+}
+
 /// Match a pattern string against text, supporting:
 /// - Simple substring match
+/// - Word boundary match with ! suffix: "set!" matches _set_ but not multiset
 /// - OR patterns: \(A\|B\|C\) 
 /// - AND patterns: \(A\&B\&C\)
 /// - Mixed with AND precedence: \(A\|B\&C\) = A OR (B AND C)
@@ -683,8 +726,96 @@ fn pattern_matches(pattern: &str, text: &str) -> bool {
         return eval_pattern_expr(inner, &text_lower);
     }
     
+    // Check for word boundary match (! suffix)
+    if pattern.ends_with('!') {
+        let word = pattern.trim_end_matches('!').to_lowercase();
+        return word_boundary_match(&word, &text_lower);
+    }
+    
     // Simple substring match (case-insensitive)
     text_lower.contains(&pattern.to_lowercase())
+}
+
+/// Match pattern with .* wildcard support
+/// "lemma_.*_len" matches "lemma_seq_len", "lemma_set_len", etc.
+fn wildcard_match(pattern: &str, text: &str) -> bool {
+    // Convert .* pattern to regex-like matching
+    // Split by .* and check if parts appear in order
+    let parts: Vec<&str> = pattern.split(".*").collect();
+    
+    if parts.is_empty() {
+        return true;
+    }
+    
+    let mut pos = 0;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        
+        // First part must match at start (if pattern doesn't start with .*)
+        if i == 0 && !pattern.starts_with(".*") {
+            if !text.starts_with(part) {
+                return false;
+            }
+            pos = part.len();
+        } 
+        // Last part must match at end (if pattern doesn't end with .*)
+        else if i == parts.len() - 1 && !pattern.ends_with(".*") {
+            if !text[pos..].ends_with(part) {
+                return false;
+            }
+        }
+        // Middle parts just need to appear somewhere after current position
+        else {
+            if let Some(found_pos) = text[pos..].find(part) {
+                pos = pos + found_pos + part.len();
+            } else {
+                return false;
+            }
+        }
+    }
+    
+    true
+}
+
+/// Check if word appears with word boundaries (for snake_case identifiers)
+/// Word boundaries are: start of string, end of string, underscore, or non-alphanumeric
+fn word_boundary_match(word: &str, text: &str) -> bool {
+    if word.is_empty() {
+        return true;
+    }
+    
+    let text_chars: Vec<char> = text.chars().collect();
+    let word_chars: Vec<char> = word.chars().collect();
+    
+    for i in 0..=text_chars.len().saturating_sub(word_chars.len()) {
+        // Check if word matches at position i
+        let matches = word_chars.iter().enumerate().all(|(j, &wc)| {
+            i + j < text_chars.len() && text_chars[i + j] == wc
+        });
+        
+        if matches {
+            // Check left boundary: start of string, underscore, or non-alphanumeric
+            let left_ok = i == 0 || {
+                let c = text_chars[i - 1];
+                c == '_' || !c.is_alphanumeric()
+            };
+            
+            // Check right boundary: end of string, underscore, or non-alphanumeric
+            let right_pos = i + word_chars.len();
+            let right_ok = right_pos >= text_chars.len() || {
+                let c = text_chars[right_pos];
+                c == '_' || !c.is_alphanumeric()
+            };
+            
+            if left_ok && right_ok {
+                return true;
+            }
+        }
+    }
+    
+    false
 }
 
 /// Evaluate a pattern expression with OR (|) and AND (&)
@@ -702,6 +833,37 @@ fn eval_pattern_expr(expr: &str, text: &str) -> bool {
     eval_and_expr(expr, text)
 }
 
+/// Evaluate pattern expression for names - uses word boundary matching
+fn eval_name_pattern_expr(expr: &str, name: &str) -> bool {
+    // Split by \| (OR) first (lower precedence)
+    let or_parts: Vec<&str> = expr.split("\\|").collect();
+    
+    if or_parts.len() > 1 {
+        // OR: any part matching is success
+        return or_parts.iter().any(|part| eval_name_and_expr(part, name));
+    }
+    
+    // No OR, evaluate as AND expression
+    eval_name_and_expr(expr, name)
+}
+
+/// Evaluate AND expression for names - uses word boundary or wildcard matching
+fn eval_name_and_expr(expr: &str, name: &str) -> bool {
+    let and_parts: Vec<&str> = expr.split("\\&").collect();
+    
+    // AND: all parts must match
+    and_parts.iter().all(|part| {
+        let part = part.trim();
+        if part.is_empty() {
+            true
+        } else if part.contains(".*") {
+            wildcard_match(&part.to_lowercase(), name)
+        } else {
+            word_boundary_match(&part.to_lowercase(), name)
+        }
+    })
+}
+
 /// Evaluate AND expression - all parts must match
 fn eval_and_expr(expr: &str, text: &str) -> bool {
     let and_parts: Vec<&str> = expr.split("\\&").collect();
@@ -711,6 +873,10 @@ fn eval_and_expr(expr: &str, text: &str) -> bool {
         let part = part.trim();
         if part.is_empty() {
             true
+        } else if part.ends_with('!') {
+            // Word boundary match
+            let word = part.trim_end_matches('!').to_lowercase();
+            word_boundary_match(&word, text)
         } else {
             text.contains(&part.to_lowercase())
         }
@@ -719,9 +885,10 @@ fn eval_and_expr(expr: &str, text: &str) -> bool {
 
 /// Check if a lemma matches the search pattern
 fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
-    // Check name pattern (case-insensitive substring match, supports OR/AND)
+    // Check name pattern - use word boundary matching for snake_case identifiers
+    // "set" matches lemma_set_contains but NOT multiset
     if let Some(ref name_pat) = pattern.name {
-        if !pattern_matches(name_pat, &lemma.name) {
+        if !name_pattern_matches(name_pat, &lemma.name) {
             return false;
         }
     }
@@ -865,7 +1032,7 @@ fn main() -> Result<()> {
     // Search vstd if specified
     if let Some(ref vstd_path) = args.vstd_path {
         println!("Searching vstd: {}", vstd_path.display());
-        let files = find_rust_files(vstd_path);
+        let files = find_rust_files(vstd_path, &[]);  // No exclusions for vstd
         println!("  Found {} files", files.len());
         
         for file in &files {
@@ -879,7 +1046,10 @@ fn main() -> Result<()> {
     let codebase_lemma_start = all_lemmas.len();
     if let Some(ref codebase_path) = args.codebase_path {
         println!("Searching codebase: {}", codebase_path.display());
-        let files = find_rust_files(codebase_path);
+        if !args.exclude_dirs.is_empty() {
+            println!("  Excluding: {}", args.exclude_dirs.join(", "));
+        }
+        let files = find_rust_files(codebase_path, &args.exclude_dirs);
         println!("  Found {} files", files.len());
         
         for file in &files {
@@ -1151,5 +1321,84 @@ mod tests {
         assert!(pattern_matches("\\(apple\\|banana\\&cherry\\)", "banana cherry pie"));
         // Should NOT match just "banana" (doesn't match A, and B&C requires both)
         assert!(!pattern_matches("\\(apple\\|banana\\&cherry\\)", "banana pie"));
+    }
+
+    // =========================================================================
+    // Test: Word boundary matching with ! suffix
+    // =========================================================================
+    #[test]
+    fn test_word_boundary_match() {
+        // set! should match _set_, _set, set_ but NOT multiset
+        assert!(word_boundary_match("set", "lemma_set_contains"));
+        assert!(word_boundary_match("set", "set_lib"));
+        assert!(word_boundary_match("set", "to_set"));
+        assert!(word_boundary_match("set", "set"));
+        
+        // Should NOT match multiset
+        assert!(!word_boundary_match("set", "multiset"));
+        assert!(!word_boundary_match("set", "lemma_multiset_empty"));
+        
+        // Should NOT match subset (set is substring but not word-bounded)
+        assert!(!word_boundary_match("set", "subset"));
+    }
+
+    // =========================================================================
+    // Test: Pattern matches with ! suffix (for non-name patterns)
+    // =========================================================================
+    #[test]
+    fn test_pattern_matches_word_boundary() {
+        assert!(pattern_matches("set!", "lemma_set_contains"));
+        assert!(pattern_matches("set!", "to_set"));
+        assert!(!pattern_matches("set!", "multiset"));
+        assert!(!pattern_matches("set!", "subset"));
+        
+        // Without !, substring match (for requires/ensures/types)
+        assert!(pattern_matches("set", "multiset"));
+        assert!(pattern_matches("set", "subset"));
+    }
+
+    // =========================================================================
+    // Test: Name pattern matching uses word boundaries by default
+    // =========================================================================
+    #[test]
+    fn test_name_pattern_matches() {
+        // Word boundary by default for name matching
+        assert!(name_pattern_matches("set", "lemma_set_contains"));
+        assert!(name_pattern_matches("set", "to_set"));
+        assert!(name_pattern_matches("set", "set_lib"));
+        assert!(!name_pattern_matches("set", "multiset"));
+        assert!(!name_pattern_matches("set", "subset"));
+    }
+
+    // =========================================================================
+    // Test: Wildcard matching with .*
+    // =========================================================================
+    #[test]
+    fn test_wildcard_match() {
+        // Basic wildcard
+        assert!(wildcard_match("lemma_.*_len", "lemma_seq_len"));
+        assert!(wildcard_match("lemma_.*_len", "lemma_set_len"));
+        assert!(!wildcard_match("lemma_.*_len", "lemma_seq_contains"));
+        
+        // Wildcard at start
+        assert!(wildcard_match(".*_len", "lemma_seq_len"));
+        assert!(wildcard_match(".*_len", "seq_len"));
+        
+        // Wildcard at end
+        assert!(wildcard_match("lemma_seq.*", "lemma_seq_len"));
+        assert!(wildcard_match("lemma_seq.*", "lemma_seq"));
+        
+        // Multiple wildcards
+        assert!(wildcard_match("lemma_.*_.*_id", "lemma_seq_to_set_id"));
+    }
+
+    // =========================================================================
+    // Test: Name pattern with wildcard
+    // =========================================================================
+    #[test]
+    fn test_name_pattern_wildcard() {
+        assert!(name_pattern_matches("lemma_.*_len", "lemma_seq_len"));
+        assert!(name_pattern_matches("lemma_.*_len", "lemma_set_len"));
+        assert!(!name_pattern_matches("lemma_.*_len", "axiom_seq_len"));
     }
 }
