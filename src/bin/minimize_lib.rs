@@ -2285,21 +2285,59 @@ fn main() -> Result<()> {
         None => num_to_test,
     };
     
-    // Phase 7 tests each lemma once, Phase 8 tests each lemma once
+    // Count files that would get broadcast groups (for estimation)
+    let lib_file_count = find_rust_files(&args.library).len();
+    let codebase_files = find_rust_files(&args.codebase);
+    let codebase_file_count = codebase_files.iter()
+        .filter(|f| !f.starts_with(&args.library))
+        .count();
+    
+    // Estimate each phase
+    let estimated_phase1 = initial_duration; // already done
+    let estimated_phase2 = Duration::from_secs(0); // no verification
+    let estimated_phase3 = Duration::from_secs(0); // no verification
+    let estimated_phase4 = Duration::from_secs(0); // no verification
+    let estimated_phase5 = if args.apply_lib_broadcasts { 
+        initial_duration * (lib_file_count as u32) 
+    } else { 
+        Duration::from_secs(0) 
+    };
+    let estimated_phase6 = if args.update_broadcasts { 
+        initial_duration * (codebase_file_count as u32) 
+    } else { 
+        Duration::from_secs(0) 
+    };
     let estimated_phase7 = initial_duration * (actual_to_test as u32);
     let estimated_phase8 = initial_duration * (actual_to_test as u32);
-    let estimated_total = estimated_phase7 + estimated_phase8;
+    let estimated_total = estimated_phase1 + estimated_phase2 + estimated_phase3 + 
+                          estimated_phase4 + estimated_phase5 + estimated_phase6 + 
+                          estimated_phase7 + estimated_phase8;
     
     log!("Phase 4: Estimating time...");
-    log!("  Lemmas to skip (unused modules): {}", num_module_unused);
-    log!("  Lemmas to test:                  {}", num_to_test);
-    if args.max_lemmas.is_some() {
-        log!("  Lemmas to test (limited by -N):  {}", actual_to_test);
-    }
     log!("  Time per verification:           {}", format_duration(initial_duration));
-    log!("  Phase 7 (dependence test):       ~{}", format_duration(estimated_phase7));
-    log!("  Phase 8 (necessity test):        ~{}", format_duration(estimated_phase8));
-    log!("  Estimated total:                 ~{}", format_duration(estimated_total));
+    log!("  Lemmas to test:                  {}", actual_to_test);
+    if num_module_unused > 0 {
+        log!("  Lemmas to skip (unused modules): {}", num_module_unused);
+    }
+    log!();
+    log!("  Phase 1 (verify codebase):       {} (done)", format_duration(estimated_phase1));
+    log!("  Phase 2 (analyze library):       ~0s (no verification)");
+    log!("  Phase 3 (discover broadcasts):   ~0s (no verification)");
+    log!("  Phase 4 (estimate time):         ~0s (no verification)");
+    if args.apply_lib_broadcasts {
+        log!("  Phase 5 (library broadcasts):    ~{} ({} files)", format_duration(estimated_phase5), lib_file_count);
+    } else {
+        log!("  Phase 5 (library broadcasts):    skipped (no -L flag)");
+    }
+    if args.update_broadcasts {
+        log!("  Phase 6 (codebase broadcasts):   ~{} ({} files)", format_duration(estimated_phase6), codebase_file_count);
+    } else {
+        log!("  Phase 6 (codebase broadcasts):   skipped (no -b flag)");
+    }
+    log!("  Phase 7 (dependence test):       ~{} ({} lemmas)", format_duration(estimated_phase7), actual_to_test);
+    log!("  Phase 8 (necessity test):        ~{} ({} lemmas)", format_duration(estimated_phase8), actual_to_test);
+    log!("  ─────────────────────────────────────────");
+    log!("  TOTAL ESTIMATED TIME:            ~{}", format_duration(estimated_total));
     log!();
     
     // Phase 5: Apply broadcast groups to library
