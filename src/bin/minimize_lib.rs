@@ -2347,15 +2347,30 @@ fn main() -> Result<()> {
     if args.dry_run {
         // Dry run output
         log!("═══════════════════════════════════════════════════════════════");
-        log!("DRY RUN - Would perform the following");
+        log!("DRY RUN - Would perform the following phases");
         log!("═══════════════════════════════════════════════════════════════");
         log!();
-        log!("For each lemma:");
-        log!("  1. Comment out the lemma definition");
-        log!("  2. Comment out all call sites in codebase");
-        log!("  3. Run verus verification");
-        log!("  4. If FAILS  → Mark as // Veracity: USED, restore");
-        log!("  5. If PASSES → Mark as // Veracity: UNUSED, keep commented");
+        log!("PHASE 1: Broadcast group updates (with -L and -b flags)");
+        log!("  - Apply broadcast groups to library files (-L)");
+        log!("  - Apply broadcast groups to codebase files (-b)");
+        log!("  - Verify everything still works");
+        log!();
+        log!("PHASE 2: Test lemmas for DEPENDENCE (with -L flag)");
+        log!("  For each top-level lemma:");
+        log!("  1. Comment out lemma + all call sites");
+        log!("  2. Run verification");
+        log!("  3. If PASSES → Mark // Veracity: DEPENDENT (vstd proves it)");
+        log!("  4. Restore (dependent lemmas may still be needed for context)");
+        log!();
+        log!("PHASE 3: Test lemmas for REMOVAL (existing minimization)");
+        log!("  For each lemma:");
+        log!("  1. Comment out lemma + call sites");
+        log!("  2. Run verification");
+        log!("  3. If FAILS  → Mark // Veracity: USED, restore");
+        log!("  4. If PASSES → Mark // Veracity: UNUSED, keep commented");
+        log!();
+        log!("Note: DEPENDENT ≠ removable. A lemma may be DEPENDENT on vstd");
+        log!("      but still needed to bring the proof into context.");
         log!();
         log!("Lemmas to test (sorted by codebase call count, type variants grouped):");
         
