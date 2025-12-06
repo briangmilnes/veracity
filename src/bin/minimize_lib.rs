@@ -2976,6 +2976,10 @@ fn main() -> Result<()> {
     log!();
     log!("Phase 7 (dependence): {} DEPENDENT, {} INDEPENDENT", dependent_count, independent_count);
     log!("Phase 8 (necessity):  {} USED, {} UNUSED, {} skipped", stats.lemmas_used, stats.lemmas_unused, stats.lemmas_module_unused);
+    log!("Combined:             {} DEPENDENT BUT NEEDED (keep these)", dependent_but_used.len());
+    if stats.call_sites_commented > 0 {
+        log!("Call sites commented: {}", stats.call_sites_commented);
+    }
     log!();
     
     // Table 1: Dependent lemmas (vstd can prove these)
@@ -2983,12 +2987,11 @@ fn main() -> Result<()> {
     log!("│ DEPENDENT LEMMAS (vstd broadcast groups can prove these)       │");
     log!("├─────────────────────────────────────────────────────────────────┤");
     if dependent_lemmas.is_empty() {
-        log!("│ (none found - dependence testing not yet implemented)         │");
+        log!("│ (none)                                                          │");
     } else {
         for (name, file, type_info) in &dependent_lemmas {
             let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {}{}", name, type_info);
-            log!("│   └─ {}", rel_path.display());
+            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
         }
     }
     log!("└─────────────────────────────────────────────────────────────────┘");
@@ -3003,8 +3006,7 @@ fn main() -> Result<()> {
     } else {
         for (name, file, type_info) in &unused_lemmas {
             let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {}{}", name, type_info);
-            log!("│   └─ {}", rel_path.display());
+            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
         }
     }
     log!("└─────────────────────────────────────────────────────────────────┘");
@@ -3015,22 +3017,14 @@ fn main() -> Result<()> {
     log!("│ DEPENDENT BUT NEEDED (guide verification, keep for now)        │");
     log!("├─────────────────────────────────────────────────────────────────┤");
     if dependent_but_used.is_empty() {
-        if dependent_lemmas.is_empty() {
-            log!("│ (none - dependence testing not yet implemented)               │");
-        } else {
-            log!("│ (none - all dependent lemmas were also unneeded)              │");
-        }
+        log!("│ (none - all dependent lemmas were also unneeded)              │");
     } else {
         for (name, file, type_info) in &dependent_but_used {
             let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {}{}", name, type_info);
-            log!("│   └─ {}", rel_path.display());
+            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
         }
     }
     log!("└─────────────────────────────────────────────────────────────────┘");
-    log!();
-    log!("Call Sites:");
-    log!("  Commented out:           {}", stats.call_sites_commented);
     log!();
     log!("Spec Functions:");
     log!("  Total in library:        {}", stats.spec_fns_total);
