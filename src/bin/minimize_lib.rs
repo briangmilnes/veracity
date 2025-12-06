@@ -2161,88 +2161,40 @@ fn main() -> Result<()> {
     log!("You will need to review each // Veracity: line and decide what to keep.");
     log!();
     log!("Phases:");
-    log!("  Phase 1: Discover vstd broadcast groups from verus installation");
-    log!("  Phase 2: Apply broadcast groups to library (-L flag)");
-    log!("  Phase 3: Analyze library structure (lemmas, modules, call sites, spec fns)");
-    log!("  Phase 4: Apply broadcast groups to codebase (-b flag)");
-    log!("  Phase 5: Test lemma dependence on vstd (can vstd prove it alone?)");
-    log!("  Phase 6: Test lemma necessity (can codebase verify without it?)");
+    log!("  Phase 1: Verify codebase compiles and verifies");
+    log!("  Phase 2: Analyze library structure (lemmas, modules, call sites, spec fns)");
+    log!("  Phase 3: Discover vstd broadcast groups from verus installation");
+    log!("  Phase 4: Estimate time for testing");
+    log!("  Phase 5: Apply broadcast groups to library (-L flag)");
+    log!("  Phase 6: Apply broadcast groups to codebase (-b flag)");
+    log!("  Phase 7: Test lemma dependence on vstd (can vstd prove it alone?)");
+    log!("  Phase 8: Test lemma necessity (can codebase verify without it?)");
     log!();
     log!("Comment markers inserted:");
-    log!("  // Veracity: added broadcast group  - Phase 2/4: Inserted broadcast use block");
-    log!("  // Veracity: DEPENDENT              - Phase 5: Lemma proven by vstd broadcast groups");
-    log!("  // Veracity: INDEPENDENT            - Phase 5: Lemma provides unique proof logic");
-    log!("  // Veracity: USED                   - Phase 6: Lemma required, restored after test");
-    log!("  // Veracity: UNUSED                 - Phase 6: Lemma not needed, left commented out");
-    log!("  // Veracity: UNNEEDED               - Phase 6: Call site not needed, left commented");
+    log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
+    log!("  // Veracity: DEPENDENT              - Phase 7: Lemma proven by vstd broadcast groups");
+    log!("  // Veracity: INDEPENDENT            - Phase 7: Lemma provides unique proof logic");
+    log!("  // Veracity: USED                   - Phase 8: Lemma required, restored after test");
+    log!("  // Veracity: UNUSED                 - Phase 8: Lemma not needed, left commented out");
+    log!("  // Veracity: UNNEEDED               - Phase 8: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
     
-    // Phase 1: Discover broadcast groups from vstd
-    log!("Phase 1: Discovering broadcast groups from vstd...");
-    let broadcast_groups = if let Some(vstd_path) = find_vstd_source() {
-        log!("  vstd source: {}", vstd_path.display());
-        let groups = discover_broadcast_groups(&vstd_path)?;
-        log!("  Found {} broadcast groups:", groups.len());
-        for bg in &groups {
-            log!("    {}", bg.full_path);
-        }
-        groups
+    // Phase 1: Verify codebase
+    log!("Phase 1: Verifying codebase...");
+    let (initial_success, initial_duration) = run_verus_timed(&args.codebase)?;
+    if initial_success {
+        log!("  ✓ Verification passed in {}. Continuing.", format_duration(initial_duration));
     } else {
-        log!("  ⚠ Could not find vstd source (broadcast group recommendations disabled)");
-        Vec::new()
-    };
-    log!();
-    
-    // Phase 2: Recommend and apply broadcast groups to library
-    log!("Phase 2: Library broadcast groups...");
-    let lib_recommendations = if !broadcast_groups.is_empty() {
-        log!("  Analyzing library for broadcast group recommendations...");
-        let recs = analyze_library_broadcast_groups(
-            &args.library,
-            &args.exclude_dirs,
-            &broadcast_groups,
-        )?;
-        if recs.is_empty() {
-            log!("  No new broadcast groups recommended for library.");
-        } else {
-            log!("  {} library files could benefit from broadcast groups", recs.len());
-        }
-        recs
-    } else {
-        log!("  Skipped (no broadcast groups discovered)");
-        Vec::new()
-    };
-    
-    if args.apply_lib_broadcasts && !args.dry_run && !lib_recommendations.is_empty() {
-        log!();
-        log!("  ADDING broadcast groups to library files:");
-        for rec in &lib_recommendations {
-            let rel_path = rec.file.strip_prefix(&args.library).unwrap_or(&rec.file);
-            let group_names: Vec<_> = rec.recommended_groups.iter().map(|(g, _)| g.as_str()).collect();
-            log!("    + {} → {}", rel_path.display(), group_names.join(", "));
-            apply_broadcast_groups_to_file(&rec.file, &rec.recommended_groups)?;
-        }
-        log!();
-        log!("  Verifying codebase with updated library...");
-        let success = run_verus(&args.codebase)?;
-        if success {
-            log!("  ✓ Verification PASSED");
-        } else {
-            log!("  ✗ Verification FAILED - broadcast groups may have broken something");
-            log!("  Stopping here. Fix issues before continuing.");
-            return Ok(());
-        }
-    } else if args.apply_lib_broadcasts && args.dry_run {
-        log!("  Would add broadcast groups to library (dry run, use -L flag to apply)");
-    } else if !args.apply_lib_broadcasts {
-        log!("  Skipped (use -L flag to add broadcast groups)");
+        log!("  ✗ Verification failed. Exiting.");
+        log!("  Fix verification errors before running Veracity.");
+        return Ok(());
     }
     log!();
     
-    // Phase 3: Analyze library structure
-    log!("Phase 3: Analyzing library structure...");
+    // Phase 2: Analyze library structure
+    log!("Phase 2: Analyzing library structure...");
     
     log!("  Scanning library for proof functions (lemmas)...");
     let proof_fns = list_library_proof_functions(&args.library)?;
@@ -2294,10 +2246,8 @@ fn main() -> Result<()> {
     
     log!("  {} call sites in library", total_lib_calls);
     log!("  {} call sites in codebase (outside library)", total_codebase_calls);
-    log!();
     
-    // Phase 3d: Find spec functions
-    log!("Phase 3d: Scanning library for spec functions...");
+    log!("  Scanning library for spec functions...");
     let spec_fns = list_library_spec_functions(&args.library)?;
     log!("  Found {} spec functions", spec_fns.len());
     
@@ -2314,8 +2264,92 @@ fn main() -> Result<()> {
     log!("  {} spec functions without explicit calls (excluding type variants where any is used)", unused_spec_fns.len());
     log!();
     
-    // Phase 4: Apply broadcast groups to codebase
-    log!("Phase 4: Codebase broadcast groups...");
+    // Phase 3: Discover broadcast groups from vstd
+    log!("Phase 3: Discovering vstd broadcast groups...");
+    let broadcast_groups = if let Some(vstd_path) = find_vstd_source() {
+        log!("  vstd source: {}", vstd_path.display());
+        let groups = discover_broadcast_groups(&vstd_path)?;
+        log!("  Found {} broadcast groups", groups.len());
+        groups
+    } else {
+        log!("  ⚠ Could not find vstd source (broadcast group recommendations disabled)");
+        Vec::new()
+    };
+    log!();
+    
+    // Phase 4: Estimate time
+    let num_module_unused: usize = proof_fns.iter().filter(|pf| !used_modules.contains(&pf.module)).count();
+    let num_to_test = proof_fns.len() - num_module_unused;
+    let actual_to_test = match args.max_lemmas {
+        Some(n) => num_to_test.min(n),
+        None => num_to_test,
+    };
+    
+    // Phase 7 tests each lemma once, Phase 8 tests each lemma once
+    let estimated_phase7 = initial_duration * (actual_to_test as u32);
+    let estimated_phase8 = initial_duration * (actual_to_test as u32);
+    let estimated_total = estimated_phase7 + estimated_phase8;
+    
+    log!("Phase 4: Estimating time...");
+    log!("  Lemmas to skip (unused modules): {}", num_module_unused);
+    log!("  Lemmas to test:                  {}", num_to_test);
+    if args.max_lemmas.is_some() {
+        log!("  Lemmas to test (limited by -N):  {}", actual_to_test);
+    }
+    log!("  Time per verification:           {}", format_duration(initial_duration));
+    log!("  Phase 7 (dependence test):       ~{}", format_duration(estimated_phase7));
+    log!("  Phase 8 (necessity test):        ~{}", format_duration(estimated_phase8));
+    log!("  Estimated total:                 ~{}", format_duration(estimated_total));
+    log!();
+    
+    // Phase 5: Apply broadcast groups to library
+    log!("Phase 5: Library broadcast groups...");
+    let lib_recommendations = if !broadcast_groups.is_empty() {
+        log!("  Analyzing library for broadcast group recommendations...");
+        let recs = analyze_library_broadcast_groups(
+            &args.library,
+            &args.exclude_dirs,
+            &broadcast_groups,
+        )?;
+        if recs.is_empty() {
+            log!("  No new broadcast groups recommended for library.");
+        } else {
+            log!("  {} library files could benefit from broadcast groups", recs.len());
+        }
+        recs
+    } else {
+        log!("  Skipped (no broadcast groups discovered)");
+        Vec::new()
+    };
+    
+    if args.apply_lib_broadcasts && !args.dry_run && !lib_recommendations.is_empty() {
+        log!();
+        log!("  ADDING broadcast groups to library files:");
+        for rec in &lib_recommendations {
+            let rel_path = rec.file.strip_prefix(&args.library).unwrap_or(&rec.file);
+            let group_names: Vec<_> = rec.recommended_groups.iter().map(|(g, _)| g.as_str()).collect();
+            log!("    + {} → {}", rel_path.display(), group_names.join(", "));
+            apply_broadcast_groups_to_file(&rec.file, &rec.recommended_groups)?;
+        }
+        log!();
+        log!("  Verifying codebase with updated library...");
+        let success = run_verus(&args.codebase)?;
+        if success {
+            log!("  ✓ Verification PASSED");
+        } else {
+            log!("  ✗ Verification FAILED - broadcast groups may have broken something");
+            log!("  Stopping here. Fix issues before continuing.");
+            return Ok(());
+        }
+    } else if args.apply_lib_broadcasts && args.dry_run {
+        log!("  Would add broadcast groups to library (dry run, use -L flag to apply)");
+    } else if !args.apply_lib_broadcasts {
+        log!("  Skipped (use -L flag to add broadcast groups)");
+    }
+    log!();
+    
+    // Phase 6: Apply broadcast groups to codebase
+    log!("Phase 6: Codebase broadcast groups...");
     log!("  Analyzing broadcast groups per file...");
     let broadcast_recommendations = analyze_broadcast_groups_per_file(&args.codebase, &args.library, &args.exclude_dirs, &broadcast_groups)?;
     
@@ -2398,62 +2432,13 @@ fn main() -> Result<()> {
         }
     }
     
-    // Categorize
-    let num_module_unused = lemma_results.iter().filter(|lr| !lr.module_used).count();
-    let num_to_test = lemma_results.iter().filter(|lr| lr.module_used).count();
-    
-    log!("Lemma Categories:");
-    log!("  {} lemmas in unused modules (skip verification)", num_module_unused);
-    log!("  {} lemmas in used modules (need testing)", num_to_test);
-    log!();
-    
-    // Phase 5: Test lemmas for necessity
-    log!("Phase 5: Testing lemmas for necessity...");
-    log!("  Timing verification...");
-    let (success, duration) = run_verus_timed(&args.codebase)?;
-    
-    if !success {
-        log!("✗ Initial verification failed! Cannot proceed with minimization.");
-        return Ok(());
-    }
-    
-    log!("  ✓ Verification succeeded in {}", format_duration(duration));
-    log!();
-    
-    // Apply limit if specified
-    let actual_to_test = match args.max_lemmas {
-        Some(n) => num_to_test.min(n),
-        None => num_to_test,
-    };
-    
-    // Estimate: Phase 5 tests each lemma once, Phase 6 tests each lemma once
-    let estimated_phase5 = duration * (actual_to_test as u32);
-    let estimated_phase6 = duration * (actual_to_test as u32);
-    let estimated_total = estimated_phase5 + estimated_phase6;
-    
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("PHASE 5 & 6 ESTIMATE");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!();
-    log!("  Lemmas to skip (unused modules): {}", num_module_unused);
-    log!("  Lemmas to test (total):          {}", num_to_test);
-    if args.max_lemmas.is_some() {
-        log!("  Lemmas to test (limited):        {}", actual_to_test);
-    }
-    log!("  Time per verification:           {}", format_duration(duration));
-    log!();
-    log!("  Phase 5 (dependence test):       ~{}", format_duration(estimated_phase5));
-    log!("  Phase 6 (necessity test):        ~{}", format_duration(estimated_phase6));
-    log!("  Estimated total time:            ~{}", format_duration(estimated_total));
-    log!();
-    
     if args.dry_run {
         // Dry run output
         log!("═══════════════════════════════════════════════════════════════");
-        log!("DRY RUN - Phase 5 and 6 details");
+        log!("DRY RUN - Phase 7 and 8 details");
         log!("═══════════════════════════════════════════════════════════════");
         log!();
-        log!("Phase 5: Test lemma dependence on vstd");
+        log!("Phase 7: Test lemma dependence on vstd");
         log!("  For each lemma:");
         log!("  1. Comment out lemma body (replace with empty {{}})");
         log!("  2. Run Verus verification");
@@ -2461,7 +2446,7 @@ fn main() -> Result<()> {
         log!("  4. If FAILS  → Mark // Veracity: INDEPENDENT (unique logic)");
         log!("  5. Restore original body (dependence info only, no removal)");
         log!();
-        log!("Phase 6: Test lemma necessity");
+        log!("Phase 8: Test lemma necessity");
         log!("  For each lemma:");
         log!("  1. Comment out lemma definition + all call sites");
         log!("  2. Run Verus verification");
@@ -2642,10 +2627,10 @@ fn main() -> Result<()> {
     }
     
     // ═══════════════════════════════════════════════════════════════════════
-    // PHASE 5: Test lemma dependence on vstd
+    // PHASE 7: Test lemma dependence on vstd
     // ═══════════════════════════════════════════════════════════════════════
     log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 5: Testing lemma dependence on vstd");
+    log!("Phase 7: Testing lemma dependence on vstd");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     log!("For each lemma: replace body with {{}}, verify, restore.");
@@ -2672,23 +2657,23 @@ fn main() -> Result<()> {
         
         log_no_newline!("[{}/{}] Testing dependence of {}{}... ", i + 1, sorted_groups.len(), name, type_info);
         
-        // For now, skip Phase 5 dependence testing - just mark as INDEPENDENT
+        // For now, skip Phase 7 dependence testing - just mark as INDEPENDENT
         // TODO: Implement body replacement with {} and verification
         log!("INDEPENDENT (dependence test not yet implemented)");
         independent_count += variant_count;
     }
     
     log!();
-    log!("Phase 5 Summary:");
+    log!("Phase 7 Summary:");
     log!("  DEPENDENT (vstd can prove):   {}", _dependent_count);
     log!("  INDEPENDENT (unique logic):   {}", independent_count);
     log!();
     
     // ═══════════════════════════════════════════════════════════════════════
-    // PHASE 6: Test lemma necessity
+    // PHASE 8: Test lemma necessity
     // ═══════════════════════════════════════════════════════════════════════
     log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 6: Testing lemma necessity");
+    log!("Phase 8: Testing lemma necessity");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     log!("For each lemma: comment out definition + calls, verify.");
