@@ -2991,56 +2991,66 @@ fn main() -> Result<()> {
     }
     log!();
     
+    // Calculate max filename width for alignment across all lemma tables
+    let max_file_width = dependent_lemmas.iter()
+        .chain(unused_lemmas.iter())
+        .chain(dependent_but_used.iter())
+        .map(|(_, file, _)| {
+            file.strip_prefix(&args.library).unwrap_or(file).display().to_string().len()
+        })
+        .max()
+        .unwrap_or(0);
+    
     // Table 1: Dependent lemmas (vstd can prove these)
-    log!("┌─────────────────────────────────────────────────────────────────┐");
-    log!("│ DEPENDENT LEMMAS (vstd broadcast groups can prove these)       │");
-    log!("├─────────────────────────────────────────────────────────────────┤");
+    log!("┌───────────────────────────────────────────────────────────────┐");
+    log!("│ DEPENDENT LEMMAS (vstd broadcast groups can prove these)     │");
+    log!("├───────────────────────────────────────────────────────────────┤");
     if dependent_lemmas.is_empty() {
-        log!("│ (none)                                                          │");
+        log!("│ (none)                                                        │");
     } else {
         for (name, file, type_info) in &dependent_lemmas {
-            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file).display().to_string();
+            log!("│ {:width$} -> {}{}", rel_path, name, type_info, width = max_file_width);
         }
     }
-    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!("└───────────────────────────────────────────────────────────────┘");
     log!();
     
     // Table 2: Unneeded lemmas commented out
-    log!("┌─────────────────────────────────────────────────────────────────┐");
-    log!("│ UNNEEDED LEMMAS (commented out, codebase verifies without)     │");
-    log!("├─────────────────────────────────────────────────────────────────┤");
+    log!("┌───────────────────────────────────────────────────────────────┐");
+    log!("│ UNNEEDED LEMMAS (commented out, codebase verifies without)   │");
+    log!("├───────────────────────────────────────────────────────────────┤");
     if unused_lemmas.is_empty() {
-        log!("│ (none - all tested lemmas are needed)                          │");
+        log!("│ (none - all tested lemmas are needed)                        │");
     } else {
         for (name, file, type_info) in &unused_lemmas {
-            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file).display().to_string();
+            log!("│ {:width$} -> {}{}", rel_path, name, type_info, width = max_file_width);
         }
     }
-    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!("└───────────────────────────────────────────────────────────────┘");
     log!();
     
     // Table 3: Dependent lemmas needed to guide validation
-    log!("┌─────────────────────────────────────────────────────────────────┐");
-    log!("│ DEPENDENT BUT NEEDED (guide verification, keep for now)        │");
-    log!("├─────────────────────────────────────────────────────────────────┤");
+    log!("┌───────────────────────────────────────────────────────────────┐");
+    log!("│ DEPENDENT BUT NEEDED (guide verification, keep for now)      │");
+    log!("├───────────────────────────────────────────────────────────────┤");
     if dependent_but_used.is_empty() {
-        log!("│ (none - all dependent lemmas were also unneeded)              │");
+        log!("│ (none - all dependent lemmas were also unneeded)             │");
     } else {
         for (name, file, type_info) in &dependent_but_used {
-            let rel_path = file.strip_prefix(&args.library).unwrap_or(file);
-            log!("│ {} -> {}{}", rel_path.display(), name, type_info);
+            let rel_path = file.strip_prefix(&args.library).unwrap_or(file).display().to_string();
+            log!("│ {:width$} -> {}{}", rel_path, name, type_info, width = max_file_width);
         }
     }
-    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!("└───────────────────────────────────────────────────────────────┘");
     log!();
     // Table 4: Spec functions without explicit calls
-    log!("┌─────────────────────────────────────────────────────────────────┐");
-    log!("│ SPEC FUNCTIONS (after minimization, {} total, {} unused)      │", stats.spec_fns_total, stats.spec_fns_unused);
-    log!("├─────────────────────────────────────────────────────────────────┤");
+    log!("┌───────────────────────────────────────────────────────────────┐");
+    log!("│ SPEC FUNCTIONS ({} total, {} without explicit calls)         │", stats.spec_fns_total, stats.spec_fns_unused);
+    log!("├───────────────────────────────────────────────────────────────┤");
     if stats.spec_fns_unused == 0 {
-        log!("│ (all spec functions have explicit calls)                       │");
+        log!("│ (all spec functions have explicit calls)                      │");
     } else {
         // Group by file and then by base name to consolidate type variants
         let mut by_file: std::collections::HashMap<PathBuf, std::collections::HashMap<String, Vec<String>>> = 
@@ -3057,10 +3067,17 @@ fn main() -> Result<()> {
                 .push(type_suffix);
         }
         
+        // Calculate max file width for spec functions
+        let spec_max_width = by_file.keys()
+            .map(|f| f.display().to_string().len())
+            .max()
+            .unwrap_or(0);
+        
         let mut files: Vec<_> = by_file.keys().collect();
         files.sort();
         for file in files {
             let name_map = &by_file[file];
+            let file_str = file.display().to_string();
             
             let mut names: Vec<_> = name_map.keys().collect();
             names.sort();
@@ -3068,10 +3085,10 @@ fn main() -> Result<()> {
                 let type_variants = &name_map[name];
                 if type_variants.len() == 1 && type_variants[0].is_empty() {
                     // No type variant, just the base name
-                    log!("│ {} -> {}", file.display(), name);
+                    log!("│ {:width$} -> {}", file_str, name, width = spec_max_width);
                 } else if type_variants.iter().all(|t| t.is_empty()) {
                     // Multiple instances but no type variants
-                    log!("│ {} -> {} ({} instances)", file.display(), name, type_variants.len());
+                    log!("│ {:width$} -> {} ({} instances)", file_str, name, type_variants.len(), width = spec_max_width);
                 } else {
                     // Has type variants - group them
                     let types: Vec<_> = type_variants.iter()
@@ -3079,29 +3096,29 @@ fn main() -> Result<()> {
                         .map(|t| t.trim_start_matches('<').trim_end_matches('>'))
                         .collect();
                     if types.is_empty() {
-                        log!("│ {} -> {}", file.display(), name);
+                        log!("│ {:width$} -> {}", file_str, name, width = spec_max_width);
                     } else {
-                        log!("│ {} -> {}<{}> ({} variants, 0 used)", file.display(), name, types.join(", "), types.len());
+                        log!("│ {:width$} -> {}<{}> ({} variants, 0 used)", file_str, name, types.join(", "), types.len(), width = spec_max_width);
                     }
                 }
             }
         }
     }
-    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!("└───────────────────────────────────────────────────────────────┘");
     log!();
     
     // Table 5: Removable modules
-    log!("┌─────────────────────────────────────────────────────────────────┐");
-    log!("│ REMOVABLE MODULES ({} can be removed entirely)                 │", stats.modules_removable.len());
-    log!("├─────────────────────────────────────────────────────────────────┤");
+    log!("┌───────────────────────────────────────────────────────────────┐");
+    log!("│ REMOVABLE MODULES ({} can be removed entirely)               │", stats.modules_removable.len());
+    log!("├───────────────────────────────────────────────────────────────┤");
     if stats.modules_removable.is_empty() {
-        log!("│ (none - all modules are needed)                                │");
+        log!("│ (none - all modules are needed)                              │");
     } else {
         for m in &stats.modules_removable {
             log!("│ {}", m);
         }
     }
-    log!("└─────────────────────────────────────────────────────────────────┘");
+    log!("└───────────────────────────────────────────────────────────────┘");
     log!();
     
     if final_success {

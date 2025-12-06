@@ -110,6 +110,9 @@ Since Verus is a superset of Rust, all general Rusticate tools work on Verus cod
 - `veracity-fix-add-requires`: Auto-generate requires from assertions
 - `veracity-fix-add-ensures`: Auto-generate ensures from return patterns
 
+#### Library Minimization
+- `veracity-minimize-lib`: Minimize vstd library dependencies and identify removable lemmas
+
 ---
 
 ## Quick Start
@@ -347,6 +350,141 @@ Total traits analyzed: 4
 Traits with default methods: 3
 Default implementation rate: 42%
 ```
+
+---
+
+### 7. `veracity-minimize-lib`
+
+Minimize vstd library dependencies by testing which lemmas are truly needed. This tool iteratively comments out lemmas and verifies the codebase to identify:
+- **Dependent lemmas:** Can be proven by vstd broadcast groups alone
+- **Unused lemmas:** Codebase verifies without them
+- **Needed lemmas:** Required for verification
+
+**Usage:**
+```bash
+# Basic usage
+veracity-minimize-lib -c /path/to/codebase -l /path/to/library
+
+# With library broadcast groups applied
+veracity-minimize-lib -c /path/to/codebase -l /path/to/library -L
+
+# Limit testing to N lemmas (for faster iteration)
+veracity-minimize-lib -c /path/to/codebase -l /path/to/library -N 20
+
+# Exclude directories
+veracity-minimize-lib -c /path/to/codebase -l /path/to/library -e experiments -e tests
+
+# Dry run (no modifications)
+veracity-minimize-lib -c /path/to/codebase -l /path/to/library -n
+```
+
+**Arguments:**
+| Flag | Description |
+|------|-------------|
+| `-c, --codebase` | Path to the codebase to verify |
+| `-l, --library` | Path to the library directory containing lemmas |
+| `-n, --dry-run` | Show what would be done without modifying files |
+| `-b, --broadcasts` | Apply recommended broadcast groups to codebase |
+| `-L, --lib-broadcasts` | Apply broadcast groups to library modules |
+| `-N, --max-lemmas` | Limit number of lemmas to test (for faster runs) |
+| `-e, --exclude` | Exclude directory from analysis (can be repeated) |
+
+**Phases:**
+1. **Verify codebase:** Ensure code compiles and verifies before modifications
+2. **Analyze library:** Scan for lemmas, modules, call sites, spec functions
+3. **Discover broadcasts:** Find vstd broadcast groups from verus installation
+4. **Estimate time:** Calculate expected runtime based on verification time
+5. **Library broadcasts:** Apply broadcast groups to library modules (`-L` flag)
+6. **Codebase broadcasts:** Apply broadcast groups to codebase (`-b` flag)
+7. **Dependence test:** Test if lemmas can be proven by vstd alone (empty body test)
+8. **Necessity test:** Test if codebase verifies without each lemma
+
+**Comment Markers:**
+All modifications use `// Veracity:` prefixes for easy identification:
+- `// Veracity: added broadcast group` - Inserted broadcast use block
+- `// Veracity: DEPENDENT` - Lemma proven by vstd broadcast groups
+- `// Veracity: INDEPENDENT` - Lemma provides unique proof logic
+- `// Veracity: USED` - Lemma required, restored after test
+- `// Veracity: UNUSED` - Lemma not needed, left commented out
+- `// Veracity: UNNEEDED` - Call site not needed, left commented
+
+**Example:**
+```bash
+$ veracity-minimize-lib -c tests/fixtures/APAS-VERUS \
+    -l tests/fixtures/APAS-VERUS/src/vstdplus -e experiments -L
+
+Verus Library Minimizer
+=======================
+
+Arguments:
+  -c, --codebase:       tests/fixtures/APAS-VERUS
+  -l, --library:        tests/fixtures/APAS-VERUS/src/vstdplus
+  -n, --dry-run:        false
+  -b, --broadcasts:     false
+  -L, --lib-broadcasts: true
+  -N, --max-lemmas:     all
+  -e, --exclude:        experiments
+
+Phase 1: Verifying codebase...
+  ✓ Verification passed in 5.8s. Continuing.
+
+Phase 2: Analyzing library structure...
+  Found 211 proof functions
+  In 11 modules
+  ...
+
+Phase 7: Testing lemma dependence on vstd
+  [1/121] Testing dependence of lemma_spec_add_commutative... PASSED → DEPENDENT
+  [2/121] Testing dependence of lemma_to_seq_no_duplicates... FAILED → INDEPENDENT
+  ...
+
+Phase 8: Testing lemma necessity
+  [1/121] Testing necessity of lemma_spec_add_commutative... PASSED → UNUSED
+  [2/121] Testing necessity of lemma_to_seq_no_duplicates... FAILED → USED
+  ...
+
+═══════════════════════════════════════════════════════════════
+MINIMIZATION SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Time:
+  Actual time:             5m 55s
+  Estimated time:          39m 37s
+  Estimation error:        -85.1% (faster due to quick failures)
+
+Phase 7 (dependence): 17 DEPENDENT, 194 INDEPENDENT
+Phase 8 (necessity):  180 USED, 31 UNUSED, 0 skipped
+Combined:             10 DEPENDENT BUT NEEDED (keep these)
+
+┌───────────────────────────────────────────────────────────────┐
+│ DEPENDENT LEMMAS (vstd broadcast groups can prove these)     │
+├───────────────────────────────────────────────────────────────┤
+│ checked_nat.rs -> lemma_spec_add_commutative
+│ checked_nat.rs -> lemma_add_associative_ghost
+│ ...
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│ UNNEEDED LEMMAS (commented out, codebase verifies without)   │
+├───────────────────────────────────────────────────────────────┤
+│ checked_nat.rs -> lemma_spec_add_commutative
+│ seq.rs         -> lemma_take_full
+│ ...
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│ REMOVABLE MODULES (1 can be removed entirely)               │
+├───────────────────────────────────────────────────────────────┤
+│ checked_nat_with_checked_view
+└───────────────────────────────────────────────────────────────┘
+
+✓ Minimization complete! Codebase still verifies.
+```
+
+**Safety:**
+- Requires git repository with no uncommitted changes (unless dry-run)
+- All changes are reversible comments
+- Final verification confirms codebase still works
 
 ---
 
