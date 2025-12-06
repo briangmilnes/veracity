@@ -2082,7 +2082,7 @@ fn main() -> Result<()> {
     
     // Print reassurance and phase overview
     log!("═══════════════════════════════════════════════════════════════════════════════");
-    log!("IMPORTANT: No code will be harmed!");
+    log!("IMPORTANT: No code will be harmed in the making of this production!");
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
     log!("Veracity will repeatedly comment things in and out using // Veracity: lines");
