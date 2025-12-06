@@ -14,7 +14,7 @@
 //! Logs to: analyses/veracity-minimize-lib.log
 
 use anyhow::Result;
-use ra_ap_syntax::{ast, AstNode, SyntaxKind};
+use ra_ap_syntax::{ast::{self, HasName}, AstNode, SyntaxKind};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -68,9 +68,8 @@ struct MinimizeArgs {
 struct BroadcastGroup {
     full_path: String,       // e.g., "vstd::seq::group_seq_axioms"
     name: String,            // e.g., "group_seq_axioms"  
-    keywords: Vec<String>,   // inferred from name, e.g., ["seq", "Seq"]
     description: String,     // e.g., "sequence axioms"
-    relevant_types: Vec<String>, // types that suggest this group, e.g., ["Seq", "seq"]
+    relevant_types: Vec<String>, // types defined in the vstd module (parsed via AST)
 }
 
 #[derive(Debug, Clone)]
@@ -1070,6 +1069,9 @@ fn discover_broadcast_groups(vstd_path: &Path) -> Result<Vec<BroadcastGroup>> {
             Err(_) => continue,
         };
         
+        // Extract types defined in this file using AST parsing
+        let file_types = extract_types_from_vstd_file(path);
+        
         // Find "pub broadcast group group_name {" at module level (not inside impl blocks)
         // Groups inside impl blocks are indented; module-level groups start at column 0 or 1
         for line in content.lines() {
@@ -1096,22 +1098,19 @@ fn discover_broadcast_groups(vstd_path: &Path) -> Result<Vec<BroadcastGroup>> {
                     
                     let full_path = format!("vstd::{module_path}::{name}");
                     
-                    // Infer keywords from group name
-                    let keywords = infer_keywords_from_group_name(name);
-                    
                     // Generate description from name
                     let description = name
                         .strip_prefix("group_")
                         .unwrap_or(name)
                         .replace('_', " ");
                     
-                    // relevant_types are type names that suggest using this group
-                    let relevant_types = infer_relevant_types_from_keywords(&keywords);
+                    // relevant_types are the actual types defined in this vstd module file
+                    // (parsed via AST, not hardcoded)
+                    let relevant_types = file_types.clone();
                     
                     groups.push(BroadcastGroup {
                         full_path,
                         name: name.to_string(),
-                        keywords,
                         description,
                         relevant_types,
                     });
@@ -1123,109 +1122,49 @@ fn discover_broadcast_groups(vstd_path: &Path) -> Result<Vec<BroadcastGroup>> {
     Ok(groups)
 }
 
-/// Infer relevant types from keywords (for broadcast group matching)
-fn infer_relevant_types_from_keywords(keywords: &[String]) -> Vec<String> {
+/// Extract type definitions from a vstd module file using AST parsing.
+/// Returns the names of structs and enums defined in the file.
+fn extract_types_from_vstd_file(file_path: &Path) -> Vec<String> {
     let mut types = Vec::new();
     
-    // Map keywords to actual type names that would appear in code
-    let type_map = [
-        ("Seq", vec!["Seq"]),
-        ("seq", vec!["Seq"]),
-        ("Set", vec!["Set"]),
-        ("set", vec!["Set"]),
-        ("Map", vec!["Map"]),
-        ("map", vec!["Map"]),
-        ("Multiset", vec!["Multiset"]),
-        ("multiset", vec!["Multiset"]),
-        ("Vec", vec!["Vec"]),
-        ("vec", vec!["Vec"]),
-        ("HashMap", vec!["HashMap"]),
-        ("HashSet", vec!["HashSet"]),
-        ("String", vec!["String"]),
-        ("int", vec!["int"]),
-        ("nat", vec!["nat"]),
-        ("u8", vec!["u8"]),
-        ("u16", vec!["u16"]),
-        ("u32", vec!["u32"]),
-        ("u64", vec!["u64"]),
-        ("usize", vec!["usize"]),
-        ("i8", vec!["i8"]),
-        ("i16", vec!["i16"]),
-        ("i32", vec!["i32"]),
-        ("i64", vec!["i64"]),
-        ("isize", vec!["isize"]),
-    ];
+    let content = match std::fs::read_to_string(file_path) {
+        Ok(c) => c,
+        Err(_) => return types,
+    };
     
-    for kw in keywords {
-        for (pattern, type_names) in &type_map {
-            if kw == *pattern {
-                for t in type_names {
-                    if !types.contains(&t.to_string()) {
-                        types.push(t.to_string());
+    let parsed = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+    let tree = parsed.tree();
+    
+    // Find struct and enum definitions
+    for node in tree.syntax().descendants() {
+        match node.kind() {
+            SyntaxKind::STRUCT => {
+                if let Some(s) = ast::Struct::cast(node.clone()) {
+                    if let Some(name) = s.name() {
+                        types.push(name.text().to_string());
                     }
                 }
             }
+            SyntaxKind::ENUM => {
+                if let Some(e) = ast::Enum::cast(node.clone()) {
+                    if let Some(name) = e.name() {
+                        types.push(name.text().to_string());
+                    }
+                }
+            }
+            // Also look for type aliases
+            SyntaxKind::TYPE_ALIAS => {
+                if let Some(ta) = ast::TypeAlias::cast(node.clone()) {
+                    if let Some(name) = ta.name() {
+                        types.push(name.text().to_string());
+                    }
+                }
+            }
+            _ => {}
         }
     }
     
     types
-}
-
-/// Infer keywords from a broadcast group name
-fn infer_keywords_from_group_name(name: &str) -> Vec<String> {
-    let mut keywords = Vec::new();
-    
-    // Strip "group_" prefix
-    let base = name.strip_prefix("group_").unwrap_or(name);
-    
-    // Common mappings
-    let keyword_map = [
-        ("seq", vec!["seq", "Seq", "sequence"]),
-        ("set", vec!["set", "Set"]),
-        ("map", vec!["map", "Map"]),
-        ("multiset", vec!["multiset", "Multiset"]),
-        ("hash", vec!["hash", "Hash", "HashMap", "HashSet"]),
-        ("vec", vec!["vec", "Vec"]),
-        ("slice", vec!["slice"]),
-        ("array", vec!["array"]),
-        ("mul", vec!["mul", "multiply"]),
-        ("div", vec!["div", "divide"]),
-        ("mod", vec!["mod", "modulo"]),
-        ("pow", vec!["pow", "power"]),
-        ("bits", vec!["bits", "bit"]),
-        ("string", vec!["string", "String", "str"]),
-        ("range", vec!["range", "Range"]),
-        ("ptr", vec!["ptr", "pointer"]),
-        ("layout", vec!["layout", "Layout"]),
-        ("control_flow", vec!["control", "flow"]),
-        ("filter", vec!["filter"]),
-        ("flatten", vec!["flatten"]),
-    ];
-    
-    for (pattern, kws) in &keyword_map {
-        if base.contains(pattern) {
-            for kw in kws {
-                keywords.push(kw.to_string());
-            }
-        }
-    }
-    
-    // Also add the base name parts
-    for part in base.split('_') {
-        if part.len() > 2 && !keywords.iter().any(|k| k.eq_ignore_ascii_case(part)) {
-            keywords.push(part.to_string());
-            // Add capitalized version
-            let mut capitalized = part.to_string();
-            if let Some(c) = capitalized.get_mut(0..1) {
-                c.make_ascii_uppercase();
-            }
-            if !keywords.contains(&capitalized) {
-                keywords.push(capitalized);
-            }
-        }
-    }
-    
-    keywords
 }
 
 /// Apply broadcast groups to a file by inserting use statements
@@ -1635,32 +1574,17 @@ fn analyze_broadcast_groups_per_file(
                 continue;
             }
             
-            // Check for actual type usage in AST
-            let mut usage_score = 0;
-            
-            for keyword in &bg.keywords {
-                let keyword_lower = keyword.to_lowercase();
-                for type_name in &type_usages {
-                    let type_lower = type_name.to_lowercase();
-                    // Exact match or starts with (for generics like Seq<T>)
-                    if type_lower == keyword_lower || type_lower.starts_with(&keyword_lower) {
-                        usage_score += 3;
-                    }
+            // Check for EXACT type usage - no fuzzy matching
+            // Only recommend if a relevant_type is exactly present in the file's type usages
+            let mut matched = false;
+            for relevant_type in &bg.relevant_types {
+                if type_usages.contains(relevant_type) {
+                    matched = true;
+                    break;
                 }
             }
             
-            // Special handling for arithmetic - look for int/nat types
-            if bg.full_path.contains("arithmetic") {
-                for type_name in &type_usages {
-                    let type_lower = type_name.to_lowercase();
-                    if type_lower == "int" || type_lower == "nat" {
-                        usage_score += 2;
-                    }
-                }
-            }
-            
-            // Require a minimum usage score to recommend
-            if usage_score >= 3 {
+            if matched {
                 recommended_groups.push((bg.full_path.clone(), bg.description.clone()));
             }
         }
@@ -1698,65 +1622,108 @@ fn analyze_broadcast_groups_per_file(
     Ok(recommendations)
 }
 
-/// Apply broadcast groups to a file by adding them after the last existing broadcast use block
-/// or after the use statements if no existing broadcast block exists
+/// Apply broadcast groups to a file by MERGING them into an existing broadcast use block
+/// or creating a new block if none exists. Verus only allows ONE broadcast use block per module.
+/// Handles both single-line (broadcast use foo;) and multi-line (broadcast use { ... };) formats.
 fn apply_broadcast_groups(file: &Path, groups: &[(String, String)]) -> Result<String> {
     let content = std::fs::read_to_string(file)?;
     let original = content.clone();
     let lines: Vec<&str> = content.lines().collect();
     
-    // Find insertion point - after last broadcast use or after use statements
-    let mut insertion_line = 0;
-    let mut in_broadcast_block = false;
-    let mut last_broadcast_line = 0;
-    let mut last_use_line = 0;
+    // Find existing broadcast use - could be single-line or multi-line block
+    let mut single_line_broadcast: Option<usize> = None;  // broadcast use foo;
+    let mut multi_line_start: Option<usize> = None;       // broadcast use {
+    let mut multi_line_end: Option<usize> = None;         // };
+    let mut in_multi_line = false;
     
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
-        if trimmed.starts_with("use ") {
-            last_use_line = i;
-        }
-        if trimmed.contains("broadcast use") {
-            in_broadcast_block = true;
-            last_broadcast_line = i;
-        }
-        if in_broadcast_block && trimmed.contains('}') {
-            last_broadcast_line = i;
-            in_broadcast_block = false;
+        
+        // Multi-line block: broadcast use { ... };
+        if trimmed.starts_with("broadcast use {") || trimmed.starts_with("broadcast use{") {
+            multi_line_start = Some(i);
+            in_multi_line = true;
+        } else if in_multi_line && (trimmed == "};" || trimmed.starts_with("};")) {
+            multi_line_end = Some(i);
+            break;
+        } else if trimmed.starts_with("broadcast use ") && trimmed.ends_with(';') && !trimmed.contains('{') {
+            // Single-line: broadcast use vstd::foo::bar;
+            single_line_broadcast = Some(i);
         }
     }
     
-    // Prefer inserting after existing broadcast blocks, otherwise after use statements
-    insertion_line = if last_broadcast_line > 0 {
-        last_broadcast_line + 1
-    } else if last_use_line > 0 {
-        last_use_line + 1
-    } else {
-        // Look for verus! macro start
+    let mut new_lines: Vec<String> = Vec::new();
+    
+    if let (Some(_start), Some(end)) = (multi_line_start, multi_line_end) {
+        // MERGE into existing multi-line broadcast use block
         for (i, line) in lines.iter().enumerate() {
-            if line.contains("verus!") {
+            if i == end {
+                // Insert new groups with comment BEFORE the closing };
+                new_lines.push("        // Veracity: added broadcast groups".to_string());
+                for (group, _desc) in groups {
+                    new_lines.push(format!("        {},", group));
+                }
+            }
+            new_lines.push(line.to_string());
+        }
+    } else if let Some(single_idx) = single_line_broadcast {
+        // Convert single-line to multi-line and add new groups
+        let single_line = lines[single_idx].trim();
+        // Extract the existing group: "broadcast use vstd::foo::bar;" -> "vstd::foo::bar"
+        let existing_group = single_line
+            .strip_prefix("broadcast use ")
+            .and_then(|s| s.strip_suffix(';'))
+            .unwrap_or("");
+        
+        // Get the indentation from the original line
+        let indent = lines[single_idx].len() - lines[single_idx].trim_start().len();
+        let indent_str = " ".repeat(indent);
+        
+        for (i, line) in lines.iter().enumerate() {
+            if i == single_idx {
+                // Replace single-line with multi-line block containing old + new groups
+                new_lines.push(format!("{}broadcast use {{", indent_str));
+                new_lines.push(format!("{}    {},", indent_str, existing_group));
+                new_lines.push(format!("{}    // Veracity: added broadcast groups", indent_str));
+                for (group, _desc) in groups {
+                    new_lines.push(format!("{}    {},", indent_str, group));
+                }
+                new_lines.push(format!("{}}};", indent_str));
+            } else {
+                new_lines.push(line.to_string());
+            }
+        }
+    } else {
+        // No existing broadcast use - create new block INSIDE verus! macro
+        let mut insertion_line = 0;
+        let mut in_verus = false;
+        
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            // Find verus! { and insert right after
+            if trimmed.starts_with("verus!") && trimmed.contains('{') {
+                in_verus = true;
                 insertion_line = i + 1;
+            } else if in_verus {
+                // Insert after the verus! { line
                 break;
             }
         }
-        insertion_line
-    };
-    
-    // Build the new broadcast use block
-    let mut broadcast_lines = vec![
-        String::new(),
-        "    // Veracity: added broadcast group".to_string(),
-        "    broadcast use {".to_string(),
-    ];
-    for (group, _desc) in groups {
-        broadcast_lines.push(format!("        {},", group));
-    }
-    broadcast_lines.push("    };".to_string());
-    
-    // Insert the broadcast block
-    let mut new_lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
-    for (offset, line) in broadcast_lines.iter().enumerate() {
-        new_lines.insert(insertion_line + offset, line.clone());
+        
+        // Build and insert new broadcast use block
+        for (i, line) in lines.iter().enumerate() {
+            new_lines.push(line.to_string());
+            if i == insertion_line - 1 {
+                // Insert after this line (which is the verus! { line)
+                new_lines.push(String::new());
+                new_lines.push("// Veracity: added broadcast group".to_string());
+                new_lines.push("broadcast use {".to_string());
+                for (group, _desc) in groups {
+                    new_lines.push(format!("    {},", group));
+                }
+                new_lines.push("};".to_string());
+            }
+        }
     }
     
     std::fs::write(file, new_lines.join("\n") + "\n")?;
@@ -1771,7 +1738,7 @@ fn restore_file(file: &Path, original: &str) -> Result<()> {
 
 /// Run verus and check for Z3 errors
 /// Returns (success, has_z3_errors, duration)
-fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, Duration)> {
+fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, Duration)> {
     let start = Instant::now();
     let mut cmd = Command::new("verus");
     cmd.current_dir(codebase);
@@ -1788,11 +1755,11 @@ fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, Duration)> {
     let success = output.status.success();
     
     // Check for Z3 errors in stderr
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let has_z3_errors = stderr.contains("Z3") && 
                         (stderr.contains("error") || stderr.contains("timeout") || stderr.contains("unknown"));
     
-    Ok((success, has_z3_errors, duration))
+    Ok((success, has_z3_errors, stderr, duration))
 }
 
 /// Comment out lines in a file (1-indexed, inclusive)
@@ -2530,7 +2497,7 @@ fn main() -> Result<()> {
         
         // First, get baseline verification time
         log!("  Getting baseline verification time...");
-        let (baseline_success, baseline_z3_errors, baseline_time) = run_verus_check_z3(&args.codebase)?;
+        let (baseline_success, baseline_z3_errors, _baseline_stderr, baseline_time) = run_verus_check_z3(&args.codebase)?;
         
         if !baseline_success {
             log!("  ✗ Baseline verification FAILED! Cannot apply broadcast groups.");
@@ -2543,7 +2510,7 @@ fn main() -> Result<()> {
             log!();
             
             let mut applied_count = 0;
-            let mut reverted_count = 0;
+            let mut _reverted_count = 0;  // Prefixed with _ since we exit early on first revert for debugging
             let mut total_time_saved = Duration::ZERO;
             
             for (i, rec) in broadcast_recommendations.iter().enumerate() {
@@ -2562,17 +2529,27 @@ fn main() -> Result<()> {
                 
                 // Run verification and check for Z3 errors
                 log_no_newline!("verifying... ");
-                let (success, has_z3_errors, new_time) = run_verus_check_z3(&args.codebase)?;
+                let (success, has_z3_errors, stderr, new_time) = run_verus_check_z3(&args.codebase)?;
                 
                 if !success || has_z3_errors {
                     // Revert the changes
                     restore_file(&rec.file, &original)?;
-                    reverted_count += 1;
+                    _reverted_count += 1;
                     if has_z3_errors {
                         log!("REVERTED (Z3 errors)");
                     } else {
                         log!("REVERTED (verification failed)");
                     }
+                    // Show the error and exit on first failure for debugging
+                    log!();
+                    log!("Verus output on failure:");
+                    log!("─────────────────────────────────────────────────────────────────");
+                    for line in stderr.lines() {
+                        log!("{}", line);
+                    }
+                    log!("─────────────────────────────────────────────────────────────────");
+                    log!("Exiting after first revert for debugging.");
+                    return Ok(());
                 } else {
                     // Keep the changes
                     applied_count += 1;
@@ -2594,7 +2571,7 @@ fn main() -> Result<()> {
             log!();
             log!("  Broadcast update summary:");
             log!("    Applied: {} files", applied_count);
-            log!("    Reverted: {} files", reverted_count);
+            log!("    Reverted: {} files", _reverted_count);
             if total_time_saved > Duration::ZERO {
                 log!("    Time saved: {}", format_duration(total_time_saved));
             }
