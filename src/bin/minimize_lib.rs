@@ -1907,7 +1907,7 @@ fn test_lemma(
     let mut call_originals: Vec<(PathBuf, usize, String)> = Vec::new();
     for cs in codebase_calls {
         if !cs.in_library {
-            let orig = comment_out_line(&cs.file, cs.line, "TESTING-CALL")?;
+            let orig = comment_out_line(&cs.file, cs.line, "TESTING")?;
             call_originals.push((cs.file.clone(), cs.line, orig));
         }
     }
@@ -1925,7 +1925,7 @@ fn test_lemma(
         
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
-            comment_out_line(file, *line, "UNNEEDED")?;
+            comment_out_line(file, *line, &format!("UNNEEDED call to {}", lemma.name))?;
         }
         
         Ok((false, duration)) // false = not needed
@@ -1979,7 +1979,7 @@ fn test_lemma_group(
     let mut call_originals: Vec<(PathBuf, usize, String)> = Vec::new();
     for cs in codebase_calls {
         if !cs.in_library {
-            let orig = comment_out_line(&cs.file, cs.line, "TESTING-CALL")?;
+            let orig = comment_out_line(&cs.file, cs.line, "TESTING")?;
             call_originals.push((cs.file.clone(), cs.line, orig));
         }
     }
@@ -1999,7 +1999,7 @@ fn test_lemma_group(
         
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
-            comment_out_line(file, *line, "UNNEEDED")?;
+            comment_out_line(file, *line, "UNNEEDED call")?;
         }
         
         Ok((false, duration)) // false = not needed
@@ -2080,8 +2080,34 @@ fn main() -> Result<()> {
     }
     log!();
     
-    // Step 0a: Discover broadcast groups from vstd
-    log!("Step 0a: Discovering broadcast groups from vstd...");
+    // Print reassurance and phase overview
+    log!("═══════════════════════════════════════════════════════════════════════════════");
+    log!("IMPORTANT: No code will be harmed!");
+    log!("═══════════════════════════════════════════════════════════════════════════════");
+    log!();
+    log!("Veracity will repeatedly comment things in and out using // Veracity: lines");
+    log!("to test and improve your use of vstd. All changes are reversible comments.");
+    log!("You will need to review each // Veracity: line and decide what to keep.");
+    log!();
+    log!("Comment markers used:");
+    log!("  // Veracity: USED            - Lemma is needed, was restored after test");
+    log!("  // Veracity: UNUSED          - Lemma not needed, left commented out");
+    log!("  // Veracity: UNNEEDED        - Call site not needed, left commented out");
+    log!("  // Veracity: DEPENDENT       - Lemma proven by vstd broadcast groups");
+    log!("  // Veracity: TESTING         - Temporary marker during testing (should not remain)");
+    log!();
+    log!("Phases:");
+    log!("  Phase 1: Discover vstd broadcast groups");
+    log!("  Phase 2: Apply broadcast groups to library (with -L flag)");
+    log!("  Phase 3: Analyze library (lemmas, modules, call sites, spec functions)");
+    log!("  Phase 4: Apply broadcast groups to codebase (with -b flag)");
+    log!("  Phase 5: Comment out unused lemmas");
+    log!();
+    log!("═══════════════════════════════════════════════════════════════════════════════");
+    log!();
+    
+    // Phase 1: Discover broadcast groups from vstd
+    log!("Phase 1: Discovering broadcast groups from vstd...");
     let broadcast_groups = if let Some(vstd_path) = find_vstd_source() {
         log!("  vstd source: {}", vstd_path.display());
         let groups = discover_broadcast_groups(&vstd_path)?;
@@ -2096,9 +2122,9 @@ fn main() -> Result<()> {
     };
     log!();
     
-    // Step 0b: Propose broadcast groups for library modules
+    // Phase 2: Propose and apply broadcast groups for library modules
     let lib_recommendations = if !broadcast_groups.is_empty() {
-        log!("Step 0b: Analyzing library for broadcast group recommendations...");
+        log!("Phase 2a: Analyzing library for broadcast group recommendations...");
         let recs = analyze_library_broadcast_groups(
             &args.library,
             &args.exclude_dirs,
@@ -2115,9 +2141,9 @@ fn main() -> Result<()> {
         Vec::new()
     };
     
-    // Step 0b.2: Apply broadcast groups to library if requested
+    // Phase 2b: Apply broadcast groups to library if requested
     if args.apply_lib_broadcasts && !args.dry_run && !lib_recommendations.is_empty() {
-        log!("Step 0b.2: Applying broadcast groups to library...");
+        log!("Phase 2b: Applying broadcast groups to library...");
         for rec in &lib_recommendations {
             let rel_path = rec.file.strip_prefix(&args.library).unwrap_or(&rec.file);
             log!("  Updating {}...", rel_path.display());
@@ -2126,13 +2152,13 @@ fn main() -> Result<()> {
         log!("  Applied broadcast groups to {} files", lib_recommendations.len());
         log!();
     } else if args.apply_lib_broadcasts && args.dry_run {
-        log!("Step 0b.2: Would apply broadcast groups to library (dry run)");
+        log!("Phase 2b: Would apply broadcast groups to library (dry run)");
         log!();
     }
     
-    // Step 0c: Verify after applying broadcast groups
+    // Phase 2c: Verify after applying broadcast groups
     if args.apply_lib_broadcasts && !args.dry_run {
-        log!("Step 0c: Verifying after broadcast group updates...");
+        log!("Phase 2c: Verifying after broadcast group updates...");
         let success = run_verus(&args.codebase)?;
         if success {
             log!("  ✓ Verification passes with new broadcast groups");
@@ -2144,8 +2170,8 @@ fn main() -> Result<()> {
         log!();
     }
     
-    // Step 1: Find all proof functions
-    log!("Step 1: Scanning library for proof functions (lemmas)...");
+    // Phase 3a: Find all proof functions
+    log!("Phase 3a: Scanning library for proof functions (lemmas)...");
     let proof_fns = list_library_proof_functions(&args.library)?;
     log!("  Found {} proof functions", proof_fns.len());
     
@@ -2153,8 +2179,8 @@ fn main() -> Result<()> {
     log!("  In {} modules", modules.len());
     log!();
     
-    // Step 2: Check module usage
-    log!("Step 2: Checking which library modules are used in codebase...");
+    // Phase 3b: Check module usage
+    log!("Phase 3b: Checking which library modules are used in codebase...");
     let used_modules = find_used_modules(&args.codebase, &args.library, &modules)?;
     let unused_modules: Vec<_> = modules.difference(&used_modules).cloned().collect();
     
@@ -2171,8 +2197,8 @@ fn main() -> Result<()> {
     }
     log!();
     
-    // Step 3: Find call sites
-    log!("Step 3: Scanning for lemma call sites...");
+    // Phase 3c: Find call sites
+    log!("Phase 3c: Scanning for lemma call sites...");
     let mut lemma_results: Vec<LemmaResult> = Vec::new();
     let mut total_lib_calls = 0;
     let mut total_codebase_calls = 0;
@@ -2202,8 +2228,8 @@ fn main() -> Result<()> {
     log!("  {} call sites in codebase (outside library)", total_codebase_calls);
     log!();
     
-    // Step 4: Find spec functions
-    log!("Step 4: Scanning library for spec functions...");
+    // Phase 3d: Find spec functions
+    log!("Phase 3d: Scanning library for spec functions...");
     let spec_fns = list_library_spec_functions(&args.library)?;
     log!("  Found {} spec functions", spec_fns.len());
     
@@ -2220,14 +2246,14 @@ fn main() -> Result<()> {
     log!("  {} spec functions without explicit calls (excluding type variants where any is used)", unused_spec_fns.len());
     log!();
     
-    // Step 5: Analyze broadcast groups per file
-    log!("Step 5: Analyzing broadcast groups per file...");
+    // Phase 4a: Analyze broadcast groups per file
+    log!("Phase 4a: Analyzing broadcast groups per file...");
     let broadcast_recommendations = analyze_broadcast_groups_per_file(&args.codebase, &args.library, &args.exclude_dirs, &broadcast_groups)?;
     log!();
     
-    // Step 5b: Apply broadcast groups if requested (skip in dry-run mode)
+    // Phase 4b: Apply broadcast groups if requested (skip in dry-run mode)
     if args.update_broadcasts && !args.dry_run && !broadcast_recommendations.is_empty() {
-        log!("Step 5b: Applying broadcast group recommendations...");
+        log!("Phase 4b: Applying broadcast group recommendations...");
         log!();
         
         // First, get baseline verification time
@@ -2312,8 +2338,8 @@ fn main() -> Result<()> {
     log!("  {} lemmas in used modules (need testing)", num_to_test);
     log!();
     
-    // Step 6: Time verification
-    log!("Step 6: Timing verification...");
+    // Phase 5a: Time verification
+    log!("Phase 5a: Timing verification...");
     let (success, duration) = run_verus_timed(&args.codebase)?;
     
     if !success {
