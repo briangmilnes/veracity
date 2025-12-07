@@ -177,10 +177,12 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `trait _ { type _ }` | Traits with any associated type |
 | `trait _ { type V }` | Traits with associated type V |
 | `trait _ { fn view }` | Traits with 'view' method |
-| `trait _ { body Seq }` | Traits using Seq in default impls |
+| `trait _ { Seq }` | Traits using Seq in default impls |
+| `trait _ { Seq ; fn view }` | Traits with Seq AND view method |
 | `impl _ { fn spec_len }` | Impls with spec_len method |
-| `impl _ { body Seq }` | Impls mentioning Seq in body |
-| `impl _ { body lemma }` | Impls calling lemmas in body |
+| `impl _ { Seq }` | Impls mentioning Seq in body |
+| `impl _ { lemma }` | Impls calling lemmas in body |
+| `impl _ { Seq ; fn add -> u32 }` | Body has Seq AND add->u32 method |
 
 ### Trait Bounds (with Transitive Resolution)
 

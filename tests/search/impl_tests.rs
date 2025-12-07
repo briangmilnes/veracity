@@ -64,23 +64,31 @@ fn test_parse_impl_wildcard_for_type() {
 
 #[test]
 fn test_parse_impl_body_pattern() {
-    let pattern = parse_pattern("impl _ { body Seq }").unwrap();
+    let pattern = parse_pattern("impl _ { Seq }").unwrap();
     assert!(pattern.is_impl_search);
     assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
 }
 
 #[test]
 fn test_parse_impl_body_multiple_patterns() {
-    let pattern = parse_pattern("impl _ { body Seq lemma }").unwrap();
+    let pattern = parse_pattern("impl _ { Seq ; lemma }").unwrap();
     assert!(pattern.is_impl_search);
     assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string(), "lemma".to_string()]);
 }
 
 #[test]
 fn test_parse_impl_body_with_fn() {
-    let pattern = parse_pattern("impl _ { body Seq fn view }").unwrap();
+    let pattern = parse_pattern("impl _ { Seq ; fn view }").unwrap();
     assert!(pattern.is_impl_search);
     assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
     assert_eq!(pattern.body_fn_name, Some("view".to_string()));
+}
+
+#[test]
+fn test_parse_impl_body_fn_with_return() {
+    let pattern = parse_pattern("impl _ { fn add -> u32 }").unwrap();
+    assert!(pattern.is_impl_search);
+    assert_eq!(pattern.body_fn_name, Some("add".to_string()));
+    assert_eq!(pattern.body_fn_return, Some("u32".to_string()));
 }
 

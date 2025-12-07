@@ -195,12 +195,14 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'trait _ { type V }' | traits with associated type V |
 | 'trait _ { fn view }' | traits with view method |
 | 'trait _ { fn _ -> Self }' | traits with method returning Self |
-| 'trait _ { body Seq }' | traits with Seq usage in default impls |
+| 'trait _ { Seq }' | traits with Seq usage in default impls |
+| 'trait _ { Seq ; fn view }' | traits with Seq AND view method |
 | 'impl _ { type _ }' | impls with any associated type |
 | 'impl _ { fn spec_len }' | impls with spec_len method |
 | 'impl _ for Seq { fn len }' | Seq impls with len method |
-| 'impl _ { body Seq }' | impls mentioning Seq in body |
-| 'impl _ { body lemma }' | impls calling lemmas in body |
+| 'impl _ { Seq }' | impls mentioning Seq in body |
+| 'impl _ { lemma }' | impls calling lemmas in body |
+| 'impl _ { Seq ; fn add -> u32 }' | impls with Seq AND add->u32 method |
 
 ## OR/AND Patterns
 
@@ -290,13 +292,13 @@ All 195+ patterns with corresponding tests (276 tests total).
 - '{ type NAME }' - Has associated type NAME
 - '{ fn NAME }' - Has method NAME
 - '{ fn NAME -> TYPE }' - Has method returning TYPE
-- '{ body PATTERN }' - Body text contains PATTERN (for impl/trait)
+- '{ PATTERN }' - Body text contains PATTERN (for impl/trait)
+- '{ P1 ; P2 }' - Multiple body patterns (semicolon-separated)
 - '{ : TYPE }' - Has field/variant of TYPE
 - '{ : T1, : T2 }' - Has fields of T1 AND T2 (any order)
 - '( : T1, : T2 )' - Has args of T1 AND T2 (any order)
 - '#[ATTR]' - Has attribute ATTR
-- 'proof {}' - Has proof block in body
-- 'assert' - Has assert statement in body
-- 'body PATTERN' - Body contains PATTERN (for functions)
+- 'proof {}' - Has proof block in body (for functions)
+- 'assert' - Has assert statement in body (for functions)
 - '\(A\|B\)' - Match A OR B
 - '\(A\&B\)' - Match A AND B

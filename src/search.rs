@@ -126,7 +126,9 @@ fn is_keyword(token: &str) -> bool {
     ) || token.starts_with("#[")
 }
 
-/// Parse body patterns like { type NAME } or { fn NAME -> TYPE }
+/// Parse body patterns like { type NAME }, { fn NAME -> TYPE }, or { Seq; fn add }
+/// Patterns without keywords (type/fn) are treated as body text patterns.
+/// Semicolons separate multiple patterns.
 /// Returns the number of tokens consumed
 fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
     if tokens.is_empty() || tokens[0] != "{" {
@@ -137,11 +139,16 @@ fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
     
     while i < tokens.len() && tokens[i] != "}" {
         let token = tokens[i].to_lowercase();
+        // Skip semicolons as separators
+        if tokens[i] == ";" {
+            i += 1;
+            continue;
+        }
         match token.as_str() {
             "type" => {
                 i += 1;
                 // Get type name pattern
-                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "fn" && tokens[i] != "body" {
+                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "fn" && tokens[i] != "type" && tokens[i] != ";" {
                     pattern.body_type_patterns.push(tokens[i].clone());
                     i += 1;
                 }
@@ -149,7 +156,7 @@ fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
             "fn" => {
                 i += 1;
                 // Get function name pattern
-                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "->" && !tokens[i].starts_with('(') {
+                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "->" && !tokens[i].starts_with('(') && tokens[i] != ";" {
                     pattern.body_fn_name = Some(tokens[i].clone());
                     i += 1;
                 }
@@ -164,21 +171,15 @@ fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
                 // Check for -> TYPE
                 if i < tokens.len() && tokens[i] == "->" {
                     i += 1;
-                    if i < tokens.len() && tokens[i] != "}" {
+                    if i < tokens.len() && tokens[i] != "}" && tokens[i] != ";" {
                         pattern.body_fn_return = Some(tokens[i].clone());
                         i += 1;
                     }
                 }
             }
-            "body" => {
-                i += 1;
-                // Collect body patterns until we hit } or another keyword
-                while i < tokens.len() && tokens[i] != "}" && tokens[i] != "type" && tokens[i] != "fn" {
-                    pattern.impl_body_patterns.push(tokens[i].clone());
-                    i += 1;
-                }
-            }
             _ => {
+                // Any other token is a body text pattern
+                pattern.impl_body_patterns.push(tokens[i].clone());
                 i += 1;
             }
         }
