@@ -420,6 +420,27 @@ fn test_fn_arg_type_pattern_single() {
     assert!(pattern.arg_type_patterns.contains(&"Ghost".to_string()));
 }
 
+// Complex struct patterns
+
+#[test]
+fn test_struct_with_attribute_and_fields() {
+    let pattern = parse_pattern("#[verifier::reject_recursive_types] struct _ { : Ghost, : Tracked }").unwrap();
+    assert!(pattern.is_struct_search);
+    assert!(pattern.attribute_patterns.contains(&"verifier::reject_recursive_types".to_string()));
+    assert!(pattern.struct_field_patterns.contains(&"Ghost".to_string()));
+    assert!(pattern.struct_field_patterns.contains(&"Tracked".to_string()));
+}
+
+#[test]
+fn test_generic_struct_with_multiple_fields() {
+    let pattern = parse_pattern("struct <_> { : int, : Seq, : Option }").unwrap();
+    assert!(pattern.is_struct_search);
+    assert!(pattern.requires_generics);
+    assert!(pattern.struct_field_patterns.contains(&"int".to_string()));
+    assert!(pattern.struct_field_patterns.contains(&"Seq".to_string()));
+    assert!(pattern.struct_field_patterns.contains(&"Option".to_string()));
+}
+
 #[test]
 fn test_enum_variant_pattern() {
     let pattern = parse_pattern("enum _ { : String }").unwrap();
