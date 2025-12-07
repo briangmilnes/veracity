@@ -1,0 +1,16 @@
+Logging to: /home/milnes/projects/veracity/docs/analyses/veracity-search.log
+Verus Search
+============
+
+Pattern: trait _ : \(Clone\|Copy\)
+Searching: /home/milnes/projects/verus-lang/source/vstd
+Files: 87, Traits: 93, Matches: 2
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/core.rs:30: [0m
+#[verifier::external_trait_specification]
+[38;5;22mpub trait ExInteger: Copy[0m
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/core.rs:87: [0m
+#[verifier::external_trait_specification]
+[38;5;22mpub trait ExIterStep: Clone + PartialOrd + Sized[0m
+

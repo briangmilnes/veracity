@@ -137,6 +137,116 @@ struct BodyMethod {
     return_type: Option<String>,
 }
 
+/// Trait hierarchy for transitive bound resolution
+#[derive(Debug, Default)]
+struct TraitHierarchy {
+    /// Map: trait name -> direct super-traits (bounds)
+    bounds: std::collections::HashMap<String, Vec<String>>,
+    /// Map: type alias name -> aliased type
+    type_aliases: std::collections::HashMap<String, String>,
+}
+
+impl TraitHierarchy {
+    /// Build hierarchy from a list of parsed traits
+    fn from_traits(traits: &[ParsedTrait], type_aliases: &[ParsedTypeAlias]) -> Self {
+        let mut hierarchy = TraitHierarchy::default();
+        
+        for tr in traits {
+            hierarchy.bounds.insert(tr.name.clone(), tr.bounds.clone());
+        }
+        
+        for ta in type_aliases {
+            // Strip generics from value: Seq<T> -> Seq
+            let value = if let Some(gen_start) = ta.value.find('<') {
+                ta.value[..gen_start].trim().to_string()
+            } else {
+                ta.value.clone()
+            };
+            hierarchy.type_aliases.insert(ta.name.clone(), value);
+        }
+        
+        hierarchy
+    }
+    
+    /// Get all transitive bounds for a trait (including through other traits)
+    fn transitive_bounds(&self, trait_name: &str) -> std::collections::HashSet<String> {
+        let mut result = std::collections::HashSet::new();
+        let mut queue = vec![trait_name.to_string()];
+        
+        while let Some(t) = queue.pop() {
+            if let Some(bounds) = self.bounds.get(&t) {
+                for bound in bounds {
+                    if result.insert(bound.clone()) {
+                        queue.push(bound.clone());
+                    }
+                }
+            }
+        }
+        
+        result
+    }
+    
+    /// Check if a trait has a bound (directly or transitively)
+    fn has_bound(&self, trait_name: &str, search_bound: &str) -> bool {
+        self.transitive_bounds(trait_name).contains(search_bound)
+    }
+    
+    /// Check if a trait has a DIRECT bound (not transitive)
+    fn has_direct_bound(&self, trait_name: &str, search_bound: &str) -> bool {
+        self.bounds.get(trait_name)
+            .map(|b| b.iter().any(|x| x == search_bound))
+            .unwrap_or(false)
+    }
+    
+    /// Find the path from a trait to a bound (for "via X" display)
+    fn find_path(&self, trait_name: &str, search_bound: &str) -> Option<String> {
+        // BFS to find shortest path
+        let mut queue = vec![(trait_name.to_string(), vec![])];
+        let mut visited = std::collections::HashSet::new();
+        
+        while let Some((current, path)) = queue.pop() {
+            if visited.contains(&current) {
+                continue;
+            }
+            visited.insert(current.clone());
+            
+            if let Some(bounds) = self.bounds.get(&current) {
+                for bound in bounds {
+                    if bound == search_bound {
+                        // Found it! Return the path
+                        if path.is_empty() {
+                            return None; // Direct, no "via"
+                        } else {
+                            return Some(path.join(" → "));
+                        }
+                    }
+                    let mut new_path = path.clone();
+                    new_path.push(bound.clone());
+                    queue.push((bound.clone(), new_path));
+                }
+            }
+        }
+        
+        None
+    }
+    
+    /// Resolve a type alias to its ultimate type
+    fn resolve_type_alias(&self, name: &str) -> String {
+        let mut current = name.to_string();
+        let mut visited = std::collections::HashSet::new();
+        
+        while let Some(target) = self.type_aliases.get(&current) {
+            if visited.contains(&current) {
+                break; // Cycle detected
+            }
+            visited.insert(current.clone());
+            current = target.clone();
+        }
+        
+        current
+    }
+}
+
 /// Parsed representation of a type alias
 #[derive(Debug, Clone)]
 struct ParsedTypeAlias {
@@ -1875,6 +1985,84 @@ fn matches_trait(tr: &ParsedTrait, pattern: &SearchPattern) -> bool {
     true
 }
 
+/// Check if a trait matches the search pattern EXCEPT for bounds
+/// (used for transitive bound matching where we check bounds separately)
+fn matches_trait_non_bound(tr: &ParsedTrait, pattern: &SearchPattern) -> bool {
+    // Check requires_generics
+    if pattern.requires_generics && tr.generics.is_empty() {
+        return false;
+    }
+    
+    // Check name pattern
+    if let Some(ref name_pat) = pattern.name {
+        if !name_pattern_matches(name_pat, &tr.name) {
+            return false;
+        }
+    }
+    
+    // Skip trait bounds check - handled by hierarchy
+    
+    // Check generic patterns
+    for required in &pattern.generics_patterns {
+        let generics_text: String = tr.generics.iter()
+            .map(|g| format!("{} {}", g.name, g.bounds.join(" ")))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !pattern_matches(required, &generics_text) {
+            return false;
+        }
+    }
+    
+    // Check body type patterns
+    for type_pat in &pattern.body_type_patterns {
+        let mut found = false;
+        for body_type in &tr.body_types {
+            if name_pattern_matches(type_pat, body_type) {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return false;
+        }
+    }
+    
+    // Check body fn patterns
+    if let Some(ref fn_name_pat) = pattern.body_fn_name {
+        let mut found = false;
+        for method in &tr.body_methods {
+            if name_pattern_matches(fn_name_pat, &method.name) {
+                if let Some(ref ret_pat) = pattern.body_fn_return {
+                    if let Some(ref ret_type) = method.return_type {
+                        if !pattern_matches(ret_pat, ret_type) {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                let mut args_match = true;
+                for arg_pat in &pattern.body_fn_args {
+                    let args_text = method.args.join(" ");
+                    if !pattern_matches(arg_pat, &args_text) {
+                        args_match = false;
+                        break;
+                    }
+                }
+                if args_match {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if !found {
+            return false;
+        }
+    }
+    
+    true
+}
+
 /// Display a matched impl in file:line format (for Emacs compilation/grep mode)
 fn display_impl(imp: &ParsedImpl, _base_path: Option<&Path>, color: bool) {
     // File:line on first line for Emacs navigation (red)
@@ -1952,6 +2140,47 @@ fn display_trait(tr: &ParsedTrait, _base_path: Option<&Path>, color: bool) {
     
     // Build and show the signature (green)
     let sig = format!("{}trait {}{}{}", vis, tr.name, generics_str, bounds_str);
+    log!("{}{}{}", green(color), sig, reset(color));
+    log!("");
+}
+
+/// Display a matched trait with transitive path (via X → Y)
+fn display_trait_with_via(tr: &ParsedTrait, via_path: &str, _base_path: Option<&Path>, color: bool) {
+    // File:line on first line for Emacs navigation (red)
+    log!("{}{}:{}: {}", red(color), tr.file.display(), tr.line, reset(color));
+    
+    // Show context
+    for ctx in &tr.context {
+        log!("{}", ctx);
+    }
+    
+    let vis = if tr.visibility.is_empty() {
+        String::new()
+    } else {
+        format!("{} ", tr.visibility)
+    };
+    
+    let generics_str = if tr.generics.is_empty() {
+        String::new()
+    } else {
+        let gen_strs: Vec<String> = tr.generics.iter().map(|g| {
+            if g.bounds.is_empty() {
+                g.name.clone()
+            } else {
+                format!("{}: {}", g.name, g.bounds.join(" + "))
+            }
+        }).collect();
+        format!("<{}>", gen_strs.join(", "))
+    };
+    
+    let bounds_str = if tr.bounds.is_empty() {
+        String::new()
+    } else {
+        format!(": {}", tr.bounds.join(" + "))
+    };
+    
+    // Build and show the signature (green) with (via ...) annotation
+    let sig = format!("{}trait {}{}{}  (via {})", vis, tr.name, generics_str, bounds_str, via_path);
     log!("{}{}{}", green(color), sig, reset(color));
     log!("");
 }
@@ -2295,20 +2524,70 @@ fn main() -> Result<()> {
         }
     } else if args.pattern.is_trait_search {
         let mut all_traits: Vec<ParsedTrait> = Vec::new();
+        let mut all_type_aliases: Vec<ParsedTypeAlias> = Vec::new();
         for file in &all_files {
             all_traits.extend(parse_traits_from_file(file));
+            all_type_aliases.extend(parse_types_from_file(file));
         }
         let total_traits = all_traits.len();
         
-        let matches: Vec<_> = all_traits.into_iter()
-            .filter(|t| matches_trait(t, &args.pattern))
-            .collect();
+        // Build trait hierarchy for transitive bound resolution
+        let hierarchy = TraitHierarchy::from_traits(&all_traits, &all_type_aliases);
         
-        log!("Files: {}, Traits: {}, Matches: {}", file_count, total_traits, matches.len());
+        // Separate direct and transitive matches
+        let mut direct_matches: Vec<&ParsedTrait> = Vec::new();
+        let mut transitive_matches: Vec<(&ParsedTrait, String)> = Vec::new(); // (trait, via_path)
+        
+        // Check if we're searching for a specific bound
+        let search_bound = if !args.pattern.trait_bounds.is_empty() {
+            Some(args.pattern.trait_bounds[0].clone())
+        } else {
+            None
+        };
+        
+        for tr in &all_traits {
+            // First check non-bound criteria
+            if !matches_trait_non_bound(tr, &args.pattern) {
+                continue;
+            }
+            
+            // If we're searching for a bound, check direct vs transitive
+            if let Some(ref bound) = search_bound {
+                if hierarchy.has_direct_bound(&tr.name, bound) {
+                    direct_matches.push(tr);
+                } else if hierarchy.has_bound(&tr.name, bound) {
+                    if let Some(path) = hierarchy.find_path(&tr.name, bound) {
+                        transitive_matches.push((tr, path));
+                    }
+                }
+            } else {
+                // No bound search, just use regular matching
+                if matches_trait(tr, &args.pattern) {
+                    direct_matches.push(tr);
+                }
+            }
+        }
+        
+        let total_matches = direct_matches.len() + transitive_matches.len();
+        log!("Files: {}, Traits: {}, Matches: {} ({} direct, {} transitive)", 
+             file_count, total_traits, total_matches, direct_matches.len(), transitive_matches.len());
         log!("");
         
-        for tr in &matches {
-            display_trait(tr, base_path, args.color);
+        if !direct_matches.is_empty() {
+            log!("=== DIRECT ===");
+            log!("");
+            for tr in &direct_matches {
+                display_trait(tr, base_path, args.color);
+            }
+        }
+        
+        if !transitive_matches.is_empty() {
+            log!("");
+            log!("=== TRANSITIVE ===");
+            log!("");
+            for (tr, via_path) in &transitive_matches {
+                display_trait_with_via(tr, via_path, base_path, args.color);
+            }
         }
     } else {
         let mut all_lemmas: Vec<ParsedLemma> = Vec::new();
