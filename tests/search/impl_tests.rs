@@ -62,3 +62,25 @@ fn test_parse_impl_wildcard_for_type() {
     assert_eq!(pattern.impl_for_type, Some("_".to_string()));
 }
 
+#[test]
+fn test_parse_impl_body_pattern() {
+    let pattern = parse_pattern("impl _ { body Seq }").unwrap();
+    assert!(pattern.is_impl_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
+}
+
+#[test]
+fn test_parse_impl_body_multiple_patterns() {
+    let pattern = parse_pattern("impl _ { body Seq lemma }").unwrap();
+    assert!(pattern.is_impl_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string(), "lemma".to_string()]);
+}
+
+#[test]
+fn test_parse_impl_body_with_fn() {
+    let pattern = parse_pattern("impl _ { body Seq fn view }").unwrap();
+    assert!(pattern.is_impl_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
+    assert_eq!(pattern.body_fn_name, Some("view".to_string()));
+}
+

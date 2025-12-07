@@ -61,3 +61,25 @@ fn test_parse_trait_wildcard() {
     assert_eq!(pattern.name, Some("_".to_string()));
 }
 
+#[test]
+fn test_parse_trait_body_pattern() {
+    let pattern = parse_pattern("trait _ { body Seq }").unwrap();
+    assert!(pattern.is_trait_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
+}
+
+#[test]
+fn test_parse_trait_body_multiple_patterns() {
+    let pattern = parse_pattern("trait _ { body lemma proof }").unwrap();
+    assert!(pattern.is_trait_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["lemma".to_string(), "proof".to_string()]);
+}
+
+#[test]
+fn test_parse_trait_body_with_fn() {
+    let pattern = parse_pattern("trait _ { body Seq fn view }").unwrap();
+    assert!(pattern.is_trait_search);
+    assert_eq!(pattern.impl_body_patterns, vec!["Seq".to_string()]);
+    assert_eq!(pattern.body_fn_name, Some("view".to_string()));
+}
+

@@ -119,6 +119,8 @@ struct ParsedImpl {
     body_types: Vec<String>,
     /// Method names in the impl body
     body_methods: Vec<BodyMethod>,
+    /// Full body text for pattern matching
+    body_text: String,
 }
 
 /// Parsed representation of a trait definition
@@ -141,6 +143,8 @@ struct ParsedTrait {
     body_types: Vec<String>,
     /// Method signatures in the trait body
     body_methods: Vec<BodyMethod>,
+    /// Full body text for pattern matching
+    body_text: String,
 }
 
 /// A method in a trait/impl body
@@ -836,6 +840,7 @@ fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String
         full_text: line.to_string(),
         body_types,
         body_methods,
+        body_text: body.to_string(),
     })
 }
 
@@ -950,6 +955,7 @@ fn parse_trait_line(line: &str, line_num: usize, path: &Path, context: Vec<Strin
         full_text: line.to_string(),
         body_types,
         body_methods,
+        body_text: body.to_string(),
     })
 }
 
@@ -2273,6 +2279,13 @@ fn matches_impl(imp: &ParsedImpl, pattern: &SearchPattern) -> bool {
         }
     }
     
+    // Check impl body text patterns
+    for body_pat in &pattern.impl_body_patterns {
+        if !pattern_matches(body_pat, &imp.body_text) {
+            return false;
+        }
+    }
+    
     true
 }
 
@@ -2362,6 +2375,13 @@ fn matches_trait(tr: &ParsedTrait, pattern: &SearchPattern) -> bool {
     for required in &pattern.attribute_patterns {
         let all_attrs = tr.attributes.join(" ");
         if !pattern_matches(required, &all_attrs) {
+            return false;
+        }
+    }
+    
+    // Check trait body text patterns (for default/blanket implementations)
+    for body_pat in &pattern.impl_body_patterns {
+        if !pattern_matches(body_pat, &tr.body_text) {
             return false;
         }
     }

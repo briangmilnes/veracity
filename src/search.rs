@@ -106,6 +106,8 @@ pub struct SearchPattern {
     pub body_fn_return: Option<String>,
     /// Method argument type patterns
     pub body_fn_args: Vec<String>,
+    /// Raw body text patterns (for searching impl/trait body text)
+    pub impl_body_patterns: Vec<String>,
 }
 
 /// Parse a search pattern from a string
@@ -139,7 +141,7 @@ fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
             "type" => {
                 i += 1;
                 // Get type name pattern
-                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "fn" {
+                if i < tokens.len() && tokens[i] != "}" && tokens[i] != "fn" && tokens[i] != "body" {
                     pattern.body_type_patterns.push(tokens[i].clone());
                     i += 1;
                 }
@@ -166,6 +168,14 @@ fn parse_body_pattern(tokens: &[String], pattern: &mut SearchPattern) -> usize {
                         pattern.body_fn_return = Some(tokens[i].clone());
                         i += 1;
                     }
+                }
+            }
+            "body" => {
+                i += 1;
+                // Collect body patterns until we hit } or another keyword
+                while i < tokens.len() && tokens[i] != "}" && tokens[i] != "type" && tokens[i] != "fn" {
+                    pattern.impl_body_patterns.push(tokens[i].clone());
+                    i += 1;
                 }
             }
             _ => {
