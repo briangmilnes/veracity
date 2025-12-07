@@ -6,42 +6,33 @@ Since Verus is a superset of Rust, Veracity also includes general Rust analysis 
 
 ## Featured Tools
 
-### 🔍 [veracity-search](docs/veracity-search.md)
+> 📖 Each tool name links to **full documentation** with complete pattern references and examples.
+
+### 🔍 [veracity-search](docs/veracity-search.md) — *[full docs](docs/veracity-search.md)*
 
 Type-based semantic search for Verus code. Find functions, traits, impls by pattern.
 
 ```bash
-# Find proof functions containing 'len'
-veracity-search -v 'proof fn .*len.*'
-
-# Traits requiring Clone (with transitive resolution!)
-veracity-search -v -C ~/myproject 'trait _ : Clone'
-# → Shows: StT : Clone (direct)
-# → Shows: HashOrd : StT (via StT) (transitive)
-
-# Search builtin types
-veracity-search -v -b 'struct real'
+veracity-search -v 'proof fn .*len.*'           # proof functions containing 'len'
+veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
+veracity-search -v -b 'struct real'             # search builtin types
 ```
 
-### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md)
+### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*
 
-Automatically minimize vstd library dependencies. Tests each lemma to find what's truly needed.
+Automatically minimize vstd library dependencies. 11 phases test each lemma to find what's truly needed.
 
 ```bash
 veracity-minimize-lib -c ./myproject -l ./myproject/src/vstdplus -L -b -a
 ```
 
-11 phases: analyze → broadcast groups → test dependence → test necessity → minimize asserts
+### 🕳️ [veracity-review-proof-holes](docs/veracity-proof-holes.md) — *[full docs](docs/veracity-proof-holes.md)*
 
-### 🕳️ [veracity-review-proof-holes](docs/veracity-proof-holes.md)
-
-Detect incomplete proofs and unverified assumptions.
+Detect incomplete proofs: `admit()`, `assume(false)`, `#[verifier::external_body]`, axioms with holes.
 
 ```bash
 veracity-review-proof-holes -d src/
 ```
-
-Finds: `admit()`, `assume(false)`, `#[verifier::external_body]`, axioms with holes
 
 ### 📊 veracity-count-loc
 
