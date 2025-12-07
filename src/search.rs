@@ -87,6 +87,14 @@ pub struct SearchPattern {
     /// Attribute patterns (#[...])
     pub attribute_patterns: Vec<String>,
     
+    // Function body patterns
+    /// Must have proof { } block in body
+    pub has_proof_block: bool,
+    /// Must have assert statement in body
+    pub has_assert: bool,
+    /// Body content patterns (for searching function bodies)
+    pub body_patterns: Vec<String>,
+    
     // Body patterns (for trait/impl body matching)
     /// Associated type patterns to match in trait/impl body
     pub body_type_patterns: Vec<String>,
@@ -110,7 +118,7 @@ fn is_keyword(token: &str) -> bool {
         "proof" | "fn" | "args" | "generics" | "types" | "requires" | "ensures" |
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
         "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | 
-        "=" | "{" | "}" | ":"
+        "=" | "{" | "}" | ":" | "assert" | "body"
     ) || token.starts_with("#[")
 }
 
@@ -270,7 +278,22 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
         }
         
         match token_lower.as_str() {
-            "proof" | "spec" | "exec" | "open" | "closed" | "broadcast" | "axiom" => {
+            "proof" => {
+                // Check if followed by { or {} - means "has proof block in body"
+                if i + 1 < tokens.len() && (tokens[i + 1] == "{" || tokens[i + 1] == "{}") {
+                    pattern.has_proof_block = true;
+                    i += 2; // Skip "proof" and "{" or "{}"
+                    // Skip closing } if present
+                    if i < tokens.len() && tokens[i] == "}" {
+                        i += 1;
+                    }
+                } else {
+                    // It's a modifier for proof functions
+                    pattern.required_modifiers.push(token_lower.clone());
+                    i += 1;
+                }
+            }
+            "spec" | "exec" | "open" | "closed" | "broadcast" | "axiom" => {
                 // Capture modifiers for filtering (except pub which is just visibility)
                 pattern.required_modifiers.push(token_lower.clone());
                 i += 1;
@@ -353,6 +376,19 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                 // Collect patterns until next keyword
                 while i < tokens.len() && !is_keyword(&tokens[i]) {
                     pattern.ensures_patterns.push(tokens[i].clone());
+                    i += 1;
+                }
+            }
+            "assert" => {
+                // Must have assert in body
+                pattern.has_assert = true;
+                i += 1;
+            }
+            "body" => {
+                // Body content patterns
+                i += 1;
+                while i < tokens.len() && !is_keyword(&tokens[i]) {
+                    pattern.body_patterns.push(tokens[i].clone());
                     i += 1;
                 }
             }

@@ -15,7 +15,8 @@ Type-based semantic search for Verus code. Find functions, traits, impls by patt
 ```bash
 veracity-search -v 'proof fn .*len.*'           # proof functions containing 'len'
 veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
-veracity-search -v -b 'struct real'             # search builtin types
+veracity-search -v 'exec fn _ proof {}'         # exec functions with proof blocks
+veracity-search -v 'struct _ { : Ghost }'       # structs with Ghost fields
 ```
 
 ### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*

@@ -75,6 +75,12 @@ struct ParsedLemma {
     ensures: Vec<String>,
     /// Attributes (extracted from context)
     attributes: Vec<String>,
+    /// Whether function body contains proof { } blocks
+    has_proof_block: bool,
+    /// Whether function body contains assert statements
+    has_assert: bool,
+    /// The function body text (for pattern matching)
+    body_text: String,
     /// The full text of the lemma signature
     #[allow(dead_code)]
     full_text: String,
@@ -100,6 +106,7 @@ struct ParsedImpl {
     line: usize,
     /// Preceding context (doc comments, attributes)
     context: Vec<String>,
+    #[allow(dead_code)]
     visibility: String,
     generics: Vec<GenericParam>,
     trait_name: Option<String>,
@@ -121,6 +128,7 @@ struct ParsedTrait {
     line: usize,
     /// Preceding context (doc comments, attributes)
     context: Vec<String>,
+    #[allow(dead_code)]
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
@@ -259,6 +267,7 @@ struct ParsedTypeAlias {
     file: PathBuf,
     line: usize,
     context: Vec<String>,
+    #[allow(dead_code)]
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
@@ -273,6 +282,7 @@ struct ParsedStruct {
     file: PathBuf,
     line: usize,
     context: Vec<String>,
+    #[allow(dead_code)]
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
@@ -290,6 +300,7 @@ struct ParsedEnum {
     file: PathBuf,
     line: usize,
     context: Vec<String>,
+    #[allow(dead_code)]
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
@@ -542,7 +553,13 @@ fn parse_lemmas_from_file(path: &Path) -> Vec<ParsedLemma> {
         
         // Look for proof fn, broadcast proof fn, etc.
         if contains_proof_fn(line) {
-            if let Some(lemma) = parse_lemma_at(&lines, i, path) {
+            if let Some(mut lemma) = parse_lemma_at(&lines, i, path) {
+                // Extract function body for analysis
+                let body = extract_function_body(&lines, i);
+                lemma.has_proof_block = body.contains("proof {") || body.contains("proof{");
+                lemma.has_assert = body.contains("assert(") || body.contains("assert!(")
+                    || body.contains("assert_by(") || body.contains("assert_forall_by(");
+                lemma.body_text = body;
                 lemmas.push(lemma);
             }
         }
@@ -551,6 +568,46 @@ fn parse_lemmas_from_file(path: &Path) -> Vec<ParsedLemma> {
     }
     
     lemmas
+}
+
+/// Extract the full function body text
+fn extract_function_body(lines: &[&str], start: usize) -> String {
+    let mut body = String::new();
+    let mut brace_depth = 0;
+    let mut started = false;
+    
+    for i in start..lines.len() {
+        let line = lines[i];
+        
+        for ch in line.chars() {
+            match ch {
+                '{' => {
+                    brace_depth += 1;
+                    started = true;
+                }
+                '}' => {
+                    brace_depth -= 1;
+                    if started && brace_depth == 0 {
+                        body.push_str(line);
+                        return body;
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        if started {
+            body.push_str(line);
+            body.push('\n');
+        }
+        
+        // Limit search depth
+        if i > start + 200 {
+            break;
+        }
+    }
+    
+    body
 }
 
 /// Parse all impl blocks from a file
@@ -1613,6 +1670,7 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
     // Extract attributes from context
     let attributes = extract_attributes_from_context(&context);
     
+    // Body analysis is done later when we have full file context
     Some(ParsedLemma {
         file: path.to_path_buf(),
         line,
@@ -1627,6 +1685,9 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
         requires,
         ensures,
         attributes,
+        has_proof_block: false,  // Set later
+        has_assert: false,       // Set later
+        body_text: String::new(), // Set later
         full_text: text.to_string(),
     })
 }
@@ -2077,6 +2138,23 @@ fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
     for required in &pattern.attribute_patterns {
         let all_attrs = lemma.attributes.join(" ");
         if !pattern_matches(required, &all_attrs) {
+            return false;
+        }
+    }
+    
+    // Check has_proof_block
+    if pattern.has_proof_block && !lemma.has_proof_block {
+        return false;
+    }
+    
+    // Check has_assert
+    if pattern.has_assert && !lemma.has_assert {
+        return false;
+    }
+    
+    // Check body patterns
+    for required in &pattern.body_patterns {
+        if !pattern_matches(required, &lemma.body_text) {
             return false;
         }
     }
@@ -2646,33 +2724,15 @@ fn display_struct(st: &ParsedStruct, _base_path: Option<&Path>, color: bool) {
     // File:line on first line for Emacs navigation (red)
     log!("{}{}:{}: {}", red(color), st.file.display(), st.line, reset(color));
     
-    // Show context
+    // Show context (attributes, doc comments)
     for ctx in &st.context {
         log!("{}", ctx);
     }
     
-    let vis = if st.visibility.is_empty() {
-        String::new()
-    } else {
-        format!("{} ", st.visibility)
-    };
-    
-    let generics_str = if st.generics.is_empty() {
-        String::new()
-    } else {
-        let gen_strs: Vec<String> = st.generics.iter().map(|g| {
-            if g.bounds.is_empty() {
-                g.name.clone()
-            } else {
-                format!("{}: {}", g.name, g.bounds.join(" + "))
-            }
-        }).collect();
-        format!("<{}>", gen_strs.join(", "))
-    };
-    
-    // Build and show the signature (green)
-    let sig = format!("{}struct {}{}", vis, st.name, generics_str);
-    log!("{}{}{}", green(color), sig, reset(color));
+    // Show the full struct definition with body (green)
+    for line in st.full_text.lines() {
+        log!("{}{}{}", green(color), line, reset(color));
+    }
     log!("");
 }
 
@@ -2681,33 +2741,15 @@ fn display_enum(en: &ParsedEnum, _base_path: Option<&Path>, color: bool) {
     // File:line on first line for Emacs navigation (red)
     log!("{}{}:{}: {}", red(color), en.file.display(), en.line, reset(color));
     
-    // Show context
+    // Show context (attributes, doc comments)
     for ctx in &en.context {
         log!("{}", ctx);
     }
     
-    let vis = if en.visibility.is_empty() {
-        String::new()
-    } else {
-        format!("{} ", en.visibility)
-    };
-    
-    let generics_str = if en.generics.is_empty() {
-        String::new()
-    } else {
-        let gen_strs: Vec<String> = en.generics.iter().map(|g| {
-            if g.bounds.is_empty() {
-                g.name.clone()
-            } else {
-                format!("{}: {}", g.name, g.bounds.join(" + "))
-            }
-        }).collect();
-        format!("<{}>", gen_strs.join(", "))
-    };
-    
-    // Build and show the signature (green)
-    let sig = format!("{}enum {}{}", vis, en.name, generics_str);
-    log!("{}{}{}", green(color), sig, reset(color));
+    // Show the full enum definition with body (green)
+    for line in en.full_text.lines() {
+        log!("{}{}{}", green(color), line, reset(color));
+    }
     log!("");
 }
 
@@ -2892,10 +2934,13 @@ fn main() -> Result<()> {
         && args.pattern.attribute_patterns.is_empty()
         && args.pattern.struct_field_patterns.is_empty()
         && args.pattern.enum_variant_patterns.is_empty()
+        && args.pattern.body_patterns.is_empty()
         && !args.pattern.requires_generics
         && !args.pattern.has_recommends
         && !args.pattern.has_requires
-        && !args.pattern.has_ensures;
+        && !args.pattern.has_ensures
+        && !args.pattern.has_proof_block
+        && !args.pattern.has_assert;
     
     // Search based on pattern type
     if is_match_all {

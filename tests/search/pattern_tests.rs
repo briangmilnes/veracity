@@ -413,3 +413,46 @@ fn test_enum_variant_pattern() {
     assert!(pattern.enum_variant_patterns.contains(&"String".to_string()));
 }
 
+// Body pattern tests
+
+#[test]
+fn test_proof_block_pattern() {
+    let pattern = parse_pattern("fn _ proof {}").unwrap();
+    assert!(pattern.has_proof_block);
+    assert_eq!(pattern.name, Some("_".to_string()));
+}
+
+#[test]
+fn test_proof_block_pattern_with_exec() {
+    let pattern = parse_pattern("exec fn _ proof {}").unwrap();
+    assert!(pattern.has_proof_block);
+    assert!(pattern.required_modifiers.contains(&"exec".to_string()));
+}
+
+#[test]
+fn test_assert_pattern() {
+    let pattern = parse_pattern("fn _ assert").unwrap();
+    assert!(pattern.has_assert);
+}
+
+#[test]
+fn test_assert_pattern_with_exec() {
+    let pattern = parse_pattern("exec fn _ assert").unwrap();
+    assert!(pattern.has_assert);
+    assert!(pattern.required_modifiers.contains(&"exec".to_string()));
+}
+
+#[test]
+fn test_body_pattern() {
+    let pattern = parse_pattern("fn _ body lemma").unwrap();
+    assert!(pattern.body_patterns.contains(&"lemma".to_string()));
+}
+
+#[test]
+fn test_body_pattern_multiple() {
+    // Note: "proof" is a keyword, so body stops at it
+    let pattern = parse_pattern("fn _ body lemma tracked").unwrap();
+    assert!(pattern.body_patterns.contains(&"lemma".to_string()));
+    assert!(pattern.body_patterns.contains(&"tracked".to_string()));
+}
+

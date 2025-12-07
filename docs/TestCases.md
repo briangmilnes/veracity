@@ -243,6 +243,27 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'fn _ -> .*int.*Seq' | Return contains int then Seq |
 | 'fn _ types (Key,' | Types mention tuple with Key |
 
+## Ghost/Tracked Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'fn _ types Ghost' | Functions mentioning Ghost type |
+| 'fn _ types Tracked' | Functions mentioning Tracked type |
+| 'fn _ types tracked' | Functions with tracked parameters |
+| 'struct _ { : Ghost }' | Structs with Ghost fields |
+| 'struct _ { : Tracked }' | Structs with Tracked fields |
+
+## Function Body Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'fn _ proof {}' | Functions with proof blocks |
+| 'exec fn _ proof {}' | Exec functions with proof blocks |
+| 'fn _ assert' | Functions with assert statements |
+| 'exec fn _ assert' | Exec functions with asserts |
+| 'fn _ body lemma' | Functions calling lemmas in body |
+| 'fn _ body admit' | Functions with admit in body |
+
 ## Pattern Syntax
 
 - '_' - Matches any name/type (context-dependent)
@@ -257,5 +278,8 @@ All 195+ patterns with corresponding tests (276 tests total).
 - '{ fn NAME -> TYPE }' - Has method returning TYPE
 - '{ : TYPE }' - Has field/variant of TYPE
 - '#[ATTR]' - Has attribute ATTR
+- 'proof {}' - Has proof block in body
+- 'assert' - Has assert statement in body
+- 'body PATTERN' - Body contains PATTERN
 - '\(A\|B\)' - Match A OR B
 - '\(A\&B\)' - Match A AND B

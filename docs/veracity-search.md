@@ -118,6 +118,27 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `#[derive(Clone)] struct _` | Structs deriving Clone |
 | `#[verifier::external] impl _` | External impls |
 
+### Ghost/Tracked Types
+
+| Pattern | Matches |
+|---------|---------|
+| `fn _ types Ghost` | Functions mentioning Ghost type |
+| `fn _ types Tracked` | Functions mentioning Tracked type |
+| `fn _ types tracked` | Functions with tracked parameters |
+| `struct _ { : Ghost }` | Structs with Ghost fields |
+| `struct _ { : Tracked }` | Structs with Tracked fields |
+
+### Function Body Patterns
+
+| Pattern | Matches |
+|---------|---------|
+| `fn _ proof {}` | Functions with proof blocks in body |
+| `exec fn _ proof {}` | Exec functions with proof blocks |
+| `fn _ assert` | Functions with assert statements |
+| `exec fn _ assert` | Exec functions with asserts |
+| `fn _ body lemma` | Functions calling lemmas |
+| `fn _ body admit` | Functions with admits in body |
+
 ### Clauses
 
 | Pattern | Matches |
