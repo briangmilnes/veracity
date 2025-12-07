@@ -292,6 +292,7 @@ struct ParsedEnum {
 #[derive(Debug)]
 struct SearchArgs {
     vstd_path: Option<PathBuf>,
+    builtin_path: Option<PathBuf>,
     codebase_path: Option<PathBuf>,
     exclude_dirs: Vec<String>,
     strict_match: bool,
@@ -310,6 +311,7 @@ impl SearchArgs {
         }
         
         let mut vstd_path: Option<PathBuf> = None;
+        let mut builtin_path: Option<PathBuf> = None;
         let mut codebase_path: Option<PathBuf> = None;
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut strict_match = false;
@@ -358,6 +360,10 @@ impl SearchArgs {
                     }
                     codebase_path = Some(PathBuf::from(&args[i]));
                 }
+                "--builtin" | "-b" => {
+                    // Auto-discover builtin path from verus installation
+                    builtin_path = Some(discover_builtin_path()?);
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -380,6 +386,7 @@ impl SearchArgs {
         
         Ok(SearchArgs {
             vstd_path,
+            builtin_path,
             codebase_path,
             exclude_dirs,
             strict_match,
@@ -401,6 +408,7 @@ impl SearchArgs {
         println!();
         println!("Options:");
         println!("  -v, --vstd [PATH]     Search vstd (auto-discovers from verus if no path)");
+        println!("  -b, --builtin         Search builtin primitives (int, nat, real, Ghost, etc.)");
         println!("  -C, --codebase PATH   Search codebase directory");
         println!("  -e, --exclude DIR     Exclude directory from search (can use multiple times)");
         println!("  -s, --strict          Strict/exact matching (no fuzzy)");
@@ -427,6 +435,28 @@ impl SearchArgs {
 
 /// Discover vstd source path from verus binary location
 fn discover_vstd_path() -> Result<PathBuf> {
+    let source_path = discover_verus_source_path()?;
+    let vstd_path = source_path.join("vstd");
+    if vstd_path.exists() {
+        Ok(vstd_path)
+    } else {
+        Err(anyhow::anyhow!("Could not find vstd at {:?}", vstd_path))
+    }
+}
+
+/// Discover builtin source path from verus binary location
+fn discover_builtin_path() -> Result<PathBuf> {
+    let source_path = discover_verus_source_path()?;
+    let builtin_path = source_path.join("builtin");
+    if builtin_path.exists() {
+        Ok(builtin_path)
+    } else {
+        Err(anyhow::anyhow!("Could not find builtin at {:?}", builtin_path))
+    }
+}
+
+/// Discover verus source path from verus binary location
+fn discover_verus_source_path() -> Result<PathBuf> {
     let output = Command::new("which")
         .arg("verus")
         .output()?;
@@ -439,19 +469,18 @@ fn discover_vstd_path() -> Result<PathBuf> {
     let verus_path = PathBuf::from(verus_path);
     
     // verus binary is typically at: verus-lang/source/target-verus/release/verus
-    // vstd is at: verus-lang/source/vstd
+    // source is at: verus-lang/source/
     if let Some(parent) = verus_path.parent() {
         if let Some(parent2) = parent.parent() {
             if let Some(parent3) = parent2.parent() {
-                let vstd_path = parent3.join("vstd");
-                if vstd_path.exists() {
-                    return Ok(vstd_path);
+                if parent3.exists() {
+                    return Ok(parent3.to_path_buf());
                 }
             }
         }
     }
     
-    Err(anyhow::anyhow!("Could not find vstd source relative to verus binary"))
+    Err(anyhow::anyhow!("Could not find verus source relative to verus binary"))
 }
 
 // Pattern parsing is done by veracity::search::parse_pattern (imported above)
@@ -2522,6 +2551,13 @@ fn main() -> Result<()> {
     if let Some(ref vstd_path) = args.vstd_path {
         log!("Searching: {}", vstd_path.display());
         let files = find_rust_files(vstd_path, &[]);
+        file_count += files.len();
+        all_files.extend(files);
+    }
+    
+    if let Some(ref builtin_path) = args.builtin_path {
+        log!("Searching: {}", builtin_path.display());
+        let files = find_rust_files(builtin_path, &[]);
         file_count += files.len();
         all_files.extend(files);
     }
