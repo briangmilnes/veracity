@@ -5,5 +5,19 @@ Verus Search
 Pattern: trait _ { Seq; fn view} 
 Searching: /home/milnes/projects/verus-lang/source/vstd
 Searching: /home/milnes/projects/APAS-VERUS/src
-Files: 193, Traits: 165, Matches: 0 (0 direct, 0 transitive)
+Files: 193, Traits: 165, Matches: 4 (4 direct, 0 transitive)
+
+=== DIRECT ===
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/hash.rs:277: [0m
+[38;5;22mpub trait KeysAdditionalSpecFns<'a, Key: 'a, Value: 'a>[0m
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/hash.rs:386: [0m
+[38;5;22mpub trait ValuesAdditionalSpecFns<'a, Key: 'a, Value: 'a>[0m
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/hash.rs:495: [0m
+[38;5;22mpub trait MapIterAdditionalSpecFns<'a, Key: 'a, Value: 'a>[0m
+
+[31m/home/milnes/projects/verus-lang/source/vstd/std_specs/hash.rs:1078: [0m
+[38;5;22mpub trait SetIterAdditionalSpecFns<'a, Key: 'a>[0m
 

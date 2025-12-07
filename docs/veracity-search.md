@@ -183,6 +183,7 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `impl _ { Seq }` | Impls mentioning Seq in body |
 | `impl _ { lemma }` | Impls calling lemmas in body |
 | `impl _ { Seq ; fn add -> u32 }` | Body has Seq AND add->u32 method |
+| `impl _ {Seq;fn view}` | Same (spaces optional around `{};`) |
 
 ### Trait Bounds (with Transitive Resolution)
 

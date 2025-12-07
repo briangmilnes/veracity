@@ -294,6 +294,7 @@ All 195+ patterns with corresponding tests (276 tests total).
 - '{ fn NAME -> TYPE }' - Has method returning TYPE
 - '{ PATTERN }' - Body text contains PATTERN (for impl/trait)
 - '{ P1 ; P2 }' - Multiple body patterns (semicolon-separated)
+- Spaces around `{`, `}`, `;` are optional: `{Seq;fn view}` works
 - '{ : TYPE }' - Has field/variant of TYPE
 - '{ : T1, : T2 }' - Has fields of T1 AND T2 (any order)
 - '( : T1, : T2 )' - Has args of T1 AND T2 (any order)
