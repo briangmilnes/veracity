@@ -70,8 +70,8 @@ name = "veracity-minimize-lib"
 path = "src/bin/minimize_lib.rs"
 
 [[bin]]
-name = "veracity-lemma-search"
-path = "src/bin/lemma_search.rs"
+name = "veracity-search"
+path = "src/bin/search.rs"
 
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions

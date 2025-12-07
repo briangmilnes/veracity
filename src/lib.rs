@@ -8,6 +8,7 @@
 
 pub mod args;
 pub mod parser;
+pub mod search;
 
 use anyhow::Result;
 use ra_ap_syntax::SourceFile;

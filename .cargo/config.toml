@@ -1,0 +1,6 @@
+# Default to release builds
+[alias]
+b = "build --release"
+r = "run --release"
+t = "test --release"
+

@@ -155,6 +155,66 @@ Since Verus is a superset of Rust, all general Rusticate tools work on Verus cod
 #### Library Minimization
 - `veracity-minimize-lib`: Minimize vstd library dependencies and identify removable lemmas
 
+#### Code Search
+- `veracity-search`: Type-based semantic search for Verus code (functions, traits, impls)
+
+---
+
+## 🔍 Code Search Tool
+
+**`veracity-search`** - Search for functions, traits, and impls by signature patterns.
+
+### Quick Examples
+
+```bash
+# Find all proof functions
+veracity-search 'proof fn _'
+
+# Find functions returning Seq
+veracity-search 'fn _ -> Seq'
+
+# Find traits with associated type V
+veracity-search 'trait _ { type V }'
+
+# Find View impls for any type
+veracity-search 'impl View for _'
+
+# Functions with both requires and ensures
+veracity-search 'fn _ requires ensures'
+
+# Open spec functions containing "len"
+veracity-search 'open spec fn .*len.*'
+```
+
+### Pattern Syntax
+
+| Pattern | Meaning |
+|---------|---------|
+| `_` | Match all (functions, traits, impls) |
+| `fn _` | All functions |
+| `proof fn _` | All proof functions |
+| `fn .*len.*` | Functions containing "len" |
+| `fn _ -> TYPE` | Functions returning TYPE |
+| `fn _ requires .*` | Functions with requires clause |
+| `fn <_>` | Generic functions |
+| `trait _ { type _ }` | Traits with associated types |
+| `impl View for _` | View implementations |
+| `fn \(foo\|bar\)` | Match foo OR bar |
+
+See [docs/TestCases.md](docs/TestCases.md) for complete pattern reference (190+ patterns).
+
+### Options
+
+```bash
+veracity-search [OPTIONS] PATTERN
+
+Options:
+  -v, --vstd PATH    Search in vstd (auto-discovered if not specified)
+  -c, --codebase PATH  Search in codebase directory
+  --color            Enable colored output (default)
+  --no-color         Disable colored output
+```
+
 ---
 
 ## Quick Start
