@@ -2,6 +2,16 @@
 
 Type-based semantic search for Verus code. Find functions, traits, impls, structs, enums, and type aliases by pattern matching.
 
+## Acknowledgment
+
+This tool is inspired by the foundational work of **Jeannette Wing** on using specifications as search keys for software libraries. Her 1993 paper established the principle that type signatures and specifications—not just names—should be the primary way to discover reusable code.
+
+> Wing, Jeannette M. "Specifications as Search Keys for Software Libraries."  
+> *Proceedings of the 8th International Conference on Logic Programming*, 1991.  
+> [PDF](https://www.researchgate.net/publication/2353720_Specifications_as_Search_Keys_for_Software_Libraries)
+
+Thank you, Jeannette, for showing us that types are the best documentation.
+
 ## Quick Start
 
 ```bash
