@@ -112,7 +112,12 @@ pub struct SearchPattern {
 
 /// Parse a search pattern from a string
 pub fn parse_pattern(input: &str) -> Result<SearchPattern> {
-    let tokens: Vec<String> = input.split_whitespace().map(|s| s.to_string()).collect();
+    // Normalize spacing around special chars so tokenization works without requiring spaces
+    let normalized = input
+        .replace("{", " { ")
+        .replace("}", " } ")
+        .replace(";", " ; ");
+    let tokens: Vec<String> = normalized.split_whitespace().map(|s| s.to_string()).collect();
     parse_search_pattern(&tokens)
 }
 
