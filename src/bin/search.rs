@@ -2063,6 +2063,62 @@ fn matches_trait_non_bound(tr: &ParsedTrait, pattern: &SearchPattern) -> bool {
     true
 }
 
+/// Check if a struct matches the search pattern
+fn matches_struct(st: &ParsedStruct, pattern: &SearchPattern) -> bool {
+    // Check requires_generics
+    if pattern.requires_generics && st.generics.is_empty() {
+        return false;
+    }
+    
+    // Check name pattern
+    if let Some(ref name_pat) = pattern.name {
+        if !name_pattern_matches(name_pat, &st.name) {
+            return false;
+        }
+    }
+    
+    // Check generic patterns
+    for required in &pattern.generics_patterns {
+        let generics_text: String = st.generics.iter()
+            .map(|g| format!("{} {}", g.name, g.bounds.join(" ")))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !pattern_matches(required, &generics_text) {
+            return false;
+        }
+    }
+    
+    true
+}
+
+/// Check if an enum matches the search pattern
+fn matches_enum(en: &ParsedEnum, pattern: &SearchPattern) -> bool {
+    // Check requires_generics
+    if pattern.requires_generics && en.generics.is_empty() {
+        return false;
+    }
+    
+    // Check name pattern
+    if let Some(ref name_pat) = pattern.name {
+        if !name_pattern_matches(name_pat, &en.name) {
+            return false;
+        }
+    }
+    
+    // Check generic patterns
+    for required in &pattern.generics_patterns {
+        let generics_text: String = en.generics.iter()
+            .map(|g| format!("{} {}", g.name, g.bounds.join(" ")))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !pattern_matches(required, &generics_text) {
+            return false;
+        }
+    }
+    
+    true
+}
+
 /// Display a matched impl in file:line format (for Emacs compilation/grep mode)
 fn display_impl(imp: &ParsedImpl, _base_path: Option<&Path>, color: bool) {
     // File:line on first line for Emacs navigation (red)
@@ -2216,6 +2272,41 @@ fn display_type_alias(ty: &ParsedTypeAlias, _base_path: Option<&Path>, color: bo
     
     // Build and show the signature (green)
     let sig = format!("{}type {}{} = {}", vis, ty.name, generics_str, ty.value);
+    log!("{}{}{}", green(color), sig, reset(color));
+    log!("");
+}
+
+/// Display a matched type alias with transitive path
+fn display_type_alias_with_via(ty: &ParsedTypeAlias, via_path: &str, _base_path: Option<&Path>, color: bool) {
+    // File:line on first line for Emacs navigation (red)
+    log!("{}{}:{}: {}", red(color), ty.file.display(), ty.line, reset(color));
+    
+    // Show context
+    for ctx in &ty.context {
+        log!("{}", ctx);
+    }
+    
+    let vis = if ty.visibility.is_empty() {
+        String::new()
+    } else {
+        format!("{} ", ty.visibility)
+    };
+    
+    let generics_str = if ty.generics.is_empty() {
+        String::new()
+    } else {
+        let gen_strs: Vec<String> = ty.generics.iter().map(|g| {
+            if g.bounds.is_empty() {
+                g.name.clone()
+            } else {
+                format!("{}: {}", g.name, g.bounds.join(" + "))
+            }
+        }).collect();
+        format!("<{}>", gen_strs.join(", "))
+    };
+    
+    // Build and show the signature (green) with (via ...) annotation
+    let sig = format!("{}type {}{} = {}  (via {})", vis, ty.name, generics_str, ty.value, via_path);
     log!("{}{}{}", green(color), sig, reset(color));
     log!("");
 }
@@ -2451,6 +2542,9 @@ fn main() -> Result<()> {
     let is_match_all = args.pattern.name == Some("_".to_string()) 
         && !args.pattern.is_impl_search 
         && !args.pattern.is_trait_search
+        && !args.pattern.is_type_search
+        && !args.pattern.is_struct_search
+        && !args.pattern.is_enum_search
         && args.pattern.types_patterns.is_empty()
         && args.pattern.returns_patterns.is_empty()
         && args.pattern.recommends_patterns.is_empty()
@@ -2588,6 +2682,123 @@ fn main() -> Result<()> {
             for (tr, via_path) in &transitive_matches {
                 display_trait_with_via(tr, via_path, base_path, args.color);
             }
+        }
+    } else if args.pattern.is_type_search {
+        // Type alias search with transitive resolution
+        let mut all_type_aliases: Vec<ParsedTypeAlias> = Vec::new();
+        for file in &all_files {
+            all_type_aliases.extend(parse_types_from_file(file));
+        }
+        let total_types = all_type_aliases.len();
+        
+        // Build type alias hierarchy
+        let hierarchy = TraitHierarchy::from_traits(&[], &all_type_aliases);
+        
+        // Get the search value pattern
+        let search_value = args.pattern.type_value.clone();
+        
+        let mut direct_matches: Vec<&ParsedTypeAlias> = Vec::new();
+        let mut transitive_matches: Vec<(&ParsedTypeAlias, String)> = Vec::new();
+        
+        for ta in &all_type_aliases {
+            // Check name pattern
+            if let Some(ref name_pat) = args.pattern.name {
+                if !name_pattern_matches(name_pat, &ta.name) {
+                    continue;
+                }
+            }
+            
+            // Check value pattern (with transitive resolution)
+            if let Some(ref value_pat) = search_value {
+                // Direct match: value matches the pattern
+                let base_value = if let Some(gen_start) = ta.value.find('<') {
+                    &ta.value[..gen_start]
+                } else {
+                    &ta.value
+                };
+                
+                if pattern_matches(value_pat, base_value) {
+                    direct_matches.push(ta);
+                } else {
+                    // Transitive: resolve the alias chain
+                    let resolved = hierarchy.resolve_type_alias(base_value);
+                    if pattern_matches(value_pat, &resolved) && resolved != base_value {
+                        // Build the via path
+                        let mut path = Vec::new();
+                        let mut current = base_value.to_string();
+                        while let Some(target) = hierarchy.type_aliases.get(&current) {
+                            path.push(current.clone());
+                            if target == &resolved || target == value_pat {
+                                break;
+                            }
+                            current = target.clone();
+                        }
+                        let via = path.join(" → ");
+                        transitive_matches.push((ta, via));
+                    }
+                }
+            } else {
+                // No value pattern, just match all
+                direct_matches.push(ta);
+            }
+        }
+        
+        let total_matches = direct_matches.len() + transitive_matches.len();
+        log!("Files: {}, Types: {}, Matches: {} ({} direct, {} transitive)",
+             file_count, total_types, total_matches, direct_matches.len(), transitive_matches.len());
+        log!("");
+        
+        if !direct_matches.is_empty() {
+            log!("=== DIRECT ===");
+            log!("");
+            for ta in &direct_matches {
+                display_type_alias(ta, base_path, args.color);
+            }
+        }
+        
+        if !transitive_matches.is_empty() {
+            log!("");
+            log!("=== TRANSITIVE ===");
+            log!("");
+            for (ta, via_path) in &transitive_matches {
+                display_type_alias_with_via(ta, via_path, base_path, args.color);
+            }
+        }
+    } else if args.pattern.is_struct_search {
+        // Struct search
+        let mut all_structs: Vec<ParsedStruct> = Vec::new();
+        for file in &all_files {
+            all_structs.extend(parse_structs_from_file(file));
+        }
+        let total_structs = all_structs.len();
+        
+        let matches: Vec<_> = all_structs.into_iter()
+            .filter(|s| matches_struct(s, &args.pattern))
+            .collect();
+        
+        log!("Files: {}, Structs: {}, Matches: {}", file_count, total_structs, matches.len());
+        log!("");
+        
+        for st in &matches {
+            display_struct(st, base_path, args.color);
+        }
+    } else if args.pattern.is_enum_search {
+        // Enum search
+        let mut all_enums: Vec<ParsedEnum> = Vec::new();
+        for file in &all_files {
+            all_enums.extend(parse_enums_from_file(file));
+        }
+        let total_enums = all_enums.len();
+        
+        let matches: Vec<_> = all_enums.into_iter()
+            .filter(|e| matches_enum(e, &args.pattern))
+            .collect();
+        
+        log!("Files: {}, Enums: {}, Matches: {}", file_count, total_enums, matches.len());
+        log!("");
+        
+        for en in &matches {
+            display_enum(en, base_path, args.color);
         }
     } else {
         let mut all_lemmas: Vec<ParsedLemma> = Vec::new();
