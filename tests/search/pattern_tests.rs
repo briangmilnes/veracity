@@ -400,10 +400,24 @@ fn test_struct_field_pattern() {
 
 #[test]
 fn test_struct_field_pattern_multiple() {
-    let pattern = parse_pattern("struct _ { : int : Seq }").unwrap();
+    // With commas (order independent matching)
+    let pattern = parse_pattern("struct _ { : int, : Seq }").unwrap();
     assert!(pattern.is_struct_search);
     assert!(pattern.struct_field_patterns.contains(&"int".to_string()));
     assert!(pattern.struct_field_patterns.contains(&"Seq".to_string()));
+}
+
+#[test]
+fn test_fn_arg_type_pattern() {
+    let pattern = parse_pattern("fn _ ( : Seq, : int )").unwrap();
+    assert!(pattern.arg_type_patterns.contains(&"Seq".to_string()));
+    assert!(pattern.arg_type_patterns.contains(&"int".to_string()));
+}
+
+#[test]
+fn test_fn_arg_type_pattern_single() {
+    let pattern = parse_pattern("fn _ ( : Ghost )").unwrap();
+    assert!(pattern.arg_type_patterns.contains(&"Ghost".to_string()));
 }
 
 #[test]

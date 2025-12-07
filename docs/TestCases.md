@@ -221,9 +221,20 @@ All 195+ patterns with corresponding tests (276 tests total).
 |---------|-------------|
 | 'struct _ { : int }' | Structs with int-typed field |
 | 'struct _ { : Seq }' | Structs with Seq-typed field |
-| 'struct _ { : int : Seq }' | Structs with int AND Seq fields |
+| 'struct _ { : int, : Seq }' | Structs with int AND Seq fields (any order) |
 | 'enum _ { : String }' | Enums with String-typed variant |
 | 'enum _ { : int }' | Enums with int-typed variant |
+| 'enum _ { : int, : String }' | Enums with int AND String variants (any order) |
+
+## Function Argument Type Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'fn _ ( : Seq )' | Functions with Seq-typed argument |
+| 'fn _ ( : int )' | Functions with int-typed argument |
+| 'fn _ ( : int, : Seq )' | Functions with int AND Seq args (any order) |
+| 'fn _ ( : Ghost )' | Functions with Ghost-typed argument |
+| 'fn _ ( : Tracked )' | Functions with Tracked-typed argument |
 
 ## Attribute/Pragma Patterns
 
@@ -277,6 +288,8 @@ All 195+ patterns with corresponding tests (276 tests total).
 - '{ fn NAME }' - Has method NAME
 - '{ fn NAME -> TYPE }' - Has method returning TYPE
 - '{ : TYPE }' - Has field/variant of TYPE
+- '{ : T1, : T2 }' - Has fields of T1 AND T2 (any order)
+- '( : T1, : T2 )' - Has args of T1 AND T2 (any order)
 - '#[ATTR]' - Has attribute ATTR
 - 'proof {}' - Has proof block in body
 - 'assert' - Has assert statement in body

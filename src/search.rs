@@ -32,6 +32,8 @@ pub struct SearchPattern {
     pub generics_patterns: Vec<String>,
     /// Type patterns - matches anywhere (generics, args, requires, ensures)
     pub types_patterns: Vec<String>,
+    /// Argument type patterns (: TYPE, : TYPE) - specific arg types
+    pub arg_type_patterns: Vec<String>,
     /// Return type patterns (-> TYPE)
     pub returns_patterns: Vec<String>,
     /// Recommends clause patterns (all must match)
@@ -118,7 +120,7 @@ fn is_keyword(token: &str) -> bool {
         "proof" | "fn" | "args" | "generics" | "types" | "requires" | "ensures" |
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
         "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | 
-        "=" | "{" | "}" | ":" | "assert" | "body"
+        "=" | "{" | "}" | ":" | "assert" | "body" | "(" | ")"
     ) || token.starts_with("#[")
 }
 
@@ -310,9 +312,48 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                     pattern.requires_generics = true;
                     i += 1;
                 }
-                if i < tokens.len() && !is_keyword(&tokens[i]) && tokens[i] != "<_>" {
+                if i < tokens.len() && !is_keyword(&tokens[i]) && tokens[i] != "<_>" 
+                    && !tokens[i].starts_with('(') {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
+                }
+                // Check for (: TYPE, : TYPE) argument type patterns
+                if i < tokens.len() && tokens[i] == "(" {
+                    i += 1;
+                    while i < tokens.len() && tokens[i] != ")" {
+                        let tok = &tokens[i];
+                        // Skip commas
+                        if tok == "," || tok.ends_with(',') {
+                            if tok.len() > 1 && tok.ends_with(',') {
+                                let ty = tok.trim_end_matches(',');
+                                if !ty.is_empty() && ty != ":" {
+                                    pattern.arg_type_patterns.push(ty.to_string());
+                                }
+                            }
+                            i += 1;
+                            continue;
+                        }
+                        if tok == ":" {
+                            // Argument type follows
+                            i += 1;
+                            if i < tokens.len() && tokens[i] != ")" && tokens[i] != "," {
+                                let ty = tokens[i].trim_end_matches(',');
+                                pattern.arg_type_patterns.push(ty.to_string());
+                                i += 1;
+                            }
+                        } else if !is_keyword(tok) {
+                            // Direct type without :
+                            let ty = tok.trim_end_matches(',');
+                            pattern.arg_type_patterns.push(ty.to_string());
+                            i += 1;
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    // Skip closing )
+                    if i < tokens.len() && tokens[i] == ")" {
+                        i += 1;
+                    }
                 }
             }
             "args" => {
@@ -491,21 +532,35 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
                 }
-                // Check for body pattern { : TYPE } or { TYPE }
+                // Check for body pattern { : TYPE, : TYPE } or { TYPE, TYPE }
                 if i < tokens.len() && tokens[i] == "{" {
                     i += 1;
                     while i < tokens.len() && tokens[i] != "}" {
                         let tok = &tokens[i];
+                        // Skip commas
+                        if tok == "," || tok.ends_with(',') {
+                            if tok.len() > 1 && tok.ends_with(',') {
+                                // Token like "int," - extract type
+                                let ty = tok.trim_end_matches(',');
+                                if !ty.is_empty() {
+                                    pattern.struct_field_patterns.push(ty.to_string());
+                                }
+                            }
+                            i += 1;
+                            continue;
+                        }
                         if tok == ":" {
                             // Field type follows
                             i += 1;
-                            if i < tokens.len() && tokens[i] != "}" {
-                                pattern.struct_field_patterns.push(tokens[i].clone());
+                            if i < tokens.len() && tokens[i] != "}" && tokens[i] != "," {
+                                let ty = tokens[i].trim_end_matches(',');
+                                pattern.struct_field_patterns.push(ty.to_string());
                                 i += 1;
                             }
                         } else if !tok.starts_with('#') {
                             // Direct type without :
-                            pattern.struct_field_patterns.push(tok.clone());
+                            let ty = tok.trim_end_matches(',');
+                            pattern.struct_field_patterns.push(ty.to_string());
                             i += 1;
                         } else {
                             i += 1;
@@ -530,21 +585,34 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
                 }
-                // Check for body pattern { : TYPE }
+                // Check for body pattern { : TYPE, : TYPE }
                 if i < tokens.len() && tokens[i] == "{" {
                     i += 1;
                     while i < tokens.len() && tokens[i] != "}" {
                         let tok = &tokens[i];
+                        // Skip commas
+                        if tok == "," || tok.ends_with(',') {
+                            if tok.len() > 1 && tok.ends_with(',') {
+                                let ty = tok.trim_end_matches(',');
+                                if !ty.is_empty() {
+                                    pattern.enum_variant_patterns.push(ty.to_string());
+                                }
+                            }
+                            i += 1;
+                            continue;
+                        }
                         if tok == ":" {
                             // Variant type follows
                             i += 1;
-                            if i < tokens.len() && tokens[i] != "}" {
-                                pattern.enum_variant_patterns.push(tokens[i].clone());
+                            if i < tokens.len() && tokens[i] != "}" && tokens[i] != "," {
+                                let ty = tokens[i].trim_end_matches(',');
+                                pattern.enum_variant_patterns.push(ty.to_string());
                                 i += 1;
                             }
                         } else if !tok.starts_with('#') {
                             // Direct type
-                            pattern.enum_variant_patterns.push(tok.clone());
+                            let ty = tok.trim_end_matches(',');
+                            pattern.enum_variant_patterns.push(ty.to_string());
                             i += 1;
                         } else {
                             i += 1;

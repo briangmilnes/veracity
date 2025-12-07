@@ -107,7 +107,16 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 |---------|---------|
 | `struct _ { : Seq }` | Structs with Seq-typed field |
 | `struct _ { : int }` | Structs with int-typed field |
+| `struct _ { : int, : Seq }` | Structs with BOTH int AND Seq fields (any order) |
 | `enum _ { : String }` | Enums with String-typed variant |
+
+### Function Argument Types
+
+| Pattern | Matches |
+|---------|---------|
+| `fn _ ( : Seq )` | Functions with Seq-typed argument |
+| `fn _ ( : int, : Seq )` | Functions with BOTH int AND Seq args (any order) |
+| `fn _ ( : Ghost )` | Functions with Ghost-typed argument |
 
 ### Attributes/Pragmas
 

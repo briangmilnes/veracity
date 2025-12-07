@@ -2095,6 +2095,14 @@ fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
         }
     }
     
+    // Check arg_type_patterns - each pattern must match some argument type (order independent)
+    for required in &pattern.arg_type_patterns {
+        let args_text = lemma.args.iter().map(|a| a.ty.clone()).collect::<Vec<_>>().join(" ");
+        if !pattern_matches(required, &args_text) {
+            return false;
+        }
+    }
+    
     // Check has_recommends - must have a recommends clause
     if pattern.has_recommends && lemma.recommends.is_empty() {
         return false;
@@ -2934,6 +2942,7 @@ fn main() -> Result<()> {
         && args.pattern.attribute_patterns.is_empty()
         && args.pattern.struct_field_patterns.is_empty()
         && args.pattern.enum_variant_patterns.is_empty()
+        && args.pattern.arg_type_patterns.is_empty()
         && args.pattern.body_patterns.is_empty()
         && !args.pattern.requires_generics
         && !args.pattern.has_recommends
