@@ -73,6 +73,8 @@ struct ParsedLemma {
     requires: Vec<String>,
     /// Ensures clauses  
     ensures: Vec<String>,
+    /// Attributes (extracted from context)
+    attributes: Vec<String>,
     /// The full text of the lemma signature
     #[allow(dead_code)]
     full_text: String,
@@ -102,6 +104,8 @@ struct ParsedImpl {
     generics: Vec<GenericParam>,
     trait_name: Option<String>,
     for_type: String,
+    /// Attributes (extracted from context)
+    attributes: Vec<String>,
     #[allow(dead_code)]
     full_text: String,
     /// Associated types in the impl body
@@ -121,6 +125,8 @@ struct ParsedTrait {
     name: String,
     generics: Vec<GenericParam>,
     bounds: Vec<String>,
+    /// Attributes (extracted from context)
+    attributes: Vec<String>,
     #[allow(dead_code)]
     full_text: String,
     /// Associated types in the trait body
@@ -270,6 +276,10 @@ struct ParsedStruct {
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
+    /// Field types (for matching struct _ { : TYPE })
+    field_types: Vec<String>,
+    /// Attributes (for matching #[...])
+    attributes: Vec<String>,
     #[allow(dead_code)]
     full_text: String,
 }
@@ -283,6 +293,10 @@ struct ParsedEnum {
     visibility: String,
     name: String,
     generics: Vec<GenericParam>,
+    /// Variant types (for matching enum _ { : TYPE })
+    variant_types: Vec<String>,
+    /// Attributes (for matching #[...])
+    attributes: Vec<String>,
     #[allow(dead_code)]
     full_text: String,
 }
@@ -750,6 +764,9 @@ fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String
     // Parse body content
     let (body_types, body_methods) = parse_body_content(body);
     
+    // Extract attributes from context
+    let attributes = extract_attributes_from_context(&context);
+    
     Some(ParsedImpl {
         file: path.to_path_buf(),
         line: line_num,
@@ -758,6 +775,7 @@ fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String
         generics,
         trait_name,
         for_type,
+        attributes,
         full_text: line.to_string(),
         body_types,
         body_methods,
@@ -860,6 +878,9 @@ fn parse_trait_line(line: &str, line_num: usize, path: &Path, context: Vec<Strin
     // Parse body content
     let (body_types, body_methods) = parse_body_content(body);
     
+    // Extract attributes from context
+    let attributes = extract_attributes_from_context(&context);
+    
     Some(ParsedTrait {
         file: path.to_path_buf(),
         line: line_num,
@@ -868,6 +889,7 @@ fn parse_trait_line(line: &str, line_num: usize, path: &Path, context: Vec<Strin
         name,
         generics,
         bounds,
+        attributes,
         full_text: line.to_string(),
         body_types,
         body_methods,
@@ -989,7 +1011,14 @@ fn parse_structs_from_file(path: &Path) -> Vec<ParsedStruct> {
             if trimmed.starts_with("struct ") || trimmed.starts_with("pub struct ") 
                 || trimmed.starts_with("pub(crate) struct ") {
                 let context = collect_context(&lines, i);
-                if let Some(parsed) = parse_struct_line(trimmed, i + 1, path, context) {
+                // Extract attributes from context
+                let attributes = extract_attributes_from_context(&context);
+                // Collect struct body to extract field types
+                let (full_text, field_types) = collect_struct_body(&lines, i);
+                if let Some(mut parsed) = parse_struct_line(trimmed, i + 1, path, context) {
+                    parsed.field_types = field_types;
+                    parsed.attributes = attributes;
+                    parsed.full_text = full_text;
                     structs.push(parsed);
                 }
             }
@@ -997,6 +1026,142 @@ fn parse_structs_from_file(path: &Path) -> Vec<ParsedStruct> {
     }
     
     structs
+}
+
+/// Extract attributes from context lines
+fn extract_attributes_from_context(context: &[String]) -> Vec<String> {
+    let mut attrs = Vec::new();
+    for line in context {
+        let trimmed = line.trim();
+        if trimmed.starts_with("#[") {
+            // Extract the attribute content
+            if let Some(end) = trimmed.find(']') {
+                let attr = &trimmed[2..end];
+                attrs.push(attr.to_string());
+            }
+        }
+    }
+    attrs
+}
+
+/// Collect struct body and extract field types
+fn collect_struct_body(lines: &[&str], start_line: usize) -> (String, Vec<String>) {
+    let mut body = String::new();
+    let mut field_types = Vec::new();
+    let mut brace_depth = 0;
+    let mut started = false;
+    
+    for i in start_line..lines.len() {
+        let line = lines[i];
+        body.push_str(line);
+        body.push('\n');
+        
+        for ch in line.chars() {
+            match ch {
+                '{' => {
+                    brace_depth += 1;
+                    started = true;
+                }
+                '}' => {
+                    brace_depth -= 1;
+                    if started && brace_depth == 0 {
+                        // Parse field types from body
+                        field_types = extract_field_types(&body);
+                        return (body, field_types);
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        // Also handle tuple structs: struct Foo(Type1, Type2);
+        if !started && line.contains('(') && line.contains(')') && line.contains(';') {
+            field_types = extract_tuple_struct_types(line);
+            return (body, field_types);
+        }
+        
+        // Single line struct without body
+        if !started && line.trim().ends_with(';') {
+            return (body, field_types);
+        }
+    }
+    
+    (body, field_types)
+}
+
+/// Extract field types from struct body text
+fn extract_field_types(body: &str) -> Vec<String> {
+    let mut types = Vec::new();
+    
+    // Look for patterns like: field_name: Type or field_name: Type,
+    // Simple regex-like parsing
+    for line in body.lines() {
+        let trimmed = line.trim();
+        // Skip comments and attributes
+        if trimmed.starts_with("//") || trimmed.starts_with("#[") || trimmed.is_empty() {
+            continue;
+        }
+        
+        // Look for : followed by type
+        if let Some(colon_pos) = trimmed.find(':') {
+            let after_colon = trimmed[colon_pos + 1..].trim();
+            // Get the type (until , or end of line or { for where clauses)
+            let type_end = after_colon.find(|c| c == ',' || c == '{');
+            let type_str = if let Some(end) = type_end {
+                after_colon[..end].trim()
+            } else {
+                after_colon.trim().trim_end_matches(',')
+            };
+            
+            if !type_str.is_empty() && !type_str.starts_with(':') {
+                types.push(type_str.to_string());
+            }
+        }
+    }
+    
+    types
+}
+
+/// Extract types from tuple struct: struct Foo(Type1, Type2);
+fn extract_tuple_struct_types(line: &str) -> Vec<String> {
+    let mut types = Vec::new();
+    
+    if let Some(start) = line.find('(') {
+        if let Some(end) = line.rfind(')') {
+            let inner = &line[start + 1..end];
+            // Split by comma, handling nested generics
+            let mut depth = 0;
+            let mut current = String::new();
+            
+            for ch in inner.chars() {
+                match ch {
+                    '<' | '(' | '[' => {
+                        depth += 1;
+                        current.push(ch);
+                    }
+                    '>' | ')' | ']' => {
+                        depth -= 1;
+                        current.push(ch);
+                    }
+                    ',' if depth == 0 => {
+                        let ty = current.trim().to_string();
+                        if !ty.is_empty() {
+                            types.push(ty);
+                        }
+                        current.clear();
+                    }
+                    _ => current.push(ch),
+                }
+            }
+            
+            let ty = current.trim().to_string();
+            if !ty.is_empty() {
+                types.push(ty);
+            }
+        }
+    }
+    
+    types
 }
 
 /// Parse a single struct line
@@ -1053,6 +1218,8 @@ fn parse_struct_line(line: &str, line_num: usize, path: &Path, context: Vec<Stri
         visibility,
         name,
         generics,
+        field_types: Vec::new(),  // Set after parsing body
+        attributes: Vec::new(),   // Set from context
         full_text: line.to_string(),
     })
 }
@@ -1074,7 +1241,14 @@ fn parse_enums_from_file(path: &Path) -> Vec<ParsedEnum> {
             if trimmed.starts_with("enum ") || trimmed.starts_with("pub enum ") 
                 || trimmed.starts_with("pub(crate) enum ") {
                 let context = collect_context(&lines, i);
-                if let Some(parsed) = parse_enum_line(trimmed, i + 1, path, context) {
+                // Extract attributes from context
+                let attributes = extract_attributes_from_context(&context);
+                // Collect enum body to extract variant types
+                let (full_text, variant_types) = collect_enum_body(&lines, i);
+                if let Some(mut parsed) = parse_enum_line(trimmed, i + 1, path, context) {
+                    parsed.variant_types = variant_types;
+                    parsed.attributes = attributes;
+                    parsed.full_text = full_text;
                     enums.push(parsed);
                 }
             }
@@ -1082,6 +1256,71 @@ fn parse_enums_from_file(path: &Path) -> Vec<ParsedEnum> {
     }
     
     enums
+}
+
+/// Collect enum body and extract variant types
+fn collect_enum_body(lines: &[&str], start_line: usize) -> (String, Vec<String>) {
+    let mut body = String::new();
+    let mut variant_types = Vec::new();
+    let mut brace_depth = 0;
+    let mut started = false;
+    
+    for i in start_line..lines.len() {
+        let line = lines[i];
+        body.push_str(line);
+        body.push('\n');
+        
+        for ch in line.chars() {
+            match ch {
+                '{' => {
+                    brace_depth += 1;
+                    started = true;
+                }
+                '}' => {
+                    brace_depth -= 1;
+                    if started && brace_depth == 0 {
+                        // Parse variant types from body
+                        variant_types = extract_enum_variant_types(&body);
+                        return (body, variant_types);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    (body, variant_types)
+}
+
+/// Extract types from enum variants
+fn extract_enum_variant_types(body: &str) -> Vec<String> {
+    let mut types = Vec::new();
+    
+    for line in body.lines() {
+        let trimmed = line.trim();
+        // Skip comments, attributes, braces
+        if trimmed.starts_with("//") || trimmed.starts_with("#[") 
+            || trimmed.is_empty() || trimmed == "{" || trimmed == "}" {
+            continue;
+        }
+        
+        // Look for Variant(Type) or Variant { field: Type }
+        if let Some(paren_start) = trimmed.find('(') {
+            if let Some(paren_end) = trimmed.rfind(')') {
+                let inner = &trimmed[paren_start + 1..paren_end];
+                // Split by comma for tuple variants
+                types.extend(extract_tuple_struct_types(&format!("({})", inner)));
+            }
+        } else if let Some(brace_start) = trimmed.find('{') {
+            // Record variant: Variant { field: Type }
+            if let Some(brace_end) = trimmed.rfind('}') {
+                let inner = &trimmed[brace_start..=brace_end];
+                types.extend(extract_field_types(inner));
+            }
+        }
+    }
+    
+    types
 }
 
 /// Parse a single enum line
@@ -1138,6 +1377,8 @@ fn parse_enum_line(line: &str, line_num: usize, path: &Path, context: Vec<String
         visibility,
         name,
         generics,
+        variant_types: Vec::new(),  // Set after parsing body
+        attributes: Vec::new(),     // Set from context
         full_text: line.to_string(),
     })
 }
@@ -1369,6 +1610,9 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
     // Parse ensures
     let ensures = extract_clauses(text, "ensures");
     
+    // Extract attributes from context
+    let attributes = extract_attributes_from_context(&context);
+    
     Some(ParsedLemma {
         file: path.to_path_buf(),
         line,
@@ -1382,6 +1626,7 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
         recommends,
         requires,
         ensures,
+        attributes,
         full_text: text.to_string(),
     })
 }
@@ -1554,6 +1799,7 @@ fn pattern_matches(pattern: &str, text: &str) -> bool {
     }
     
     let text_lower = text.to_lowercase();
+    let pattern_lower = pattern.to_lowercase();
     
     // Check for \(...\) pattern syntax
     if pattern.starts_with("\\(") && pattern.ends_with("\\)") {
@@ -1567,8 +1813,13 @@ fn pattern_matches(pattern: &str, text: &str) -> bool {
         return word_boundary_match(&word, &text_lower);
     }
     
+    // Check for .* wildcard pattern
+    if pattern.contains(".*") {
+        return wildcard_match(&pattern_lower, &text_lower);
+    }
+    
     // Simple substring match (case-insensitive)
-    text_lower.contains(&pattern.to_lowercase())
+    text_lower.contains(&pattern_lower)
 }
 
 /// Match pattern with .* wildcard support
@@ -1576,6 +1827,7 @@ fn pattern_matches(pattern: &str, text: &str) -> bool {
 fn wildcard_match(pattern: &str, text: &str) -> bool {
     // Convert .* pattern to regex-like matching
     // Split by .* and check if parts appear in order
+    // For search, .* acts as "anything in between" - all parts just need to appear in order
     let parts: Vec<&str> = pattern.split(".*").collect();
     
     if parts.is_empty() {
@@ -1588,21 +1840,14 @@ fn wildcard_match(pattern: &str, text: &str) -> bool {
             continue;
         }
         
-        // First part must match at start (if pattern doesn't start with .*)
+        // First part: if pattern doesn't start with .*, must match at start
         if i == 0 && !pattern.starts_with(".*") {
             if !text.starts_with(part) {
                 return false;
             }
             pos = part.len();
-        } 
-        // Last part must match at end (if pattern doesn't end with .*)
-        else if i == parts.len() - 1 && !pattern.ends_with(".*") {
-            if !text[pos..].ends_with(part) {
-                return false;
-            }
-        }
-        // Middle parts just need to appear somewhere after current position
-        else {
+        } else {
+            // All other parts just need to appear somewhere after current position
             if let Some(found_pos) = text[pos..].find(part) {
                 pos = pos + found_pos + part.len();
             } else {
@@ -1828,6 +2073,14 @@ fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
         }
     }
     
+    // Check attribute patterns
+    for required in &pattern.attribute_patterns {
+        let all_attrs = lemma.attributes.join(" ");
+        if !pattern_matches(required, &all_attrs) {
+            return false;
+        }
+    }
+    
     true
 }
 
@@ -1926,6 +2179,14 @@ fn matches_impl(imp: &ParsedImpl, pattern: &SearchPattern) -> bool {
         }
     }
     
+    // Check attribute patterns
+    for required in &pattern.attribute_patterns {
+        let all_attrs = imp.attributes.join(" ");
+        if !pattern_matches(required, &all_attrs) {
+            return false;
+        }
+    }
+    
     true
 }
 
@@ -2007,6 +2268,14 @@ fn matches_trait(tr: &ParsedTrait, pattern: &SearchPattern) -> bool {
             }
         }
         if !found {
+            return false;
+        }
+    }
+    
+    // Check attribute patterns
+    for required in &pattern.attribute_patterns {
+        let all_attrs = tr.attributes.join(" ");
+        if !pattern_matches(required, &all_attrs) {
             return false;
         }
     }
@@ -2117,6 +2386,22 @@ fn matches_struct(st: &ParsedStruct, pattern: &SearchPattern) -> bool {
         }
     }
     
+    // Check field type patterns
+    for required in &pattern.struct_field_patterns {
+        let all_fields = st.field_types.join(" ");
+        if !pattern_matches(required, &all_fields) {
+            return false;
+        }
+    }
+    
+    // Check attribute patterns
+    for required in &pattern.attribute_patterns {
+        let all_attrs = st.attributes.join(" ");
+        if !pattern_matches(required, &all_attrs) {
+            return false;
+        }
+    }
+    
     true
 }
 
@@ -2141,6 +2426,22 @@ fn matches_enum(en: &ParsedEnum, pattern: &SearchPattern) -> bool {
             .collect::<Vec<_>>()
             .join(" ");
         if !pattern_matches(required, &generics_text) {
+            return false;
+        }
+    }
+    
+    // Check variant type patterns
+    for required in &pattern.enum_variant_patterns {
+        let all_variants = en.variant_types.join(" ");
+        if !pattern_matches(required, &all_variants) {
+            return false;
+        }
+    }
+    
+    // Check attribute patterns
+    for required in &pattern.attribute_patterns {
+        let all_attrs = en.attributes.join(" ");
+        if !pattern_matches(required, &all_attrs) {
             return false;
         }
     }
@@ -2588,6 +2889,9 @@ fn main() -> Result<()> {
         && args.pattern.ensures_patterns.is_empty()
         && args.pattern.generics_patterns.is_empty()
         && args.pattern.required_modifiers.is_empty()
+        && args.pattern.attribute_patterns.is_empty()
+        && args.pattern.struct_field_patterns.is_empty()
+        && args.pattern.enum_variant_patterns.is_empty()
         && !args.pattern.requires_generics
         && !args.pattern.has_recommends
         && !args.pattern.has_requires

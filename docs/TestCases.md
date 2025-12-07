@@ -1,6 +1,6 @@
 # Veracity Search Test Cases
 
-All 180 patterns with corresponding tests (271 tests total).
+All 195+ patterns with corresponding tests (276 tests total).
 
 ## Pattern Table
 
@@ -215,6 +215,34 @@ All 180 patterns with corresponding tests (271 tests total).
 | 'impl \(View\|DeepView\)' | View or DeepView impl |
 | 'impl _ for \(Seq\|Set\)' | impl for Seq or Set |
 
+## Struct/Enum Field Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'struct _ { : int }' | Structs with int-typed field |
+| 'struct _ { : Seq }' | Structs with Seq-typed field |
+| 'struct _ { : int : Seq }' | Structs with int AND Seq fields |
+| 'enum _ { : String }' | Enums with String-typed variant |
+| 'enum _ { : int }' | Enums with int-typed variant |
+
+## Attribute/Pragma Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| '#[verifier::external_body] fn _' | Functions with external_body attr |
+| '#[verifier::opaque] fn _' | Opaque functions |
+| '#[verifier::external_body] struct _' | Structs with external_body |
+| '#[derive(Clone)] struct _' | Structs deriving Clone |
+| '#[verifier::external] impl _' | External impls |
+
+## Tuple Type Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'fn _ -> (int,' | Returns tuple starting with int |
+| 'fn _ -> .*int.*Seq' | Return contains int then Seq |
+| 'fn _ types (Key,' | Types mention tuple with Key |
+
 ## Pattern Syntax
 
 - '_' - Matches any name/type (context-dependent)
@@ -227,5 +255,7 @@ All 180 patterns with corresponding tests (271 tests total).
 - '{ type NAME }' - Has associated type NAME
 - '{ fn NAME }' - Has method NAME
 - '{ fn NAME -> TYPE }' - Has method returning TYPE
+- '{ : TYPE }' - Has field/variant of TYPE
+- '#[ATTR]' - Has attribute ATTR
 - '\(A\|B\)' - Match A OR B
 - '\(A\&B\)' - Match A AND B

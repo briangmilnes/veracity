@@ -93,6 +93,31 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `fn _ types Map` | Mentions Map anywhere |
 | `Seq^+` | Must mention Seq (shorthand) |
 
+### Tuple Types
+
+| Pattern | Matches |
+|---------|---------|
+| `fn _ -> (int,` | Returns tuple starting with int |
+| `fn _ -> .*int.*Seq` | Return type contains int then Seq |
+| `fn _ types (Key,` | Mentions tuple with Key |
+
+### Struct/Enum Fields
+
+| Pattern | Matches |
+|---------|---------|
+| `struct _ { : Seq }` | Structs with Seq-typed field |
+| `struct _ { : int }` | Structs with int-typed field |
+| `enum _ { : String }` | Enums with String-typed variant |
+
+### Attributes/Pragmas
+
+| Pattern | Matches |
+|---------|---------|
+| `#[verifier::external_body] fn _` | Functions with external_body |
+| `#[verifier::opaque] fn _` | Opaque functions |
+| `#[derive(Clone)] struct _` | Structs deriving Clone |
+| `#[verifier::external] impl _` | External impls |
+
 ### Clauses
 
 | Pattern | Matches |

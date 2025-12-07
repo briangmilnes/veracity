@@ -375,3 +375,41 @@ fn test_broadcast_proof_fn_modifiers() {
     assert!(pattern.required_modifiers.contains(&"proof".to_string()));
 }
 
+// Attribute pattern tests
+
+#[test]
+fn test_attribute_pattern_simple() {
+    let pattern = parse_pattern("#[verifier::external_body] fn _").unwrap();
+    assert_eq!(pattern.name, Some("_".to_string()));
+    assert_eq!(pattern.attribute_patterns, vec!["verifier::external_body".to_string()]);
+}
+
+#[test]
+fn test_attribute_pattern_opaque() {
+    let pattern = parse_pattern("#[verifier::opaque] spec fn _").unwrap();
+    assert_eq!(pattern.attribute_patterns, vec!["verifier::opaque".to_string()]);
+    assert!(pattern.required_modifiers.contains(&"spec".to_string()));
+}
+
+#[test]
+fn test_struct_field_pattern() {
+    let pattern = parse_pattern("struct _ { : int }").unwrap();
+    assert!(pattern.is_struct_search);
+    assert!(pattern.struct_field_patterns.contains(&"int".to_string()));
+}
+
+#[test]
+fn test_struct_field_pattern_multiple() {
+    let pattern = parse_pattern("struct _ { : int : Seq }").unwrap();
+    assert!(pattern.is_struct_search);
+    assert!(pattern.struct_field_patterns.contains(&"int".to_string()));
+    assert!(pattern.struct_field_patterns.contains(&"Seq".to_string()));
+}
+
+#[test]
+fn test_enum_variant_pattern() {
+    let pattern = parse_pattern("enum _ { : String }").unwrap();
+    assert!(pattern.is_enum_search);
+    assert!(pattern.enum_variant_patterns.contains(&"String".to_string()));
+}
+

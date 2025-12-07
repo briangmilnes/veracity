@@ -74,10 +74,18 @@ pub struct SearchPattern {
     // Struct search fields
     /// True if searching for struct definitions
     pub is_struct_search: bool,
+    /// Field type patterns (struct _ { : TYPE })
+    pub struct_field_patterns: Vec<String>,
     
     // Enum search fields
     /// True if searching for enum definitions
     pub is_enum_search: bool,
+    /// Variant type patterns (enum _ { : TYPE })
+    pub enum_variant_patterns: Vec<String>,
+    
+    // Attribute/pragma patterns
+    /// Attribute patterns (#[...])
+    pub attribute_patterns: Vec<String>,
     
     // Body patterns (for trait/impl body matching)
     /// Associated type patterns to match in trait/impl body
@@ -101,8 +109,9 @@ fn is_keyword(token: &str) -> bool {
     matches!(token.to_lowercase().as_str(), 
         "proof" | "fn" | "args" | "generics" | "types" | "requires" | "ensures" |
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
-        "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | "=" | "{"
-    )
+        "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | 
+        "=" | "{" | "}" | ":"
+    ) || token.starts_with("#[")
 }
 
 /// Parse body patterns like { type NAME } or { fn NAME -> TYPE }
@@ -227,6 +236,23 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
     while i < tokens.len() {
         let token = &tokens[i];
         let token_lower = token.to_lowercase();
+        
+        // Check for #[...] attribute pattern
+        if token.starts_with("#[") {
+            // Extract attribute content (may span multiple tokens if spaces inside)
+            let mut attr = token.clone();
+            // If doesn't end with ], collect more tokens
+            while !attr.ends_with(']') && i + 1 < tokens.len() {
+                i += 1;
+                attr.push(' ');
+                attr.push_str(&tokens[i]);
+            }
+            // Store just the inner part without #[ and ]
+            let inner = attr.trim_start_matches("#[").trim_end_matches(']');
+            pattern.attribute_patterns.push(inner.to_string());
+            i += 1;
+            continue;
+        }
         
         // Check for TYPE^+ pattern (must have type)
         if token.ends_with("^+") {
@@ -429,6 +455,31 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
                 }
+                // Check for body pattern { : TYPE } or { TYPE }
+                if i < tokens.len() && tokens[i] == "{" {
+                    i += 1;
+                    while i < tokens.len() && tokens[i] != "}" {
+                        let tok = &tokens[i];
+                        if tok == ":" {
+                            // Field type follows
+                            i += 1;
+                            if i < tokens.len() && tokens[i] != "}" {
+                                pattern.struct_field_patterns.push(tokens[i].clone());
+                                i += 1;
+                            }
+                        } else if !tok.starts_with('#') {
+                            // Direct type without :
+                            pattern.struct_field_patterns.push(tok.clone());
+                            i += 1;
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    // Skip closing }
+                    if i < tokens.len() && tokens[i] == "}" {
+                        i += 1;
+                    }
+                }
             }
             "enum" => {
                 pattern.is_enum_search = true;
@@ -442,6 +493,31 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                 if i < tokens.len() && !is_keyword(&tokens[i]) {
                     pattern.name = Some(tokens[i].clone());
                     i += 1;
+                }
+                // Check for body pattern { : TYPE }
+                if i < tokens.len() && tokens[i] == "{" {
+                    i += 1;
+                    while i < tokens.len() && tokens[i] != "}" {
+                        let tok = &tokens[i];
+                        if tok == ":" {
+                            // Variant type follows
+                            i += 1;
+                            if i < tokens.len() && tokens[i] != "}" {
+                                pattern.enum_variant_patterns.push(tokens[i].clone());
+                                i += 1;
+                            }
+                        } else if !tok.starts_with('#') {
+                            // Direct type
+                            pattern.enum_variant_patterns.push(tok.clone());
+                            i += 1;
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    // Skip closing }
+                    if i < tokens.len() && tokens[i] == "}" {
+                        i += 1;
+                    }
                 }
             }
             _ => {
