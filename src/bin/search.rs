@@ -1725,15 +1725,17 @@ fn extract_return_type(text: &str) -> Option<String> {
 /// Find matching closing bracket, returns position relative to start
 fn find_matching_bracket(text: &str, open: char, close: char) -> Option<usize> {
     let mut count = 0;
-    for (i, ch) in text.chars().enumerate() {
+    let mut byte_pos = 0;
+    for ch in text.chars() {
         if ch == open {
             count += 1;
         } else if ch == close {
             count -= 1;
             if count == 0 {
-                return Some(i);
+                return Some(byte_pos);
             }
         }
+        byte_pos += ch.len_utf8();
     }
     None
 }

@@ -16,8 +16,10 @@ Type-based semantic search for Verus code. Find functions, traits, impls by patt
 veracity-search -v 'proof fn .*len.*'           # proof functions containing 'len'
 veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
 veracity-search -v 'exec fn _ proof {}'         # exec functions with proof blocks
-veracity-search -v 'struct _ { : Ghost }'       # structs with Ghost fields
+veracity-search -v 'impl _ {Seq; fn view}'      # impls using Seq with view method
 ```
+
+**⚡ Fast**: Searches 6,366 files (57,853 items) across 15 Verus projects in **0.6 seconds**.
 
 ### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*
 
