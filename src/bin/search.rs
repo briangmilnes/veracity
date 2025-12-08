@@ -1377,8 +1377,10 @@ fn extract_enum_variant_types(body: &str) -> Vec<String> {
         } else if let Some(brace_start) = trimmed.find('{') {
             // Record variant: Variant { field: Type }
             if let Some(brace_end) = trimmed.rfind('}') {
-                let inner = &trimmed[brace_start..=brace_end];
-                types.extend(extract_field_types(inner));
+                if brace_end > brace_start {
+                    let inner = &trimmed[brace_start..=brace_end];
+                    types.extend(extract_field_types(inner));
+                }
             }
         }
     }
