@@ -182,6 +182,9 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'type <_> Foo' | type generics | generic type Foo |
 | 'type Foo' | type | type Foo |
 | 'type Foo = Bar' | type value | type Foo = Bar |
+| 'def _' | def | all type definitions |
+| 'def JoinHandle' | def | any def named JoinHandle |
+| 'def .*Seq.*' | def | defs matching pattern |
 | 'types Seq' | types | mentions Seq |
 | 'types Seq, Set' | types | mentions Seq and Set |
 | 'types Set' | types | mentions Set |

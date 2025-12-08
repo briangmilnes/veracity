@@ -2959,6 +2959,7 @@ fn main() -> Result<()> {
         && !args.pattern.is_type_search
         && !args.pattern.is_struct_search
         && !args.pattern.is_enum_search
+        && !args.pattern.is_def_search
         && args.pattern.types_patterns.is_empty()
         && args.pattern.returns_patterns.is_empty()
         && args.pattern.recommends_patterns.is_empty()
@@ -3220,6 +3221,81 @@ fn main() -> Result<()> {
         
         for en in &matches {
             display_enum(en, base_path, args.color);
+        }
+    } else if args.pattern.is_def_search {
+        // Unified type definition search (struct, enum, type alias, trait)
+        let mut all_structs: Vec<ParsedStruct> = Vec::new();
+        let mut all_enums: Vec<ParsedEnum> = Vec::new();
+        let mut all_types: Vec<ParsedTypeAlias> = Vec::new();
+        let mut all_traits: Vec<ParsedTrait> = Vec::new();
+        
+        for file in &all_files {
+            all_structs.extend(parse_structs_from_file(file));
+            all_enums.extend(parse_enums_from_file(file));
+            all_types.extend(parse_types_from_file(file));
+            all_traits.extend(parse_traits_from_file(file));
+        }
+        
+        // Filter by name pattern
+        let struct_matches: Vec<_> = all_structs.into_iter()
+            .filter(|s| {
+                if let Some(ref name_pat) = args.pattern.name {
+                    name_pattern_matches(name_pat, &s.name)
+                } else {
+                    true
+                }
+            })
+            .collect();
+        
+        let enum_matches: Vec<_> = all_enums.into_iter()
+            .filter(|e| {
+                if let Some(ref name_pat) = args.pattern.name {
+                    name_pattern_matches(name_pat, &e.name)
+                } else {
+                    true
+                }
+            })
+            .collect();
+        
+        let type_matches: Vec<_> = all_types.into_iter()
+            .filter(|t| {
+                if let Some(ref name_pat) = args.pattern.name {
+                    name_pattern_matches(name_pat, &t.name)
+                } else {
+                    true
+                }
+            })
+            .collect();
+        
+        let trait_matches: Vec<_> = all_traits.into_iter()
+            .filter(|t| {
+                if let Some(ref name_pat) = args.pattern.name {
+                    name_pattern_matches(name_pat, &t.name)
+                } else {
+                    true
+                }
+            })
+            .collect();
+        
+        let total_matches = struct_matches.len() + enum_matches.len() + type_matches.len() + trait_matches.len();
+        
+        log!("Files: {}", file_count);
+        log!("  Structs: {}, Enums: {}, Types: {}, Traits: {}", 
+             struct_matches.len(), enum_matches.len(), type_matches.len(), trait_matches.len());
+        log!("  Matches: {}", total_matches);
+        log!("");
+        
+        for st in &struct_matches {
+            display_struct(st, base_path, args.color);
+        }
+        for en in &enum_matches {
+            display_enum(en, base_path, args.color);
+        }
+        for ta in &type_matches {
+            display_type_alias(ta, base_path, args.color);
+        }
+        for tr in &trait_matches {
+            display_trait(tr, base_path, args.color);
         }
     } else {
         let mut all_lemmas: Vec<ParsedLemma> = Vec::new();

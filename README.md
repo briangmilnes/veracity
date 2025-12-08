@@ -15,7 +15,7 @@ Type-based semantic search for Verus code. Find functions, traits, impls by patt
 ```bash
 veracity-search -v 'proof fn .*len.*'           # proof functions containing 'len'
 veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
-veracity-search -v 'exec fn _ proof {}'         # exec functions with proof blocks
+veracity-search -v 'def JoinHandle'             # find any type definition by name
 veracity-search -v 'impl _ {Seq; fn view}'      # impls using Seq with view method
 ```
 

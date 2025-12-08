@@ -120,6 +120,14 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `struct _ { : int, : Seq }` | Structs with BOTH int AND Seq fields (any order) |
 | `enum _ { : String }` | Enums with String-typed variant |
 
+### Unified Type Definitions (`def`)
+
+| Pattern | Matches |
+|---------|---------|
+| `def JoinHandle` | Any struct, enum, type alias, or trait named JoinHandle |
+| `def _` | All type definitions (380 in vstd) |
+| `def .*Seq.*` | Defs with Seq in the name |
+
 ### Function Argument Types
 
 | Pattern | Matches |

@@ -85,6 +85,10 @@ pub struct SearchPattern {
     /// Variant type patterns (enum _ { : TYPE })
     pub enum_variant_patterns: Vec<String>,
     
+    // Def search fields (all type definitions: struct, enum, type, trait)
+    /// True if searching for any type definition
+    pub is_def_search: bool,
+    
     // Attribute/pragma patterns
     /// Attribute patterns (#[...])
     pub attribute_patterns: Vec<String>,
@@ -126,7 +130,7 @@ fn is_keyword(token: &str) -> bool {
     matches!(token.to_lowercase().as_str(), 
         "proof" | "fn" | "args" | "generics" | "types" | "requires" | "ensures" |
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
-        "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | 
+        "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | "def" | 
         "=" | "{" | "}" | ":" | "assert" | "body" | "(" | ")"
     ) || token.starts_with("#[")
 }
@@ -638,6 +642,16 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
                     if i < tokens.len() && tokens[i] == "}" {
                         i += 1;
                     }
+                }
+            }
+            "def" => {
+                // Search all type definitions (struct, enum, type alias, trait)
+                pattern.is_def_search = true;
+                i += 1;
+                // Next could be type name
+                if i < tokens.len() && !is_keyword(&tokens[i]) {
+                    pattern.name = Some(tokens[i].clone());
+                    i += 1;
                 }
             }
             _ => {
