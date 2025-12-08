@@ -1463,6 +1463,7 @@ fn contains_proof_fn(line: &str) -> bool {
     // open spec fn name
     // closed spec fn name
     // exec fn name
+    // pub fn name (plain Rust fn, may have Verus attributes)
     
     let tokens: Vec<&str> = trimmed.split_whitespace().collect();
     
@@ -1470,6 +1471,10 @@ fn contains_proof_fn(line: &str) -> bool {
         // Match "proof fn", "axiom fn", "spec fn", or "exec fn"
         if (*token == "proof" || *token == "axiom" || *token == "spec" || *token == "exec") 
             && i + 1 < tokens.len() && tokens[i + 1] == "fn" {
+            return true;
+        }
+        // Also match plain "fn" (Rust fn, may have Verus requires/ensures)
+        if *token == "fn" {
             return true;
         }
     }
