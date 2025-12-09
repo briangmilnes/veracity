@@ -47,7 +47,7 @@ $ veracity-count-loc -d src/
       36/      34/     114 human_eval_001.rs
      128/      87/     342 array_list.rs
       89/     156/     287 btree_map.rs
-     ─────────────────────
+   ─────────────────────
      253/     277/     743 total (Spec/Proof/Exec)
 ```
 

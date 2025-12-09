@@ -398,6 +398,13 @@ impl SearchArgs {
                     std::process::exit(0);
                 }
                 other => {
+                    // Check for unknown flags (anything starting with - that we didn't match)
+                    if other.starts_with('-') && other != "-" {
+                        return Err(anyhow::anyhow!(
+                            "Unknown option: {}\nUse --help to see available options.",
+                            other
+                        ));
+                    }
                     // Everything else is part of the pattern
                     pattern_parts.push(other.to_string());
                 }
