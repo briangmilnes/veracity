@@ -98,8 +98,22 @@ pub struct SearchPattern {
     pub has_proof_block: bool,
     /// Must have assert statement in body
     pub has_assert: bool,
+    /// Must have unsafe { } block in body
+    pub has_unsafe_block: bool,
+    /// Must have assume() call in body
+    pub has_assume: bool,
+    /// Must have Tracked::assume_new() call in body
+    pub has_assume_new: bool,
     /// Body content patterns (for searching function bodies)
     pub body_patterns: Vec<String>,
+    
+    // Unsafe patterns
+    /// Must be unsafe fn or unsafe impl
+    pub is_unsafe: bool,
+    
+    // Proof holes pattern
+    /// Match any proof hole (unsafe fn/impl, unsafe block, assume, assume_new, external_body without proof)
+    pub is_holes_search: bool,
     
     // Body patterns (for trait/impl body matching)
     /// Associated type patterns to match in trait/impl body
@@ -131,7 +145,8 @@ fn is_keyword(token: &str) -> bool {
         "proof" | "fn" | "args" | "generics" | "types" | "requires" | "ensures" |
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
         "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | "def" | 
-        "=" | "{" | "}" | ":" | "assert" | "body" | "(" | ")"
+        "=" | "{" | "}" | ":" | "assert" | "body" | "(" | ")" |
+        "unsafe" | "assume" | "holes"
     ) || token.starts_with("#[")
 }
 
@@ -443,6 +458,31 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
             "assert" => {
                 // Must have assert in body
                 pattern.has_assert = true;
+                i += 1;
+            }
+            "unsafe" => {
+                // Check if followed by { or {} - means "has unsafe block in body"
+                if i + 1 < tokens.len() && (tokens[i + 1] == "{" || tokens[i + 1] == "{}") {
+                    pattern.has_unsafe_block = true;
+                    i += 2; // Skip "unsafe" and "{" or "{}"
+                    // Skip closing } if present
+                    if i < tokens.len() && tokens[i] == "}" {
+                        i += 1;
+                    }
+                } else {
+                    // It's a modifier for unsafe fn/impl
+                    pattern.is_unsafe = true;
+                    i += 1;
+                }
+            }
+            "assume" => {
+                // Must have assume() call in body
+                pattern.has_assume = true;
+                i += 1;
+            }
+            "holes" => {
+                // Match any proof hole
+                pattern.is_holes_search = true;
                 i += 1;
             }
             "body" => {

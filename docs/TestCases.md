@@ -189,6 +189,12 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'types Seq, Set' | types | mentions Seq and Set |
 | 'types Set' | types | mentions Set |
 | 'types Set, Seq' | types | mentions Set and Seq |
+| 'unsafe fn _' | unsafe | unsafe functions |
+| 'unsafe impl _' | unsafe | unsafe impl blocks |
+| 'fn _ unsafe {}' | body unsafe | functions with unsafe {} in body |
+| 'fn _ assume' | body assume | functions with assume() calls |
+| 'fn _ body assume_new' | body assume | functions with Tracked::assume_new() |
+| 'holes' | proof holes | all proof holes |
 
 ## Body Patterns (trait/impl)
 
@@ -272,6 +278,14 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'struct _ { : Ghost }' | Structs with Ghost fields |
 | 'struct _ { : Tracked }' | Structs with Tracked fields |
 
+## Unsafe Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| 'unsafe fn _' | Unsafe functions |
+| 'unsafe impl _' | Unsafe impl blocks |
+| 'fn _ unsafe {}' | Functions with unsafe {} blocks in body |
+
 ## Function Body Patterns
 
 | Pattern | Description |
@@ -280,8 +294,23 @@ All 195+ patterns with corresponding tests (276 tests total).
 | 'exec fn _ proof {}' | Exec functions with proof blocks |
 | 'fn _ assert' | Functions with assert statements |
 | 'exec fn _ assert' | Exec functions with asserts |
+| 'fn _ assume' | Functions with assume() calls |
+| 'fn _ body assume_new' | Functions with Tracked::assume_new() |
 | 'fn _ body lemma' | Functions calling lemmas in body |
 | 'fn _ body admit' | Functions with admit in body |
+
+## Proof Holes Pattern
+
+| Pattern | Description |
+|---------|-------------|
+| 'holes' | All proof holes (unsafe fn/impl, unsafe {}, assume, assume_new) |
+
+The `holes` pattern provides a comprehensive report:
+```
+Files: 6366, Proof Holes: 4650
+  unsafe fn: 1374, unsafe impl: 424
+  unsafe {}: 3177, assume: 350, assume_new: 55
+```
 
 ## Pattern Syntax
 
@@ -304,5 +333,9 @@ All 195+ patterns with corresponding tests (276 tests total).
 - '#[ATTR]' - Has attribute ATTR
 - 'proof {}' - Has proof block in body (for functions)
 - 'assert' - Has assert statement in body (for functions)
+- 'unsafe' - Match unsafe fn or impl
+- 'unsafe {}' - Has unsafe block in body (for functions)
+- 'assume' - Has assume() call in body (for functions)
+- 'holes' - Match any proof hole
 - '\(A\|B\)' - Match A OR B
 - '\(A\&B\)' - Match A AND B

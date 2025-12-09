@@ -155,6 +155,14 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `struct _ { : Ghost }` | Structs with Ghost fields |
 | `struct _ { : Tracked }` | Structs with Tracked fields |
 
+### Unsafe Patterns
+
+| Pattern | Matches |
+|---------|---------|
+| `unsafe fn _` | Unsafe functions |
+| `unsafe impl _` | Unsafe impl blocks |
+| `fn _ unsafe {}` | Functions with unsafe blocks in body |
+
 ### Function Body Patterns
 
 | Pattern | Matches |
@@ -163,8 +171,23 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `exec fn _ proof {}` | Exec functions with proof blocks |
 | `fn _ assert` | Functions with assert statements |
 | `exec fn _ assert` | Exec functions with asserts |
+| `fn _ assume` | Functions with assume() calls in body |
+| `fn _ body assume_new` | Functions with Tracked::assume_new() |
 | `fn _ body lemma` | Functions calling lemmas |
 | `fn _ body admit` | Functions with admits in body |
+
+### Proof Holes (`holes`)
+
+| Pattern | Matches |
+|---------|---------|
+| `holes` | All proof holes (unsafe fn/impl, unsafe blocks, assume, assume_new) |
+
+The `holes` pattern provides comprehensive reporting:
+```
+Files: 6366, Proof Holes: 4650
+  unsafe fn: 1374, unsafe impl: 424
+  unsafe {}: 3177, assume: 350, assume_new: 55
+```
 
 ### Clauses
 

@@ -491,3 +491,46 @@ fn test_body_pattern_multiple() {
     assert!(pattern.body_patterns.contains(&"tracked".to_string()));
 }
 
+// === Unsafe and Holes Patterns ===
+
+#[test]
+fn test_unsafe_fn() {
+    let pattern = parse_pattern("unsafe fn _").unwrap();
+    assert!(pattern.is_unsafe);
+    assert_eq!(pattern.name, Some("_".to_string()));
+}
+
+#[test]
+fn test_unsafe_impl() {
+    let pattern = parse_pattern("unsafe impl _").unwrap();
+    assert!(pattern.is_unsafe);
+    assert!(pattern.is_impl_search);
+}
+
+#[test]
+fn test_fn_unsafe_block() {
+    let pattern = parse_pattern("fn _ unsafe {}").unwrap();
+    assert!(pattern.has_unsafe_block);
+    assert_eq!(pattern.name, Some("_".to_string()));
+}
+
+#[test]
+fn test_fn_assume() {
+    let pattern = parse_pattern("fn _ assume").unwrap();
+    assert!(pattern.has_assume);
+    assert_eq!(pattern.name, Some("_".to_string()));
+}
+
+#[test]
+fn test_holes_pattern() {
+    let pattern = parse_pattern("holes").unwrap();
+    assert!(pattern.is_holes_search);
+}
+
+#[test]
+fn test_fn_body_assume_new() {
+    let pattern = parse_pattern("fn _ body assume_new").unwrap();
+    assert!(pattern.body_patterns.contains(&"assume_new".to_string()));
+    assert_eq!(pattern.name, Some("_".to_string()));
+}
+

@@ -75,10 +75,18 @@ struct ParsedLemma {
     ensures: Vec<String>,
     /// Attributes (extracted from context)
     attributes: Vec<String>,
+    /// Whether this is an unsafe fn
+    is_unsafe: bool,
     /// Whether function body contains proof { } blocks
     has_proof_block: bool,
     /// Whether function body contains assert statements
     has_assert: bool,
+    /// Whether function body contains unsafe { } blocks
+    has_unsafe_block: bool,
+    /// Whether function body contains assume() calls
+    has_assume: bool,
+    /// Whether function body contains Tracked::assume_new() calls
+    has_assume_new: bool,
     /// The function body text (for pattern matching)
     body_text: String,
     /// The full text of the lemma signature
@@ -108,6 +116,8 @@ struct ParsedImpl {
     context: Vec<String>,
     #[allow(dead_code)]
     visibility: String,
+    /// Whether this is an unsafe impl
+    is_unsafe: bool,
     generics: Vec<GenericParam>,
     trait_name: Option<String>,
     for_type: String,
@@ -570,6 +580,9 @@ fn parse_lemmas_from_file(path: &Path) -> Vec<ParsedLemma> {
                 lemma.has_proof_block = body.contains("proof {") || body.contains("proof{");
                 lemma.has_assert = body.contains("assert(") || body.contains("assert!(")
                     || body.contains("assert_by(") || body.contains("assert_forall_by(");
+                lemma.has_unsafe_block = body.contains("unsafe {") || body.contains("unsafe{");
+                lemma.has_assume = body.contains("assume(");
+                lemma.has_assume_new = body.contains("assume_new(") || body.contains("Tracked::assume_new");
                 lemma.body_text = body;
                 lemmas.push(lemma);
             }
@@ -774,6 +787,7 @@ fn parse_method_signature(line: &str) -> Option<BodyMethod> {
 /// Parse a single impl line
 fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String>, body: &str) -> Option<ParsedImpl> {
     let mut visibility = String::new();
+    let mut is_unsafe = false;
     let mut rest = line;
     
     // Extract visibility
@@ -783,6 +797,12 @@ fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String
     } else if rest.starts_with("pub ") {
         visibility = "pub".to_string();
         rest = rest.trim_start_matches("pub ");
+    }
+    
+    // Check for unsafe
+    if rest.starts_with("unsafe ") {
+        is_unsafe = true;
+        rest = rest.trim_start_matches("unsafe ");
     }
     
     // Should start with impl now
@@ -840,6 +860,7 @@ fn parse_impl_line(line: &str, line_num: usize, path: &Path, context: Vec<String
         line: line_num,
         context,
         visibility,
+        is_unsafe,
         generics,
         trait_name,
         for_type,
@@ -1635,13 +1656,16 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
     
     let fn_idx = fn_idx?;
     
+    // Detect if this is unsafe fn
+    let is_unsafe = tokens[..fn_idx].iter().any(|t| *t == "unsafe");
+    
     // Everything before "fn" is visibility + modifiers
     for i in 0..fn_idx {
         let token = tokens[i];
         if token == "pub" || token.starts_with("pub(") {
             visibility = token.to_string();
         } else if token == "proof" || token == "broadcast" || token == "open" || token == "closed" 
-                  || token == "spec" || token == "axiom" || token == "exec" {
+                  || token == "spec" || token == "axiom" || token == "exec" || token == "unsafe" {
             modifiers.push(token.to_string());
         }
     }
@@ -1705,8 +1729,12 @@ fn parse_lemma_text(text: &str, line: usize, path: &Path, context: Vec<String>) 
         requires,
         ensures,
         attributes,
+        is_unsafe,
         has_proof_block: false,  // Set later
         has_assert: false,       // Set later
+        has_unsafe_block: false, // Set later
+        has_assume: false,       // Set later
+        has_assume_new: false,   // Set later
         body_text: String::new(), // Set later
         full_text: text.to_string(),
     })
@@ -2182,6 +2210,26 @@ fn matches_pattern(lemma: &ParsedLemma, pattern: &SearchPattern) -> bool {
         return false;
     }
     
+    // Check is_unsafe
+    if pattern.is_unsafe && !lemma.is_unsafe {
+        return false;
+    }
+    
+    // Check has_unsafe_block
+    if pattern.has_unsafe_block && !lemma.has_unsafe_block {
+        return false;
+    }
+    
+    // Check has_assume
+    if pattern.has_assume && !lemma.has_assume {
+        return false;
+    }
+    
+    // Check has_assume_new (Tracked::assume_new)
+    if pattern.has_assume_new && !lemma.has_assume_new {
+        return false;
+    }
+    
     // Check body patterns
     for required in &pattern.body_patterns {
         if !pattern_matches(required, &lemma.body_text) {
@@ -2201,6 +2249,11 @@ fn relevance_score(_lemma: &ParsedLemma, _pattern: &SearchPattern) -> i32 {
 
 /// Check if an impl matches the search pattern
 fn matches_impl(imp: &ParsedImpl, pattern: &SearchPattern) -> bool {
+    // Check is_unsafe
+    if pattern.is_unsafe && !imp.is_unsafe {
+        return false;
+    }
+    
     // Check requires_generics
     if pattern.requires_generics && imp.generics.is_empty() {
         return false;
@@ -2961,6 +3014,48 @@ fn main() -> Result<()> {
     
     let base_path = args.vstd_path.as_deref().or(args.codebase_path.as_deref());
     
+    // Check if this is a "holes" search (proof holes)
+    if args.pattern.is_holes_search {
+        // Collect all proof holes: unsafe fn/impl, unsafe blocks, assume, assume_new
+        let mut all_lemmas: Vec<ParsedLemma> = Vec::new();
+        let mut all_impls: Vec<ParsedImpl> = Vec::new();
+        for file in &all_files {
+            all_lemmas.extend(parse_lemmas_from_file(file));
+            all_impls.extend(parse_impls_from_file(file));
+        }
+        
+        // Find function holes
+        let fn_holes: Vec<_> = all_lemmas.into_iter()
+            .filter(|f| f.is_unsafe || f.has_unsafe_block || f.has_assume || f.has_assume_new)
+            .collect();
+        
+        // Find unsafe impls
+        let impl_holes: Vec<_> = all_impls.into_iter()
+            .filter(|i| i.is_unsafe)
+            .collect();
+        
+        let total_holes = fn_holes.len() + impl_holes.len();
+        
+        log!("Files: {}, Proof Holes: {}", file_count, total_holes);
+        log!("  unsafe fn: {}, unsafe impl: {}", 
+            fn_holes.iter().filter(|f| f.is_unsafe).count(),
+            impl_holes.len());
+        log!("  unsafe {{}}: {}, assume: {}, assume_new: {}",
+            fn_holes.iter().filter(|f| f.has_unsafe_block).count(),
+            fn_holes.iter().filter(|f| f.has_assume).count(),
+            fn_holes.iter().filter(|f| f.has_assume_new).count());
+        log!("");
+        
+        for lemma in &fn_holes {
+            display_lemma(lemma, base_path, args.color);
+        }
+        for imp in &impl_holes {
+            display_impl(imp, base_path, args.color);
+        }
+        
+        return Ok(());
+    }
+    
     // Check if this is a bare wildcard pattern (should match everything)
     let is_match_all = args.pattern.name == Some("_".to_string()) 
         && !args.pattern.is_impl_search 
@@ -2986,7 +3081,12 @@ fn main() -> Result<()> {
         && !args.pattern.has_requires
         && !args.pattern.has_ensures
         && !args.pattern.has_proof_block
-        && !args.pattern.has_assert;
+        && !args.pattern.has_assert
+        && !args.pattern.is_unsafe
+        && !args.pattern.has_unsafe_block
+        && !args.pattern.has_assume
+        && !args.pattern.has_assume_new
+        && !args.pattern.is_holes_search;
     
     // Search based on pattern type
     if is_match_all {

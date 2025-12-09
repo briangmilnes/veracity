@@ -17,9 +17,12 @@ veracity-search -v 'proof fn .*len.*'           # proof functions containing 'le
 veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
 veracity-search -v 'def JoinHandle'             # find any type definition by name
 veracity-search -v 'impl _ {Seq; fn view}'      # impls using Seq with view method
+veracity-search -C ~/myproject 'holes'          # find all proof holes
 ```
 
 **⚡ Fast**: Searches 6,366 files (57,853 items) across 15 Verus projects in **0.6 seconds**.
+
+**🕳️ Proof Holes**: The `holes` pattern finds unsafe fn/impl, unsafe blocks, assume(), and Tracked::assume_new()—comprehensive verification gap detection.
 
 ### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*
 
