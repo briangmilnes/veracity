@@ -36,7 +36,11 @@ enum VerifierAttribute {
 struct ProofHoleStats {
     assume_false_count: usize,
     assume_count: usize,
+    assume_new_count: usize,  // Tracked::assume_new()
     admit_count: usize,
+    unsafe_fn_count: usize,
+    unsafe_impl_count: usize,
+    unsafe_block_count: usize,
     external_body_count: usize,
     external_fn_spec_count: usize,
     external_trait_spec_count: usize,
@@ -106,7 +110,8 @@ fn main() -> Result<()> {
     
     log!("Verus Proof Hole Detection");
     log!("Looking for:");
-    log!("  - assume(false), assume(), admit()");
+    log!("  - assume(false), assume(), Tracked::assume_new(), admit()");
+    log!("  - unsafe fn, unsafe impl, unsafe {{}} blocks");
     log!("  - axiom fn with holes in body (admit/assume/external_body)");
     log!("  - external_body, external_fn_specification, external_trait_specification");
     log!("  - external_type_specification, external_trait_extension, external");
@@ -335,7 +340,50 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
         analyze_attributes_with_ra_syntax(&root, &mut stats);
     }
     
+    // Always scan the entire file for unsafe patterns (they can appear outside verus! blocks)
+    analyze_unsafe_patterns(&root, &mut stats);
+    
     Ok(stats)
+}
+
+/// Analyze unsafe patterns across the entire file (including outside verus! blocks)
+/// This catches unsafe fn, unsafe impl, unsafe blocks that may be in regular Rust code
+fn analyze_unsafe_patterns(root: &SyntaxNode, stats: &mut FileStats) {
+    let tokens: Vec<_> = root.descendants_with_tokens()
+        .filter_map(|n| n.into_token())
+        .collect();
+    
+    for i in 0..tokens.len() {
+        let token = &tokens[i];
+        
+        // Look for unsafe keyword (as UNSAFE_KW - regular Rust syntax)
+        if token.kind() == SyntaxKind::UNSAFE_KW {
+            // Look ahead to see what follows
+            let mut j = i + 1;
+            // Skip whitespace
+            while j < tokens.len() && tokens[j].kind() == SyntaxKind::WHITESPACE {
+                j += 1;
+            }
+            if j < tokens.len() {
+                match tokens[j].kind() {
+                    SyntaxKind::FN_KW => {
+                        stats.holes.unsafe_fn_count += 1;
+                        stats.holes.total_holes += 1;
+                    }
+                    SyntaxKind::IMPL_KW => {
+                        stats.holes.unsafe_impl_count += 1;
+                        stats.holes.total_holes += 1;
+                    }
+                    SyntaxKind::L_CURLY => {
+                        stats.holes.unsafe_block_count += 1;
+                        stats.holes.total_holes += 1;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Note: assume_new is handled in analyze_verus_macro() for verus! blocks
+    }
 }
 
 // Analyze attributes using ra_ap_syntax token walking
@@ -439,7 +487,7 @@ fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats)
         // Also check for "broadcast" which might not be an IDENT
         if token.kind() == SyntaxKind::IDENT || token.text() == "broadcast" {
             let text = token.text();
-            if text == "assume" || text == "admit" {
+            if text == "assume" || text == "admit" || text == "assume_new" {
                 // Check if it's followed by (
                 if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::L_PAREN {
                     if text == "assume" {
@@ -453,6 +501,10 @@ fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats)
                     } else if text == "admit" {
                         stats.holes.admit_count += 1;
                         stats.holes.total_holes += 1;
+                    } else if text == "assume_new" {
+                        // Tracked::assume_new() - a sneaky assume!
+                        stats.holes.assume_new_count += 1;
+                        stats.holes.total_holes += 1;
                     }
                 }
             }
@@ -461,6 +513,8 @@ fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats)
             // broadcast use just imports axioms - it doesn't define them
             // The axioms themselves are counted when we find axiom fn with holes
         }
+        
+        // Note: unsafe fn/impl/blocks are detected by analyze_unsafe_patterns() on the whole file
         
         // Look for verifier attributes inside the verus! macro
         if token.kind() == SyntaxKind::POUND {
@@ -695,8 +749,20 @@ fn print_file_report(path: &str, stats: &FileStats) {
         if stats.holes.assume_count > 0 {
             log!("      {} × assume()", stats.holes.assume_count);
         }
+        if stats.holes.assume_new_count > 0 {
+            log!("      {} × Tracked::assume_new()", stats.holes.assume_new_count);
+        }
         if stats.holes.admit_count > 0 {
             log!("      {} × admit()", stats.holes.admit_count);
+        }
+        if stats.holes.unsafe_fn_count > 0 {
+            log!("      {} × unsafe fn", stats.holes.unsafe_fn_count);
+        }
+        if stats.holes.unsafe_impl_count > 0 {
+            log!("      {} × unsafe impl", stats.holes.unsafe_impl_count);
+        }
+        if stats.holes.unsafe_block_count > 0 {
+            log!("      {} × unsafe {{}}", stats.holes.unsafe_block_count);
         }
         if stats.holes.external_body_count > 0 {
             log!("      {} × external_body", stats.holes.external_body_count);
@@ -754,7 +820,11 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
         
         summary.holes.assume_false_count += stats.holes.assume_false_count;
         summary.holes.assume_count += stats.holes.assume_count;
+        summary.holes.assume_new_count += stats.holes.assume_new_count;
         summary.holes.admit_count += stats.holes.admit_count;
+        summary.holes.unsafe_fn_count += stats.holes.unsafe_fn_count;
+        summary.holes.unsafe_impl_count += stats.holes.unsafe_impl_count;
+        summary.holes.unsafe_block_count += stats.holes.unsafe_block_count;
         summary.holes.external_body_count += stats.holes.external_body_count;
         summary.holes.external_fn_spec_count += stats.holes.external_fn_spec_count;
         summary.holes.external_trait_spec_count += stats.holes.external_trait_spec_count;
@@ -795,8 +865,20 @@ fn print_summary(summary: &SummaryStats) {
     if summary.holes.assume_count > 0 {
         log!("   {} × assume()", summary.holes.assume_count);
     }
+    if summary.holes.assume_new_count > 0 {
+        log!("   {} × Tracked::assume_new()", summary.holes.assume_new_count);
+    }
     if summary.holes.admit_count > 0 {
         log!("   {} × admit()", summary.holes.admit_count);
+    }
+    if summary.holes.unsafe_fn_count > 0 {
+        log!("   {} × unsafe fn", summary.holes.unsafe_fn_count);
+    }
+    if summary.holes.unsafe_impl_count > 0 {
+        log!("   {} × unsafe impl", summary.holes.unsafe_impl_count);
+    }
+    if summary.holes.unsafe_block_count > 0 {
+        log!("   {} × unsafe {{}}", summary.holes.unsafe_block_count);
     }
     if summary.holes.external_body_count > 0 {
         log!("   {} × external_body", summary.holes.external_body_count);
@@ -861,8 +943,20 @@ fn print_project_summary(project_name: &str, summary: &SummaryStats) {
         if summary.holes.assume_count > 0 {
             log!("     {} × assume()", summary.holes.assume_count);
         }
+        if summary.holes.assume_new_count > 0 {
+            log!("     {} × Tracked::assume_new()", summary.holes.assume_new_count);
+        }
         if summary.holes.admit_count > 0 {
             log!("     {} × admit()", summary.holes.admit_count);
+        }
+        if summary.holes.unsafe_fn_count > 0 {
+            log!("     {} × unsafe fn", summary.holes.unsafe_fn_count);
+        }
+        if summary.holes.unsafe_impl_count > 0 {
+            log!("     {} × unsafe impl", summary.holes.unsafe_impl_count);
+        }
+        if summary.holes.unsafe_block_count > 0 {
+            log!("     {} × unsafe {{}}", summary.holes.unsafe_block_count);
         }
         if summary.holes.external_body_count > 0 {
             log!("     {} × external_body", summary.holes.external_body_count);
@@ -919,7 +1013,11 @@ fn print_global_summary(projects: &[ProjectStats]) {
         
         global.holes.assume_false_count += project.summary.holes.assume_false_count;
         global.holes.assume_count += project.summary.holes.assume_count;
+        global.holes.assume_new_count += project.summary.holes.assume_new_count;
         global.holes.admit_count += project.summary.holes.admit_count;
+        global.holes.unsafe_fn_count += project.summary.holes.unsafe_fn_count;
+        global.holes.unsafe_impl_count += project.summary.holes.unsafe_impl_count;
+        global.holes.unsafe_block_count += project.summary.holes.unsafe_block_count;
         global.holes.external_body_count += project.summary.holes.external_body_count;
         global.holes.external_fn_spec_count += project.summary.holes.external_fn_spec_count;
         global.holes.external_trait_spec_count += project.summary.holes.external_trait_spec_count;
@@ -954,8 +1052,20 @@ fn print_global_summary(projects: &[ProjectStats]) {
     if global.holes.assume_count > 0 {
         log!("   {} × assume()", global.holes.assume_count);
     }
+    if global.holes.assume_new_count > 0 {
+        log!("   {} × Tracked::assume_new()", global.holes.assume_new_count);
+    }
     if global.holes.admit_count > 0 {
         log!("   {} × admit()", global.holes.admit_count);
+    }
+    if global.holes.unsafe_fn_count > 0 {
+        log!("   {} × unsafe fn", global.holes.unsafe_fn_count);
+    }
+    if global.holes.unsafe_impl_count > 0 {
+        log!("   {} × unsafe impl", global.holes.unsafe_impl_count);
+    }
+    if global.holes.unsafe_block_count > 0 {
+        log!("   {} × unsafe {{}}", global.holes.unsafe_block_count);
     }
     if global.holes.external_body_count > 0 {
         log!("   {} × external_body", global.holes.external_body_count);

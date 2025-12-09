@@ -2654,10 +2654,11 @@ fn display_impl(imp: &ParsedImpl, _base_path: Option<&Path>, color: bool) {
     };
     
     // Build and show the signature (green)
+    let unsafe_str = if imp.is_unsafe { "unsafe " } else { "" };
     let sig = if let Some(ref trait_name) = imp.trait_name {
-        format!("{}impl{} {} for {}", vis, generics_str, trait_name, imp.for_type)
+        format!("{}{}impl{} {} for {}", vis, unsafe_str, generics_str, trait_name, imp.for_type)
     } else {
-        format!("{}impl{} {}", vis, generics_str, imp.for_type)
+        format!("{}{}impl{} {}", vis, unsafe_str, generics_str, imp.for_type)
     };
     
     log!("{}{}{}", green(color), sig, reset(color));

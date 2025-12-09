@@ -146,7 +146,7 @@ fn is_keyword(token: &str) -> bool {
         "spec" | "exec" | "open" | "closed" | "broadcast" | "pub" | "axiom" |
         "impl" | "trait" | "for" | "recommends" | "->" | "type" | "struct" | "enum" | "def" | 
         "=" | "{" | "}" | ":" | "assert" | "body" | "(" | ")" |
-        "unsafe" | "assume" | "holes"
+        "unsafe" | "assume" | "assume_new" | "holes"
     ) || token.starts_with("#[")
 }
 
@@ -478,6 +478,11 @@ pub fn parse_search_pattern(tokens: &[String]) -> Result<SearchPattern> {
             "assume" => {
                 // Must have assume() call in body
                 pattern.has_assume = true;
+                i += 1;
+            }
+            "assume_new" => {
+                // Must have Tracked::assume_new() call in body
+                pattern.has_assume_new = true;
                 i += 1;
             }
             "holes" => {

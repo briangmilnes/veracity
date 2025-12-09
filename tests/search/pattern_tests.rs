@@ -529,8 +529,9 @@ fn test_holes_pattern() {
 
 #[test]
 fn test_fn_body_assume_new() {
-    let pattern = parse_pattern("fn _ body assume_new").unwrap();
-    assert!(pattern.body_patterns.contains(&"assume_new".to_string()));
+    // assume_new is now a first-class keyword, not a body pattern
+    let pattern = parse_pattern("fn _ assume_new").unwrap();
+    assert!(pattern.has_assume_new);
     assert_eq!(pattern.name, Some("_".to_string()));
 }
 
