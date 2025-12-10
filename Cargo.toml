@@ -73,6 +73,10 @@ path = "src/bin/minimize_lib.rs"
 name = "veracity-search"
 path = "src/bin/search.rs"
 
+[[bin]]
+name = "veracity-review-verus-wrapping"
+path = "src/bin/review_verus_wrapping.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants
