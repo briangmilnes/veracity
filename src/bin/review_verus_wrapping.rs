@@ -205,6 +205,12 @@ fn analyze_file(path: &Path) -> Result<(Vec<WrappedType>, Vec<ExternalFnSpec>)> 
                 let wrapper_name = caps.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
                 let rust_type = caps.get(2).map(|m| m.as_str().to_string()).unwrap_or_default();
                 
+                // Skip macro template definitions (contain $ which are macro parameters)
+                if rust_type.contains('$') {
+                    i += 1;
+                    continue;
+                }
+                
                 let wrapped_type = WrappedType {
                     wrapper_name,
                     rust_type,
@@ -234,6 +240,12 @@ fn analyze_file(path: &Path) -> Result<(Vec<WrappedType>, Vec<ExternalFnSpec>)> 
             let has_requires = requires_re.is_match(&spec_text);
             let has_recommends = recommends_re.is_match(&spec_text);
             let has_ensures = ensures_re.is_match(&spec_text);
+            
+            // Skip macro template methods (contain $ which are macro parameters)
+            if method_path.contains('$') {
+                i += 1;
+                continue;
+            }
             
             let method_spec = MethodSpec {
                 method_path,
