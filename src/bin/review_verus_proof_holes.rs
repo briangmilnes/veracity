@@ -32,6 +32,14 @@ enum VerifierAttribute {
     Axiom,
 }
 
+/// A single detected proof hole with its location
+#[derive(Debug, Clone)]
+struct DetectedHole {
+    line: usize,
+    hole_type: String,
+    context: String,  // Short snippet of code for context
+}
+
 #[derive(Debug, Default, Clone)]
 struct ProofHoleStats {
     assume_false_count: usize,
@@ -49,6 +57,8 @@ struct ProofHoleStats {
     external_count: usize,
     opaque_count: usize,
     total_holes: usize,
+    /// Detailed list of holes for Emacs-compatible output
+    holes: Vec<DetectedHole>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -103,10 +113,140 @@ struct GlobalSummaryStats {
     axioms: AxiomStats,
 }
 
+/// Tool-specific arguments for proof-holes tool
+struct ProofHolesArgs {
+    standard: StandardArgs,
+    /// Emacs-compatible diagnostics output (file:line: message)
+    emacs_mode: bool,
+}
+
+impl ProofHolesArgs {
+    fn parse() -> Result<Self> {
+        let args: Vec<String> = std::env::args().collect();
+        
+        let standard = Self::parse_args(&args)?;
+        
+        Ok(ProofHolesArgs {
+            standard,
+            emacs_mode: true,  // Always use emacs-compatible output
+        })
+    }
+    
+    fn parse_args(args: &[String]) -> Result<StandardArgs> {
+        if args.len() == 1 {
+            let current_dir = std::env::current_dir()?;
+            return Ok(StandardArgs { 
+                paths: vec![current_dir],
+                is_module_search: false,
+                project: None,
+                language: "Verus".to_string(),
+                repositories: None,
+                multi_codebase: None,
+                src_dirs: vec!["src".to_string(), "source".to_string()],
+                test_dirs: vec!["tests".to_string(), "test".to_string()],
+                bench_dirs: vec!["benches".to_string()],
+            });
+        }
+        
+        let mut i = 1;
+        let mut paths = Vec::new();
+        let mut multi_codebase = None;
+        
+        while i < args.len() {
+            match args[i].as_str() {
+                "--dir" | "-d" => {
+                    i += 1;
+                    while i < args.len() && !args[i].starts_with('-') {
+                        let dir_path = PathBuf::from(&args[i]);
+                        if dir_path.exists() && dir_path.is_dir() {
+                            paths.push(dir_path);
+                        } else {
+                            let current_dir = std::env::current_dir()?;
+                            let full_path = current_dir.join(&args[i]);
+                            if full_path.exists() {
+                                paths.push(full_path);
+                            } else {
+                                return Err(anyhow::anyhow!("Directory not found: {}", args[i]));
+                            }
+                        }
+                        i += 1;
+                    }
+                }
+                "--multi-codebase" | "-M" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--multi-codebase requires a directory path"));
+                    }
+                    let multi_path = PathBuf::from(&args[i]);
+                    if !multi_path.exists() || !multi_path.is_dir() {
+                        return Err(anyhow::anyhow!("Invalid multi-codebase directory: {}", args[i]));
+                    }
+                    multi_codebase = Some(multi_path);
+                    i += 1;
+                }
+                "--help" | "-h" => {
+                    println!("Usage: veracity-review-proof-holes [OPTIONS] [PATH...]");
+                    println!();
+                    println!("Detects proof holes in Verus code with Emacs-compatible output.");
+                    println!("Output format: file:line: type - context");
+                    println!();
+                    println!("Options:");
+                    println!("  -d, --dir DIR [DIR...]     Analyze specific directories");
+                    println!("  -M, --multi-codebase DIR   Scan multiple independent projects");
+                    println!("  -h, --help                 Show this help message");
+                    std::process::exit(0);
+                }
+                other if other.starts_with('-') => {
+                    return Err(anyhow::anyhow!("Unknown option: {}", other));
+                }
+                _ => {
+                    let path = PathBuf::from(&args[i]);
+                    if path.exists() {
+                        paths.push(path);
+                    } else {
+                        let current_dir = std::env::current_dir()?;
+                        let full_path = current_dir.join(&args[i]);
+                        if full_path.exists() {
+                            paths.push(full_path);
+                        } else {
+                            return Err(anyhow::anyhow!("Path not found: {}", args[i]));
+                        }
+                    }
+                    i += 1;
+                }
+            }
+        }
+        
+        // Default to current directory if no paths
+        if paths.is_empty() && multi_codebase.is_none() {
+            let current_dir = std::env::current_dir()?;
+            paths.push(current_dir);
+        }
+        
+        Ok(StandardArgs {
+            paths,
+            is_module_search: false,
+            project: None,
+            language: "Verus".to_string(),
+            repositories: None,
+            multi_codebase,
+            src_dirs: vec!["src".to_string(), "source".to_string()],
+            test_dirs: vec!["tests".to_string(), "test".to_string()],
+            bench_dirs: vec!["benches".to_string()],
+        })
+    }
+}
+
 fn main() -> Result<()> {
     let start_time = Instant::now();
     
-    let args = StandardArgs::parse()?;
+    let args = ProofHolesArgs::parse()?;
+    
+    if args.emacs_mode {
+        // Emacs mode - quiet output, just file:line: messages
+        run_emacs_mode(&args.standard)?;
+        return Ok(());
+    }
     
     log!("Verus Proof Hole Detection");
     log!("Looking for:");
@@ -122,12 +262,12 @@ fn main() -> Result<()> {
     log!("");
     
     // Check for multi-codebase mode
-    if let Some(multi_base) = &args.multi_codebase {
+    if let Some(multi_base) = &args.standard.multi_codebase {
         // Multi-codebase scanning mode
         run_multi_codebase_analysis(multi_base)?;
     } else {
         // Single project mode
-        run_single_project_analysis(&args)?;
+        run_single_project_analysis(&args.standard)?;
     }
     
     let elapsed = start_time.elapsed();
@@ -135,6 +275,120 @@ fn main() -> Result<()> {
     log!("Completed in {}ms", elapsed.as_millis());
     
     Ok(())
+}
+
+/// Run in Emacs compilation buffer mode - outputs file:line: message format
+/// Interleaved with nice file summaries
+fn run_emacs_mode(args: &StandardArgs) -> Result<()> {
+    let mut all_files: Vec<PathBuf> = Vec::new();
+    let base_dir = args.base_dir();
+    
+    // Handle both file and directory modes
+    for path in &args.paths {
+        if path.is_file() && path.extension().map_or(false, |e| e == "rs") {
+            all_files.push(path.clone());
+        } else if path.is_dir() {
+            all_files.extend(find_rust_files(&[path.clone()]));
+        }
+    }
+    
+    let mut file_stats_map: HashMap<String, FileStats> = HashMap::new();
+    
+    // Interleaved output: for each file, show header + holes + counts
+    for file in &all_files {
+        if let Ok(stats) = analyze_file(file) {
+            let abs_path = file.canonicalize().unwrap_or_else(|_| file.clone());
+            let path_str = if let Ok(rel_path) = file.strip_prefix(&base_dir) {
+                rel_path.display().to_string()
+            } else {
+                file.display().to_string()
+            };
+            
+            let has_holes = stats.holes.total_holes > 0;
+            
+            if has_holes {
+                // Print file header with ❌
+                println!("❌ {}", path_str);
+                
+                // Print each hole in Emacs format (no indent - Emacs needs col 0)
+                for hole in &stats.holes.holes {
+                    println!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
+                }
+                
+                // Print hole counts
+                println!("   Holes: {} total", stats.holes.total_holes);
+                print_hole_counts(&stats.holes, "      ");
+                
+                if stats.proof_functions > 0 {
+                    println!("   Proof functions: {} total ({} clean, {} holed)", 
+                             stats.proof_functions, 
+                             stats.clean_proof_functions, 
+                             stats.holed_proof_functions);
+                }
+            } else {
+                println!("✓ {}", path_str);
+                if stats.proof_functions > 0 {
+                    println!("   {} clean proof function{}", 
+                             stats.proof_functions,
+                             if stats.proof_functions == 1 { "" } else { "s" });
+                }
+            }
+            
+            file_stats_map.insert(path_str, stats);
+        }
+    }
+    
+    // Print summary
+    let summary = compute_summary(&file_stats_map);
+    print_summary(&summary);
+    
+    Ok(())
+}
+
+/// Print hole counts with a given prefix
+fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
+    if holes.assume_false_count > 0 {
+        println!("{}{} × assume(false)", prefix, holes.assume_false_count);
+    }
+    if holes.assume_count > 0 {
+        println!("{}{} × assume()", prefix, holes.assume_count);
+    }
+    if holes.assume_new_count > 0 {
+        println!("{}{} × Tracked::assume_new()", prefix, holes.assume_new_count);
+    }
+    if holes.admit_count > 0 {
+        println!("{}{} × admit()", prefix, holes.admit_count);
+    }
+    if holes.unsafe_fn_count > 0 {
+        println!("{}{} × unsafe fn", prefix, holes.unsafe_fn_count);
+    }
+    if holes.unsafe_impl_count > 0 {
+        println!("{}{} × unsafe impl", prefix, holes.unsafe_impl_count);
+    }
+    if holes.unsafe_block_count > 0 {
+        println!("{}{} × unsafe {{}}", prefix, holes.unsafe_block_count);
+    }
+    if holes.external_body_count > 0 {
+        println!("{}{} × external_body", prefix, holes.external_body_count);
+    }
+    if holes.external_fn_spec_count > 0 {
+        println!("{}{} × external_fn_specification", prefix, holes.external_fn_spec_count);
+    }
+    if holes.external_trait_spec_count > 0 {
+        println!("{}{} × external_trait_specification", prefix, holes.external_trait_spec_count);
+    }
+    if holes.external_type_spec_count > 0 {
+        println!("{}{} × external_type_specification", prefix, holes.external_type_spec_count);
+    }
+    if holes.external_trait_ext_count > 0 {
+        println!("{}{} × external_trait_extension", prefix, holes.external_trait_ext_count);
+    }
+    if holes.external_count > 0 {
+        println!("{}{} × external", prefix, holes.external_count);
+    }
+    if holes.opaque_count > 0 {
+        println!("{}{} × opaque", prefix, holes.opaque_count);
+    }
 }
 
 /// Run analysis on a single project (standard mode)
@@ -305,6 +559,36 @@ fn contains_verus_macro(path: &Path) -> Result<bool> {
     Ok(false)
 }
 
+/// Compute line number from byte offset
+fn line_from_offset(content: &str, offset: usize) -> usize {
+    content[..offset.min(content.len())]
+        .chars()
+        .filter(|&c| c == '\n')
+        .count() + 1
+}
+
+/// Get a trimmed context snippet from around a byte offset
+fn get_context(content: &str, offset: usize) -> String {
+    // Find the start and end of the line containing the offset
+    let start = content[..offset.min(content.len())]
+        .rfind('\n')
+        .map(|p| p + 1)
+        .unwrap_or(0);
+    let end = content[offset.min(content.len())..]
+        .find('\n')
+        .map(|p| p + offset)
+        .unwrap_or(content.len());
+    
+    let line = &content[start..end];
+    // Trim and truncate for display
+    let trimmed = line.trim();
+    if trimmed.len() > 80 {
+        format!("{}...", &trimmed[..77])
+    } else {
+        trimmed.to_string()
+    }
+}
+
 fn analyze_file(path: &Path) -> Result<FileStats> {
     let content = fs::read_to_string(path)?;
     
@@ -337,18 +621,18 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     
     // If no verus! macro found, scan for attributes at the file level (for non-Verus Rust files)
     if !found_verus_macro {
-        analyze_attributes_with_ra_syntax(&root, &mut stats);
+        analyze_attributes_with_ra_syntax(&root, &content, &mut stats);
     }
     
     // Always scan the entire file for unsafe patterns (they can appear outside verus! blocks)
-    analyze_unsafe_patterns(&root, &mut stats);
+    analyze_unsafe_patterns(&root, &content, &mut stats);
     
     Ok(stats)
 }
 
 /// Analyze unsafe patterns across the entire file (including outside verus! blocks)
 /// This catches unsafe fn, unsafe impl, unsafe blocks that may be in regular Rust code
-fn analyze_unsafe_patterns(root: &SyntaxNode, stats: &mut FileStats) {
+fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileStats) {
     let tokens: Vec<_> = root.descendants_with_tokens()
         .filter_map(|n| n.into_token())
         .collect();
@@ -358,6 +642,10 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, stats: &mut FileStats) {
         
         // Look for unsafe keyword (as UNSAFE_KW - regular Rust syntax)
         if token.kind() == SyntaxKind::UNSAFE_KW {
+            let offset: usize = token.text_range().start().into();
+            let line = line_from_offset(content, offset);
+            let context = get_context(content, offset);
+            
             // Look ahead to see what follows
             let mut j = i + 1;
             // Skip whitespace
@@ -369,14 +657,29 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, stats: &mut FileStats) {
                     SyntaxKind::FN_KW => {
                         stats.holes.unsafe_fn_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "unsafe fn".to_string(),
+                            context,
+                        });
                     }
                     SyntaxKind::IMPL_KW => {
                         stats.holes.unsafe_impl_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "unsafe impl".to_string(),
+                            context,
+                        });
                     }
                     SyntaxKind::L_CURLY => {
                         stats.holes.unsafe_block_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "unsafe {}".to_string(),
+                            context,
+                        });
                     }
                     _ => {}
                 }
@@ -389,7 +692,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, stats: &mut FileStats) {
 // Analyze attributes using ra_ap_syntax token walking
 // This is the most reliable method for Verus files as it catches all attributes
 // regardless of whether the Rust parser can fully understand Verus syntax
-fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, stats: &mut FileStats) {
+fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &mut FileStats) {
     let all_tokens: Vec<_> = root.descendants_with_tokens()
         .filter_map(|n| n.into_token())
         .collect();
@@ -397,34 +700,73 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, stats: &mut FileStats) {
     for (i, token) in all_tokens.iter().enumerate() {
         if token.kind() == SyntaxKind::POUND {
             if let Some(attr) = detect_verifier_attribute(&all_tokens, i) {
+                let offset: usize = token.text_range().start().into();
+                let line = line_from_offset(content, offset);
+                let context = get_context(content, offset);
+                
                 match attr {
                     VerifierAttribute::ExternalBody => {
                         stats.holes.external_body_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_body".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalFnSpec => {
                         stats.holes.external_fn_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_fn_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTraitSpec => {
                         stats.holes.external_trait_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
                         stats.holes.external_type_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_type_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTraitExt => {
                         stats.holes.external_trait_ext_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_extension".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::External => {
                         stats.holes.external_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::Opaque => {
                         stats.holes.opaque_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "opaque".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::Axiom => {
                         // #[verifier::axiom] attribute - tracked separately as axiom
@@ -437,7 +779,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, stats: &mut FileStats) {
     }
 }
 
-fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats) {
+fn analyze_verus_macro(tree: &SyntaxNode, content: &str, stats: &mut FileStats) {
     // Walk the token tree looking for:
     // 1. Functions with proof modifier
     // 2. Function calls to assume/admit
@@ -490,21 +832,45 @@ fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats)
             if text == "assume" || text == "admit" || text == "assume_new" {
                 // Check if it's followed by (
                 if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::L_PAREN {
+                    let offset: usize = token.text_range().start().into();
+                    let line = line_from_offset(content, offset);
+                    let context = get_context(content, offset);
+                    
                     if text == "assume" {
                         // Check if it's assume(false)
                         if i + 2 < tokens.len() && tokens[i + 2].text() == "false" {
                             stats.holes.assume_false_count += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "assume(false)".to_string(),
+                                context,
+                            });
                         } else {
                             stats.holes.assume_count += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "assume()".to_string(),
+                                context,
+                            });
                         }
                         stats.holes.total_holes += 1;
                     } else if text == "admit" {
                         stats.holes.admit_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "admit()".to_string(),
+                            context,
+                        });
                     } else if text == "assume_new" {
                         // Tracked::assume_new() - a sneaky assume!
                         stats.holes.assume_new_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "assume_new()".to_string(),
+                            context,
+                        });
                     }
                 }
             }
@@ -519,34 +885,73 @@ fn analyze_verus_macro(tree: &SyntaxNode, _content: &str, stats: &mut FileStats)
         // Look for verifier attributes inside the verus! macro
         if token.kind() == SyntaxKind::POUND {
             if let Some(attr) = detect_verifier_attribute(&tokens, i) {
+                let offset: usize = token.text_range().start().into();
+                let line = line_from_offset(content, offset);
+                let context = get_context(content, offset);
+                
                 match attr {
                     VerifierAttribute::ExternalBody => {
                         stats.holes.external_body_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_body".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalFnSpec => {
                         stats.holes.external_fn_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_fn_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTraitSpec => {
                         stats.holes.external_trait_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
                         stats.holes.external_type_spec_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_type_specification".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::ExternalTraitExt => {
                         stats.holes.external_trait_ext_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_extension".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::External => {
                         stats.holes.external_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "external".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::Opaque => {
                         stats.holes.opaque_count += 1;
                         stats.holes.total_holes += 1;
+                        stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "opaque".to_string(),
+                            context,
+                        });
                     }
                     VerifierAttribute::Axiom => {
                         // #[verifier::axiom] attribute - tracked separately as axiom
