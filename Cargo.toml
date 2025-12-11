@@ -18,6 +18,7 @@ serde_json = "1.0"
 chrono = "0.4"
 regex = "1.10"
 walkdir = "2.5"
+rayon = "1.10"
 syn = { version = "2.0", features = ["full", "visit", "extra-traits"] }
 verus_syn = { path = "../verus-lang/dependencies/syn", features = ["full", "visit", "extra-traits"] }
 
@@ -84,6 +85,10 @@ path = "src/bin/mirify.rs"
 [[bin]]
 name = "veracity-analyze-vstd"
 path = "src/bin/analyze_vstd_coverage.rs"
+
+[[bin]]
+name = "veracity-analyze-modules-mir"
+path = "src/bin/analyze_modules_mir.rs"
 
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
