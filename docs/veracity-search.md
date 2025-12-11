@@ -62,9 +62,13 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `enum _` | All enums |
 | `type _` | All type aliases |
 
-### Wildcards (`.*` and `_`)
+### Wildcards and Boundaries
 
-The `.*` wildcard matches any characters (like regex). Works in names, types, clauses, and body patterns.
+| Syntax | Meaning |
+|--------|---------|
+| `_` | Match anything |
+| `.*` | Match any characters (like regex) |
+| `!` suffix | Word boundary match (in type patterns) |
 
 | Pattern | Matches |
 |---------|---------|
@@ -72,14 +76,18 @@ The `.*` wildcard matches any characters (like regex). Works in names, types, cl
 | `fn .*_len` | Names ending with '_len' |
 | `fn .*len.*` | Names containing 'len' |
 | `fn _ types Seq.*A` | Types matching 'Seq' then 'A' |
+| `fn _ types set!` | Word boundary: `Set` ✓, `multiset` ✗ |
 | `fn _ requires .*forall.*` | Requires containing 'forall' |
 | `fn _ ensures .*==.*` | Ensures with equality |
 | `fn _` | Any name (`_` = match all) |
 
 ### Name Matching
 
+Names use **word boundary matching** by default—`fn set` matches `lemma_set_contains` but NOT `multiset`.
+
 | Pattern | Matches |
 |---------|---------|
+| `fn set` | Names with 'set' at word boundary (lemma_set_len ✓, multiset ✗) |
 | `fn lemma_add` | Exact name 'lemma_add' |
 | `fn lemma_.*` | Names starting with 'lemma_' |
 | `fn .*_len` | Names ending with '_len' |
@@ -123,7 +131,17 @@ The `.*` wildcard matches any characters (like regex). Works in names, types, cl
 | `fn _ types Map` | Mentions Map anywhere |
 | `fn _ types Seq.*A` | Types matching Seq then A (e.g., `Seq<A>`) |
 | `fn _ types .*clone.*` | Types containing 'clone' |
+| `fn _ types set!` | Word boundary: `Set` ✓, `multiset` ✗ |
 | `Seq^+` | Must mention Seq (shorthand) |
+
+### Type Aliases
+
+| Pattern | Matches |
+|---------|---------|
+| `type _` | All type aliases |
+| `type V` | Type aliases named V |
+| `type _ = Seq` | Type aliases that alias to something with Seq |
+| `type _ = .*Map.*` | Type aliases aliasing Map-containing types |
 
 ### Tuple Types
 
