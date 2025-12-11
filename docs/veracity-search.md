@@ -15,8 +15,14 @@ Thank you, Jeannette, for showing us that types are the best documentation.
 ## Quick Start
 
 ```bash
-# Search vstd for proof functions containing 'len'
+# Search vstd for proof functions containing 'len' (uses .* wildcard)
 veracity-search -v 'proof fn .*len.*'
+
+# Wildcard matching: lemma_seq_len, lemma_set_len, etc.
+veracity-search -v 'fn lemma_.*_len'
+
+# Types matching pattern: Seq<A>, Seq<char>, etc.
+veracity-search -v 'fn _ types Seq.*A'
 
 # Search for traits requiring Clone (direct + transitive)
 veracity-search -v 'trait _ : Clone'
@@ -55,6 +61,20 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 | `struct _` | All structs |
 | `enum _` | All enums |
 | `type _` | All type aliases |
+
+### Wildcards (`.*` and `_`)
+
+The `.*` wildcard matches any characters (like regex). Works in names, types, clauses, and body patterns.
+
+| Pattern | Matches |
+|---------|---------|
+| `fn lemma_.*` | Names starting with 'lemma_' |
+| `fn .*_len` | Names ending with '_len' |
+| `fn .*len.*` | Names containing 'len' |
+| `fn _ types Seq.*A` | Types matching 'Seq' then 'A' |
+| `fn _ requires .*forall.*` | Requires containing 'forall' |
+| `fn _ ensures .*==.*` | Ensures with equality |
+| `fn _` | Any name (`_` = match all) |
 
 ### Name Matching
 
@@ -101,6 +121,8 @@ veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
 |---------|---------|
 | `fn _ types Seq` | Mentions Seq anywhere in signature |
 | `fn _ types Map` | Mentions Map anywhere |
+| `fn _ types Seq.*A` | Types matching Seq then A (e.g., `Seq<A>`) |
+| `fn _ types .*clone.*` | Types containing 'clone' |
 | `Seq^+` | Must mention Seq (shorthand) |
 
 ### Tuple Types
