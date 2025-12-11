@@ -45,6 +45,7 @@ struct ProofHoleStats {
     assume_false_count: usize,
     assume_count: usize,
     assume_new_count: usize,  // Tracked::assume_new()
+    assume_specification_count: usize,  // pub assume_specification
     admit_count: usize,
     unsafe_fn_count: usize,
     unsafe_impl_count: usize,
@@ -355,6 +356,9 @@ fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     }
     if holes.assume_new_count > 0 {
         println!("{}{} × Tracked::assume_new()", prefix, holes.assume_new_count);
+    }
+    if holes.assume_specification_count > 0 {
+        println!("{}{} × assume_specification", prefix, holes.assume_specification_count);
     }
     if holes.admit_count > 0 {
         println!("{}{} × admit()", prefix, holes.admit_count);
@@ -829,6 +833,21 @@ fn analyze_verus_macro(tree: &SyntaxNode, content: &str, stats: &mut FileStats) 
         // Also check for "broadcast" which might not be an IDENT
         if token.kind() == SyntaxKind::IDENT || token.text() == "broadcast" {
             let text = token.text();
+            
+            // Check for assume_specification (followed by < for generics)
+            if text == "assume_specification" {
+                let offset: usize = token.text_range().start().into();
+                let line = line_from_offset(content, offset);
+                let context = get_context(content, offset);
+                stats.holes.assume_specification_count += 1;
+                stats.holes.total_holes += 1;
+                stats.holes.holes.push(DetectedHole {
+                    line,
+                    hole_type: "assume_specification".to_string(),
+                    context,
+                });
+            }
+            
             if text == "assume" || text == "admit" || text == "assume_new" {
                 // Check if it's followed by (
                 if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::L_PAREN {
@@ -1157,6 +1176,9 @@ fn print_file_report(path: &str, stats: &FileStats) {
         if stats.holes.assume_new_count > 0 {
             log!("      {} × Tracked::assume_new()", stats.holes.assume_new_count);
         }
+        if stats.holes.assume_specification_count > 0 {
+            log!("      {} × assume_specification", stats.holes.assume_specification_count);
+        }
         if stats.holes.admit_count > 0 {
             log!("      {} × admit()", stats.holes.admit_count);
         }
@@ -1226,6 +1248,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
         summary.holes.assume_false_count += stats.holes.assume_false_count;
         summary.holes.assume_count += stats.holes.assume_count;
         summary.holes.assume_new_count += stats.holes.assume_new_count;
+        summary.holes.assume_specification_count += stats.holes.assume_specification_count;
         summary.holes.admit_count += stats.holes.admit_count;
         summary.holes.unsafe_fn_count += stats.holes.unsafe_fn_count;
         summary.holes.unsafe_impl_count += stats.holes.unsafe_impl_count;
@@ -1272,6 +1295,9 @@ fn print_summary(summary: &SummaryStats) {
     }
     if summary.holes.assume_new_count > 0 {
         log!("   {} × Tracked::assume_new()", summary.holes.assume_new_count);
+    }
+    if summary.holes.assume_specification_count > 0 {
+        log!("   {} × assume_specification", summary.holes.assume_specification_count);
     }
     if summary.holes.admit_count > 0 {
         log!("   {} × admit()", summary.holes.admit_count);
@@ -1351,6 +1377,9 @@ fn print_project_summary(project_name: &str, summary: &SummaryStats) {
         if summary.holes.assume_new_count > 0 {
             log!("     {} × Tracked::assume_new()", summary.holes.assume_new_count);
         }
+        if summary.holes.assume_specification_count > 0 {
+            log!("     {} × assume_specification", summary.holes.assume_specification_count);
+        }
         if summary.holes.admit_count > 0 {
             log!("     {} × admit()", summary.holes.admit_count);
         }
@@ -1419,6 +1448,7 @@ fn print_global_summary(projects: &[ProjectStats]) {
         global.holes.assume_false_count += project.summary.holes.assume_false_count;
         global.holes.assume_count += project.summary.holes.assume_count;
         global.holes.assume_new_count += project.summary.holes.assume_new_count;
+        global.holes.assume_specification_count += project.summary.holes.assume_specification_count;
         global.holes.admit_count += project.summary.holes.admit_count;
         global.holes.unsafe_fn_count += project.summary.holes.unsafe_fn_count;
         global.holes.unsafe_impl_count += project.summary.holes.unsafe_impl_count;
@@ -1459,6 +1489,9 @@ fn print_global_summary(projects: &[ProjectStats]) {
     }
     if global.holes.assume_new_count > 0 {
         log!("   {} × Tracked::assume_new()", global.holes.assume_new_count);
+    }
+    if global.holes.assume_specification_count > 0 {
+        log!("   {} × assume_specification", global.holes.assume_specification_count);
     }
     if global.holes.admit_count > 0 {
         log!("   {} × admit()", global.holes.admit_count);
