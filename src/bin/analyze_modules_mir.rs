@@ -232,19 +232,41 @@ fn analyze_mir_multi_project(path: &Path, max_projects: Option<usize>, log_file:
     ).unwrap();
     
     // Match vstd spec/proof function calls
-    let vstd_fn_re = Regex::new(
+    let _vstd_fn_re = Regex::new(
         r"vstd::([a-z_]+)::([a-z_][a-z0-9_]*)"
     ).unwrap();
     
     // Match trait impls on vstd types
-    let vstd_trait_impl_re = Regex::new(
+    let _vstd_trait_impl_re = Regex::new(
         r"<([A-Za-z_][A-Za-z0-9_:<>& ,]*?) as vstd::([a-z_]+)::([A-Za-z_][A-Za-z0-9_]*)(?:<[^>]*>)?>::([a-z_][a-z0-9_]*)"
+    ).unwrap();
+    
+    // =========================================================================
+    // VSTD-WRAPPED STDLIB TYPES
+    // These Rust stdlib types have vstd specs in vstd/std_specs/
+    // When a Verus crate uses these, they're effectively using vstd
+    // =========================================================================
+    
+    // Match stdlib type method calls that vstd wraps
+    // Vec, Option, Result, HashMap, HashSet, VecDeque, Box, Arc, Rc, etc.
+    let vstd_wrapped_type_re = Regex::new(
+        r"(Vec|Option|Result|HashMap|HashSet|VecDeque|Box|Arc|Rc|Cell|RefCell|String|Mutex|RwLock)::<[^>]*>::([a-z_][a-z0-9_]*)"
+    ).unwrap();
+    
+    // Match qualified stdlib paths for vstd-wrapped types
+    let vstd_wrapped_qualified_re = Regex::new(
+        r"(?:std|core|alloc)::[a-z_]+::(Vec|Option|Result|HashMap|HashSet|VecDeque|Box|Arc|Rc|Cell|RefCell|String|Mutex|RwLock)(?:::<[^>]*>)?::([a-z_][a-z0-9_]*)"
+    ).unwrap();
+    
+    // Match trait impls on vstd-wrapped types
+    let vstd_wrapped_trait_impl_re = Regex::new(
+        r"<(Vec|Option|Result|HashMap|HashSet|VecDeque|Box|Arc|Rc|String)<[^>]*> as [^>]+>::([a-z_][a-z0-9_]*)"
     ).unwrap();
     
     // Also catch std/core/alloc usage for comparison
     let stdlib_path_re = Regex::new(r"(?:std|core|alloc)::[a-zA-Z_][a-zA-Z0-9_:]*").unwrap();
     
-    // Map vstd type names to qualified paths
+    // Map vstd type names to qualified paths (pure vstd types)
     let get_qualified_vstd_type = |type_name: &str| -> Option<&'static str> {
         match type_name {
             "Seq" => Some("vstd::seq::Seq"),
@@ -260,6 +282,27 @@ fn analyze_mir_multi_project(path: &Path, max_projects: Option<usize>, log_file:
             "Tracked" => Some("vstd::modes::Tracked"),
             "Ghost" => Some("vstd::modes::Ghost"),
             "Proof" => Some("vstd::modes::Proof"),
+            _ => None,
+        }
+    };
+    
+    // Map vstd-wrapped stdlib types to their vstd spec paths
+    let get_vstd_wrapped_type = |type_name: &str| -> Option<&'static str> {
+        match type_name {
+            "Vec" => Some("vstd::std_specs::vec::Vec"),
+            "Option" => Some("vstd::std_specs::option::Option"),
+            "Result" => Some("vstd::std_specs::result::Result"),
+            "HashMap" => Some("vstd::std_specs::hash::HashMap"),
+            "HashSet" => Some("vstd::std_specs::hash::HashSet"),
+            "VecDeque" => Some("vstd::std_specs::vecdeque::VecDeque"),
+            "Box" => Some("vstd::std_specs::smart_ptrs::Box"),
+            "Arc" => Some("vstd::std_specs::smart_ptrs::Arc"),
+            "Rc" => Some("vstd::std_specs::smart_ptrs::Rc"),
+            "Cell" => Some("vstd::std_specs::core::Cell"),
+            "RefCell" => Some("vstd::std_specs::core::RefCell"),
+            "String" => Some("vstd::string::String"),
+            "Mutex" => Some("vstd::std_specs::sync::Mutex"),
+            "RwLock" => Some("vstd::std_specs::sync::RwLock"),
             _ => None,
         }
     };
@@ -347,7 +390,62 @@ fn analyze_mir_multi_project(path: &Path, max_projects: Option<usize>, log_file:
                 local_builtin_calls.entry(normalized).or_default().insert(crate_name.clone());
             }
             
-            // Extract stdlib usage for comparison
+            // =========================================================================
+            // VSTD-WRAPPED STDLIB TYPES
+            // When a Verus project uses Vec::push, Option::unwrap, etc., these have 
+            // vstd specs and should be counted as vstd usage
+            // =========================================================================
+            
+            // Match unqualified: Vec::<T>::push, Option::<T>::unwrap, etc.
+            for cap in vstd_wrapped_type_re.captures_iter(&content) {
+                if let (Some(type_match), Some(method_match)) = (cap.get(1), cap.get(2)) {
+                    let type_name = type_match.as_str();
+                    let method_name = method_match.as_str();
+                    
+                    if let Some(vstd_type) = get_vstd_wrapped_type(type_name) {
+                        local_vstd_types.entry(vstd_type.to_string()).or_default().insert(crate_name.clone());
+                        let qualified_method = format!("{}::{}", vstd_type, method_name);
+                        local_vstd_methods.entry(qualified_method).or_default().insert(crate_name.clone());
+                        
+                        // Also add to vstd modules
+                        let parts: Vec<&str> = vstd_type.split("::").collect();
+                        if parts.len() >= 2 {
+                            let module = format!("{}::{}", parts[0], parts[1]);
+                            local_vstd_modules.entry(module).or_default().insert(crate_name.clone());
+                        }
+                    }
+                }
+            }
+            
+            // Match qualified: std::vec::Vec::<T>::push, core::option::Option::unwrap, etc.
+            for cap in vstd_wrapped_qualified_re.captures_iter(&content) {
+                if let (Some(type_match), Some(method_match)) = (cap.get(1), cap.get(2)) {
+                    let type_name = type_match.as_str();
+                    let method_name = method_match.as_str();
+                    
+                    if let Some(vstd_type) = get_vstd_wrapped_type(type_name) {
+                        local_vstd_types.entry(vstd_type.to_string()).or_default().insert(crate_name.clone());
+                        let qualified_method = format!("{}::{}", vstd_type, method_name);
+                        local_vstd_methods.entry(qualified_method).or_default().insert(crate_name.clone());
+                    }
+                }
+            }
+            
+            // Match trait impls: <Vec<T> as IntoIterator>::into_iter, etc.
+            for cap in vstd_wrapped_trait_impl_re.captures_iter(&content) {
+                if let (Some(type_match), Some(method_match)) = (cap.get(1), cap.get(2)) {
+                    let type_name = type_match.as_str();
+                    let method_name = method_match.as_str();
+                    
+                    if let Some(vstd_type) = get_vstd_wrapped_type(type_name) {
+                        local_vstd_types.entry(vstd_type.to_string()).or_default().insert(crate_name.clone());
+                        let qualified_method = format!("{}::{}", vstd_type, method_name);
+                        local_vstd_methods.entry(qualified_method).or_default().insert(crate_name.clone());
+                    }
+                }
+            }
+            
+            // Extract stdlib usage for comparison (non-wrapped types)
             for cap in stdlib_path_re.find_iter(&content) {
                 let call = cap.as_str();
                 let parts: Vec<&str> = call.split("::").collect();
