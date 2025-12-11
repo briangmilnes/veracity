@@ -77,6 +77,14 @@ path = "src/bin/search.rs"
 name = "veracity-review-verus-wrapping"
 path = "src/bin/review_verus_wrapping.rs"
 
+[[bin]]
+name = "veracity-mirify"
+path = "src/bin/mirify.rs"
+
+[[bin]]
+name = "veracity-analyze-vstd"
+path = "src/bin/analyze_vstd_coverage.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants
