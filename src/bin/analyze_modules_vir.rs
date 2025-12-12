@@ -479,6 +479,10 @@ fn main() -> Result<()> {
     writeln!(log)?;
     writeln!(log, "VIR files are located at: <project>/.verus-log/crate.vir")?;
     writeln!(log)?;
+    writeln!(log, "NOTE: vstd itself is included in analysis. It defines RwLock with 91 state machine")?;
+    writeln!(log, "methods (acquire_exc_start, acquire_read_end, etc.). These inflate the method count")?;
+    writeln!(log, "but are only used by vstd internally, not by typical user projects.")?;
+    writeln!(log)?;
     writeln!(log, "2. VSTD TYPES")?;
     writeln!(log)?;
     writeln!(log, "   This helps us answer: Which vstd types are most widely used?")?;
