@@ -117,20 +117,43 @@ https://github.com/verus-lang/verus/releases/download/release/0.2025.11.30.840fa
 
 But these don't help with path dependencies — you still need the source checkout for vstd.
 
-## Projects Successfully Time Travelled
+## Projects Successfully VIRified (10/15 = 67%)
 
-| Project | Verus Version | VIR Size |
-|---------|---------------|----------|
-| anvil | 0.2025.11.30.840fa61 | 29MB |
+| Project | Method | VIR Size |
+|---------|--------|----------|
+| APAS-VERUS | cargo-verus verify | 22MB |
+| pmemlog | cargo-verus verify | 4.1MB |
+| anvil | TIME TRAVEL (0.2025.11.30.840fa61) | 29MB |
+| vest | cargo-verus verify | 11MB |
+| vostd | cargo-verus verify | 32MB |
+| CortenMM-Artifact | cargo-verus verify | 30MB |
+| verified-nrkernel | cargo-verus verify --no-verify | 31MB |
+| verdict | tools/activate.sh (1.86.0 toolchain) | 35MB |
+| verus/vstd | vargo build | 43MB |
+| verified-ironkv | TIME TRAVEL (0.2025.10.30.f592032) | 18MB |
 
-## Projects Needing Time Travel
+**Total VIR: ~255MB**
 
-| Project | Last Working | Blocker |
-|---------|--------------|---------|
-| verdict | Nov 2025 | `source_file` API |
-| owl | Dec 2025 | `source_file` API |
-| verified-ironkv | Jul 2025 | vstd API changes |
-| verified-node-replication | Aug 2025 | vstd API changes |
+## Projects Needing Work
+
+| Project | Blocker | Notes |
+|---------|---------|-------|
+| owl | Uses git deps + Rust 1.91 `source_file` removal | Complex - needs Cargo.toml patching |
+| verified-node-replication | 217 errors, April 2024 Verus | Missing `AsynchronousSingleton` |
+| verismo | Needs cmake+ninja for hacl-sys | System build deps |
+| atmosphere | Uses Nix + mars-research/verus fork | Needs nix develop |
+| verified-storage/* | Needs nightly-2025-04-15 | Future toolchain |
+
+## Projects Skipped (Not Verus Code)
+
+| Project | Reason |
+|---------|--------|
+| verus-analyzer | Rust IDE tooling, not Verus code |
+| verified-memory-allocator | No Verus code found |
+| verified-paging | No vstd deps |
+| alphaverus | Python AI project |
+| human-eval-verus | Benchmark dataset |
+| leaf | Coq project |
 
 ## The Two Solutions to Bit Rot
 
@@ -151,6 +174,5 @@ But these don't help with path dependencies — you still need the source checko
 └─────────────────────────────────────────────────────────┘
 ```
 
-*"There is no difference between Time and any of the three dimensions of Space except that
-our consciousness moves along it."* — H.G. Wells
+*"There is no difference between Time and any of the three dimensions of Space except that our consciousness moves along it."* — H.G. Wells
 
