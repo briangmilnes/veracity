@@ -90,6 +90,10 @@ path = "src/bin/analyze_vstd_coverage.rs"
 name = "veracity-analyze-modules-vir"
 path = "src/bin/analyze_modules_vir.rs"
 
+[[bin]]
+name = "veracity-analyze-rust-wrapping-needs"
+path = "src/bin/analyze_rust_wrapping_needs.rs"
+
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions
 # - review_invariants.rs - Check loop/struct invariants
