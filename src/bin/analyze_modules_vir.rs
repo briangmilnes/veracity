@@ -384,6 +384,11 @@ fn main() -> Result<()> {
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_else(|| "unknown".to_string());
         
+        // Skip vstd itself - we analyze projects that USE vstd, not vstd's definitions
+        if project_name == "vstd" || project_name == "release" {
+            continue;
+        }
+        
         if let Ok(content) = fs::read_to_string(vir_file) {
             let (types, methods, type_methods) = parse_vir_file(&content);
             
@@ -479,9 +484,9 @@ fn main() -> Result<()> {
     writeln!(log)?;
     writeln!(log, "VIR files are located at: <project>/.verus-log/crate.vir")?;
     writeln!(log)?;
-    writeln!(log, "NOTE: vstd itself is included in analysis. It defines RwLock with 91 state machine")?;
-    writeln!(log, "methods (acquire_exc_start, acquire_read_end, etc.). These inflate the method count")?;
-    writeln!(log, "but are only used by vstd internally, not by typical user projects.")?;
+    writeln!(log, "NOTE: vstd itself is EXCLUDED from this analysis. We analyze user projects that")?;
+    writeln!(log, "USE vstd, not vstd's internal definitions. This avoids inflating counts with")?;
+    writeln!(log, "vstd-internal types like RwLock's 91 state machine methods.")?;
     writeln!(log)?;
     writeln!(log, "2. VSTD TYPES")?;
     writeln!(log)?;
@@ -493,7 +498,7 @@ fn main() -> Result<()> {
     writeln!(log)?;
     writeln!(log, "3. VSTD METHODS")?;
     writeln!(log)?;
-    writeln!(log, "   This helps us answer: Which vstd methods are called most often?")?;
+    writeln!(log, "   This helps us answer: Which vstd methods are used most often?")?;
     writeln!(log)?;
     writeln!(log, "   Lists {} vstd methods as Type::method, sorted by project count.", total_methods)?;
     writeln!(log)?;
@@ -501,7 +506,7 @@ fn main() -> Result<()> {
     writeln!(log)?;
     writeln!(log, "   This helps us answer: For each type, which methods are used and how often?")?;
     writeln!(log)?;
-    writeln!(log, "   For each type, shows all methods with percentage of type-users that call each.")?;
+    writeln!(log, "   For each type, shows all methods with percentage of type-users that use each.")?;
     writeln!(log)?;
     writeln!(log, "5. GREEDY COVER: TYPES (FULL PROJECT SUPPORT)")?;
     writeln!(log)?;
@@ -551,16 +556,13 @@ fn main() -> Result<()> {
     
     // Section 3: Methods
     writeln!(log, "=== 3. VSTD METHODS (by project count) ===\n")?;
-    writeln!(log, "This helps us answer: Which vstd methods are called most often?\n")?;
+    writeln!(log, "This helps us answer: Which vstd methods are used most often?\n")?;
     writeln!(log, "{:<40} {:>10} {:>10}", "Method", "Projects", "Pct")?;
     let mut method_vec: Vec<_> = method_to_projects.iter().collect();
     method_vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
-    for (method, projects) in method_vec.iter().take(50) {
+    for (method, projects) in &method_vec {
         let pct = (projects.len() as f64 / total_vstd as f64) * 100.0;
         writeln!(log, "{:<40} {:>10} {:>9.2}%", method, projects.len(), pct)?;
-    }
-    if method_to_projects.len() > 50 {
-        writeln!(log, "... and {} more methods", method_to_projects.len() - 50)?;
     }
     writeln!(log)?;
     
@@ -575,13 +577,10 @@ fn main() -> Result<()> {
             let mut method_list: Vec<_> = methods.iter().collect();
             method_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             
-            for (method, method_projects) in method_list.iter().take(20) {
+            for (method, method_projects) in &method_list {
                 let pct_of_type_users = (method_projects.len() as f64 / type_users as f64) * 100.0;
                 writeln!(log, "  {:>6.2}%  {:<30} ({} projects)", 
                     pct_of_type_users, method, method_projects.len())?;
-            }
-            if methods.len() > 20 {
-                writeln!(log, "  ... and {} more methods", methods.len() - 20)?;
             }
             writeln!(log)?;
         }
@@ -611,12 +610,9 @@ fn main() -> Result<()> {
     for (target, items) in &method_cover {
         let target_count = ((target / 100.0) * total_vstd as f64).ceil() as usize;
         writeln!(log, "  --- Target: {:.0}% ({} projects fully supported) ---", target, target_count)?;
-        for (i, (item, new_count, cum_pct)) in items.iter().take(30).enumerate() {
+        for (i, (item, new_count, cum_pct)) in items.iter().enumerate() {
             writeln!(log, "  {:>4}. {:<35} + {:>3} ({:.2}%)", 
                 i + 1, item, new_count, cum_pct)?;
-        }
-        if items.len() > 30 {
-            writeln!(log, "  ... ({} more methods)", items.len() - 30)?;
         }
         writeln!(log, "  => {} methods needed to fully support {:.2}%\n", items.len(),
             items.last().map(|x| x.2).unwrap_or(0.0))?;
