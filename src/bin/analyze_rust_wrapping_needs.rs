@@ -200,25 +200,28 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
             
-            // Map std_specs files to the TYPES they wrap (not traits)
-            let type_names: Vec<&str> = match file_stem {
-                "vec" => vec!["Vec"],
-                "option" => vec!["Option"], 
-                "result" => vec!["Result"],
-                "string" => vec!["String"],
-                "hash" | "hash_map" => vec!["HashMap", "HashSet", "DefaultHasher"],
-                "hash_set" => vec!["HashSet"],
-                "btree_map" => vec!["BTreeMap"],
-                "btree_set" => vec!["BTreeSet"],
-                "cell" => vec!["Cell", "RefCell"],
-                "atomic" => vec!["AtomicU64", "AtomicU32", "AtomicBool", "AtomicUsize"],
-                "control_flow" => vec!["ControlFlow"],
-                "range" => vec!["Range", "RangeInclusive"],
-                "cmp" => vec!["Ordering"],
-                "slice" => vec!["Vec"], // slice methods often apply to Vec
-                "vecdeque" => vec!["VecDeque"],
-                // These files spec TRAITS, not types - skip for type analysis
-                "clone" | "convert" | "ops" => continue,
+            // Map std_specs files to TYPES or TRAITS they wrap
+            let (type_names, trait_names): (Vec<&str>, Vec<&str>) = match file_stem {
+                // Type wrapping files
+                "vec" => (vec!["Vec"], vec![]),
+                "option" => (vec!["Option"], vec![]), 
+                "result" => (vec!["Result"], vec![]),
+                "string" => (vec!["String"], vec![]),
+                "hash" | "hash_map" => (vec!["HashMap", "HashSet", "DefaultHasher"], vec!["Hash"]),
+                "hash_set" => (vec!["HashSet"], vec![]),
+                "btree_map" => (vec!["BTreeMap"], vec![]),
+                "btree_set" => (vec!["BTreeSet"], vec![]),
+                "cell" => (vec!["Cell", "RefCell"], vec![]),
+                "atomic" => (vec!["AtomicU64", "AtomicU32", "AtomicBool", "AtomicUsize"], vec![]),
+                "control_flow" => (vec!["ControlFlow"], vec![]),
+                "range" => (vec!["Range", "RangeInclusive"], vec![]),
+                "cmp" => (vec!["Ordering"], vec!["PartialEq", "Eq", "PartialOrd", "Ord"]),
+                "slice" => (vec!["Vec"], vec![]),
+                "vecdeque" => (vec!["VecDeque"], vec![]),
+                // Trait-only files
+                "clone" => (vec![], vec!["Clone"]),
+                "convert" => (vec![], vec!["From", "Into", "TryFrom", "TryInto"]),
+                "ops" => (vec![], vec!["Add", "Sub", "Mul", "Div", "Rem", "Neg", "Index", "Deref"]),
                 // Skip generic/internal files
                 "core" | "num" | "bits" | "mod" => continue,
                 _ => continue,
@@ -253,6 +256,7 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
                 }
             }
             
+            // Process types
             for type_name in type_names {
                 let type_info = wrapped_types.entry(type_name.to_string()).or_default();
                 if type_info.source_file.is_empty() {
@@ -261,6 +265,20 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
                 // Add methods found in this file to this type
                 for method in &methods_in_file {
                     let method_spec = type_info.methods.entry(method.clone()).or_default();
+                    method_spec.has_ensures = ensures_re.is_match(&content);
+                    method_spec.has_requires = requires_re.is_match(&content);
+                }
+            }
+            
+            // Process traits (store in same structure but mark as trait)
+            for trait_name in trait_names {
+                let trait_info = wrapped_types.entry(format!("TRAIT:{}", trait_name)).or_default();
+                if trait_info.source_file.is_empty() {
+                    trait_info.source_file = rel_path.clone();
+                }
+                // Add methods found in this file to this trait
+                for method in &methods_in_file {
+                    let method_spec = trait_info.methods.entry(method.clone()).or_default();
                     method_spec.has_ensures = ensures_re.is_match(&content);
                     method_spec.has_requires = requires_re.is_match(&content);
                 }
@@ -531,36 +549,52 @@ fn main() -> Result<()> {
     writeln!(log, "=== TABLE OF CONTENTS ===\n")?;
     writeln!(log, "1. ABSTRACT")?;
     writeln!(log, "2. VSTD CURRENTLY WRAPS (Types)")?;
-    writeln!(log, "3. VSTD CURRENTLY WRAPS (Methods by Type)")?;
-    writeln!(log, "4. RUST STDLIB USAGE (from rusticate)")?;
-    writeln!(log, "5. GAP ANALYSIS: Types NOT Wrapped")?;
-    writeln!(log, "6. GAP ANALYSIS: Methods NOT Wrapped (by Type)")?;
-    writeln!(log, "7. COVERAGE SUMMARY")?;
-    writeln!(log, "8. PRIORITY RECOMMENDATIONS")?;
+    writeln!(log, "3. VSTD CURRENTLY WRAPS (Traits)")?;
+    writeln!(log, "4. VSTD CURRENTLY WRAPS (Methods by Type/Trait)")?;
+    writeln!(log, "5. RUST STDLIB USAGE (from rusticate)")?;
+    writeln!(log, "6. GAP ANALYSIS: Types NOT Wrapped")?;
+    writeln!(log, "7. GAP ANALYSIS: Methods NOT Wrapped (by Type)")?;
+    writeln!(log, "8. COVERAGE SUMMARY")?;
+    writeln!(log, "9. PRIORITY RECOMMENDATIONS")?;
     writeln!(log)?;
     
+    // Separate types from traits in vstd_wrapped
+    let vstd_types: BTreeMap<_, _> = vstd_wrapped.iter()
+        .filter(|(k, _)| !k.starts_with("TRAIT:"))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    let vstd_traits: BTreeMap<_, _> = vstd_wrapped.iter()
+        .filter(|(k, _)| k.starts_with("TRAIT:"))
+        .map(|(k, v)| (k.strip_prefix("TRAIT:").unwrap().to_string(), v.clone()))
+        .collect();
+    
     // Count totals
-    let vstd_type_count = vstd_wrapped.len();
-    let vstd_method_count: usize = vstd_wrapped.values()
+    let vstd_type_count = vstd_types.len();
+    let vstd_trait_count = vstd_traits.len();
+    let vstd_type_method_count: usize = vstd_types.values()
         .map(|t| t.methods.len())
         .sum();
+    let vstd_trait_method_count: usize = vstd_traits.values()
+        .map(|t| t.methods.len())
+        .sum();
+    let vstd_method_count = vstd_type_method_count + vstd_trait_method_count;
     
     let rust_type_count = rust_used.len();
     let rust_method_count: usize = rust_used.values()
         .map(|m| m.len())
         .sum();
     
-    // Find gaps
+    // Find gaps (compare against vstd_types, not vstd_wrapped which includes traits)
     let mut unwrapped_types: BTreeSet<String> = BTreeSet::new();
     let mut unwrapped_methods: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut partially_wrapped: BTreeMap<String, (usize, usize)> = BTreeMap::new(); // (wrapped, total)
     
     for (type_name, methods) in &rust_used {
-        if !vstd_wrapped.contains_key(type_name) {
+        if !vstd_types.contains_key(type_name) {
             unwrapped_types.insert(type_name.clone());
             unwrapped_methods.insert(type_name.clone(), methods.clone());
         } else {
-            let wrapped_methods = &vstd_wrapped[type_name].methods;
+            let wrapped_methods = &vstd_types[type_name].methods;
             let mut missing: BTreeSet<String> = BTreeSet::new();
             for m in methods {
                 if !wrapped_methods.contains_key(m) {
@@ -580,7 +614,8 @@ fn main() -> Result<()> {
     writeln!(log, "This report analyzes the gap between what vstd wraps and what Rust")?;
     writeln!(log, "stdlib types/methods are actually used in real codebases.\n")?;
     writeln!(log, "Key findings:")?;
-    writeln!(log, "  - vstd wraps {} types with {} methods", vstd_type_count, vstd_method_count)?;
+    writeln!(log, "  - vstd wraps {} TYPES with {} methods", vstd_type_count, vstd_type_method_count)?;
+    writeln!(log, "  - vstd specs {} TRAITS with {} methods", vstd_trait_count, vstd_trait_method_count)?;
     writeln!(log, "  - Rust codebases use {} types with {} methods", rust_type_count, rust_method_count)?;
     writeln!(log, "  - {} types are NOT wrapped at all", unwrapped_types.len())?;
     writeln!(log, "  - {} types have missing methods", unwrapped_methods.len())?;
@@ -594,24 +629,42 @@ fn main() -> Result<()> {
     
     // Section 2: What vstd wraps (Types)
     writeln!(log, "=== 2. VSTD CURRENTLY WRAPS (Types) ===\n")?;
-    writeln!(log, "This helps us answer: How much does vstd already wrap?\n")?;
+    writeln!(log, "This helps us answer: How much does vstd already wrap in types?\n")?;
     writeln!(log, "{:<25} {:>10} {:>30}", "Type", "Methods", "Source File")?;
     writeln!(log, "{}", "-".repeat(70))?;
     
-    for (type_name, info) in &vstd_wrapped {
+    for (type_name, info) in &vstd_types {
         writeln!(log, "{:<25} {:>10} {:>30}", 
             type_name, 
             info.methods.len(),
             &info.source_file)?;
     }
     writeln!(log)?;
-    writeln!(log, "Total: {} types, {} methods\n", vstd_type_count, vstd_method_count)?;
+    writeln!(log, "Total: {} types, {} methods\n", vstd_type_count, vstd_type_method_count)?;
     
-    // Section 3: What vstd wraps (Methods by Type)
-    writeln!(log, "=== 3. VSTD CURRENTLY WRAPS (Methods by Type) ===\n")?;
+    // Section 3: What vstd specs (Traits)
+    writeln!(log, "=== 3. VSTD CURRENTLY SPECS (Traits) ===\n")?;
+    writeln!(log, "This helps us answer: What Rust traits does vstd provide specs for?\n")?;
+    writeln!(log, "These are traits from core::ops, core::clone, core::cmp, etc.\n")?;
+    writeln!(log, "{:<25} {:>10} {:>30}", "Trait", "Methods", "Source File")?;
+    writeln!(log, "{}", "-".repeat(70))?;
+    
+    for (trait_name, info) in &vstd_traits {
+        writeln!(log, "{:<25} {:>10} {:>30}", 
+            trait_name, 
+            info.methods.len(),
+            &info.source_file)?;
+    }
+    writeln!(log)?;
+    writeln!(log, "Total: {} traits, {} methods\n", vstd_trait_count, vstd_trait_method_count)?;
+    
+    // Section 4: What vstd wraps (Methods by Type/Trait)
+    writeln!(log, "=== 4. VSTD CURRENTLY WRAPS (Methods by Type/Trait) ===\n")?;
     writeln!(log, "This helps us answer: What methods are already specified?\n")?;
     
-    for (type_name, info) in &vstd_wrapped {
+    // Types first
+    writeln!(log, "--- TYPES ---\n")?;
+    for (type_name, info) in &vstd_types {
         if info.methods.is_empty() {
             continue;
         }
@@ -636,8 +689,35 @@ fn main() -> Result<()> {
         writeln!(log)?;
     }
     
-    // Section 4: Rust stdlib usage
-    writeln!(log, "=== 4. RUST STDLIB USAGE (from rusticate) ===\n")?;
+    // Traits second
+    writeln!(log, "--- TRAITS ---\n")?;
+    for (trait_name, info) in &vstd_traits {
+        if info.methods.is_empty() {
+            continue;
+        }
+        writeln!(log, "TRAIT: {} ({} methods)", trait_name, info.methods.len())?;
+        
+        for (method, spec) in &info.methods {
+            let mut flags = Vec::new();
+            if spec.is_assume_specification { flags.push("assume_spec"); }
+            if spec.is_when_used_as_spec { flags.push("when_used"); }
+            if spec.has_requires { flags.push("requires"); }
+            if spec.has_ensures { flags.push("ensures"); }
+            if spec.has_recommends { flags.push("recommends"); }
+            
+            let flag_str = if flags.is_empty() { 
+                String::from("defined") 
+            } else { 
+                flags.join(", ") 
+            };
+            
+            writeln!(log, "  {} [{}]", method, flag_str)?;
+        }
+        writeln!(log)?;
+    }
+    
+    // Section 5: Rust stdlib usage (renumbered from 4)
+    writeln!(log, "=== 5. RUST STDLIB USAGE (from rusticate) ===\n")?;
     writeln!(log, "This helps us answer: What does Rust code actually use?\n")?;
     writeln!(log, "{:<25} {:>10} {:>15}", "Type", "Methods", "Crate Usage")?;
     writeln!(log, "{}", "-".repeat(55))?;
@@ -656,7 +736,7 @@ fn main() -> Result<()> {
     writeln!(log)?;
     
     // Section 5: Types NOT wrapped
-    writeln!(log, "=== 5. GAP ANALYSIS: Types NOT Wrapped ===\n")?;
+    writeln!(log, "=== 6. GAP ANALYSIS: Types NOT Wrapped ===\n")?;
     writeln!(log, "This helps us answer: Which types does Verus need to wrap?\n")?;
     
     if unwrapped_types.is_empty() {
@@ -682,7 +762,7 @@ fn main() -> Result<()> {
     }
     
     // Section 6: Methods NOT wrapped (by Type)
-    writeln!(log, "=== 6. GAP ANALYSIS: Methods NOT Wrapped (by Type) ===\n")?;
+    writeln!(log, "=== 7. GAP ANALYSIS: Methods NOT Wrapped (by Type) ===\n")?;
     writeln!(log, "This helps us answer: Which methods does vstd need to wrap?\n")?;
     
     for (type_name, missing_methods) in &unwrapped_methods {
@@ -706,7 +786,7 @@ fn main() -> Result<()> {
     }
     
     // Section 7: Coverage Summary
-    writeln!(log, "=== 7. COVERAGE SUMMARY ===\n")?;
+    writeln!(log, "=== 8. COVERAGE SUMMARY ===\n")?;
     
     writeln!(log, "Type Coverage:")?;
     writeln!(log, "  - Used in Rust: {} types", rust_type_count)?;
@@ -739,7 +819,7 @@ fn main() -> Result<()> {
     writeln!(log, "  - Gap: {} methods\n", rust_method_count.saturating_sub(total_covered_methods))?;
     
     // Section 8: Priority Recommendations
-    writeln!(log, "=== 8. PRIORITY RECOMMENDATIONS ===\n")?;
+    writeln!(log, "=== 9. PRIORITY RECOMMENDATIONS ===\n")?;
     writeln!(log, "Types to wrap (sorted by usage):\n")?;
     
     let mut priority_types: Vec<_> = unwrapped_types.iter()
