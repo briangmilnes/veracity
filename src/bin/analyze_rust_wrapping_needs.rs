@@ -193,45 +193,76 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
             }
         }
         
-        // For std_specs files, also parse impl blocks to find methods
+        // For std_specs files, map filename to stdlib type and find method specs
         if is_std_specs {
             // Find which type this file is about from filename
             let file_stem = path.file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
             
-            let type_name = match file_stem {
-                "vec" => "Vec",
-                "option" => "Option", 
-                "result" => "Result",
-                "string" => "String",
-                "hash_map" => "HashMap",
-                "hash_set" => "HashSet",
-                "btree_map" => "BTreeMap",
-                "btree_set" => "BTreeSet",
-                "cell" => "Cell",
-                "atomic" => "AtomicU64", // placeholder
-                "control_flow" => "ControlFlow",
-                "range" => "Range",
-                "bits" => "u64", // bit operations
-                "cmp" => "Ordering",
-                "clone" => "Clone",
-                "core" => continue, // skip
-                "num" => continue, // skip
+            let type_names: Vec<&str> = match file_stem {
+                "vec" => vec!["Vec"],
+                "option" => vec!["Option"], 
+                "result" => vec!["Result"],
+                "string" => vec!["String"],
+                "hash" | "hash_map" => vec!["HashMap", "HashSet", "DefaultHasher"],
+                "hash_set" => vec!["HashSet"],
+                "btree_map" => vec!["BTreeMap"],
+                "btree_set" => vec!["BTreeSet"],
+                "cell" => vec!["Cell", "RefCell"],
+                "atomic" => vec!["AtomicU64", "AtomicU32", "AtomicBool", "AtomicUsize"],
+                "control_flow" => vec!["ControlFlow"],
+                "range" => vec!["Range", "RangeInclusive"],
+                "cmp" => vec!["Ordering"],
+                "clone" => vec!["Clone"],
+                "slice" => vec!["Vec"], // slice methods often apply to Vec
+                "vecdeque" => vec!["VecDeque"],
+                "convert" => vec!["From", "Into", "TryFrom", "TryInto"],
+                "ops" => vec!["Add", "Sub", "Mul", "Div", "Index", "Deref"],
+                // Skip generic/internal files
+                "core" | "num" | "bits" | "mod" => continue,
                 _ => continue,
             };
             
-            let type_info = wrapped_types.entry(type_name.to_string()).or_default();
-            type_info.source_file = rel_path.clone();
+            // Find spec fn, proof fn, open spec fn patterns for methods
+            let spec_fn_re = Regex::new(r"(?:open\s+)?(?:spec|proof)\s+fn\s+(\w+)").unwrap();
+            let pub_fn_re = Regex::new(r"pub\s+(?:open\s+)?(?:spec|proof)?\s*fn\s+(\w+)").unwrap();
             
-            // Find all fn definitions in this file
-            for caps in fn_re.captures_iter(&content) {
-                let fn_name = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-                if !fn_name.is_empty() && !fn_name.starts_with("_") {
-                    let method_spec = type_info.methods.entry(fn_name.to_string()).or_default();
-                    // Check context around this fn for specs
-                    method_spec.has_requires = requires_re.is_match(&content);
+            // Extract method names from this file
+            let mut methods_in_file: HashSet<String> = HashSet::new();
+            for caps in spec_fn_re.captures_iter(&content) {
+                if let Some(m) = caps.get(1) {
+                    let method_name = m.as_str();
+                    // Skip internal/helper methods
+                    if !method_name.starts_with('_') && 
+                       !method_name.starts_with("ex_") &&
+                       !method_name.contains("_spec") &&
+                       method_name.len() > 1 {
+                        methods_in_file.insert(method_name.to_string());
+                    }
+                }
+            }
+            for caps in pub_fn_re.captures_iter(&content) {
+                if let Some(m) = caps.get(1) {
+                    let method_name = m.as_str();
+                    if !method_name.starts_with('_') && 
+                       !method_name.starts_with("ex_") &&
+                       method_name.len() > 1 {
+                        methods_in_file.insert(method_name.to_string());
+                    }
+                }
+            }
+            
+            for type_name in type_names {
+                let type_info = wrapped_types.entry(type_name.to_string()).or_default();
+                if type_info.source_file.is_empty() {
+                    type_info.source_file = rel_path.clone();
+                }
+                // Add methods found in this file to this type
+                for method in &methods_in_file {
+                    let method_spec = type_info.methods.entry(method.clone()).or_default();
                     method_spec.has_ensures = ensures_re.is_match(&content);
+                    method_spec.has_requires = requires_re.is_match(&content);
                 }
             }
         }
@@ -251,6 +282,11 @@ fn parse_spec_target(target: &str) -> Option<(String, String)> {
             let type_part = &target[1..as_pos];
             let type_name = type_part.split('<').next()?.trim().to_string();
             
+            // Skip macro variables and invalid names
+            if !is_valid_type_name(&type_name) {
+                return None;
+            }
+            
             // Find method after >>::
             if let Some(method_start) = target.rfind(">::") {
                 let method = target[method_start + 3..].trim().to_string();
@@ -263,16 +299,72 @@ fn parse_spec_target(target: &str) -> Option<(String, String)> {
     let parts: Vec<&str> = target.split("::").collect();
     if parts.len() >= 2 {
         let type_name = parts[0].split('<').next()?.trim().to_string();
+        
+        // Skip macro variables and invalid names
+        if !is_valid_type_name(&type_name) {
+            return None;
+        }
+        
         let method = parts.last()?.trim().to_string();
         return Some((type_name, method));
     }
     
     // Just a type name
     if !target.contains("::") {
-        return Some((target.to_string(), String::new()));
+        if is_valid_type_name(target) {
+            return Some((target.to_string(), String::new()));
+        }
     }
     
     None
+}
+
+/// Check if a name is a valid Rust stdlib type that vstd would wrap
+fn is_valid_type_name(name: &str) -> bool {
+    // Only accept known stdlib types - be strict to avoid false positives
+    let valid_stdlib_types: HashSet<&str> = [
+        // Core types
+        "Option", "Result", "Ordering",
+        // Collections
+        "Vec", "String", "Box", "Rc", "Arc",
+        "HashMap", "BTreeMap", "HashSet", "BTreeSet",
+        "VecDeque", "LinkedList", "BinaryHeap",
+        // Cell types
+        "Cell", "RefCell", "UnsafeCell",
+        // Sync types
+        "Mutex", "RwLock", "Once", "Condvar", "Barrier",
+        // Atomic types
+        "AtomicBool", "AtomicI8", "AtomicI16", "AtomicI32", "AtomicI64", "AtomicIsize",
+        "AtomicU8", "AtomicU16", "AtomicU32", "AtomicU64", "AtomicUsize",
+        // Iterator/Range
+        "Range", "RangeInclusive", "RangeTo", "RangeFrom", "RangeFull",
+        "Iterator", "IntoIterator", "FromIterator", "Iter", "IterMut",
+        // Smart pointers
+        "Cow", "Pin", "NonNull", "Unique",
+        // Other common types
+        "Duration", "Instant", "SystemTime",
+        "Path", "PathBuf", "OsStr", "OsString",
+        "File", "TcpStream", "TcpListener", "UdpSocket",
+        "Error", "IoError",
+        // Traits that vstd specs
+        "Clone", "Copy", "Default", "Debug", "Display",
+        "PartialEq", "Eq", "PartialOrd", "Ord", "Hash",
+        "Deref", "DerefMut", "Index", "IndexMut",
+        "Add", "Sub", "Mul", "Div", "Rem", "Neg",
+        "BitAnd", "BitOr", "BitXor", "Not", "Shl", "Shr",
+        "Drop", "Fn", "FnMut", "FnOnce",
+        "Send", "Sync", "Sized", "Unpin",
+        "From", "Into", "TryFrom", "TryInto",
+        "AsRef", "AsMut", "Borrow", "BorrowMut", "ToOwned",
+        // Control flow
+        "ControlFlow",
+        // Hasher
+        "Hasher", "DefaultHasher", "BuildHasher",
+        // PhantomData
+        "PhantomData", "ManuallyDrop", "MaybeUninit",
+    ].into_iter().collect();
+    
+    valid_stdlib_types.contains(name)
 }
 
 /// Parse rusticate's analyze_modules_mir.log to get stdlib usage
