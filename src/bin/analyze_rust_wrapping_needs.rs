@@ -200,6 +200,7 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
             
+            // Map std_specs files to the TYPES they wrap (not traits)
             let type_names: Vec<&str> = match file_stem {
                 "vec" => vec!["Vec"],
                 "option" => vec!["Option"], 
@@ -214,11 +215,10 @@ fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>>
                 "control_flow" => vec!["ControlFlow"],
                 "range" => vec!["Range", "RangeInclusive"],
                 "cmp" => vec!["Ordering"],
-                "clone" => vec!["Clone"],
                 "slice" => vec!["Vec"], // slice methods often apply to Vec
                 "vecdeque" => vec!["VecDeque"],
-                "convert" => vec!["From", "Into", "TryFrom", "TryInto"],
-                "ops" => vec!["Add", "Sub", "Mul", "Div", "Index", "Deref"],
+                // These files spec TRAITS, not types - skip for type analysis
+                "clone" | "convert" | "ops" => continue,
                 // Skip generic/internal files
                 "core" | "num" | "bits" | "mod" => continue,
                 _ => continue,
@@ -321,7 +321,7 @@ fn parse_spec_target(target: &str) -> Option<(String, String)> {
 
 /// Check if a name is a valid Rust stdlib type that vstd would wrap
 fn is_valid_type_name(name: &str) -> bool {
-    // Only accept known stdlib types - be strict to avoid false positives
+    // Only accept known stdlib TYPES (not traits) - be strict to avoid false positives
     let valid_stdlib_types: HashSet<&str> = [
         // Core types
         "Option", "Result", "Ordering",
@@ -336,9 +336,9 @@ fn is_valid_type_name(name: &str) -> bool {
         // Atomic types
         "AtomicBool", "AtomicI8", "AtomicI16", "AtomicI32", "AtomicI64", "AtomicIsize",
         "AtomicU8", "AtomicU16", "AtomicU32", "AtomicU64", "AtomicUsize",
-        // Iterator/Range
+        // Iterator/Range types
         "Range", "RangeInclusive", "RangeTo", "RangeFrom", "RangeFull",
-        "Iterator", "IntoIterator", "FromIterator", "Iter", "IterMut",
+        "Iter", "IterMut",
         // Smart pointers
         "Cow", "Pin", "NonNull", "Unique",
         // Other common types
@@ -346,25 +346,43 @@ fn is_valid_type_name(name: &str) -> bool {
         "Path", "PathBuf", "OsStr", "OsString",
         "File", "TcpStream", "TcpListener", "UdpSocket",
         "Error", "IoError",
-        // Traits that vstd specs
-        "Clone", "Copy", "Default", "Debug", "Display",
-        "PartialEq", "Eq", "PartialOrd", "Ord", "Hash",
-        "Deref", "DerefMut", "Index", "IndexMut",
-        "Add", "Sub", "Mul", "Div", "Rem", "Neg",
-        "BitAnd", "BitOr", "BitXor", "Not", "Shl", "Shr",
-        "Drop", "Fn", "FnMut", "FnOnce",
-        "Send", "Sync", "Sized", "Unpin",
-        "From", "Into", "TryFrom", "TryInto",
-        "AsRef", "AsMut", "Borrow", "BorrowMut", "ToOwned",
         // Control flow
         "ControlFlow",
-        // Hasher
-        "Hasher", "DefaultHasher", "BuildHasher",
+        // Hasher types
+        "DefaultHasher",
         // PhantomData
         "PhantomData", "ManuallyDrop", "MaybeUninit",
     ].into_iter().collect();
     
     valid_stdlib_types.contains(name)
+}
+
+/// Check if a name is a Rust stdlib trait
+fn is_stdlib_trait(name: &str) -> bool {
+    let stdlib_traits: HashSet<&str> = [
+        // Core traits
+        "Clone", "Copy", "Default", "Debug", "Display",
+        "PartialEq", "Eq", "PartialOrd", "Ord", "Hash",
+        // Pointer traits
+        "Deref", "DerefMut", "Index", "IndexMut",
+        // Operator traits (core::ops)
+        "Add", "Sub", "Mul", "Div", "Rem", "Neg",
+        "BitAnd", "BitOr", "BitXor", "Not", "Shl", "Shr",
+        "AddAssign", "SubAssign", "MulAssign", "DivAssign",
+        // Drop and Fn traits
+        "Drop", "Fn", "FnMut", "FnOnce",
+        // Marker traits
+        "Send", "Sync", "Sized", "Unpin",
+        // Conversion traits
+        "From", "Into", "TryFrom", "TryInto",
+        "AsRef", "AsMut", "Borrow", "BorrowMut", "ToOwned",
+        // Iterator traits
+        "Iterator", "IntoIterator", "FromIterator", "ExactSizeIterator", "DoubleEndedIterator",
+        // Hasher trait
+        "Hasher", "BuildHasher",
+    ].into_iter().collect();
+    
+    stdlib_traits.contains(name)
 }
 
 /// Parse rusticate's analyze_modules_mir.log to get stdlib usage
