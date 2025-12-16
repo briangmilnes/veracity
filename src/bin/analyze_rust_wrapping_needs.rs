@@ -401,27 +401,27 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "PART I: CURRENT STATE")?;
     writeln!(log, "  1.  How did we get the Rust data?")?;
-    writeln!(log, "  1b. What specification primitives does vstd provide?")?;
-    writeln!(log, "  2.  How many Rust Data Types does Verus wrap?")?;
-    writeln!(log, "  3.  How many Rust Traits does Verus wrap?")?;
-    writeln!(log, "  4.  How many total Rust Methods does Verus wrap?")?;
-    writeln!(log, "  5.  Per-type method coverage (wrapped vs unwrapped)")?;
+    writeln!(log, "  2.  What specification primitives does vstd provide?")?;
+    writeln!(log, "  3.  How many Rust Data Types does Verus wrap?")?;
+    writeln!(log, "  4.  How many Rust Traits does Verus wrap?")?;
+    writeln!(log, "  5.  How many total Rust Methods does Verus wrap?")?;
+    writeln!(log, "  6.  Per-type method coverage (wrapped vs unwrapped)")?;
     writeln!(log)?;
     writeln!(log, "PART II: GREEDY FULL SUPPORT COVERAGE")?;
-    writeln!(log, "  6.  Modules: What to wrap for 70/80/90/100% coverage")?;
-    writeln!(log, "  7.  Data Types: What to wrap for 70/80/90/100% coverage")?;
-    writeln!(log, "  8.  Traits: What to wrap for 70/80/90/100% coverage")?;
-    writeln!(log, "  9.  Methods: What to wrap for 70/80/90/100% coverage")?;
-    writeln!(log, "  10. Methods per Type: What to wrap within each type")?;
-    writeln!(log, "  11. Methods per Trait: What to wrap within each trait")?;
+    writeln!(log, "  7.  Modules: What to wrap for 70/80/90/100% coverage")?;
+    writeln!(log, "  8.  Data Types: What to wrap for 70/80/90/100% coverage")?;
+    writeln!(log, "  9.  Traits: What to wrap for 70/80/90/100% coverage")?;
+    writeln!(log, "  10. Methods: What to wrap for 70/80/90/100% coverage")?;
+    writeln!(log, "  11. Methods per Type: What to wrap within each type")?;
+    writeln!(log, "  12. Methods per Trait: What to wrap within each trait")?;
     writeln!(log)?;
     writeln!(log, "PART III: SUMMARY & RECOMMENDATIONS")?;
-    writeln!(log, "  12. Coverage Summary Table")?;
-    writeln!(log, "  13. Priority Recommendations")?;
-    writeln!(log, "      13.1  70% Full Support Coverage")?;
-    writeln!(log, "      13.2  80% Full Support Coverage")?;
-    writeln!(log, "      13.3  90% Full Support Coverage")?;
-    writeln!(log, "      13.4  100% Full Support Coverage")?;
+    writeln!(log, "  13. Coverage Summary Table")?;
+    writeln!(log, "  14. Priority Recommendations")?;
+    writeln!(log, "      14.1  70% Full Support Coverage")?;
+    writeln!(log, "      14.2  80% Full Support Coverage")?;
+    writeln!(log, "      14.3  90% Full Support Coverage")?;
+    writeln!(log, "      14.4  100% Full Support Coverage")?;
     writeln!(log)?;
     
     // ========================================================================
@@ -520,8 +520,8 @@ fn write_report(
     writeln!(log, "  - Type annotations: core::option::Option<T>")?;
     writeln!(log)?;
     
-    // Section 1b: Specification Primitives
-    writeln!(log, "\n=== 1b. WHAT SPECIFICATION PRIMITIVES DOES VSTD PROVIDE? ===\n")?;
+    // Section 2: Specification Primitives
+    writeln!(log, "\n=== 2. WHAT SPECIFICATION PRIMITIVES DOES VSTD PROVIDE? ===\n")?;
     writeln!(log, "Beyond wrapping Rust stdlib, vstd provides mathematical types for specifications.")?;
     writeln!(log, "These are NOT stdlib wrappers - they are verification-specific primitives.\n")?;
     
@@ -580,8 +580,8 @@ fn write_report(
     writeln!(log, "  Tracked<T> - Wrapper for linear/proof data")?;
     writeln!(log)?;
     
-    // Section 2: Types wrapped
-    writeln!(log, "\n=== 2. HOW MANY RUST DATA TYPES DOES VERUS WRAP? ===\n")?;
+    // Section 3: Types wrapped
+    writeln!(log, "\n=== 3. HOW MANY RUST DATA TYPES DOES VERUS WRAP? ===\n")?;
     writeln!(log, "vstd currently wraps {} Rust stdlib types.\n", vstd.wrapped_rust_types.len())?;
     writeln!(log, "Resource estimates for veracity-analyze-libs:")?;
     writeln!(log, "  - Disk space for vstd source: ~5 MB")?;
@@ -598,8 +598,8 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "Total: {} types, {} methods.", vstd.wrapped_rust_types.len(), total_wrapped)?;
     
-    // Section 3: Traits
-    writeln!(log, "\n=== 3. HOW MANY RUST TRAITS DOES VERUS WRAP? ===\n")?;
+    // Section 4: Traits
+    writeln!(log, "\n=== 4. HOW MANY RUST TRAITS DOES VERUS WRAP? ===\n")?;
     writeln!(log, "vstd provides specs for {} traits.\n", vstd.traits.len())?;
     
     let mut total_trait_methods = 0;
@@ -615,8 +615,8 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "Total: {} traits, {} trait methods.", vstd.traits.len(), total_trait_methods)?;
     
-    // Section 4: Total methods (stdlib wrappers via assume_specification)
-    writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
+    // Section 5: Total methods (stdlib wrappers via assume_specification)
+    writeln!(log, "\n=== 5. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
     writeln!(log, "vstd wraps {} Rust stdlib methods via assume_specification blocks.\n", vstd.external_specs.len())?;
     writeln!(log, "These are actual Rust stdlib functions/methods that vstd provides formal specifications for.")?;
     writeln!(log)?;
@@ -669,8 +669,8 @@ fn write_report(
         }
     }
     
-    // Section 5: Per-type coverage
-    writeln!(log, "\n=== 5. PER-TYPE METHOD COVERAGE ===\n")?;
+    // Section 6: Per-type coverage
+    writeln!(log, "\n=== 6. PER-TYPE METHOD COVERAGE ===\n")?;
     writeln!(log, "Comparing vstd wrapped methods vs Rust usage.")?;
     writeln!(log, "vstd wraps: {} types. Rust uses: {} unique types in MIR.\n",
         vstd.wrapped_rust_types.len(), rusticate.summary.unique_types)?;
@@ -689,30 +689,30 @@ fn write_report(
     writeln!(log, "The greedy algorithm selects items that maximize newly-supported crates.")?;
     writeln!(log)?;
     
-    // Section 6: Modules
-    writeln!(log, "\n=== 6. MODULES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
+    // Section 7: Modules
+    writeln!(log, "\n=== 7. MODULES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
     write_greedy_section(log, "modules", &rusticate.analysis.greedy_cover.modules)?;
     
-    // Section 7: Types
-    writeln!(log, "\n=== 7. DATA TYPES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
+    // Section 8: Types
+    writeln!(log, "\n=== 8. DATA TYPES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
     write_greedy_section(log, "types", &rusticate.analysis.greedy_cover.types)?;
     
-    // Section 8: Traits
-    writeln!(log, "\n=== 8. TRAITS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
+    // Section 9: Traits
+    writeln!(log, "\n=== 9. TRAITS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
     write_greedy_section(log, "traits", &rusticate.analysis.greedy_cover.traits)?;
     
-    // Section 9: Methods
-    writeln!(log, "\n=== 9. METHODS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
+    // Section 10: Methods
+    writeln!(log, "\n=== 10. METHODS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
     write_greedy_section(log, "methods", &rusticate.analysis.greedy_cover.methods)?;
     
-    // Section 10: Methods per Type
-    writeln!(log, "\n=== 10. METHODS PER TYPE: WHAT TO WRAP WITHIN EACH TYPE ===\n")?;
+    // Section 11: Methods per Type
+    writeln!(log, "\n=== 11. METHODS PER TYPE: WHAT TO WRAP WITHIN EACH TYPE ===\n")?;
     writeln!(log, "For each type, which methods matter most? Minimum methods to cover N% of crates")?;
     writeln!(log, "that call methods on that type.\n")?;
     write_methods_per_type_section(log, &rusticate.analysis.greedy_cover.methods_per_type)?;
     
-    // Section 11: Methods per Trait
-    writeln!(log, "\n=== 11. METHODS PER TRAIT: WHAT TO WRAP WITHIN EACH TRAIT ===\n")?;
+    // Section 12: Methods per Trait
+    writeln!(log, "\n=== 12. METHODS PER TRAIT: WHAT TO WRAP WITHIN EACH TRAIT ===\n")?;
     writeln!(log, "For each trait, which methods matter most? Minimum methods to cover N% of crates")?;
     writeln!(log, "that use that trait.\n")?;
     write_methods_per_trait_section(log, &rusticate.analysis.greedy_cover.methods_per_trait)?;
@@ -724,8 +724,8 @@ fn write_report(
     writeln!(log, "PART III: SUMMARY & RECOMMENDATIONS")?;
     writeln!(log, "{}", "=".repeat(80))?;
     
-    // Section 12: Coverage Summary
-    writeln!(log, "\n=== 12. COVERAGE SUMMARY TABLE ===\n")?;
+    // Section 13: Coverage Summary
+    writeln!(log, "\n=== 13. COVERAGE SUMMARY TABLE ===\n")?;
     writeln!(log, "Items needed to FULLY SUPPORT N% of {} crates:\n", rusticate.summary.crates_with_stdlib)?;
     writeln!(log, "{:>8} {:>10} {:>10} {:>10} {:>10}", "Target", "Modules", "Types", "Traits", "Methods")?;
     writeln!(log, "{}", "-".repeat(55))?;
@@ -755,8 +755,8 @@ fn write_report(
         rusticate.summary.coverage_to_support_100_pct.methods)?;
     writeln!(log)?;
     
-    // Section 13: Priority Recommendations
-    writeln!(log, "\n=== 13. PRIORITY RECOMMENDATIONS ===\n")?;
+    // Section 14: Priority Recommendations
+    writeln!(log, "\n=== 14. PRIORITY RECOMMENDATIONS ===\n")?;
     
     writeln!(log, "Items to wrap to achieve full support coverage at each percentile.")?;
     writeln!(log, "Legend: [WRAPPED] = vstd already wraps this, [NEEDS WRAPPING] = gap\n")?;
@@ -889,7 +889,7 @@ fn write_report(
         None
     };
     
-    let subsections = [("70", "13.1"), ("80", "13.2"), ("90", "13.3"), ("100", "13.4")];
+    let subsections = [("70", "14.1"), ("80", "14.2"), ("90", "14.3"), ("100", "14.4")];
     
     for (pct, subsection) in subsections {
         writeln!(log, "\n=== {}. {}% FULL SUPPORT COVERAGE ===\n", subsection, pct)?;
