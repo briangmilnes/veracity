@@ -364,10 +364,6 @@ impl<'a> VstdVisitor<'a> {
         matches!(publish, Publish::Uninterp(_))
     }
     
-    fn data_mode_is_ghost(mode: &DataMode) -> bool {
-        matches!(mode, DataMode::Ghost(_))
-    }
-    
     fn data_mode_is_tracked(mode: &DataMode) -> bool {
         matches!(mode, DataMode::Tracked(_))
     }
@@ -381,8 +377,8 @@ impl<'ast, 'a> Visit<'ast> for VstdVisitor<'a> {
                 .map(|s| s.ident.to_string())
                 .unwrap_or_default();
             
-            if path == "verus" {
-                // Parse the tokens inside verus! as items
+            if path == "verus" || path == "verus_" {
+                // Parse the tokens inside verus! or verus_! as items
                 let tokens = mac.mac.tokens.clone();
                 if let Ok(file) = verus_syn::parse2::<verus_syn::File>(tokens) {
                     // Visit all items inside the verus! block

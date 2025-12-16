@@ -7,6 +7,9 @@
 //!   - vstd wrapping: vstd_inventory.json (from veracity-analyze-libs, uses Verus parser)
 //!   - Rust usage: rusticate-analyze-modules-mir.json (MIR analysis)
 
+// Allow unused fields in deserialization structs - we parse full JSON but may not use every field
+#![allow(dead_code)]
+
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -119,15 +122,15 @@ struct VstdInventory {
     summary: VstdSummary,
     #[serde(default)]
     external_specs: Vec<ExternalSpec>,
+    #[serde(default)]
+    compiler_builtins: CompilerBuiltins,
+    #[serde(default)]
+    ghost_types: Vec<GhostType>,
     // Other fields we don't need but must accept
     #[serde(default)]
     modules: serde_json::Value,
     #[serde(default)]
-    compiler_builtins: serde_json::Value,
-    #[serde(default)]
     primitive_type_specs: serde_json::Value,
-    #[serde(default)]
-    ghost_types: serde_json::Value,
     #[serde(default)]
     tracked_types: serde_json::Value,
     #[serde(default)]
@@ -159,6 +162,46 @@ struct ExternalSpec {
     source_file: String,
     #[serde(default)]
     source_line: u32,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct CompilerBuiltins {
+    #[serde(default)]
+    types: Vec<BuiltinType>,
+    #[serde(default)]
+    traits: Vec<BuiltinTrait>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BuiltinType {
+    name: String,
+    category: String,
+    description: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BuiltinTrait {
+    name: String,
+    description: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhostType {
+    name: String,
+    qualified_path: String,
+    #[serde(default)]
+    methods: Vec<GhostMethod>,
+    #[serde(default)]
+    rust_equivalent: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhostMethod {
+    name: String,
+    #[serde(default)]
+    is_uninterpreted: bool,
+    #[serde(default)]
+    is_open: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -358,6 +401,7 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "PART I: CURRENT STATE")?;
     writeln!(log, "  1.  How did we get the Rust data?")?;
+    writeln!(log, "  1b. What specification primitives does vstd provide?")?;
     writeln!(log, "  2.  How many Rust Data Types does Verus wrap?")?;
     writeln!(log, "  3.  How many Rust Traits does Verus wrap?")?;
     writeln!(log, "  4.  How many total Rust Methods does Verus wrap?")?;
@@ -474,6 +518,66 @@ fn write_report(
     writeln!(log, "  - Direct calls: std::vec::Vec::push")?;
     writeln!(log, "  - Trait methods: <Vec<T> as IntoIterator>::into_iter")?;
     writeln!(log, "  - Type annotations: core::option::Option<T>")?;
+    writeln!(log)?;
+    
+    // Section 1b: Specification Primitives
+    writeln!(log, "\n=== 1b. WHAT SPECIFICATION PRIMITIVES DOES VSTD PROVIDE? ===\n")?;
+    writeln!(log, "Beyond wrapping Rust stdlib, vstd provides mathematical types for specifications.")?;
+    writeln!(log, "These are NOT stdlib wrappers - they are verification-specific primitives.\n")?;
+    
+    writeln!(log, "--- Compiler Builtin Types ({}) ---\n", vstd.compiler_builtins.types.len())?;
+    writeln!(log, "{:<15} {:<15} {}", "Type", "Category", "Description")?;
+    writeln!(log, "{}", "-".repeat(70))?;
+    for bt in &vstd.compiler_builtins.types {
+        writeln!(log, "{:<15} {:<15} {}", bt.name, bt.category, bt.description)?;
+    }
+    writeln!(log)?;
+    
+    writeln!(log, "--- Compiler Builtin Traits ({}) ---\n", vstd.compiler_builtins.traits.len())?;
+    for bt in &vstd.compiler_builtins.traits {
+        writeln!(log, "  {}: {}", bt.name, bt.description)?;
+    }
+    writeln!(log)?;
+    
+    writeln!(log, "--- Ghost Types ({}) ---\n", vstd.ghost_types.len())?;
+    writeln!(log, "Ghost types exist only in specifications, erased at runtime.\n")?;
+    
+    // Group ghost types by whether they have methods
+    let types_with_methods: Vec<_> = vstd.ghost_types.iter()
+        .filter(|gt| !gt.methods.is_empty())
+        .collect();
+    let types_without_methods: Vec<_> = vstd.ghost_types.iter()
+        .filter(|gt| gt.methods.is_empty())
+        .collect();
+    
+    if !types_with_methods.is_empty() {
+        writeln!(log, "Types with methods:")?;
+        for gt in &types_with_methods {
+            let rust_eq = gt.rust_equivalent.as_ref()
+                .map(|s| format!(" (like Rust's {})", s))
+                .unwrap_or_default();
+            writeln!(log, "  {}{}: {} methods", gt.name, rust_eq, gt.methods.len())?;
+        }
+        writeln!(log)?;
+    }
+    
+    if !types_without_methods.is_empty() {
+        writeln!(log, "Other ghost types:")?;
+        for gt in &types_without_methods {
+            writeln!(log, "  {}", gt.name)?;
+        }
+        writeln!(log)?;
+    }
+    
+    writeln!(log, "Key specification types:")?;
+    writeln!(log, "  int    - Mathematical integer (unbounded, can be negative)")?;
+    writeln!(log, "  nat    - Natural number (non-negative integer)")?;
+    writeln!(log, "  Seq<T> - Mathematical sequence (like Vec but for specs)")?;
+    writeln!(log, "  Set<T> - Mathematical set (like HashSet but for specs)")?;
+    writeln!(log, "  Map<K,V> - Mathematical map (like HashMap but for specs)")?;
+    writeln!(log, "  FnSpec - Specification-only function type")?;
+    writeln!(log, "  Ghost<T> - Wrapper for ghost data (erased at runtime)")?;
+    writeln!(log, "  Tracked<T> - Wrapper for linear/proof data")?;
     writeln!(log)?;
     
     // Section 2: Types wrapped
@@ -928,29 +1032,13 @@ fn write_greedy_section(
                 pct, milestone.target_crates, milestone.actual_coverage)?;
             writeln!(log, "Items needed: {}\n", milestone.items.len())?;
             
-            let show_count = match pct {
-                "70" => 25,
-                "80" => 15,
-                "90" => 10,
-                _ => 5,
-            };
-            
-            writeln!(log, "{:>5}  {:<50} {:>8} {:>10}",
+            writeln!(log, "{:>5}  {:<60} {:>8} {:>10}",
                 "Rank", "Item", "+Crates", "Cumulative")?;
-            writeln!(log, "{}", "-".repeat(80))?;
+            writeln!(log, "{}", "-".repeat(90))?;
             
-            for item in milestone.items.iter().take(show_count) {
-                let name = if item.name.len() > 48 {
-                    format!("{}...", &item.name[..45])
-                } else {
-                    item.name.clone()
-                };
-                writeln!(log, "{:>5}  {:<50} {:>+8} {:>9.4}%",
-                    item.rank, name, item.crates_added, item.cumulative_coverage)?;
-            }
-            
-            if milestone.items.len() > show_count {
-                writeln!(log, "       ... {} more items", milestone.items.len() - show_count)?;
+            for item in &milestone.items {
+                writeln!(log, "{:>5}  {:<60} {:>+8} {:>9.4}%",
+                    item.rank, item.name, item.crates_added, item.cumulative_coverage)?;
             }
             writeln!(log)?;
         }
@@ -966,7 +1054,7 @@ fn write_methods_per_type_section(
     let mut sorted: Vec<_> = methods_per_type.iter().collect();
     sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
     
-    for (type_name, cover) in sorted.iter().take(10) {
+    for (type_name, cover) in &sorted {
         writeln!(log, "{}", "=".repeat(60))?;
         writeln!(log, "TYPE: {} ({} crates, {} methods)", type_name, cover.total_crates, cover.total_methods)?;
         writeln!(log, "{}", "=".repeat(60))?;
@@ -975,21 +1063,14 @@ fn write_methods_per_type_section(
             if let Some(milestone) = cover.milestones.get(pct) {
                 writeln!(log, "\n  {}% coverage ({} crates): {} methods",
                     pct, milestone.target_crates, milestone.items.len())?;
-                for item in milestone.items.iter().take(10) {
+                for item in &milestone.items {
                     let short_name = item.name.split("::").last().unwrap_or(&item.name);
-                    writeln!(log, "    {:3}. {:<35} +{:>5} ({:>8.2}%)",
+                    writeln!(log, "    {:3}. {:<40} +{:>5} ({:>8.2}%)",
                         item.rank, short_name, item.crates_added, item.cumulative_coverage)?;
-                }
-                if milestone.items.len() > 10 {
-                    writeln!(log, "    ... {} more", milestone.items.len() - 10)?;
                 }
             }
         }
         writeln!(log)?;
-    }
-    
-    if sorted.len() > 10 {
-        writeln!(log, "\n... {} more types (see JSON for full data)", sorted.len() - 10)?;
     }
     
     Ok(())
@@ -1002,7 +1083,7 @@ fn write_methods_per_trait_section(
     let mut sorted: Vec<_> = methods_per_trait.iter().collect();
     sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
     
-    for (trait_name, cover) in sorted.iter().take(10) {
+    for (trait_name, cover) in &sorted {
         writeln!(log, "{}", "=".repeat(60))?;
         writeln!(log, "TRAIT: {} ({} crates, {} methods)", trait_name, cover.total_crates, cover.total_methods)?;
         writeln!(log, "{}", "=".repeat(60))?;
@@ -1011,20 +1092,13 @@ fn write_methods_per_trait_section(
             if let Some(milestone) = cover.milestones.get(pct) {
                 writeln!(log, "\n  {}% coverage ({} crates): {} methods",
                     pct, milestone.target_crates, milestone.items.len())?;
-                for item in milestone.items.iter().take(10) {
-                    writeln!(log, "    {:3}. {:<35} +{:>5} ({:>8.2}%)",
+                for item in &milestone.items {
+                    writeln!(log, "    {:3}. {:<40} +{:>5} ({:>8.2}%)",
                         item.rank, item.name, item.crates_added, item.cumulative_coverage)?;
-                }
-                if milestone.items.len() > 10 {
-                    writeln!(log, "    ... {} more", milestone.items.len() - 10)?;
                 }
             }
         }
         writeln!(log)?;
-    }
-    
-    if sorted.len() > 10 {
-        writeln!(log, "\n... {} more traits (see JSON for full data)", sorted.len() - 10)?;
     }
     
     Ok(())
