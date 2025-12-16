@@ -338,6 +338,7 @@ fn write_report(
     writeln!(log, "=== TABLE OF CONTENTS ===\n")?;
     writeln!(log, "INTRODUCTION")?;
     writeln!(log, "  - Data Sources")?;
+    writeln!(log, "  - Methods Summary (parsing methods used)")?;
     writeln!(log, "  - Key Questions This Report Answers")?;
     writeln!(log)?;
     writeln!(log, "PART I: CURRENT STATE")?;
@@ -381,15 +382,35 @@ fn write_report(
     writeln!(log, "--- Data Sources ---\n")?;
     writeln!(log, "RUST STDLIB USAGE:")?;
     writeln!(log, "  Tool: rusticate-analyze-modules-mir")?;
-    writeln!(log, "  Method: MIR (Mid-level IR) analysis of compiled Rust code")?;
+    writeln!(log, "  Input: MIR files from compiled Rust projects")?;
+    writeln!(log, "  Parsing: Regex patterns on MIR text (no AST parser for MIR exists)")?;
     writeln!(log, "  Dataset: {} crates with stdlib usage", rusticate.summary.crates_with_stdlib)?;
     writeln!(log, "  From: Top {} downloaded Rust projects on crates.io", rusticate.summary.total_projects)?;
     writeln!(log, "  Total crates analyzed: {}", rusticate.summary.total_crates)?;
     writeln!(log)?;
     writeln!(log, "VSTD WRAPPING:")?;
     writeln!(log, "  Tool: veracity-analyze-libs")?;
-    writeln!(log, "  Method: Verus AST parser (verus_syn) analysis of vstd source")?;
+    writeln!(log, "  Input: vstd source code (*.rs)")?;
+    writeln!(log, "  Parsing: Verus AST parser (verus_syn) - proper AST traversal")?;
     writeln!(log, "  Source: {}", vstd.vstd_path)?;
+    writeln!(log)?;
+    writeln!(log, "GAP ANALYSIS (this report):")?;
+    writeln!(log, "  Tool: veracity-analyze-rust-wrapping-needs")?;
+    writeln!(log, "  Input: JSON files from both tools above")?;
+    writeln!(log, "  Parsing: serde JSON deserialization (no regex)")?;
+    writeln!(log)?;
+    
+    writeln!(log, "--- Methods Summary ---\n")?;
+    writeln!(log, "Parsing methods used in this analysis pipeline:\n")?;
+    writeln!(log, "  Stage                        Parsing Method")?;
+    writeln!(log, "  {}", "-".repeat(55))?;
+    writeln!(log, "  Rust MIR -> stdlib usage     Regex (MIR has no AST parser)")?;
+    writeln!(log, "  vstd -> inventory            Verus AST (verus_syn)")?;
+    writeln!(log, "  JSON -> report               serde deserialization")?;
+    writeln!(log)?;
+    writeln!(log, "Note: MIR (Mid-level IR) is a compiler-internal format that cannot be")?;
+    writeln!(log, "parsed with standard Rust parsers (syn, ra_ap_syntax). Regex is used to")?;
+    writeln!(log, "extract fully-qualified stdlib paths from the human-readable MIR text.")?;
     writeln!(log)?;
     
     writeln!(log, "--- Key Questions This Report Answers ---\n")?;
