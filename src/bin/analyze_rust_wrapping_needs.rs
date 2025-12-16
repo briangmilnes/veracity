@@ -606,7 +606,31 @@ fn write_report(
     // Section 13: Priority Recommendations
     writeln!(log, "\n=== 13. PRIORITY RECOMMENDATIONS ===\n")?;
     
-    writeln!(log, "Items to wrap to achieve full support coverage at each percentile.\n")?;
+    writeln!(log, "Items to wrap to achieve full support coverage at each percentile.")?;
+    writeln!(log, "Legend: [WRAPPED] = vstd already wraps this, [NEEDS WRAPPING] = gap\n")?;
+    
+    // Build sets of what vstd wraps
+    use std::collections::HashSet;
+    
+    // Wrapped type names (e.g., "Option", "Result", "HashMap")
+    let wrapped_types: HashSet<&str> = vstd.wrapped_rust_types
+        .iter()
+        .map(|t| t.rust_type.as_str())
+        .collect();
+    
+    // Wrapped method names - collect as "TypeName::method_name"
+    let mut wrapped_methods: HashSet<String> = HashSet::new();
+    for wt in &vstd.wrapped_rust_types {
+        for m in &wt.methods_wrapped {
+            wrapped_methods.insert(format!("{}::{}", wt.rust_type, m.name));
+        }
+    }
+    
+    // Wrapped trait names
+    let wrapped_traits: HashSet<&str> = vstd.traits
+        .iter()
+        .map(|t| t.name.as_str())
+        .collect();
     
     let subsections = [("70", "13.1"), ("80", "13.2"), ("90", "13.3"), ("100", "13.4")];
     
@@ -618,34 +642,98 @@ fn write_report(
         if let Some(m) = rusticate.analysis.greedy_cover.modules.full_support.milestones.get(pct) {
             writeln!(log, "{} modules needed:\n", m.items.len())?;
             for item in &m.items {
-                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+                // Modules don't have a direct vstd mapping, show as needs wrapping
+                writeln!(log, "  {:3}. {:<45} [NEEDS WRAPPING]", item.rank, item.name)?;
             }
         }
         
         // Types
         writeln!(log, "\n--- DATA TYPES to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.types.full_support.milestones.get(pct) {
-            writeln!(log, "{} types needed:\n", m.items.len())?;
+            let mut wrapped_count = 0;
+            let mut needs_count = 0;
             for item in &m.items {
-                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+                // Extract type name from qualified path like "core::result::Result"
+                let type_name = item.name.split("::").last().unwrap_or(&item.name);
+                if wrapped_types.contains(type_name) {
+                    wrapped_count += 1;
+                } else {
+                    needs_count += 1;
+                }
+            }
+            writeln!(log, "{} types needed: {} wrapped, {} need wrapping\n", 
+                m.items.len(), wrapped_count, needs_count)?;
+            for item in &m.items {
+                let type_name = item.name.split("::").last().unwrap_or(&item.name);
+                let status = if wrapped_types.contains(type_name) {
+                    "[WRAPPED]"
+                } else {
+                    "[NEEDS WRAPPING]"
+                };
+                writeln!(log, "  {:3}. {:<45} {}", item.rank, item.name, status)?;
             }
         }
         
         // Traits
         writeln!(log, "\n--- TRAITS to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.traits.full_support.milestones.get(pct) {
-            writeln!(log, "{} traits needed:\n", m.items.len())?;
+            let mut wrapped_count = 0;
+            let mut needs_count = 0;
             for item in &m.items {
-                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+                let trait_name = item.name.split("::").last().unwrap_or(&item.name);
+                if wrapped_traits.contains(trait_name) {
+                    wrapped_count += 1;
+                } else {
+                    needs_count += 1;
+                }
+            }
+            writeln!(log, "{} traits needed: {} wrapped, {} need wrapping\n",
+                m.items.len(), wrapped_count, needs_count)?;
+            for item in &m.items {
+                let trait_name = item.name.split("::").last().unwrap_or(&item.name);
+                let status = if wrapped_traits.contains(trait_name) {
+                    "[WRAPPED]"
+                } else {
+                    "[NEEDS WRAPPING]"
+                };
+                writeln!(log, "  {:3}. {:<45} {}", item.rank, item.name, status)?;
             }
         }
         
         // Methods
         writeln!(log, "\n--- METHODS to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.methods.full_support.milestones.get(pct) {
-            writeln!(log, "{} methods needed:\n", m.items.len())?;
+            let mut wrapped_count = 0;
+            let mut needs_count = 0;
             for item in &m.items {
-                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+                // Extract "Type::method" from path like "core::result::Result::unwrap"
+                let parts: Vec<&str> = item.name.split("::").collect();
+                let check_key = if parts.len() >= 2 {
+                    format!("{}::{}", parts[parts.len()-2], parts[parts.len()-1])
+                } else {
+                    item.name.clone()
+                };
+                if wrapped_methods.contains(&check_key) {
+                    wrapped_count += 1;
+                } else {
+                    needs_count += 1;
+                }
+            }
+            writeln!(log, "{} methods needed: {} wrapped, {} need wrapping\n",
+                m.items.len(), wrapped_count, needs_count)?;
+            for item in &m.items {
+                let parts: Vec<&str> = item.name.split("::").collect();
+                let check_key = if parts.len() >= 2 {
+                    format!("{}::{}", parts[parts.len()-2], parts[parts.len()-1])
+                } else {
+                    item.name.clone()
+                };
+                let status = if wrapped_methods.contains(&check_key) {
+                    "[WRAPPED]"
+                } else {
+                    "[NEEDS WRAPPING]"
+                };
+                writeln!(log, "  {:3}. {:<55} {}", item.rank, item.name, status)?;
             }
         }
         
