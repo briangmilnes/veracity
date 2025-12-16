@@ -498,7 +498,30 @@ fn write_report(
     
     // Section 4: Total methods
     writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "Total methods with specifications: {}.\n", vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "WARNING: The vstd inventory only shows {} internal spec methods.\n", vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "BUG: veracity-analyze-libs does NOT yet extract assume_specification blocks!")?;
+    writeln!(log, "The actual count of wrapped Rust stdlib methods is ~229 (from grep).\n")?;
+    writeln!(log, "Approximate breakdown by file (from assume_specification count):")?;
+    writeln!(log, "  option.rs:    13 methods (is_some, is_none, unwrap, unwrap_or, ...)")?;
+    writeln!(log, "  result.rs:    10 methods (is_ok, is_err, unwrap, expect, ...)")?;
+    writeln!(log, "  vec.rs:       23 methods (push, pop, len, capacity, ...)")?;
+    writeln!(log, "  vecdeque.rs:  19 methods (push_back, pop_front, len, ...)")?;
+    writeln!(log, "  hash.rs:      32 methods (insert, get, contains_key, ...)")?;
+    writeln!(log, "  num.rs:       44 methods (checked_add, saturating_sub, ...)")?;
+    writeln!(log, "  ops.rs:       12 methods (add, sub, mul, div, ...)")?;
+    writeln!(log, "  cmp.rs:       16 methods (eq, ne, lt, gt, ...)")?;
+    writeln!(log, "  atomic.rs:    14 methods (load, store, compare_exchange, ...)")?;
+    writeln!(log, "  bits.rs:      16 methods (count_ones, leading_zeros, ...)")?;
+    writeln!(log, "  smart_ptrs.rs: 7 methods (Box::new, Arc::new, Rc::new, ...)")?;
+    writeln!(log, "  clone.rs:      5 methods")?;
+    writeln!(log, "  control_flow.rs: 4 methods")?;
+    writeln!(log, "  slice.rs:      3 methods")?;
+    writeln!(log, "  range.rs:      2 methods")?;
+    writeln!(log, "  alloc.rs:      1 method")?;
+    writeln!(log, "  core.rs:       7 methods (mem::swap, intrinsics, ...)")?;
+    writeln!(log)?;
+    writeln!(log, "TODO: Fix veracity-analyze-libs to parse assume_specification blocks.\n")?;
+    writeln!(log, "Current internal spec methods (NOT the stdlib wrappers):")?;
     writeln!(log, "Breakdown by type:\n")?;
     for wt in &vstd.wrapped_rust_types {
         if !wt.methods_wrapped.is_empty() {
