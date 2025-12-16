@@ -697,6 +697,94 @@ fn write_report(
         .map(|t| t.name.as_str())
         .collect();
     
+    // Build module coverage map: module_suffix -> (wrapped_count, wrapped_types)
+    // Maps source file patterns to modules they cover
+    let mut module_coverage: BTreeMap<String, (usize, Vec<String>)> = BTreeMap::new();
+    
+    // Map source files to module patterns
+    for es in &vstd.external_specs {
+        let file = es.source_file.replace("std_specs/", "").replace(".rs", "");
+        // Extract type name from external_fn (e.g., "Option" from "Option::<T>::unwrap")
+        // Handle cases like "core::ptr::null" -> "ptr", "HashMap::<K,V>::insert" -> "HashMap"
+        let mut fn_name = es.external_fn.clone();
+        // Remove generics first
+        while let Some(start) = fn_name.find("::<") {
+            if let Some(end) = fn_name[start..].find('>') {
+                fn_name = format!("{}{}", &fn_name[..start], &fn_name[start+end+1..]);
+            } else {
+                break;
+            }
+        }
+        // Also remove <'a, ...> style generics
+        while let Some(start) = fn_name.find("<") {
+            if let Some(end) = fn_name[start..].find('>') {
+                fn_name = format!("{}{}", &fn_name[..start], &fn_name[start+end+1..]);
+            } else {
+                break;
+            }
+        }
+        let parts: Vec<&str> = fn_name.split("::").collect();
+        // Get the type/struct name (usually second-to-last before method)
+        let type_name = if parts.len() >= 2 {
+            // Skip common prefixes like "core", "std", "alloc"
+            let first = parts[0];
+            if first == "core" || first == "std" || first == "alloc" {
+                if parts.len() >= 3 {
+                    parts[parts.len() - 2].to_string()
+                } else {
+                    parts[1].to_string()
+                }
+            } else if first.is_empty() {
+                // Handle cases like "::iter" from "<[T]>::iter"
+                if parts.len() >= 2 {
+                    "slice".to_string()  // Infer slice type
+                } else {
+                    "unknown".to_string()
+                }
+            } else {
+                parts[0].to_string()
+            }
+        } else if parts[0].is_empty() || parts[0] == "[" {
+            "slice".to_string()
+        } else {
+            parts[0].to_string()
+        };
+        
+        let entry = module_coverage.entry(file.clone()).or_insert((0, Vec::new()));
+        entry.0 += 1;
+        // Filter out generic type names and empty strings
+        if !type_name.is_empty() 
+            && type_name != "T" && type_name != "U" && type_name != "V"
+            && !entry.1.contains(&type_name) {
+            entry.1.push(type_name);
+        }
+    }
+    
+    // Also add wrapped types from wrapped_rust_types
+    for wt in &vstd.wrapped_rust_types {
+        // Extract module suffix from rust_module (e.g., "option" from "core::option")
+        let module_suffix = wt.rust_module.split("::").last().unwrap_or("").to_string();
+        if !module_suffix.is_empty() {
+            let entry = module_coverage.entry(module_suffix).or_insert((0, Vec::new()));
+            entry.0 += wt.methods_wrapped.len();
+            if !entry.1.contains(&wt.rust_type) {
+                entry.1.push(wt.rust_type.clone());
+            }
+        }
+    }
+    
+    // Helper to check module coverage
+    let get_module_coverage = |module_name: &str| -> Option<(usize, String)> {
+        // Extract module suffix (e.g., "option" from "std::option" or "core::option")
+        let suffix = module_name.split("::").last().unwrap_or("");
+        if let Some((count, types)) = module_coverage.get(suffix) {
+            if *count > 0 {
+                return Some((*count, types.join(", ")));
+            }
+        }
+        None
+    };
+    
     let subsections = [("70", "13.1"), ("80", "13.2"), ("90", "13.3"), ("100", "13.4")];
     
     for (pct, subsection) in subsections {
@@ -705,10 +793,24 @@ fn write_report(
         // Modules
         writeln!(log, "--- MODULES to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.modules.full_support.milestones.get(pct) {
-            writeln!(log, "{} modules needed:\n", m.items.len())?;
+            let mut partial_count = 0;
+            let mut needs_count = 0;
             for item in &m.items {
-                // Modules don't have a direct vstd mapping, show as needs wrapping
-                writeln!(log, "  {:3}. {:<45} [NEEDS WRAPPING]", item.rank, item.name)?;
+                if get_module_coverage(&item.name).is_some() {
+                    partial_count += 1;
+                } else {
+                    needs_count += 1;
+                }
+            }
+            writeln!(log, "{} modules needed: {} partial, {} need wrapping\n", 
+                m.items.len(), partial_count, needs_count)?;
+            for item in &m.items {
+                let status = if let Some((count, types)) = get_module_coverage(&item.name) {
+                    format!("[PARTIAL: {} methods for {}]", count, types)
+                } else {
+                    "[NEEDS WRAPPING]".to_string()
+                };
+                writeln!(log, "  {:3}. {:<40} {}", item.rank, item.name, status)?;
             }
         }
         
