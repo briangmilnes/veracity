@@ -11,6 +11,7 @@
 //!   - analyses/vstd_inventory.log (human-readable report)
 
 use anyhow::{Context, Result, bail};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
@@ -888,6 +889,94 @@ fn infer_rust_type_from_impl(impl_type: &str, source_file: &str) -> (String, Str
     }
 }
 
+/// Parse compiler builtins from Verus source (verus_items.rs)
+/// Returns (builtin_types, builtin_traits) extracted from the compiler definitions
+fn parse_compiler_builtins(vstd_path: &Path) -> (Vec<BuiltinType>, Vec<BuiltinTrait>) {
+    // Find verus_items.rs relative to vstd
+    let verus_items_path = vstd_path
+        .parent()  // source/vstd -> source
+        .and_then(|p| p.parent())  // source -> verus root
+        .map(|p| p.join("source/rust_verify/src/verus_items.rs"));
+    
+    let mut builtin_types = Vec::new();
+    let mut builtin_traits = Vec::new();
+    
+    // Default descriptions for builtin types
+    let type_descriptions: std::collections::HashMap<&str, (&str, &str)> = [
+        ("int", ("Mathematical unbounded integer (can be negative)", "mathematical")),
+        ("nat", ("Natural number (non-negative integer, >= 0)", "mathematical")),
+        ("real", ("Mathematical real number (arbitrary precision)", "mathematical")),
+        ("FnSpec", ("Specification-only function type (ghost callable)", "function")),
+        ("Ghost", ("Ghost wrapper - data exists only in proofs, erased at runtime", "wrapper")),
+        ("Tracked", ("Tracked wrapper - linear/affine data for permission tracking", "wrapper")),
+    ].into_iter().collect();
+    
+    let trait_descriptions: std::collections::HashMap<&str, &str> = [
+        ("Integer", "Marker trait for integer types (int, nat, u8..u128, i8..i128)"),
+        ("Sealed", "Sealed trait pattern - prevents external implementations"),
+    ].into_iter().collect();
+    
+    if let Some(path) = verus_items_path {
+        if let Ok(content) = fs::read_to_string(&path) {
+            // Parse BuiltinType entries: ("verus::verus_builtin::NAME", VerusItem::BuiltinType(...))
+            let type_re = Regex::new(r#"\("verus::verus_builtin::([^"]+)",\s*VerusItem::BuiltinType"#).unwrap();
+            for cap in type_re.captures_iter(&content) {
+                let name = cap[1].to_string();
+                // Skip private paths like "private::Sealed"
+                if name.contains("::") {
+                    continue;
+                }
+                let (desc, cat) = type_descriptions.get(name.as_str())
+                    .copied()
+                    .unwrap_or(("Verus builtin type", "other"));
+                builtin_types.push(BuiltinType {
+                    name: if name == "Ghost" || name == "Tracked" {
+                        format!("{}<T>", name)
+                    } else {
+                        name
+                    },
+                    description: desc.to_string(),
+                    category: cat.to_string(),
+                });
+            }
+            
+            // Parse BuiltinTrait entries: ("verus::verus_builtin::NAME", VerusItem::BuiltinTrait(...))
+            let trait_re = Regex::new(r#"\("verus::verus_builtin::(?:private::)?([^"]+)",\s*VerusItem::BuiltinTrait"#).unwrap();
+            for cap in trait_re.captures_iter(&content) {
+                let name = cap[1].to_string();
+                let desc = trait_descriptions.get(name.as_str())
+                    .copied()
+                    .unwrap_or("Verus builtin trait");
+                builtin_traits.push(BuiltinTrait {
+                    name,
+                    description: desc.to_string(),
+                });
+            }
+        }
+    }
+    
+    // If we didn't find them (e.g., verus_items.rs not accessible), use fallback
+    // Note: includes 'real' which exists in some Verus versions
+    if builtin_types.is_empty() {
+        builtin_types = vec![
+            BuiltinType { name: "int".to_string(), description: "Mathematical unbounded integer".to_string(), category: "mathematical".to_string() },
+            BuiltinType { name: "nat".to_string(), description: "Natural number (non-negative integer)".to_string(), category: "mathematical".to_string() },
+            BuiltinType { name: "real".to_string(), description: "Mathematical real number".to_string(), category: "mathematical".to_string() },
+            BuiltinType { name: "FnSpec".to_string(), description: "Specification-only function type".to_string(), category: "function".to_string() },
+            BuiltinType { name: "Ghost<T>".to_string(), description: "Ghost wrapper (erased at runtime)".to_string(), category: "wrapper".to_string() },
+            BuiltinType { name: "Tracked<T>".to_string(), description: "Tracked wrapper (linear/affine)".to_string(), category: "wrapper".to_string() },
+        ];
+    }
+    if builtin_traits.is_empty() {
+        builtin_traits = vec![
+            BuiltinTrait { name: "Integer".to_string(), description: "Marker trait for integer types".to_string() },
+            BuiltinTrait { name: "Sealed".to_string(), description: "Sealed trait pattern".to_string() },
+        ];
+    }
+    
+    (builtin_types, builtin_traits)
+}
+
 // ============================================================================
 // Logging Macro
 // ============================================================================
@@ -933,6 +1022,11 @@ fn main() -> Result<()> {
     log!(log_file, "Using: verus_syn AST parser");
     log!(log_file, "");
     
+    // Parse compiler builtins from Verus source
+    let (builtin_types, builtin_traits) = parse_compiler_builtins(&vstd_path);
+    log!(log_file, "Parsed {} builtin types and {} builtin traits from verus_items.rs", 
+         builtin_types.len(), builtin_traits.len());
+    
     // Initialize inventory
     let mut inventory = VstdInventory {
         schema: "https://github.com/veracity/schemas/vstd_inventory.schema.json".to_string(),
@@ -941,48 +1035,8 @@ fn main() -> Result<()> {
         vstd_path: vstd_path.display().to_string(),
         modules: Vec::new(),
         compiler_builtins: CompilerBuiltins {
-            types: vec![
-                BuiltinType {
-                    name: "int".to_string(),
-                    description: "Mathematical unbounded integer (can be negative)".to_string(),
-                    category: "mathematical".to_string(),
-                },
-                BuiltinType {
-                    name: "nat".to_string(),
-                    description: "Natural number (non-negative integer, >= 0)".to_string(),
-                    category: "mathematical".to_string(),
-                },
-                BuiltinType {
-                    name: "real".to_string(),
-                    description: "Mathematical real number".to_string(),
-                    category: "mathematical".to_string(),
-                },
-                BuiltinType {
-                    name: "FnSpec".to_string(),
-                    description: "Specification-only function type (ghost callable)".to_string(),
-                    category: "function".to_string(),
-                },
-                BuiltinType {
-                    name: "Ghost<T>".to_string(),
-                    description: "Ghost wrapper - data exists only in proofs, erased at runtime".to_string(),
-                    category: "wrapper".to_string(),
-                },
-                BuiltinType {
-                    name: "Tracked<T>".to_string(),
-                    description: "Tracked wrapper - linear/affine data for permission tracking".to_string(),
-                    category: "wrapper".to_string(),
-                },
-            ],
-            traits: vec![
-                BuiltinTrait {
-                    name: "Integer".to_string(),
-                    description: "Marker trait for integer types (int, nat, u8..u128, i8..i128)".to_string(),
-                },
-                BuiltinTrait {
-                    name: "Sealed".to_string(),
-                    description: "Sealed trait pattern - prevents external implementations".to_string(),
-                },
-            ],
+            types: builtin_types,
+            traits: builtin_traits,
         },
         primitive_type_specs: PrimitiveTypeSpecs {
             primitive_integers: vec![
