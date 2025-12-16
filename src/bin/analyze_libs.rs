@@ -306,6 +306,7 @@ struct VstdVisitor<'a> {
     broadcast_groups: Vec<BroadcastGroup>,
     macros: Vec<MacroInfo>,
     constants: Vec<ConstantInfo>,
+    external_specs: Vec<ExternalSpec>,
     
     // Current context for impl blocks
     current_impl_type: Option<String>,
@@ -331,6 +332,7 @@ impl<'a> VstdVisitor<'a> {
             broadcast_groups: Vec::new(),
             macros: Vec::new(),
             constants: Vec::new(),
+            external_specs: Vec::new(),
             current_impl_type: None,
             current_impl_methods: Vec::new(),
             wrapped_types,
@@ -390,6 +392,30 @@ impl<'ast, 'a> Visit<'ast> for VstdVisitor<'a> {
                 }
                 return;
             }
+        }
+        
+        // Handle assume_specification blocks (wraps Rust stdlib methods)
+        if let verus_syn::Item::AssumeSpecification(assume_spec) = node {
+            // Extract the external function path from brackets: [ Type::method ]
+            let external_fn = assume_spec.path.to_token_stream().to_string()
+                .replace(" ", "");  // Remove spaces from token stream
+            
+            // Try to extract module from path (e.g., "Option" from "Option::<T>::unwrap")
+            let external_module = assume_spec.path.segments.first()
+                .map(|seg| seg.ident.to_string());
+            
+            let line = self.line_number(assume_spec.assume_specification.span);
+            
+            self.external_specs.push(ExternalSpec {
+                external_fn,
+                external_module,
+                has_requires: assume_spec.requires.is_some(),
+                has_ensures: assume_spec.ensures.is_some(),
+                is_trusted: true,  // assume_specification is always trusted
+                source_file: self.source_file.clone(),
+                source_line: line,
+            });
+            return;
         }
         
         // Continue with default visiting
@@ -1263,6 +1289,7 @@ fn analyze_file_with_verus_syn(
     inventory.broadcast_groups.extend(visitor.broadcast_groups);
     inventory.macros.extend(visitor.macros);
     inventory.constants.extend(visitor.constants);
+    inventory.external_specs.extend(visitor.external_specs);
     
     Ok(())
 }
@@ -1615,6 +1642,23 @@ fn write_report(inventory: &VstdInventory, log: &mut fs::File) -> Result<()> {
     log!(log, "  Auto-broadcast:            {}", inventory.summary.total_auto_broadcast_axioms);
     log!(log, "Broadcast groups:            {}", inventory.summary.total_broadcast_groups);
     log!(log, "Macros:                      {}", inventory.summary.total_macros);
+    log!(log, "External specs (stdlib):     {}", inventory.summary.total_external_specs);
+    log!(log, "");
+    
+    // External Specs - wrapped Rust stdlib methods
+    log!(log, "=== 14. EXTERNAL SPECS (STDLIB WRAPPERS) ({}) ===", inventory.external_specs.len());
+    log!(log, "");
+    log!(log, "These are Rust stdlib methods that vstd wraps via assume_specification.");
+    log!(log, "");
+    for es in &inventory.external_specs {
+        let spec_info = match (es.has_requires, es.has_ensures) {
+            (true, true) => "[requires, ensures]",
+            (true, false) => "[requires]",
+            (false, true) => "[ensures]",
+            (false, false) => "[]",
+        };
+        log!(log, "  {} {}", es.external_fn, spec_info);
+    }
     log!(log, "");
     
     Ok(())

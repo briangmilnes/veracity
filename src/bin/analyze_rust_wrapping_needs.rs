@@ -117,6 +117,8 @@ struct VstdInventory {
     wrapped_rust_types: Vec<WrappedRustType>,
     traits: Vec<VstdTrait>,
     summary: VstdSummary,
+    #[serde(default)]
+    external_specs: Vec<ExternalSpec>,
     // Other fields we don't need but must accept
     #[serde(default)]
     modules: serde_json::Value,
@@ -135,8 +137,6 @@ struct VstdInventory {
     #[serde(default)]
     exec_functions: serde_json::Value,
     #[serde(default)]
-    external_specs: serde_json::Value,
-    #[serde(default)]
     axioms: serde_json::Value,
     #[serde(default)]
     broadcast_groups: serde_json::Value,
@@ -144,6 +144,21 @@ struct VstdInventory {
     macros: serde_json::Value,
     #[serde(default)]
     constants: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct ExternalSpec {
+    external_fn: String,
+    #[serde(default)]
+    external_module: Option<String>,
+    has_requires: bool,
+    has_ensures: bool,
+    #[serde(default)]
+    is_trusted: bool,
+    #[serde(default)]
+    source_file: String,
+    #[serde(default)]
+    source_line: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -301,9 +316,9 @@ fn main() -> Result<()> {
     let elapsed = start.elapsed();
     println!("\nAnalysis complete!");
     println!("==================");
-    println!("vstd wraps: {} types, {} methods", 
+    println!("vstd wraps: {} types, {} stdlib methods (via assume_specification)", 
         vstd.summary.total_wrapped_rust_types,
-        vstd.summary.total_wrapped_methods);
+        vstd.external_specs.len());
     println!("Rust uses: {} modules, {} types, {} traits, {} methods",
         rusticate.summary.unique_modules,
         rusticate.summary.unique_types,
@@ -496,36 +511,46 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "Total: {} traits, {} trait methods.", vstd.traits.len(), total_trait_methods)?;
     
-    // Section 4: Total methods
+    // Section 4: Total methods (stdlib wrappers via assume_specification)
     writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "WARNING: The vstd inventory only shows {} internal spec methods.\n", vstd.summary.total_wrapped_methods)?;
-    writeln!(log, "BUG: veracity-analyze-libs does NOT yet extract assume_specification blocks!")?;
-    writeln!(log, "The actual count of wrapped Rust stdlib methods is ~229 (from grep).\n")?;
-    writeln!(log, "Approximate breakdown by file (from assume_specification count):")?;
-    writeln!(log, "  option.rs:    13 methods (is_some, is_none, unwrap, unwrap_or, ...)")?;
-    writeln!(log, "  result.rs:    10 methods (is_ok, is_err, unwrap, expect, ...)")?;
-    writeln!(log, "  vec.rs:       23 methods (push, pop, len, capacity, ...)")?;
-    writeln!(log, "  vecdeque.rs:  19 methods (push_back, pop_front, len, ...)")?;
-    writeln!(log, "  hash.rs:      32 methods (insert, get, contains_key, ...)")?;
-    writeln!(log, "  num.rs:       44 methods (checked_add, saturating_sub, ...)")?;
-    writeln!(log, "  ops.rs:       12 methods (add, sub, mul, div, ...)")?;
-    writeln!(log, "  cmp.rs:       16 methods (eq, ne, lt, gt, ...)")?;
-    writeln!(log, "  atomic.rs:    14 methods (load, store, compare_exchange, ...)")?;
-    writeln!(log, "  bits.rs:      16 methods (count_ones, leading_zeros, ...)")?;
-    writeln!(log, "  smart_ptrs.rs: 7 methods (Box::new, Arc::new, Rc::new, ...)")?;
-    writeln!(log, "  clone.rs:      5 methods")?;
-    writeln!(log, "  control_flow.rs: 4 methods")?;
-    writeln!(log, "  slice.rs:      3 methods")?;
-    writeln!(log, "  range.rs:      2 methods")?;
-    writeln!(log, "  alloc.rs:      1 method")?;
-    writeln!(log, "  core.rs:       7 methods (mem::swap, intrinsics, ...)")?;
+    writeln!(log, "vstd wraps {} Rust stdlib methods via assume_specification blocks.\n", vstd.external_specs.len())?;
+    writeln!(log, "These are actual Rust stdlib functions/methods that vstd provides formal specifications for.")?;
     writeln!(log)?;
-    writeln!(log, "TODO: Fix veracity-analyze-libs to parse assume_specification blocks.\n")?;
-    writeln!(log, "Current internal spec methods (NOT the stdlib wrappers):")?;
-    writeln!(log, "Breakdown by type:\n")?;
+    
+    // Group external specs by source file
+    let mut specs_by_file: BTreeMap<String, Vec<&ExternalSpec>> = BTreeMap::new();
+    for es in &vstd.external_specs {
+        let file = if es.source_file.is_empty() { "unknown".to_string() } else { es.source_file.clone() };
+        specs_by_file.entry(file).or_default().push(es);
+    }
+    
+    writeln!(log, "Breakdown by source file:\n")?;
+    for (file, specs) in &specs_by_file {
+        let with_requires = specs.iter().filter(|s| s.has_requires).count();
+        let with_ensures = specs.iter().filter(|s| s.has_ensures).count();
+        writeln!(log, "  {:<25} {:>3} methods ({} requires, {} ensures)",
+            file.replace("std_specs/", ""), specs.len(), with_requires, with_ensures)?;
+    }
+    writeln!(log)?;
+    
+    writeln!(log, "Full list of wrapped stdlib methods:\n")?;
+    writeln!(log, "  {:<55} {:>10} {:>10}", "Method", "requires", "ensures")?;
+    writeln!(log, "  {}", "-".repeat(78))?;
+    for es in &vstd.external_specs {
+        let req = if es.has_requires { "yes" } else { "no" };
+        let ens = if es.has_ensures { "yes" } else { "no" };
+        writeln!(log, "  {:<55} {:>10} {:>10}", es.external_fn, req, ens)?;
+    }
+    writeln!(log)?;
+    
+    // Also show internal spec methods for completeness
+    writeln!(log, "Additionally, vstd provides {} internal spec methods for wrapped types:\n", 
+        vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "(These are vstd's own spec functions like view(), is_Some(), etc.)\n")?;
+    
     for wt in &vstd.wrapped_rust_types {
         if !wt.methods_wrapped.is_empty() {
-            writeln!(log, "  {} ({} methods):", wt.rust_type, wt.methods_wrapped.len())?;
+            writeln!(log, "  {} ({} spec methods):", wt.rust_type, wt.methods_wrapped.len())?;
             writeln!(log, "  {:<30} {:>8} {:>12} {:>10} {:>12}", 
                 "Method", "Mode", "requires", "ensures", "recommends")?;
             writeln!(log, "  {}", "-".repeat(75))?;
@@ -641,13 +666,30 @@ fn write_report(
         .map(|t| t.rust_type.as_str())
         .collect();
     
-    // Wrapped method names - collect as "TypeName::method_name"
-    let mut wrapped_methods: HashSet<String> = HashSet::new();
-    for wt in &vstd.wrapped_rust_types {
-        for m in &wt.methods_wrapped {
-            wrapped_methods.insert(format!("{}::{}", wt.rust_type, m.name));
-        }
-    }
+    // Wrapped method names - from external_specs (assume_specification blocks)
+    // These are the actual Rust stdlib methods that vstd wraps
+    let wrapped_methods: HashSet<String> = vstd.external_specs
+        .iter()
+        .map(|es| {
+            // Normalize: remove generics like <T> and spaces
+            let mut fn_name = es.external_fn.clone();
+            // Remove generic params like ::<T> or ::<T,E> 
+            while let Some(start) = fn_name.find("::<") {
+                if let Some(end) = fn_name[start..].find('>') {
+                    fn_name = format!("{}{}", &fn_name[..start], &fn_name[start+end+1..]);
+                } else {
+                    break;
+                }
+            }
+            // Also try to extract just "Type::method" from paths
+            let parts: Vec<&str> = fn_name.split("::").collect();
+            if parts.len() >= 2 {
+                format!("{}::{}", parts[parts.len()-2], parts[parts.len()-1])
+            } else {
+                fn_name
+            }
+        })
+        .collect();
     
     // Wrapped trait names
     let wrapped_traits: HashSet<&str> = vstd.traits
