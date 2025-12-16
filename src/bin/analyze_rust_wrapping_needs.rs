@@ -359,6 +359,10 @@ fn write_report(
     writeln!(log, "PART III: SUMMARY & RECOMMENDATIONS")?;
     writeln!(log, "  12. Coverage Summary Table")?;
     writeln!(log, "  13. Priority Recommendations")?;
+    writeln!(log, "      13.1  70% Full Support Coverage")?;
+    writeln!(log, "      13.2  80% Full Support Coverage")?;
+    writeln!(log, "      13.3  90% Full Support Coverage")?;
+    writeln!(log, "      13.4  100% Full Support Coverage")?;
     writeln!(log)?;
     
     // ========================================================================
@@ -604,42 +608,42 @@ fn write_report(
     
     writeln!(log, "Items to wrap to achieve full support coverage at each percentile.\n")?;
     
-    for pct in ["70", "80", "90", "100"] {
-        writeln!(log, "{}", "=".repeat(70))?;
-        writeln!(log, "{}% FULL SUPPORT COVERAGE", pct)?;
-        writeln!(log, "{}\n", "=".repeat(70))?;
+    let subsections = [("70", "13.1"), ("80", "13.2"), ("90", "13.3"), ("100", "13.4")];
+    
+    for (pct, subsection) in subsections {
+        writeln!(log, "\n=== {}. {}% FULL SUPPORT COVERAGE ===\n", subsection, pct)?;
         
         // Modules
-        writeln!(log, "MODULES to wrap for {}%:", pct)?;
+        writeln!(log, "--- MODULES to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.modules.full_support.milestones.get(pct) {
-            writeln!(log, "  ({} modules needed)\n", m.items.len())?;
+            writeln!(log, "{} modules needed:\n", m.items.len())?;
             for item in &m.items {
                 writeln!(log, "  {:3}. {}", item.rank, item.name)?;
             }
         }
         
         // Types
-        writeln!(log, "\nDATA TYPES to wrap for {}%:", pct)?;
+        writeln!(log, "\n--- DATA TYPES to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.types.full_support.milestones.get(pct) {
-            writeln!(log, "  ({} types needed)\n", m.items.len())?;
+            writeln!(log, "{} types needed:\n", m.items.len())?;
             for item in &m.items {
                 writeln!(log, "  {:3}. {}", item.rank, item.name)?;
             }
         }
         
         // Traits
-        writeln!(log, "\nTRAITS to wrap for {}%:", pct)?;
+        writeln!(log, "\n--- TRAITS to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.traits.full_support.milestones.get(pct) {
-            writeln!(log, "  ({} traits needed)\n", m.items.len())?;
+            writeln!(log, "{} traits needed:\n", m.items.len())?;
             for item in &m.items {
                 writeln!(log, "  {:3}. {}", item.rank, item.name)?;
             }
         }
         
         // Methods
-        writeln!(log, "\nMETHODS to wrap for {}%:", pct)?;
+        writeln!(log, "\n--- METHODS to wrap for {}% ---\n", pct)?;
         if let Some(m) = rusticate.analysis.greedy_cover.methods.full_support.milestones.get(pct) {
-            writeln!(log, "  ({} methods needed)\n", m.items.len())?;
+            writeln!(log, "{} methods needed:\n", m.items.len())?;
             for item in &m.items {
                 writeln!(log, "  {:3}. {}", item.rank, item.name)?;
             }
