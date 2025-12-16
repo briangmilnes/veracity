@@ -495,26 +495,23 @@ fn write_report(
     // Section 4: Total methods
     writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
     writeln!(log, "Total methods with specifications: {}.\n", vstd.summary.total_wrapped_methods)?;
-    writeln!(log, "Legend: R=requires, E=ensures, C=recommends\n")?;
-    writeln!(log, "Breakdown by type:")?;
+    writeln!(log, "Breakdown by type:\n")?;
     for wt in &vstd.wrapped_rust_types {
         if !wt.methods_wrapped.is_empty() {
-            writeln!(log, "\n  {} ({} methods):", wt.rust_type, wt.methods_wrapped.len())?;
+            writeln!(log, "  {} ({} methods):", wt.rust_type, wt.methods_wrapped.len())?;
+            writeln!(log, "  {:<30} {:>8} {:>12} {:>10} {:>12}", 
+                "Method", "Mode", "requires", "ensures", "recommends")?;
+            writeln!(log, "  {}", "-".repeat(75))?;
             for m in &wt.methods_wrapped {
-                let mut markers = Vec::new();
-                if m.has_requires { markers.push("R"); }
-                if m.has_ensures { markers.push("E"); }
-                if m.has_recommends { markers.push("C"); }
-                
-                if markers.is_empty() {
-                    writeln!(log, "    - {} ({})", m.name, m.mode)?;
-                } else {
-                    writeln!(log, "    - {} ({}) [{}]", m.name, m.mode, markers.join(""))?;
-                }
+                let req = if m.has_requires { "yes" } else { "no" };
+                let ens = if m.has_ensures { "yes" } else { "no" };
+                let rec = if m.has_recommends { "yes" } else { "no" };
+                writeln!(log, "  {:<30} {:>8} {:>12} {:>10} {:>12}", 
+                    m.name, m.mode, req, ens, rec)?;
             }
+            writeln!(log)?;
         }
     }
-    writeln!(log)?;
     
     // Section 5: Per-type coverage
     writeln!(log, "\n=== 5. PER-TYPE METHOD COVERAGE ===\n")?;
@@ -605,37 +602,53 @@ fn write_report(
     // Section 13: Priority Recommendations
     writeln!(log, "\n=== 13. PRIORITY RECOMMENDATIONS ===\n")?;
     
-    writeln!(log, "To achieve 70% full support coverage, prioritize:\n")?;
+    writeln!(log, "Items to wrap to achieve full support coverage at each percentile.\n")?;
     
-    writeln!(log, "TOP 10 MODULES:")?;
-    if let Some(m) = rusticate.analysis.greedy_cover.modules.full_support.milestones.get("70") {
-        for item in m.items.iter().take(10) {
-            writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+    for pct in ["70", "80", "90", "100"] {
+        writeln!(log, "{}", "=".repeat(70))?;
+        writeln!(log, "{}% FULL SUPPORT COVERAGE", pct)?;
+        writeln!(log, "{}\n", "=".repeat(70))?;
+        
+        // Modules
+        writeln!(log, "MODULES to wrap for {}%:", pct)?;
+        if let Some(m) = rusticate.analysis.greedy_cover.modules.full_support.milestones.get(pct) {
+            writeln!(log, "  ({} modules needed)\n", m.items.len())?;
+            for item in &m.items {
+                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+            }
         }
+        
+        // Types
+        writeln!(log, "\nDATA TYPES to wrap for {}%:", pct)?;
+        if let Some(m) = rusticate.analysis.greedy_cover.types.full_support.milestones.get(pct) {
+            writeln!(log, "  ({} types needed)\n", m.items.len())?;
+            for item in &m.items {
+                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+            }
+        }
+        
+        // Traits
+        writeln!(log, "\nTRAITS to wrap for {}%:", pct)?;
+        if let Some(m) = rusticate.analysis.greedy_cover.traits.full_support.milestones.get(pct) {
+            writeln!(log, "  ({} traits needed)\n", m.items.len())?;
+            for item in &m.items {
+                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+            }
+        }
+        
+        // Methods
+        writeln!(log, "\nMETHODS to wrap for {}%:", pct)?;
+        if let Some(m) = rusticate.analysis.greedy_cover.methods.full_support.milestones.get(pct) {
+            writeln!(log, "  ({} methods needed)\n", m.items.len())?;
+            for item in &m.items {
+                writeln!(log, "  {:3}. {}", item.rank, item.name)?;
+            }
+        }
+        
+        writeln!(log)?;
     }
     
-    writeln!(log, "\nTOP 10 DATA TYPES:")?;
-    if let Some(m) = rusticate.analysis.greedy_cover.types.full_support.milestones.get("70") {
-        for item in m.items.iter().take(10) {
-            writeln!(log, "  {:3}. {}", item.rank, item.name)?;
-        }
-    }
-    
-    writeln!(log, "\nTOP 10 TRAITS:")?;
-    if let Some(m) = rusticate.analysis.greedy_cover.traits.full_support.milestones.get("70") {
-        for item in m.items.iter().take(10) {
-            writeln!(log, "  {:3}. {}", item.rank, item.name)?;
-        }
-    }
-    
-    writeln!(log, "\nTOP 20 METHODS:")?;
-    if let Some(m) = rusticate.analysis.greedy_cover.methods.full_support.milestones.get("70") {
-        for item in m.items.iter().take(20) {
-            writeln!(log, "  {:3}. {}", item.rank, item.name)?;
-        }
-    }
-    
-    writeln!(log, "\n{}", "=".repeat(80))?;
+    writeln!(log, "{}", "=".repeat(80))?;
     writeln!(log, "END OF REPORT")?;
     writeln!(log, "{}", "=".repeat(80))?;
     
