@@ -21,6 +21,9 @@ walkdir = "2.5"
 rayon = "1.10"
 syn = { version = "2.0", features = ["full", "visit", "extra-traits"] }
 verus_syn = { path = "../verus-lang/dependencies/syn", features = ["full", "visit", "extra-traits"] }
+jsonschema = "0.37"
+quote = "1.0"
+proc-macro2 = "1.0"
 
 [dev-dependencies]
 serial_test = "3.0"
@@ -93,6 +96,14 @@ path = "src/bin/analyze_modules_vir.rs"
 [[bin]]
 name = "veracity-analyze-rust-wrapping-needs"
 path = "src/bin/analyze_rust_wrapping_needs.rs"
+
+[[bin]]
+name = "veracity-analyze-libs"
+path = "src/bin/analyze_libs.rs"
+
+[[bin]]
+name = "veracity-review-string-hacking"
+path = "src/bin/review_string_hacking.rs"
 
 # Additional review tools (all working)
 # - review_requires_ensures.rs - Check pre/post conditions

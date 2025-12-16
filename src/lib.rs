@@ -9,6 +9,7 @@
 pub mod args;
 pub mod parser;
 pub mod search;
+pub mod vstd_inventory;
 
 use anyhow::Result;
 use ra_ap_syntax::SourceFile;

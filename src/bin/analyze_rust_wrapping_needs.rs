@@ -62,6 +62,24 @@ struct GreedyCover {
     types: GreedyCoverCategory,
     traits: GreedyCoverCategory,
     methods: GreedyCoverCategory,
+    methods_per_type: BTreeMap<String, TypeMethodsCover>,
+    methods_per_trait: BTreeMap<String, TraitMethodsCover>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TypeMethodsCover {
+    type_name: String,
+    total_crates: usize,
+    total_methods: usize,
+    milestones: BTreeMap<String, CoverageMilestone>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TraitMethodsCover {
+    trait_name: String,
+    total_crates: usize,
+    total_methods: usize,
+    milestones: BTreeMap<String, CoverageMilestone>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -396,10 +414,12 @@ fn write_report(
     writeln!(log, "  7.  Data Types: What to wrap for 70/80/90/100% coverage")?;
     writeln!(log, "  8.  Traits: What to wrap for 70/80/90/100% coverage")?;
     writeln!(log, "  9.  Methods: What to wrap for 70/80/90/100% coverage")?;
+    writeln!(log, "  10. Methods per Type: What to wrap within each type")?;
+    writeln!(log, "  11. Methods per Trait: What to wrap within each trait")?;
     writeln!(log)?;
     writeln!(log, "PART III: SUMMARY & RECOMMENDATIONS")?;
-    writeln!(log, "  10. Coverage Summary Table")?;
-    writeln!(log, "  11. Priority Recommendations")?;
+    writeln!(log, "  12. Coverage Summary Table")?;
+    writeln!(log, "  13. Priority Recommendations")?;
     writeln!(log)?;
     
     // ========================================================================
@@ -579,6 +599,18 @@ fn write_report(
     writeln!(log, "\n=== 9. METHODS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
     write_greedy_section(log, "methods", &rusticate.analysis.greedy_cover.methods)?;
     
+    // Section 10: Methods per Type
+    writeln!(log, "\n=== 10. METHODS PER TYPE: WHAT TO WRAP WITHIN EACH TYPE ===\n")?;
+    writeln!(log, "For each type, which methods matter most? Minimum methods to cover N% of crates")?;
+    writeln!(log, "that call methods on that type.\n")?;
+    write_methods_per_type_section(log, &rusticate.analysis.greedy_cover.methods_per_type)?;
+    
+    // Section 11: Methods per Trait
+    writeln!(log, "\n=== 11. METHODS PER TRAIT: WHAT TO WRAP WITHIN EACH TRAIT ===\n")?;
+    writeln!(log, "For each trait, which methods matter most? Minimum methods to cover N% of crates")?;
+    writeln!(log, "that use that trait.\n")?;
+    write_methods_per_trait_section(log, &rusticate.analysis.greedy_cover.methods_per_trait)?;
+    
     // ========================================================================
     // PART III: SUMMARY & RECOMMENDATIONS
     // ========================================================================
@@ -587,7 +619,7 @@ fn write_report(
     writeln!(log, "{}", "=".repeat(80))?;
     
     // Section 10: Coverage Summary
-    writeln!(log, "\n=== 10. COVERAGE SUMMARY TABLE ===\n")?;
+    writeln!(log, "\n=== 12. COVERAGE SUMMARY TABLE ===\n")?;
     writeln!(log, "Items needed to FULLY SUPPORT N% of {} crates:\n", rusticate.summary.crates_with_stdlib)?;
     writeln!(log, "{:>8} {:>10} {:>10} {:>10} {:>10}", "Target", "Modules", "Types", "Traits", "Methods")?;
     writeln!(log, "{}", "-".repeat(55))?;
@@ -618,7 +650,7 @@ fn write_report(
     writeln!(log)?;
     
     // Section 11: Priority Recommendations
-    writeln!(log, "\n=== 11. PRIORITY RECOMMENDATIONS ===\n")?;
+    writeln!(log, "\n=== 13. PRIORITY RECOMMENDATIONS ===\n")?;
     
     writeln!(log, "To achieve 70% full support coverage, prioritize:\n")?;
     
@@ -698,6 +730,81 @@ fn write_greedy_section(
             }
             writeln!(log)?;
         }
+    }
+    
+    Ok(())
+}
+
+fn write_methods_per_type_section(
+    log: &mut fs::File,
+    methods_per_type: &BTreeMap<String, TypeMethodsCover>,
+) -> Result<()> {
+    // Sort by total_crates descending
+    let mut sorted: Vec<_> = methods_per_type.iter().collect();
+    sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
+    
+    // Show top 10 types
+    for (type_name, cover) in sorted.iter().take(10) {
+        writeln!(log, "{}", "=".repeat(60))?;
+        writeln!(log, "TYPE: {} ({} crates, {} methods)", type_name, cover.total_crates, cover.total_methods)?;
+        writeln!(log, "{}", "=".repeat(60))?;
+        
+        for pct in ["70", "90", "100"] {
+            if let Some(milestone) = cover.milestones.get(pct) {
+                writeln!(log, "\n  {}% coverage ({} crates): {} methods",
+                    pct, milestone.target_crates, milestone.items.len())?;
+                for item in milestone.items.iter().take(10) {
+                    let short_name = item.name.split("::").last().unwrap_or(&item.name);
+                    writeln!(log, "    {:3}. {:<35} +{:>5} ({:>8.2}%)",
+                        item.rank, short_name, item.crates_added, item.cumulative_coverage)?;
+                }
+                if milestone.items.len() > 10 {
+                    writeln!(log, "    ... {} more", milestone.items.len() - 10)?;
+                }
+            }
+        }
+        writeln!(log)?;
+    }
+    
+    if sorted.len() > 10 {
+        writeln!(log, "\n... {} more types (see JSON for full data)", sorted.len() - 10)?;
+    }
+    
+    Ok(())
+}
+
+fn write_methods_per_trait_section(
+    log: &mut fs::File,
+    methods_per_trait: &BTreeMap<String, TraitMethodsCover>,
+) -> Result<()> {
+    // Sort by total_crates descending
+    let mut sorted: Vec<_> = methods_per_trait.iter().collect();
+    sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
+    
+    // Show top 10 traits
+    for (trait_name, cover) in sorted.iter().take(10) {
+        writeln!(log, "{}", "=".repeat(60))?;
+        writeln!(log, "TRAIT: {} ({} crates, {} methods)", trait_name, cover.total_crates, cover.total_methods)?;
+        writeln!(log, "{}", "=".repeat(60))?;
+        
+        for pct in ["70", "90", "100"] {
+            if let Some(milestone) = cover.milestones.get(pct) {
+                writeln!(log, "\n  {}% coverage ({} crates): {} methods",
+                    pct, milestone.target_crates, milestone.items.len())?;
+                for item in milestone.items.iter().take(10) {
+                    writeln!(log, "    {:3}. {:<35} +{:>5} ({:>8.2}%)",
+                        item.rank, item.name, item.crates_added, item.cumulative_coverage)?;
+                }
+                if milestone.items.len() > 10 {
+                    writeln!(log, "    ... {} more", milestone.items.len() - 10)?;
+                }
+            }
+        }
+        writeln!(log)?;
+    }
+    
+    if sorted.len() > 10 {
+        writeln!(log, "\n... {} more traits (see JSON for full data)", sorted.len() - 10)?;
     }
     
     Ok(())
