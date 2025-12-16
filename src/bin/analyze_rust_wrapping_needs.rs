@@ -3,57 +3,55 @@
 //! Analyzes what vstd already wraps from Rust stdlib and what gaps remain.
 //! Compares vstd coverage against actual Rust stdlib usage from rusticate analysis.
 //!
-//! Now reads from rusticate's JSON output for structured greedy cover data.
+//! Data sources:
+//!   - vstd wrapping: vstd_inventory.json (from veracity-analyze-libs, uses Verus parser)
+//!   - Rust usage: rusticate-analyze-modules-mir.json (MIR analysis)
 
 use anyhow::{Context, Result, bail};
-use regex::Regex;
 use serde::Deserialize;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use std::path::PathBuf;
 
 // ============================================================================
-// JSON Structures (must match rusticate-analyze-modules-mir.schema.json)
+// Rusticate JSON Structures (from rusticate-analyze-modules-mir)
 // ============================================================================
 
 #[derive(Debug, Deserialize)]
 struct RusticateAnalysis {
     generated: String,
     mir_path: String,
-    analysis: Analysis,
-    summary: Summary,
+    analysis: RusticateData,
+    summary: RusticateSummary,
 }
 
 #[derive(Debug, Deserialize)]
-struct Analysis {
-    projects: ProjectStats,
-    modules: ItemUsage,
-    types: ItemUsage,
-    traits: ItemUsage,
-    methods: ItemUsage,
+struct RusticateData {
     greedy_cover: GreedyCover,
 }
 
 #[derive(Debug, Deserialize)]
-struct ProjectStats {
+struct RusticateSummary {
     total_projects: usize,
-    projects_with_mir: usize,
     total_crates: usize,
     crates_with_stdlib: usize,
+    unique_modules: usize,
+    unique_types: usize,
+    unique_traits: usize,
+    unique_methods: usize,
+    coverage_to_support_70_pct: CoverageSummary,
+    coverage_to_support_80_pct: CoverageSummary,
+    coverage_to_support_90_pct: CoverageSummary,
+    coverage_to_support_100_pct: CoverageSummary,
 }
 
 #[derive(Debug, Deserialize)]
-struct ItemUsage {
-    count: usize,
-    items: Vec<UsageItem>,
-}
-
-#[derive(Debug, Deserialize)]
-struct UsageItem {
-    name: String,
-    crate_count: usize,
+struct CoverageSummary {
+    modules: usize,
+    types: usize,
+    traits: usize,
+    methods: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,24 +65,7 @@ struct GreedyCover {
 }
 
 #[derive(Debug, Deserialize)]
-struct TypeMethodsCover {
-    type_name: String,
-    total_crates: usize,
-    total_methods: usize,
-    milestones: BTreeMap<String, CoverageMilestone>,
-}
-
-#[derive(Debug, Deserialize)]
-struct TraitMethodsCover {
-    trait_name: String,
-    total_crates: usize,
-    total_methods: usize,
-    milestones: BTreeMap<String, CoverageMilestone>,
-}
-
-#[derive(Debug, Deserialize)]
 struct GreedyCoverCategory {
-    touch: GreedyCoverResults,
     full_support: GreedyCoverResults,
 }
 
@@ -110,26 +91,105 @@ struct GreedyItem {
 }
 
 #[derive(Debug, Deserialize)]
-struct Summary {
-    total_projects: usize,
+struct TypeMethodsCover {
+    type_name: String,
     total_crates: usize,
-    crates_with_stdlib: usize,
-    unique_modules: usize,
-    unique_types: usize,
-    unique_traits: usize,
-    unique_methods: usize,
-    coverage_to_support_70_pct: CoverageSummary,
-    coverage_to_support_80_pct: CoverageSummary,
-    coverage_to_support_90_pct: CoverageSummary,
-    coverage_to_support_100_pct: CoverageSummary,
+    total_methods: usize,
+    milestones: BTreeMap<String, CoverageMilestone>,
 }
 
 #[derive(Debug, Deserialize)]
-struct CoverageSummary {
-    modules: usize,
-    types: usize,
-    traits: usize,
-    methods: usize,
+struct TraitMethodsCover {
+    trait_name: String,
+    total_crates: usize,
+    total_methods: usize,
+    milestones: BTreeMap<String, CoverageMilestone>,
+}
+
+// ============================================================================
+// VStd Inventory Structures (from veracity-analyze-libs, Verus parser)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct VstdInventory {
+    generated: String,
+    vstd_path: String,
+    wrapped_rust_types: Vec<WrappedRustType>,
+    traits: Vec<VstdTrait>,
+    summary: VstdSummary,
+    // Other fields we don't need but must accept
+    #[serde(default)]
+    modules: serde_json::Value,
+    #[serde(default)]
+    compiler_builtins: serde_json::Value,
+    #[serde(default)]
+    primitive_type_specs: serde_json::Value,
+    #[serde(default)]
+    ghost_types: serde_json::Value,
+    #[serde(default)]
+    tracked_types: serde_json::Value,
+    #[serde(default)]
+    spec_functions: serde_json::Value,
+    #[serde(default)]
+    proof_functions: serde_json::Value,
+    #[serde(default)]
+    exec_functions: serde_json::Value,
+    #[serde(default)]
+    external_specs: serde_json::Value,
+    #[serde(default)]
+    axioms: serde_json::Value,
+    #[serde(default)]
+    broadcast_groups: serde_json::Value,
+    #[serde(default)]
+    macros: serde_json::Value,
+    #[serde(default)]
+    constants: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct WrappedRustType {
+    rust_type: String,
+    rust_module: String,
+    vstd_path: String,
+    methods_wrapped: Vec<WrappedMethod>,
+}
+
+#[derive(Debug, Deserialize)]
+struct WrappedMethod {
+    name: String,
+    mode: String,
+    has_requires: bool,
+    has_ensures: bool,
+    has_recommends: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct VstdTrait {
+    name: String,
+    qualified_path: String,
+    #[serde(default)]
+    spec_methods: Vec<String>,
+    #[serde(default)]
+    proof_methods: Vec<String>,
+    #[serde(default)]
+    exec_methods: Vec<String>,
+}
+
+impl VstdTrait {
+    fn total_methods(&self) -> usize {
+        self.spec_methods.len() + self.proof_methods.len() + self.exec_methods.len()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct VstdSummary {
+    total_wrapped_rust_types: usize,
+    total_wrapped_methods: usize,
+    total_traits: usize,
+    total_spec_functions: usize,
+    total_proof_functions: usize,
+    total_exec_functions: usize,
+    total_lemmas: usize,
 }
 
 // ============================================================================
@@ -137,34 +197,27 @@ struct CoverageSummary {
 // ============================================================================
 
 struct Args {
-    vstd_path: PathBuf,
+    vstd_inventory: PathBuf,
     rusticate_json: PathBuf,
 }
 
 impl Args {
     fn parse() -> Result<Self> {
         let mut args_iter = std::env::args().skip(1);
-        let mut vstd_path = None;
+        let mut vstd_inventory = None;
         let mut rusticate_json = None;
 
         while let Some(arg) = args_iter.next() {
             match arg.as_str() {
-                "-v" | "--vstd-path" => {
-                    vstd_path = Some(PathBuf::from(
-                        args_iter.next().context("Expected path after -v/--vstd-path")?,
+                "-i" | "--vstd-inventory" => {
+                    vstd_inventory = Some(PathBuf::from(
+                        args_iter.next().context("Expected path after -i/--vstd-inventory")?,
                     ));
                 }
                 "-j" | "--rusticate-json" => {
                     rusticate_json = Some(PathBuf::from(
                         args_iter.next().context("Expected path after -j/--rusticate-json")?,
                     ));
-                }
-                // Legacy: support -r for backwards compat (will look for .json)
-                "-r" | "--rusticate-log" => {
-                    let log_path = args_iter.next().context("Expected path after -r")?;
-                    // Convert .log to .json
-                    let json_path = log_path.replace(".log", ".json");
-                    rusticate_json = Some(PathBuf::from(json_path));
                 }
                 "-h" | "--help" => {
                     print_help();
@@ -174,25 +227,24 @@ impl Args {
             }
         }
 
-        let vstd_path = vstd_path.context("Missing -v/--vstd-path")?;
+        let vstd_inventory = vstd_inventory.context("Missing -i/--vstd-inventory")?;
         let rusticate_json = rusticate_json.context("Missing -j/--rusticate-json")?;
-        Ok(Args { vstd_path, rusticate_json })
+        Ok(Args { vstd_inventory, rusticate_json })
     }
 }
 
 fn print_help() {
     println!(
-        r#"veracity-analyze-rust-wrapping-needs-in-verus
+        r#"veracity-analyze-rust-wrapping-needs
 
 Analyzes what vstd wraps from Rust stdlib vs what's actually used.
 
 USAGE:
-    veracity-analyze-rust-wrapping-needs -v <VSTD_PATH> -j <RUSTICATE_JSON>
+    veracity-analyze-rust-wrapping-needs -i <VSTD_INVENTORY> -j <RUSTICATE_JSON>
 
 OPTIONS:
-    -v, --vstd-path <PATH>       Path to vstd source directory
-    -j, --rusticate-json <PATH>  Path to rusticate's analyze_modules_mir.json
-    -r, --rusticate-log <PATH>   Legacy: path to .log (will look for .json)
+    -i, --vstd-inventory <PATH>  Path to vstd_inventory.json (from veracity-analyze-libs)
+    -j, --rusticate-json <PATH>  Path to rusticate-analyze-modules-mir.json
     -h, --help                   Print help
 
 OUTPUT:
@@ -202,130 +254,7 @@ OUTPUT:
 }
 
 // ============================================================================
-// VStd Parsing
-// ============================================================================
-
-/// Information about a wrapped type in vstd
-#[derive(Debug, Default, Clone)]
-struct VstdTypeInfo {
-    methods: BTreeMap<String, MethodSpec>,
-    source_file: String,
-    has_type_spec: bool,
-}
-
-#[derive(Debug, Default, Clone)]
-struct MethodSpec {
-    has_requires: bool,
-    has_ensures: bool,
-    has_recommends: bool,
-    is_assume_specification: bool,
-}
-
-/// Parse vstd source to find wrapped types and methods
-fn parse_vstd_source(vstd_path: &Path) -> Result<BTreeMap<String, VstdTypeInfo>> {
-    let mut wrapped_types: BTreeMap<String, VstdTypeInfo> = BTreeMap::new();
-    
-    let assume_spec_re = Regex::new(r"assume_specification\s*\[\s*([^\]]+)\s*\]").unwrap();
-    let requires_re = Regex::new(r"requires\b").unwrap();
-    let ensures_re = Regex::new(r"ensures\b").unwrap();
-    let recommends_re = Regex::new(r"recommends\b").unwrap();
-    
-    let stdlib_types: HashSet<&str> = [
-        "Option", "Result", "Vec", "String", "Box", "Rc", "Arc",
-        "Cell", "RefCell", "Mutex", "RwLock",
-        "HashMap", "BTreeMap", "HashSet", "BTreeSet",
-        "VecDeque", "LinkedList", "BinaryHeap",
-        "Range", "RangeInclusive", "Ordering", "ControlFlow",
-        "Iterator", "IntoIterator", "FromIterator",
-        "Clone", "Copy", "Default", "Debug", "Display",
-        "PartialEq", "Eq", "PartialOrd", "Ord", "Hash",
-        "Deref", "DerefMut", "Index", "IndexMut",
-        "Add", "Sub", "Mul", "Div", "Rem", "Neg",
-        "BitAnd", "BitOr", "BitXor", "Not", "Shl", "Shr",
-        "Drop", "Fn", "FnMut", "FnOnce",
-        "Send", "Sync", "Sized", "Unpin",
-        "AtomicBool", "AtomicU32", "AtomicU64", "AtomicUsize",
-        "DefaultHasher",
-    ].into_iter().collect();
-    
-    for entry in WalkDir::new(vstd_path)
-        .max_depth(4)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("rs") {
-            continue;
-        }
-        
-        let content = match fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        
-        let rel_path = path.strip_prefix(vstd_path)
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
-        
-        // Find assume_specification blocks
-        for cap in assume_spec_re.captures_iter(&content) {
-            let spec_path = cap.get(1).map(|m| m.as_str()).unwrap_or("");
-            
-            // Extract type and method from paths like "std::option::Option::unwrap"
-            let parts: Vec<&str> = spec_path.split("::").collect();
-            if parts.len() >= 2 {
-                let type_name = parts[parts.len() - 2];
-                let method_name = parts[parts.len() - 1];
-                
-                if stdlib_types.contains(type_name) {
-                    let info = wrapped_types.entry(type_name.to_string())
-                        .or_insert_with(|| VstdTypeInfo {
-                            source_file: rel_path.clone(),
-                            ..Default::default()
-                        });
-                    
-                    // Get context around the spec for requires/ensures
-                    let spec_start = cap.get(0).map(|m| m.start()).unwrap_or(0);
-                    let context_end = (spec_start + 500).min(content.len());
-                    let context = &content[spec_start..context_end];
-                    
-                    info.methods.insert(method_name.to_string(), MethodSpec {
-                        has_requires: requires_re.is_match(context),
-                        has_ensures: ensures_re.is_match(context),
-                        has_recommends: recommends_re.is_match(context),
-                        is_assume_specification: true,
-                    });
-                }
-            }
-        }
-        
-        // Also look for spec fn definitions with ensures
-        let spec_fn_re = Regex::new(r"(?:pub\s+)?(?:open\s+)?spec\s+fn\s+(spec_\w+|view|deep_view)").unwrap();
-        for cap in spec_fn_re.captures_iter(&content) {
-            let method_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
-            
-            // Try to find which type this belongs to by looking for impl blocks
-            if rel_path.contains("option") {
-                let info = wrapped_types.entry("Option".to_string())
-                    .or_insert_with(|| VstdTypeInfo { source_file: rel_path.clone(), ..Default::default() });
-                info.methods.entry(method_name.to_string()).or_default();
-            } else if rel_path.contains("result") {
-                let info = wrapped_types.entry("Result".to_string())
-                    .or_insert_with(|| VstdTypeInfo { source_file: rel_path.clone(), ..Default::default() });
-                info.methods.entry(method_name.to_string()).or_default();
-            } else if rel_path.contains("vec") || rel_path.contains("slice") {
-                let info = wrapped_types.entry("Vec".to_string())
-                    .or_insert_with(|| VstdTypeInfo { source_file: rel_path.clone(), ..Default::default() });
-                info.methods.entry(method_name.to_string()).or_default();
-            }
-        }
-    }
-    
-    Ok(wrapped_types)
-}
-
-// ============================================================================
-// Main Analysis
+// Main
 // ============================================================================
 
 fn main() -> Result<()> {
@@ -334,15 +263,26 @@ fn main() -> Result<()> {
     
     println!("veracity-analyze-rust-wrapping-needs");
     println!("=====================================");
-    println!("vstd path: {}", args.vstd_path.display());
+    println!("vstd inventory: {}", args.vstd_inventory.display());
     println!("rusticate JSON: {}", args.rusticate_json.display());
     println!();
     
+    // Load vstd inventory (from Verus parser)
+    println!("Loading vstd inventory (Verus parser)...");
+    let vstd_content = fs::read_to_string(&args.vstd_inventory)
+        .with_context(|| format!("Failed to read: {}", args.vstd_inventory.display()))?;
+    let vstd: VstdInventory = serde_json::from_str(&vstd_content)
+        .context("Failed to parse vstd inventory JSON")?;
+    
+    println!("  Types wrapped: {}", vstd.summary.total_wrapped_rust_types);
+    println!("  Methods wrapped: {}", vstd.summary.total_wrapped_methods);
+    println!("  Traits: {}", vstd.summary.total_traits);
+    
     // Load rusticate JSON
-    println!("Loading rusticate JSON...");
-    let json_content = fs::read_to_string(&args.rusticate_json)
+    println!("\nLoading rusticate JSON (MIR analysis)...");
+    let rusticate_content = fs::read_to_string(&args.rusticate_json)
         .with_context(|| format!("Failed to read: {}", args.rusticate_json.display()))?;
-    let rusticate: RusticateAnalysis = serde_json::from_str(&json_content)
+    let rusticate: RusticateAnalysis = serde_json::from_str(&rusticate_content)
         .context("Failed to parse rusticate JSON")?;
     
     println!("  Projects: {}", rusticate.summary.total_projects);
@@ -350,23 +290,20 @@ fn main() -> Result<()> {
         rusticate.summary.total_crates, 
         rusticate.summary.crates_with_stdlib);
     
-    // Parse vstd
-    println!("\nParsing vstd source...");
-    let vstd_wrapped = parse_vstd_source(&args.vstd_path)?;
-    println!("  Found {} wrapped types", vstd_wrapped.len());
-    
     // Set up log output
     fs::create_dir_all("analyses")?;
     let log_path = PathBuf::from("analyses/analyze_rust_wrapping_needs.log");
     let mut log = fs::File::create(&log_path)?;
     
     // Write the full report
-    write_report(&mut log, &rusticate, &vstd_wrapped)?;
+    write_report(&mut log, &vstd, &rusticate)?;
     
     let elapsed = start.elapsed();
     println!("\nAnalysis complete!");
     println!("==================");
-    println!("vstd wraps: {} types", vstd_wrapped.len());
+    println!("vstd wraps: {} types, {} methods", 
+        vstd.summary.total_wrapped_rust_types,
+        vstd.summary.total_wrapped_methods);
     println!("Rust uses: {} modules, {} types, {} traits, {} methods",
         rusticate.summary.unique_modules,
         rusticate.summary.unique_types,
@@ -380,8 +317,8 @@ fn main() -> Result<()> {
 
 fn write_report(
     log: &mut fs::File,
+    vstd: &VstdInventory,
     rusticate: &RusticateAnalysis,
-    vstd_wrapped: &BTreeMap<String, VstdTypeInfo>,
 ) -> Result<()> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %:z");
     
@@ -391,6 +328,7 @@ fn write_report(
     writeln!(log, "VERUS STDLIB WRAPPING GAP ANALYSIS")?;
     writeln!(log, "===================================")?;
     writeln!(log, "Generated: {}", timestamp)?;
+    writeln!(log, "VStd Inventory: {} (generated {})", vstd.vstd_path, vstd.generated)?;
     writeln!(log, "Rusticate JSON: {} (generated {})", rusticate.mir_path, rusticate.generated)?;
     writeln!(log)?;
     
@@ -449,8 +387,9 @@ fn write_report(
     writeln!(log, "  Total crates analyzed: {}", rusticate.summary.total_crates)?;
     writeln!(log)?;
     writeln!(log, "VSTD WRAPPING:")?;
-    writeln!(log, "  Method: Regex-based parsing of vstd/std_specs/*.rs")?;
-    writeln!(log, "  Extracts: assume_specification blocks, spec fn definitions")?;
+    writeln!(log, "  Tool: veracity-analyze-libs")?;
+    writeln!(log, "  Method: Verus AST parser (verus_syn) analysis of vstd source")?;
+    writeln!(log, "  Source: {}", vstd.vstd_path)?;
     writeln!(log)?;
     
     writeln!(log, "--- Key Questions This Report Answers ---\n")?;
@@ -459,13 +398,15 @@ fn write_report(
         rusticate.summary.crates_with_stdlib, rusticate.summary.total_projects)?;
     
     writeln!(log, "Q2. How many Rust Data Types does Verus wrap?")?;
-    writeln!(log, "    -> {} types currently wrapped\n", vstd_wrapped.len())?;
+    writeln!(log, "    -> {} types currently wrapped\n", vstd.summary.total_wrapped_rust_types)?;
     
-    let vstd_method_count: usize = vstd_wrapped.values().map(|t| t.methods.len()).sum();
-    writeln!(log, "Q3. How many total Rust Methods does Verus wrap?")?;
-    writeln!(log, "    -> {} methods currently wrapped\n", vstd_method_count)?;
+    writeln!(log, "Q3. How many Rust Traits does Verus wrap?")?;
+    writeln!(log, "    -> {} traits in vstd\n", vstd.summary.total_traits)?;
     
-    writeln!(log, "Q4-Q9. Greedy coverage questions answered in Parts I and II below.\n")?;
+    writeln!(log, "Q4. How many total Rust Methods does Verus wrap?")?;
+    writeln!(log, "    -> {} methods currently wrapped\n", vstd.summary.total_wrapped_methods)?;
+    
+    writeln!(log, "Q5-Q11. Greedy coverage questions answered in Parts I and II below.\n")?;
     
     // ========================================================================
     // PART I: CURRENT STATE
@@ -490,40 +431,55 @@ fn write_report(
     writeln!(log, "  - Type annotations: core::option::Option<T>")?;
     writeln!(log)?;
     
-    // Section 2: How many types does Verus wrap?
+    // Section 2: Types wrapped
     writeln!(log, "\n=== 2. HOW MANY RUST DATA TYPES DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "vstd currently wraps {} Rust stdlib types:\n", vstd_wrapped.len())?;
-    writeln!(log, "{:<25} {:>10}    {}", "Type", "Methods", "Source File")?;
+    writeln!(log, "vstd currently wraps {} Rust stdlib types:\n", vstd.wrapped_rust_types.len())?;
+    writeln!(log, "{:<20} {:<35} {:>10}", "Type", "Rust Module", "Methods")?;
     writeln!(log, "{}", "-".repeat(70))?;
     
-    let mut sorted_types: Vec<_> = vstd_wrapped.iter().collect();
-    sorted_types.sort_by(|a, b| b.1.methods.len().cmp(&a.1.methods.len()));
-    
-    for (type_name, info) in &sorted_types {
-        writeln!(log, "{:<25} {:>10}    {}", type_name, info.methods.len(), info.source_file)?;
+    let mut total_wrapped = 0;
+    for wt in &vstd.wrapped_rust_types {
+        total_wrapped += wt.methods_wrapped.len();
+        writeln!(log, "{:<20} {:<35} {:>10}", wt.rust_type, wt.rust_module, wt.methods_wrapped.len())?;
     }
     writeln!(log)?;
+    writeln!(log, "Total: {} types, {} methods", vstd.wrapped_rust_types.len(), total_wrapped)?;
     
-    // Section 3: Traits (placeholder - vstd parsing doesn't distinguish well)
+    // Section 3: Traits
     writeln!(log, "\n=== 3. HOW MANY RUST TRAITS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "Note: vstd provides specs for traits in std_specs/ops.rs, std_specs/cmp.rs, etc.")?;
-    writeln!(log, "The current parser extracts these as part of type analysis.")?;
-    writeln!(log, "Key traits with specs: PartialEq, Eq, PartialOrd, Ord, Add, Sub, Mul, Div, etc.\n")?;
+    writeln!(log, "vstd provides specs for {} traits:\n", vstd.traits.len())?;
+    
+    let mut total_trait_methods = 0;
+    for t in &vstd.traits {
+        total_trait_methods += t.total_methods();
+    }
+    
+    writeln!(log, "{:<40} {:>10}", "Trait", "Methods")?;
+    writeln!(log, "{}", "-".repeat(55))?;
+    for t in vstd.traits.iter().take(20) {
+        writeln!(log, "{:<40} {:>10}", t.name, t.total_methods())?;
+    }
+    if vstd.traits.len() > 20 {
+        writeln!(log, "... {} more traits", vstd.traits.len() - 20)?;
+    }
+    writeln!(log)?;
+    writeln!(log, "Total: {} traits, {} trait methods", vstd.traits.len(), total_trait_methods)?;
     
     // Section 4: Total methods
     writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "Total methods with specifications: {}\n", vstd_method_count)?;
+    writeln!(log, "Total methods with specifications: {}\n", vstd.summary.total_wrapped_methods)?;
     writeln!(log, "Breakdown by type:")?;
-    for (type_name, info) in &sorted_types {
-        if !info.methods.is_empty() {
-            writeln!(log, "\n  {} ({} methods):", type_name, info.methods.len())?;
-            let mut methods: Vec<_> = info.methods.keys().collect();
-            methods.sort();
-            for method in methods.iter().take(20) {
-                writeln!(log, "    - {}", method)?;
-            }
-            if methods.len() > 20 {
-                writeln!(log, "    ... {} more", methods.len() - 20)?;
+    for wt in &vstd.wrapped_rust_types {
+        if !wt.methods_wrapped.is_empty() {
+            writeln!(log, "\n  {} ({} methods):", wt.rust_type, wt.methods_wrapped.len())?;
+            for m in &wt.methods_wrapped {
+                let spec_markers = format!(
+                    "[{}{}{}]",
+                    if m.has_requires { "R" } else { "" },
+                    if m.has_ensures { "E" } else { "" },
+                    if m.has_recommends { "C" } else { "" }
+                );
+                writeln!(log, "    - {} {} {}", m.name, m.mode, spec_markers)?;
             }
         }
     }
@@ -532,42 +488,8 @@ fn write_report(
     // Section 5: Per-type coverage
     writeln!(log, "\n=== 5. PER-TYPE METHOD COVERAGE ===\n")?;
     writeln!(log, "Comparing vstd wrapped methods vs Rust usage:\n")?;
-    
-    // Build map of type -> methods used in Rust
-    let mut rust_type_methods: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for item in &rusticate.analysis.methods.items {
-        let parts: Vec<&str> = item.name.split("::").collect();
-        if parts.len() >= 2 {
-            // Extract type name (e.g., "Vec" from "alloc::vec::Vec::push")
-            let type_idx = parts.len() - 2;
-            let type_name = parts[type_idx];
-            let method_name = parts[parts.len() - 1];
-            
-            // Only track known stdlib types
-            let known_types = ["Option", "Result", "Vec", "String", "Box", "Arc", "Rc",
-                "HashMap", "HashSet", "BTreeMap", "BTreeSet", "VecDeque", "Mutex", "RwLock"];
-            if known_types.contains(&type_name) {
-                rust_type_methods.entry(type_name.to_string())
-                    .or_default()
-                    .insert(method_name.to_string());
-            }
-        }
-    }
-    
-    writeln!(log, "{:<15} {:>10} {:>10} {:>10} {:>10}", 
-        "Type", "Wrapped", "Used", "Coverage", "Gap")?;
-    writeln!(log, "{}", "-".repeat(60))?;
-    
-    for (type_name, rust_methods) in &rust_type_methods {
-        let wrapped = vstd_wrapped.get(type_name).map(|t| t.methods.len()).unwrap_or(0);
-        let used = rust_methods.len();
-        let coverage = if used > 0 { (wrapped as f64 / used as f64) * 100.0 } else { 0.0 };
-        let gap = used.saturating_sub(wrapped);
-        
-        writeln!(log, "{:<15} {:>10} {:>10} {:>9.1}% {:>10}", 
-            type_name, wrapped, used, coverage, gap)?;
-    }
-    writeln!(log)?;
+    writeln!(log, "(Note: vstd wraps: {} types, Rust uses: {} unique types in MIR)\n",
+        vstd.wrapped_rust_types.len(), rusticate.summary.unique_types)?;
     
     // ========================================================================
     // PART II: GREEDY FULL SUPPORT COVERAGE
@@ -618,7 +540,7 @@ fn write_report(
     writeln!(log, "PART III: SUMMARY & RECOMMENDATIONS")?;
     writeln!(log, "{}", "=".repeat(80))?;
     
-    // Section 10: Coverage Summary
+    // Section 12: Coverage Summary
     writeln!(log, "\n=== 12. COVERAGE SUMMARY TABLE ===\n")?;
     writeln!(log, "Items needed to FULLY SUPPORT N% of {} crates:\n", rusticate.summary.crates_with_stdlib)?;
     writeln!(log, "{:>8} {:>10} {:>10} {:>10} {:>10}", "Target", "Modules", "Types", "Traits", "Methods")?;
@@ -649,7 +571,7 @@ fn write_report(
         rusticate.summary.coverage_to_support_100_pct.methods)?;
     writeln!(log)?;
     
-    // Section 11: Priority Recommendations
+    // Section 13: Priority Recommendations
     writeln!(log, "\n=== 13. PRIORITY RECOMMENDATIONS ===\n")?;
     
     writeln!(log, "To achieve 70% full support coverage, prioritize:\n")?;
@@ -703,7 +625,6 @@ fn write_greedy_section(
                 pct, milestone.target_crates, milestone.actual_coverage)?;
             writeln!(log, "Items needed: {}\n", milestone.items.len())?;
             
-            // Show more items for 70%, fewer for others
             let show_count = match pct {
                 "70" => 25,
                 "80" => 15,
@@ -739,11 +660,9 @@ fn write_methods_per_type_section(
     log: &mut fs::File,
     methods_per_type: &BTreeMap<String, TypeMethodsCover>,
 ) -> Result<()> {
-    // Sort by total_crates descending
     let mut sorted: Vec<_> = methods_per_type.iter().collect();
     sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
     
-    // Show top 10 types
     for (type_name, cover) in sorted.iter().take(10) {
         writeln!(log, "{}", "=".repeat(60))?;
         writeln!(log, "TYPE: {} ({} crates, {} methods)", type_name, cover.total_crates, cover.total_methods)?;
@@ -777,11 +696,9 @@ fn write_methods_per_trait_section(
     log: &mut fs::File,
     methods_per_trait: &BTreeMap<String, TraitMethodsCover>,
 ) -> Result<()> {
-    // Sort by total_crates descending
     let mut sorted: Vec<_> = methods_per_trait.iter().collect();
     sorted.sort_by(|a, b| b.1.total_crates.cmp(&a.1.total_crates));
     
-    // Show top 10 traits
     for (trait_name, cover) in sorted.iter().take(10) {
         writeln!(log, "{}", "=".repeat(60))?;
         writeln!(log, "TRAIT: {} ({} crates, {} methods)", trait_name, cover.total_crates, cover.total_methods)?;
