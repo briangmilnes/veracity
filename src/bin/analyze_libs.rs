@@ -867,12 +867,19 @@ fn categorize_axiom(name: &str, source_file: &str) -> String {
 }
 
 fn infer_rust_type_from_impl(impl_type: &str, source_file: &str) -> (String, String) {
-    // Use source file location to determine what Rust type is being wrapped
+    // First, try to extract the type directly from the impl_type string
+    // This handles cases like "impl View for Chars<'a>" -> Chars
+    let extracted = extract_type_from_impl(impl_type);
+    if !extracted.0.is_empty() {
+        return extracted;
+    }
+    
+    // Fallback: Use source file location to determine what Rust type is being wrapped
     if source_file.contains("option") {
         ("Option".to_string(), "core::option".to_string())
     } else if source_file.contains("result") {
         ("Result".to_string(), "core::result".to_string())
-    } else if source_file.contains("vec.rs") {
+    } else if source_file.contains("vec.rs") && !source_file.contains("vecdeque") {
         ("Vec".to_string(), "alloc::vec".to_string())
     } else if source_file.contains("vecdeque") {
         ("VecDeque".to_string(), "alloc::collections".to_string())
@@ -884,8 +891,143 @@ fn infer_rust_type_from_impl(impl_type: &str, source_file: &str) -> (String, Str
         } else {
             ("HashMap".to_string(), "std::collections::hash_map".to_string())
         }
+    } else if source_file.contains("string.rs") {
+        if impl_type.contains("Chars") {
+            ("Chars".to_string(), "core::str".to_string())
+        } else if impl_type.contains("str") && !impl_type.contains("String") {
+            ("str".to_string(), "core::str".to_string())
+        } else {
+            ("String".to_string(), "alloc::string".to_string())
+        }
+    } else if source_file.contains("array.rs") {
+        ("array".to_string(), "core::array".to_string())
+    } else if source_file.contains("view.rs") {
+        // view.rs has impls for Box, Rc, Arc, Vec, Option, and primitives
+        if impl_type.contains("Box") {
+            ("Box".to_string(), "alloc::boxed".to_string())
+        } else if impl_type.contains("Rc") {
+            ("Rc".to_string(), "alloc::rc".to_string())
+        } else if impl_type.contains("Arc") {
+            ("Arc".to_string(), "alloc::sync".to_string())
+        } else if impl_type.contains("Vec") {
+            ("Vec".to_string(), "alloc::vec".to_string())
+        } else if impl_type.contains("Option") {
+            ("Option".to_string(), "core::option".to_string())
+        } else {
+            (String::new(), String::new())
+        }
+    } else if source_file.contains("borrow.rs") {
+        ("Cow".to_string(), "alloc::borrow".to_string())
+    } else if source_file.contains("range.rs") {
+        if impl_type.contains("Inclusive") {
+            ("RangeInclusive".to_string(), "core::ops".to_string())
+        } else {
+            ("Range".to_string(), "core::ops".to_string())
+        }
+    } else if source_file.contains("raw_ptr.rs") {
+        if impl_type.contains("mut") {
+            ("*mut T".to_string(), "core::ptr".to_string())
+        } else if impl_type.contains("const") {
+            ("*const T".to_string(), "core::ptr".to_string())
+        } else if impl_type.contains("PointsTo") {
+            ("PointsTo".to_string(), "vstd::raw_ptr".to_string())
+        } else {
+            (String::new(), String::new())
+        }
+    } else if source_file.contains("core.rs") {
+        if impl_type.contains("Ordering") {
+            ("Ordering".to_string(), "core::cmp".to_string())
+        } else if impl_type.contains("Duration") {
+            ("Duration".to_string(), "core::time".to_string())
+        } else if impl_type.contains("PhantomData") {
+            ("PhantomData".to_string(), "core::marker".to_string())
+        } else if impl_type.contains("ManuallyDrop") {
+            ("ManuallyDrop".to_string(), "core::mem".to_string())
+        } else {
+            (String::new(), String::new())
+        }
+    } else if source_file.contains("atomic.rs") {
+        // Extract atomic type name from impl_type
+        if impl_type.contains("AtomicBool") {
+            ("AtomicBool".to_string(), "core::sync::atomic".to_string())
+        } else if impl_type.contains("AtomicU") || impl_type.contains("AtomicI") || impl_type.contains("AtomicUsize") || impl_type.contains("AtomicIsize") {
+            // Generic atomic handling
+            let name = impl_type.split('<').next().unwrap_or(impl_type).trim();
+            (name.to_string(), "core::sync::atomic".to_string())
+        } else if impl_type.contains("Ordering") {
+            ("Ordering".to_string(), "core::sync::atomic".to_string())
+        } else {
+            (String::new(), String::new())
+        }
+    } else if source_file.contains("convert.rs") {
+        ("TryFromIntError".to_string(), "core::num".to_string())
+    } else if source_file.contains("cmp.rs") {
+        ("AssertParamIsEq".to_string(), "core::cmp".to_string())
+    } else if source_file.contains("control_flow.rs") {
+        if impl_type.contains("Infallible") {
+            ("Infallible".to_string(), "core::convert".to_string())
+        } else {
+            ("ControlFlow".to_string(), "core::ops".to_string())
+        }
     } else {
         (String::new(), String::new())
+    }
+}
+
+/// Extract type name from impl block type string
+/// e.g., "Chars<'a>" -> ("Chars", "core::str")
+fn extract_type_from_impl(impl_type: &str) -> (String, String) {
+    // Strip generics to get base type name
+    let base = impl_type.split('<').next().unwrap_or(impl_type).trim();
+    
+    // Known stdlib type mappings
+    match base {
+        "Chars" => ("Chars".to_string(), "core::str".to_string()),
+        "str" => ("str".to_string(), "core::str".to_string()),
+        "String" => ("String".to_string(), "alloc::string".to_string()),
+        "Vec" => ("Vec".to_string(), "alloc::vec".to_string()),
+        "VecDeque" => ("VecDeque".to_string(), "alloc::collections".to_string()),
+        "Option" => ("Option".to_string(), "core::option".to_string()),
+        "Result" => ("Result".to_string(), "core::result".to_string()),
+        "HashMap" => ("HashMap".to_string(), "std::collections".to_string()),
+        "HashSet" => ("HashSet".to_string(), "std::collections".to_string()),
+        "Box" => ("Box".to_string(), "alloc::boxed".to_string()),
+        "Rc" => ("Rc".to_string(), "alloc::rc".to_string()),
+        "Arc" => ("Arc".to_string(), "alloc::sync".to_string()),
+        "Cow" => ("Cow".to_string(), "alloc::borrow".to_string()),
+        "Range" => ("Range".to_string(), "core::ops".to_string()),
+        "RangeInclusive" => ("RangeInclusive".to_string(), "core::ops".to_string()),
+        "Duration" => ("Duration".to_string(), "core::time".to_string()),
+        "Ordering" => ("Ordering".to_string(), "core::cmp".to_string()),
+        "PhantomData" => ("PhantomData".to_string(), "core::marker".to_string()),
+        "ManuallyDrop" => ("ManuallyDrop".to_string(), "core::mem".to_string()),
+        "ControlFlow" => ("ControlFlow".to_string(), "core::ops".to_string()),
+        "Infallible" => ("Infallible".to_string(), "core::convert".to_string()),
+        "DefaultHasher" => ("DefaultHasher".to_string(), "std::collections::hash_map".to_string()),
+        "IntoIter" => ("IntoIter".to_string(), "alloc::vec".to_string()),
+        "Iter" => ("Iter".to_string(), "core::slice".to_string()),
+        "Keys" => ("Keys".to_string(), "std::collections::hash_map".to_string()),
+        "Values" => ("Values".to_string(), "std::collections::hash_map".to_string()),
+        // Atomic types
+        "AtomicBool" => ("AtomicBool".to_string(), "core::sync::atomic".to_string()),
+        "AtomicU8" => ("AtomicU8".to_string(), "core::sync::atomic".to_string()),
+        "AtomicU16" => ("AtomicU16".to_string(), "core::sync::atomic".to_string()),
+        "AtomicU32" => ("AtomicU32".to_string(), "core::sync::atomic".to_string()),
+        "AtomicU64" => ("AtomicU64".to_string(), "core::sync::atomic".to_string()),
+        "AtomicUsize" => ("AtomicUsize".to_string(), "core::sync::atomic".to_string()),
+        "AtomicI8" => ("AtomicI8".to_string(), "core::sync::atomic".to_string()),
+        "AtomicI16" => ("AtomicI16".to_string(), "core::sync::atomic".to_string()),
+        "AtomicI32" => ("AtomicI32".to_string(), "core::sync::atomic".to_string()),
+        "AtomicI64" => ("AtomicI64".to_string(), "core::sync::atomic".to_string()),
+        "AtomicIsize" => ("AtomicIsize".to_string(), "core::sync::atomic".to_string()),
+        // Raw pointers - check for patterns
+        _ if base.starts_with("*mut") => ("*mut T".to_string(), "core::ptr".to_string()),
+        _ if base.starts_with("*const") => ("*const T".to_string(), "core::ptr".to_string()),
+        // Arrays
+        _ if base.starts_with("[") && base.contains(";") => ("array".to_string(), "core::array".to_string()),
+        // Slices
+        _ if base == "[T]" || (base.starts_with("[") && !base.contains(";")) => ("slice".to_string(), "core::slice".to_string()),
+        _ => (String::new(), String::new()),
     }
 }
 
@@ -1393,7 +1535,13 @@ fn analyze_file_with_verus_syn(
     let rel_path = file.strip_prefix(vstd_root).unwrap_or(file);
     let rel_path_str = rel_path.display().to_string();
     let module_path = path_to_module(&rel_path_str);
-    let is_std_specs = rel_path_str.contains("std_specs");
+    // Files that contain stdlib wrappers (View impls, assume_specification blocks)
+    let is_std_specs = rel_path_str.contains("std_specs") 
+        || rel_path_str.ends_with("string.rs")
+        || rel_path_str.ends_with("view.rs")
+        || rel_path_str.ends_with("array.rs")
+        || rel_path_str.ends_with("slice.rs")
+        || rel_path_str.ends_with("raw_ptr.rs");
     
     // Add module info
     let module_name = rel_path.file_stem()
