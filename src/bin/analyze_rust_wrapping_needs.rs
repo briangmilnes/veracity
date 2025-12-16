@@ -415,17 +415,17 @@ fn write_report(
     
     writeln!(log, "--- Key Questions This Report Answers ---\n")?;
     writeln!(log, "Q1. How did we get the Rust data?")?;
-    writeln!(log, "    -> MIR analysis of {} crates from {} projects\n", 
+    writeln!(log, "    -> MIR analysis of {} crates from the top {} downloaded projects.\n", 
         rusticate.summary.crates_with_stdlib, rusticate.summary.total_projects)?;
     
     writeln!(log, "Q2. How many Rust Data Types does Verus wrap?")?;
-    writeln!(log, "    -> {} types currently wrapped\n", vstd.summary.total_wrapped_rust_types)?;
+    writeln!(log, "    -> {} types currently wrapped.\n", vstd.summary.total_wrapped_rust_types)?;
     
     writeln!(log, "Q3. How many Rust Traits does Verus wrap?")?;
-    writeln!(log, "    -> {} traits in vstd\n", vstd.summary.total_traits)?;
+    writeln!(log, "    -> {} traits in vstd.\n", vstd.summary.total_traits)?;
     
     writeln!(log, "Q4. How many total Rust Methods does Verus wrap?")?;
-    writeln!(log, "    -> {} methods currently wrapped\n", vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "    -> {} methods currently wrapped.\n", vstd.summary.total_wrapped_methods)?;
     
     writeln!(log, "Q5-Q11. Greedy coverage questions answered in Parts I and II below.\n")?;
     
@@ -440,11 +440,16 @@ fn write_report(
     writeln!(log, "\n=== 1. HOW DID WE GET THE RUST DATA? ===\n")?;
     writeln!(log, "The Rust stdlib usage data was collected using rusticate-analyze-modules-mir:")?;
     writeln!(log)?;
-    writeln!(log, "  1. Downloaded top {} Rust projects from crates.io", rusticate.summary.total_projects)?;
-    writeln!(log, "  2. Ran `cargo check --emit=mir` on each project (rusticate-mirify)")?;
-    writeln!(log, "  3. Analyzed {} total crates (some projects have multiple crates)", rusticate.summary.total_crates)?;
-    writeln!(log, "  4. Extracted stdlib usage from MIR using regex patterns")?;
-    writeln!(log, "  5. {} crates used at least one stdlib item", rusticate.summary.crates_with_stdlib)?;
+    writeln!(log, "  1. Downloaded top {} Rust projects from crates.io.", rusticate.summary.total_projects)?;
+    writeln!(log, "  2. Ran `cargo check --emit=mir` on each project (rusticate-mirify).")?;
+    writeln!(log, "  3. Analyzed {} total crates (some projects have multiple crates).", rusticate.summary.total_crates)?;
+    writeln!(log, "  4. Extracted stdlib usage from MIR using regex patterns.")?;
+    writeln!(log, "  5. {} crates used at least one stdlib item.", rusticate.summary.crates_with_stdlib)?;
+    writeln!(log)?;
+    writeln!(log, "Resource estimates:")?;
+    writeln!(log, "  - Disk space for MIR files: ~15-20 GB")?;
+    writeln!(log, "  - Time to generate MIR (rusticate-mirify): ~2-4 hours")?;
+    writeln!(log, "  - Time to analyze MIR (rusticate-analyze-modules-mir): ~50 seconds")?;
     writeln!(log)?;
     writeln!(log, "MIR provides fully-qualified paths, making it ideal for stdlib analysis:")?;
     writeln!(log, "  - Direct calls: std::vec::Vec::push")?;
@@ -454,7 +459,11 @@ fn write_report(
     
     // Section 2: Types wrapped
     writeln!(log, "\n=== 2. HOW MANY RUST DATA TYPES DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "vstd currently wraps {} Rust stdlib types:\n", vstd.wrapped_rust_types.len())?;
+    writeln!(log, "vstd currently wraps {} Rust stdlib types.\n", vstd.wrapped_rust_types.len())?;
+    writeln!(log, "Resource estimates for veracity-analyze-libs:")?;
+    writeln!(log, "  - Disk space for vstd source: ~5 MB")?;
+    writeln!(log, "  - Time to parse vstd (Verus AST): ~2 seconds")?;
+    writeln!(log)?;
     writeln!(log, "{:<20} {:<35} {:>10}", "Type", "Rust Module", "Methods")?;
     writeln!(log, "{}", "-".repeat(70))?;
     
@@ -464,43 +473,44 @@ fn write_report(
         writeln!(log, "{:<20} {:<35} {:>10}", wt.rust_type, wt.rust_module, wt.methods_wrapped.len())?;
     }
     writeln!(log)?;
-    writeln!(log, "Total: {} types, {} methods", vstd.wrapped_rust_types.len(), total_wrapped)?;
+    writeln!(log, "Total: {} types, {} methods.", vstd.wrapped_rust_types.len(), total_wrapped)?;
     
     // Section 3: Traits
     writeln!(log, "\n=== 3. HOW MANY RUST TRAITS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "vstd provides specs for {} traits:\n", vstd.traits.len())?;
+    writeln!(log, "vstd provides specs for {} traits.\n", vstd.traits.len())?;
     
     let mut total_trait_methods = 0;
     for t in &vstd.traits {
         total_trait_methods += t.total_methods();
     }
     
-    writeln!(log, "{:<40} {:>10}", "Trait", "Methods")?;
-    writeln!(log, "{}", "-".repeat(55))?;
-    for t in vstd.traits.iter().take(20) {
-        writeln!(log, "{:<40} {:>10}", t.name, t.total_methods())?;
-    }
-    if vstd.traits.len() > 20 {
-        writeln!(log, "... {} more traits", vstd.traits.len() - 20)?;
+    writeln!(log, "{:<50} {:>10}", "Trait", "Methods")?;
+    writeln!(log, "{}", "-".repeat(65))?;
+    for t in &vstd.traits {
+        writeln!(log, "{:<50} {:>10}", t.name, t.total_methods())?;
     }
     writeln!(log)?;
-    writeln!(log, "Total: {} traits, {} trait methods", vstd.traits.len(), total_trait_methods)?;
+    writeln!(log, "Total: {} traits, {} trait methods.", vstd.traits.len(), total_trait_methods)?;
     
     // Section 4: Total methods
     writeln!(log, "\n=== 4. HOW MANY TOTAL RUST METHODS DOES VERUS WRAP? ===\n")?;
-    writeln!(log, "Total methods with specifications: {}\n", vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "Total methods with specifications: {}.\n", vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "Legend: R=requires, E=ensures, C=recommends\n")?;
     writeln!(log, "Breakdown by type:")?;
     for wt in &vstd.wrapped_rust_types {
         if !wt.methods_wrapped.is_empty() {
             writeln!(log, "\n  {} ({} methods):", wt.rust_type, wt.methods_wrapped.len())?;
             for m in &wt.methods_wrapped {
-                let spec_markers = format!(
-                    "[{}{}{}]",
-                    if m.has_requires { "R" } else { "" },
-                    if m.has_ensures { "E" } else { "" },
-                    if m.has_recommends { "C" } else { "" }
-                );
-                writeln!(log, "    - {} {} {}", m.name, m.mode, spec_markers)?;
+                let mut markers = Vec::new();
+                if m.has_requires { markers.push("R"); }
+                if m.has_ensures { markers.push("E"); }
+                if m.has_recommends { markers.push("C"); }
+                
+                if markers.is_empty() {
+                    writeln!(log, "    - {} ({})", m.name, m.mode)?;
+                } else {
+                    writeln!(log, "    - {} ({}) [{}]", m.name, m.mode, markers.join(""))?;
+                }
             }
         }
     }
@@ -508,8 +518,8 @@ fn write_report(
     
     // Section 5: Per-type coverage
     writeln!(log, "\n=== 5. PER-TYPE METHOD COVERAGE ===\n")?;
-    writeln!(log, "Comparing vstd wrapped methods vs Rust usage:\n")?;
-    writeln!(log, "(Note: vstd wraps: {} types, Rust uses: {} unique types in MIR)\n",
+    writeln!(log, "Comparing vstd wrapped methods vs Rust usage.")?;
+    writeln!(log, "vstd wraps: {} types. Rust uses: {} unique types in MIR.\n",
         vstd.wrapped_rust_types.len(), rusticate.summary.unique_types)?;
     
     // ========================================================================
