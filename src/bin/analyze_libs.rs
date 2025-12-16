@@ -47,6 +47,8 @@ struct VstdInventory {
     broadcast_groups: Vec<BroadcastGroup>,
     macros: Vec<MacroInfo>,
     constants: Vec<ConstantInfo>,
+    enums: Vec<EnumInfo>,
+    type_aliases: Vec<TypeAliasInfo>,
     summary: Summary,
 }
 
@@ -265,6 +267,26 @@ struct ConstantInfo {
     source_line: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct EnumInfo {
+    name: String,
+    qualified_path: String,
+    variants: Vec<String>,
+    type_params: Vec<String>,
+    source_file: String,
+    source_line: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TypeAliasInfo {
+    name: String,
+    qualified_path: String,
+    aliased_type: String,
+    type_params: Vec<String>,
+    source_file: String,
+    source_line: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct Summary {
     total_modules: usize,
@@ -285,6 +307,8 @@ struct Summary {
     total_broadcast_groups: usize,
     total_macros: usize,
     total_constants: usize,
+    total_enums: usize,
+    total_type_aliases: usize,
 }
 
 // ============================================================================
@@ -307,6 +331,8 @@ struct VstdVisitor<'a> {
     macros: Vec<MacroInfo>,
     constants: Vec<ConstantInfo>,
     external_specs: Vec<ExternalSpec>,
+    enums: Vec<EnumInfo>,
+    type_aliases: Vec<TypeAliasInfo>,
     
     // Current context for impl blocks
     current_impl_type: Option<String>,
@@ -333,6 +359,8 @@ impl<'a> VstdVisitor<'a> {
             macros: Vec::new(),
             constants: Vec::new(),
             external_specs: Vec::new(),
+            enums: Vec::new(),
+            type_aliases: Vec::new(),
             current_impl_type: None,
             current_impl_methods: Vec::new(),
             wrapped_types,
@@ -747,6 +775,70 @@ impl<'ast, 'a> Visit<'ast> for VstdVisitor<'a> {
         
         verus_syn::visit::visit_item_broadcast_group(self, node);
     }
+    
+    fn visit_item_enum(&mut self, node: &'ast verus_syn::ItemEnum) {
+        let name = node.ident.to_string();
+        let qualified_path = format!("vstd::{}::{}", self.module_path, name);
+        let line = self.line_number(node.ident.span());
+        
+        // Extract variants
+        let variants: Vec<String> = node.variants.iter()
+            .map(|v| v.ident.to_string())
+            .collect();
+        
+        // Extract type params
+        let type_params: Vec<String> = node.generics.params.iter()
+            .filter_map(|p| {
+                if let verus_syn::GenericParam::Type(tp) = p {
+                    Some(tp.ident.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        
+        self.enums.push(EnumInfo {
+            name,
+            qualified_path,
+            variants,
+            type_params,
+            source_file: self.source_file.clone(),
+            source_line: line,
+        });
+        
+        verus_syn::visit::visit_item_enum(self, node);
+    }
+    
+    fn visit_item_type(&mut self, node: &'ast verus_syn::ItemType) {
+        let name = node.ident.to_string();
+        let qualified_path = format!("vstd::{}::{}", self.module_path, name);
+        let line = self.line_number(node.ident.span());
+        
+        // Get the aliased type
+        let aliased_type = node.ty.to_token_stream().to_string();
+        
+        // Extract type params
+        let type_params: Vec<String> = node.generics.params.iter()
+            .filter_map(|p| {
+                if let verus_syn::GenericParam::Type(tp) = p {
+                    Some(tp.ident.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        
+        self.type_aliases.push(TypeAliasInfo {
+            name,
+            qualified_path,
+            aliased_type,
+            type_params,
+            source_file: self.source_file.clone(),
+            source_line: line,
+        });
+        
+        verus_syn::visit::visit_item_type(self, node);
+    }
 }
 
 // ============================================================================
@@ -1154,6 +1246,8 @@ fn main() -> Result<()> {
         broadcast_groups: Vec::new(),
         macros: Vec::new(),
         constants: Vec::new(),
+        enums: Vec::new(),
+        type_aliases: Vec::new(),
         summary: Summary::default(),
     };
     
@@ -1214,6 +1308,8 @@ fn main() -> Result<()> {
         total_broadcast_groups: inventory.broadcast_groups.len(),
         total_macros: inventory.macros.len(),
         total_constants: inventory.constants.len(),
+        total_enums: inventory.enums.len(),
+        total_type_aliases: inventory.type_aliases.len(),
     };
     
     // Write report
@@ -1286,6 +1382,8 @@ fn analyze_file_with_verus_syn(
     inventory.macros.extend(visitor.macros);
     inventory.constants.extend(visitor.constants);
     inventory.external_specs.extend(visitor.external_specs);
+    inventory.enums.extend(visitor.enums);
+    inventory.type_aliases.extend(visitor.type_aliases);
     
     Ok(())
 }
