@@ -661,6 +661,7 @@ fn write_report(
     writeln!(log, "--- Data Sources ---\n")?;
     writeln!(log, "RUST STDLIB USAGE:")?;
     writeln!(log, "  Tool: rusticate-analyze-modules-mir")?;
+    writeln!(log, "  Source: https://github.com/briangmilnes/rusticate")?;
     writeln!(log, "  Input: MIR files from compiled Rust projects")?;
     writeln!(log, "  Parsing: Regex patterns on MIR text (no AST parser for MIR exists)")?;
     writeln!(log, "  Dataset: {} crates with stdlib usage", rusticate.summary.crates_with_stdlib)?;
@@ -669,12 +670,14 @@ fn write_report(
     writeln!(log)?;
     writeln!(log, "VSTD WRAPPING:")?;
     writeln!(log, "  Tool: veracity-analyze-libs")?;
+    writeln!(log, "  Source: https://github.com/briangmilnes/veracity")?;
     writeln!(log, "  Input: vstd source code (*.rs)")?;
     writeln!(log, "  Parsing: Verus AST parser (verus_syn) - proper AST traversal")?;
-    writeln!(log, "  Source: {}", vstd.vstd_path)?;
+    writeln!(log, "  vstd path: {}", vstd.vstd_path)?;
     writeln!(log)?;
     writeln!(log, "GAP ANALYSIS (this report):")?;
     writeln!(log, "  Tool: veracity-analyze-rust-wrapping-needs")?;
+    writeln!(log, "  Source: https://github.com/briangmilnes/veracity")?;
     writeln!(log, "  Input: JSON files from both tools above")?;
     writeln!(log, "  Parsing: serde JSON deserialization (no regex)")?;
     writeln!(log)?;
@@ -730,10 +733,15 @@ fn write_report(
     writeln!(log, "  - Time to generate MIR (rusticate-mirify): ~2-4 hours")?;
     writeln!(log, "  - Time to analyze MIR (rusticate-analyze-modules-mir): ~50 seconds")?;
     writeln!(log)?;
-    writeln!(log, "MIR provides fully-qualified paths, making it ideal for stdlib analysis:")?;
+    writeln!(log, "MIR provides fully-qualified paths, making it useful for stdlib analysis:")?;
     writeln!(log, "  - Direct calls: std::vec::Vec::push")?;
     writeln!(log, "  - Trait methods: <Vec<T> as IntoIterator>::into_iter")?;
     writeln!(log, "  - Type annotations: core::option::Option<T>")?;
+    writeln!(log)?;
+    writeln!(log, "Caveats:")?;
+    writeln!(log, "  - Method counts include trait impls (eq, ne, clone, default, etc.)")?;
+    writeln!(log, "  - Some false positives from crates that shadow stdlib names")?;
+    writeln!(log, "  - MIR is a compiler-internal format with no official grammar")?;
     writeln!(log)?;
     
     // Section 2: Specification Primitives
