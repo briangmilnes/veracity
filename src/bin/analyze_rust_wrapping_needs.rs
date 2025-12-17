@@ -591,6 +591,7 @@ fn write_report(
     vstd: &VstdInventory,
     rusticate: &RusticateAnalysis,
 ) -> Result<()> {
+    let report_start = std::time::Instant::now();
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %:z");
     
     // Build wrapping info lookup from vstd
@@ -638,6 +639,12 @@ fn write_report(
     writeln!(log, "      14.2  80% Full Support Coverage")?;
     writeln!(log, "      14.3  90% Full Support Coverage")?;
     writeln!(log, "      14.4  100% Full Support Coverage")?;
+    writeln!(log)?;
+    writeln!(log, "CONCLUSION")?;
+    writeln!(log, "  - Key Findings")?;
+    writeln!(log, "  - Greedy Coverage Summary Table")?;
+    writeln!(log, "  - Data Quality Notes")?;
+    writeln!(log, "  - Report Metadata")?;
     writeln!(log)?;
     
     // ========================================================================
@@ -1260,6 +1267,85 @@ fn write_report(
         
         writeln!(log)?;
     }
+    
+    // ========================================================================
+    // CONCLUSION
+    // ========================================================================
+    writeln!(log, "\n{}", "=".repeat(80))?;
+    writeln!(log, "CONCLUSION")?;
+    writeln!(log, "{}", "=".repeat(80))?;
+    writeln!(log)?;
+    
+    writeln!(log, "=== KEY FINDINGS ===\n")?;
+    
+    writeln!(log, "Current vstd Coverage:")?;
+    writeln!(log, "  - {} Rust types wrapped with {} methods", 
+        vstd.summary.total_wrapped_rust_types, vstd.summary.total_wrapped_methods)?;
+    writeln!(log, "  - {} traits defined in vstd", vstd.summary.total_traits)?;
+    writeln!(log, "  - {} stdlib methods specified via assume_specification", vstd.external_specs.len())?;
+    writeln!(log)?;
+    
+    writeln!(log, "Rust Stdlib Usage (from {} crates):", rusticate.summary.crates_with_stdlib)?;
+    writeln!(log, "  - {} unique modules used", rusticate.summary.unique_modules)?;
+    writeln!(log, "  - {} unique types used", rusticate.summary.unique_types)?;
+    writeln!(log, "  - {} unique traits used", rusticate.summary.unique_traits)?;
+    writeln!(log, "  - {} unique methods called", rusticate.summary.unique_methods)?;
+    writeln!(log)?;
+    
+    writeln!(log, "Greedy Full Support Coverage Summary:")?;
+    writeln!(log, "  (Minimum items to fully support N% of crates)\n")?;
+    writeln!(log, "  Coverage   Modules   Types   Traits   Methods")?;
+    writeln!(log, "  ---------  -------   -----   ------   -------")?;
+    
+    for pct in ["70", "80", "90", "100"] {
+        let modules = rusticate.analysis.greedy_cover.modules.full_support.milestones.get(pct)
+            .map(|m| m.items.len()).unwrap_or(0);
+        let types = rusticate.analysis.greedy_cover.types.full_support.milestones.get(pct)
+            .map(|m| m.items.len()).unwrap_or(0);
+        let traits = rusticate.analysis.greedy_cover.traits.full_support.milestones.get(pct)
+            .map(|m| m.items.len()).unwrap_or(0);
+        let methods = rusticate.analysis.greedy_cover.methods.full_support.milestones.get(pct)
+            .map(|m| m.items.len()).unwrap_or(0);
+        writeln!(log, "  {:>3}%       {:>5}     {:>4}    {:>5}     {:>5}", 
+            pct, modules, types, traits, methods)?;
+    }
+    writeln!(log)?;
+    
+    writeln!(log, "Key Insight: To fully support 70% of real Rust codebases, vstd needs:")?;
+    let m70 = rusticate.analysis.greedy_cover.modules.full_support.milestones.get("70");
+    let t70 = rusticate.analysis.greedy_cover.types.full_support.milestones.get("70");
+    let tr70 = rusticate.analysis.greedy_cover.traits.full_support.milestones.get("70");
+    let me70 = rusticate.analysis.greedy_cover.methods.full_support.milestones.get("70");
+    writeln!(log, "  - {} modules (vs {} currently touched)", 
+        m70.map(|m| m.items.len()).unwrap_or(0), wrapping.modules.len())?;
+    writeln!(log, "  - {} types (vs {} currently wrapped)",
+        t70.map(|m| m.items.len()).unwrap_or(0), vstd.summary.total_wrapped_rust_types)?;
+    writeln!(log, "  - {} traits",
+        tr70.map(|m| m.items.len()).unwrap_or(0))?;
+    writeln!(log, "  - {} methods (vs {} currently specified)",
+        me70.map(|m| m.items.len()).unwrap_or(0), vstd.external_specs.len())?;
+    writeln!(log)?;
+    
+    writeln!(log, "=== DATA QUALITY NOTES ===\n")?;
+    writeln!(log, "This analysis required approximately 5 person-days of work, largely spent")?;
+    writeln!(log, "checking and validating the data. Known limitations:")?;
+    writeln!(log)?;
+    writeln!(log, "  - MIR parsing uses regex, not a proper parser (no MIR grammar exists)")?;
+    writeln!(log, "  - Method counts include trait implementations (Clone, Eq, Default, etc.)")?;
+    writeln!(log, "  - Some false positives from crates that shadow stdlib names")?;
+    writeln!(log, "  - vstd replacement modules (thread, cell, rwlock) show as 'needs wrapping'")?;
+    writeln!(log, "    even though vstd provides equivalent functionality")?;
+    writeln!(log, "  - There are almost certainly additional data issues not yet identified")?;
+    writeln!(log)?;
+    
+    let report_duration = report_start.elapsed();
+    let end_timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %:z");
+    
+    writeln!(log, "=== REPORT METADATA ===\n")?;
+    writeln!(log, "Report started:  {}", timestamp)?;
+    writeln!(log, "Report finished: {}", end_timestamp)?;
+    writeln!(log, "Report generation time: {:.2} seconds", report_duration.as_secs_f64())?;
+    writeln!(log)?;
     
     writeln!(log, "{}", "=".repeat(80))?;
     writeln!(log, "END OF REPORT")?;
