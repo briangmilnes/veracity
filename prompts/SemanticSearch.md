@@ -115,8 +115,8 @@ Compare semantic search results vs veracity-search structural results:
 # verus_lemma_finder (semantic)
 uv run python -m verus_lemma_finder search "views of seq" data/vstd_lemma_index.json
 
-# veracity-search (structural)
-veracity-search -v 'fn.*view.*Seq'
+# veracity-search (structural) - vstd searched by default
+veracity-search 'fn.*view.*Seq'
 ```
 
 ## README Reference

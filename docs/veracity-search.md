@@ -16,29 +16,34 @@ Thank you, Jeannette, for showing us that types are the best documentation.
 
 ```bash
 # Search vstd for proof functions containing 'len' (uses .* wildcard)
-veracity-search -v 'proof fn .*len.*'
+# vstd is searched by default - no -v flag needed!
+veracity-search 'proof fn .*len.*'
 
 # Wildcard matching: lemma_seq_len, lemma_set_len, etc.
-veracity-search -v 'fn lemma_.*_len'
+veracity-search 'fn lemma_.*_len'
 
 # Types matching pattern: Seq<A>, Seq<char>, etc.
-veracity-search -v 'fn _ types Seq.*A'
+veracity-search 'fn _ types Seq.*A'
 
 # Search for traits requiring Clone (direct + transitive)
-veracity-search -v 'trait _ : Clone'
+veracity-search 'trait _ : Clone'
 
 # Search vstd + builtin for the 'real' type
-veracity-search -v -b 'struct real'
+veracity-search -b 'struct real'
 
-# Search your codebase and vstd together
-veracity-search -v -C ~/projects/my-verus-project 'fn _ -> Seq'
+# Search your codebase AND vstd together (vstd always included unless --no-vstd)
+veracity-search -C ~/projects/my-verus-project 'fn _ -> Seq'
+
+# Search codebase ONLY (disable vstd)
+veracity-search --no-vstd -C ~/projects/my-verus-project 'fn _ -> Seq'
 ```
 
 ## Options
 
 | Option | Description |
 |--------|-------------|
-| `-v, --vstd [PATH]` | Search vstd library (auto-discovers from verus in PATH) |
+| `-v, --vstd [PATH]` | Search vstd (ON by default, auto-discovers from `which verus`) |
+| `--no-vstd` | Disable vstd search |
 | `-b, --builtin` | Search builtin primitives (int, nat, real, Ghost, Tracked) |
 | `-C, --codebase PATH` | Search codebase directory |
 | `-e, --exclude DIR` | Exclude directory (repeatable) |
@@ -279,7 +284,7 @@ Files: 6366, Proof Holes: 4650
 When searching trait bounds, veracity-search finds both direct and transitive matches:
 
 ```
-veracity-search -v -C ~/myproject 'trait _ : Clone'
+veracity-search -C ~/myproject 'trait _ : Clone'
 
 === DIRECT ===
 StT: Eq + Clone + Display + Debug + Sized + View
@@ -306,22 +311,22 @@ Output is Emacs-compatible (`file:line: signature`):
 
 ```bash
 # Find all fold functions on Seq
-veracity-search -v 'spec fn fold types Seq'
+veracity-search 'spec fn fold types Seq'
 
 # Find traits with associated type V
-veracity-search -v 'trait _ { type V }'
+veracity-search 'trait _ { type V }'
 
 # Find all impls of View
-veracity-search -v 'impl View for _'
+veracity-search 'impl View for _'
 
 # Find functions with forall in requires
-veracity-search -v 'fn _ requires .*forall.*'
+veracity-search 'fn _ requires .*forall.*'
 
 # Find broadcast proofs about Seq
-veracity-search -v 'broadcast proof fn _ types Seq'
+veracity-search 'broadcast proof fn _ types Seq'
 
-# Search both vstd and your library
-veracity-search -v -C ~/projects/mylib 'proof fn lemma'
+# Search both vstd and your library (vstd is on by default)
+veracity-search -C ~/projects/mylib 'proof fn lemma'
 ```
 
 ## See Also

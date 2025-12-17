@@ -71,12 +71,13 @@ veracity-analyze-rust-wrapping-needs \
 Type-based semantic search for Verus code. Find functions, traits, impls by pattern.
 
 ```bash
-veracity-search -v 'fn lemma_.*len'             # wildcard: lemma_seq_len, lemma_set_len, ...
-veracity-search -v 'fn _ types Seq.*char'       # types matching Seq...char
-veracity-search -v 'trait _ : Clone'            # traits requiring Clone (transitive!)
-veracity-search -v 'def JoinHandle'             # find any type definition by name
-veracity-search -v 'impl _ {Seq; fn view}'      # impls using Seq with view method
-veracity-search -C ~/myproject 'holes'          # find all proof holes
+veracity-search 'fn lemma_.*len'             # wildcard: lemma_seq_len, lemma_set_len, ...
+veracity-search 'fn _ types Seq.*char'       # types matching Seq...char
+veracity-search 'trait _ : Clone'            # traits requiring Clone (transitive!)
+veracity-search 'def JoinHandle'             # find any type definition by name
+veracity-search 'impl _ {Seq; fn view}'      # impls using Seq with view method
+veracity-search -C ~/myproject 'holes'       # search codebase (vstd searched by default)
+veracity-search --no-vstd -C ~/myproject 'holes'  # search codebase only
 ```
 
 **⚡ Fast**: Searches 6,366 files (57,853 items) across 15 Verus projects in **0.6 seconds**.
