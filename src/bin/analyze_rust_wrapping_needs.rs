@@ -12,10 +12,169 @@
 
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+
+// ============================================================================
+// Wrapping Status Info (built from vstd inventory)
+// ============================================================================
+
+/// Tracks what vstd wraps, for annotating greedy cover results
+struct WrappingInfo {
+    /// Modules with any wrapping (e.g., "std::option" -> has Option wrapped)
+    modules: HashSet<String>,
+    /// Modules with method counts (module -> (wrapped_methods, total_known_methods))
+    module_coverage: BTreeMap<String, (usize, usize)>,
+    /// Types that are wrapped (e.g., "Option", "Vec", "HashMap")
+    types: HashSet<String>,
+    /// Type -> wrapped method count
+    type_method_counts: BTreeMap<String, usize>,
+    /// Traits with specs
+    traits: HashSet<String>,
+    /// Wrapped methods (e.g., "Option::unwrap", "Vec::push")
+    methods: HashSet<String>,
+}
+
+impl WrappingInfo {
+    fn from_vstd(vstd: &VstdInventory) -> Self {
+        let mut info = WrappingInfo {
+            modules: HashSet::new(),
+            module_coverage: BTreeMap::new(),
+            types: HashSet::new(),
+            type_method_counts: BTreeMap::new(),
+            traits: HashSet::new(),
+            methods: HashSet::new(),
+        };
+        
+        // Collect wrapped types and their modules
+        for wt in &vstd.wrapped_rust_types {
+            info.types.insert(wt.rust_type.clone());
+            info.type_method_counts.insert(wt.rust_type.clone(), wt.methods_wrapped.len());
+            
+            // Add module coverage
+            let module = &wt.rust_module;
+            let entry = info.module_coverage.entry(module.clone()).or_insert((0, 0));
+            entry.0 += wt.methods_wrapped.len();
+            info.modules.insert(module.clone());
+            
+            // Also add std:: variants for modules that start with core:: or alloc::
+            if module.starts_with("core::") {
+                let std_module = module.replace("core::", "std::");
+                info.modules.insert(std_module.clone());
+                let entry = info.module_coverage.entry(std_module).or_insert((0, 0));
+                entry.0 += wt.methods_wrapped.len();
+            } else if module.starts_with("alloc::") {
+                let std_module = module.replace("alloc::", "std::");
+                info.modules.insert(std_module.clone());
+                let entry = info.module_coverage.entry(std_module).or_insert((0, 0));
+                entry.0 += wt.methods_wrapped.len();
+            }
+        }
+        
+        // Collect wrapped methods from external_specs
+        for es in &vstd.external_specs {
+            info.methods.insert(es.external_fn.clone());
+            // Also try to normalize: "Vec::<T, A>::push" -> "alloc::vec::Vec::push"
+            // Extract type and method for simpler matching
+            let parts: Vec<&str> = es.external_fn.split("::").collect();
+            if parts.len() >= 2 {
+                let method_part = parts[parts.len() - 1];
+                let type_part = parts[parts.len() - 2];
+                // Handle generic types like "Vec::<T, A>"
+                let clean_type = type_part.split('<').next().unwrap_or(type_part);
+                let normalized = format!("{}::{}", clean_type, method_part);
+                info.methods.insert(normalized);
+            }
+        }
+        
+        // Collect traits
+        for t in &vstd.traits {
+            info.traits.insert(t.name.clone());
+        }
+        
+        info
+    }
+    
+    /// Get wrapping status for a module
+    fn module_status(&self, module: &str) -> (&'static str, Option<usize>) {
+        // Check both exact and normalized versions
+        let normalized = module.replace("std::", "core::");
+        if self.modules.contains(module) || self.modules.contains(&normalized) {
+            let count = self.module_coverage.get(module)
+                .or_else(|| self.module_coverage.get(&normalized))
+                .map(|(wrapped, _)| *wrapped);
+            ("PARTIAL", count)
+        } else {
+            ("NEEDS WRAPPING", None)
+        }
+    }
+    
+    /// Get wrapping status for a type
+    fn type_status(&self, type_name: &str) -> (&'static str, Option<usize>) {
+        // Extract base type name (e.g., "core::option::Option" -> "Option")
+        let base = type_name.split("::").last().unwrap_or(type_name);
+        let clean = base.split('<').next().unwrap_or(base);
+        
+        if self.types.contains(clean) {
+            let count = self.type_method_counts.get(clean).copied();
+            ("WRAPPED", count)
+        } else {
+            ("NEEDS WRAPPING", None)
+        }
+    }
+    
+    /// Get wrapping status for a trait
+    fn trait_status(&self, trait_name: &str) -> &'static str {
+        // Extract base trait name
+        let base = trait_name.split("::").last().unwrap_or(trait_name);
+        if self.traits.contains(base) || self.traits.contains(trait_name) {
+            "WRAPPED"
+        } else {
+            "NEEDS WRAPPING"
+        }
+    }
+    
+    /// Get wrapping status for a method
+    fn method_status(&self, method_name: &str) -> &'static str {
+        // Try exact match first
+        if self.methods.contains(method_name) {
+            return "WRAPPED";
+        }
+        
+        // Extract Type::method pattern from full path
+        // e.g., "core::option::Option::is_some" -> "Option::is_some"
+        let parts: Vec<&str> = method_name.split("::").collect();
+        if parts.len() >= 2 {
+            let type_name = parts[parts.len()-2];
+            let method = parts[parts.len()-1];
+            
+            // Check various patterns:
+            // 1. "Type::method" (e.g., "Option::is_some")
+            // 2. "Type::<T>::method" (e.g., "Option::<T>::is_some")
+            // 3. Just "method" for trait methods
+            let patterns = [
+                format!("{}::{}", type_name, method),
+                format!("{}::<T>::{}", type_name, method),
+                format!("{}::<T,A>::{}", type_name, method),
+                method.to_string(),
+            ];
+            
+            for pattern in &patterns {
+                if self.methods.iter().any(|m| {
+                    // Strip generics from wrapped method for comparison
+                    let clean_wrapped = m.split('<').next().unwrap_or(m);
+                    let clean_pattern = pattern.split('<').next().unwrap_or(pattern);
+                    clean_wrapped.ends_with(clean_pattern) || m == pattern
+                }) {
+                    return "WRAPPED";
+                }
+            }
+        }
+        "NEEDS WRAPPING"
+    }
+}
 
 // ============================================================================
 // Rusticate JSON Structures (from rusticate-analyze-modules-mir)
@@ -380,6 +539,9 @@ fn write_report(
 ) -> Result<()> {
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %:z");
     
+    // Build wrapping info lookup from vstd
+    let wrapping = WrappingInfo::from_vstd(vstd);
+    
     // ========================================================================
     // HEADER
     // ========================================================================
@@ -691,19 +853,19 @@ fn write_report(
     
     // Section 7: Modules
     writeln!(log, "\n=== 7. MODULES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
-    write_greedy_section(log, "modules", &rusticate.analysis.greedy_cover.modules)?;
+    write_greedy_section(log, "Module", &rusticate.analysis.greedy_cover.modules, &wrapping)?;
     
     // Section 8: Types
     writeln!(log, "\n=== 8. DATA TYPES: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
-    write_greedy_section(log, "types", &rusticate.analysis.greedy_cover.types)?;
+    write_greedy_section(log, "Data Type", &rusticate.analysis.greedy_cover.types, &wrapping)?;
     
     // Section 9: Traits
     writeln!(log, "\n=== 9. TRAITS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
-    write_greedy_section(log, "traits", &rusticate.analysis.greedy_cover.traits)?;
+    write_greedy_section(log, "Trait", &rusticate.analysis.greedy_cover.traits, &wrapping)?;
     
     // Section 10: Methods
     writeln!(log, "\n=== 10. METHODS: WHAT TO WRAP FOR 70/80/90/100% COVERAGE ===\n")?;
-    write_greedy_section(log, "methods", &rusticate.analysis.greedy_cover.methods)?;
+    write_greedy_section(log, "Method", &rusticate.analysis.greedy_cover.methods, &wrapping)?;
     
     // Section 11: Methods per Type
     writeln!(log, "\n=== 11. METHODS PER TYPE: WHAT TO WRAP WITHIN EACH TYPE ===\n")?;
@@ -1020,25 +1182,72 @@ fn write_report(
 
 fn write_greedy_section(
     log: &mut fs::File,
-    category: &str,
+    category: &str,  // "Module", "Data Type", "Trait", or "Method"
     data: &GreedyCoverCategory,
+    wrapping: &WrappingInfo,
 ) -> Result<()> {
-    writeln!(log, "Total {} in Rust codebases: (see JSON for full list)", category)?;
+    let category_lower = category.to_lowercase();
+    let category_plural = if category == "Data Type" { "types" } 
+        else { &format!("{}s", category_lower) };
+    
+    writeln!(log, "Total {} in Rust codebases: (see JSON for full list)", category_plural)?;
     writeln!(log, "Total crates analyzed: {}\n", data.full_support.total_crates)?;
     
     for pct in ["70", "80", "90", "100"] {
         if let Some(milestone) = data.full_support.milestones.get(pct) {
+            // Count wrapped vs needs wrapping
+            let mut wrapped_count = 0;
+            let mut needs_count = 0;
+            for item in &milestone.items {
+                let status = match category {
+                    "Module" => wrapping.module_status(&item.name).0,
+                    "Data Type" => wrapping.type_status(&item.name).0,
+                    "Trait" => wrapping.trait_status(&item.name),
+                    "Method" => wrapping.method_status(&item.name),
+                    _ => "UNKNOWN",
+                };
+                if status == "WRAPPED" || status == "PARTIAL" {
+                    wrapped_count += 1;
+                } else {
+                    needs_count += 1;
+                }
+            }
+            
             writeln!(log, "--- {}% FULL SUPPORT ({} crates, actual {:.2}%) ---",
                 pct, milestone.target_crates, milestone.actual_coverage)?;
-            writeln!(log, "Items needed: {}\n", milestone.items.len())?;
+            writeln!(log, "{} {}s needed: {} have coverage, {} need wrapping\n", 
+                milestone.items.len(), category_lower, wrapped_count, needs_count)?;
             
-            writeln!(log, "{:>5}  {:<60} {:>8} {:>10}",
-                "Rank", "Item", "+Crates", "Cumulative")?;
-            writeln!(log, "{}", "-".repeat(90))?;
+            // Column header with category name
+            writeln!(log, "{:>5}  {:<50} {:>8} {:>10}  {}",
+                "Rank", category, "+Crates", "Cumulative", "Verus Status")?;
+            writeln!(log, "{}", "-".repeat(105))?;
             
             for item in &milestone.items {
-                writeln!(log, "{:>5}  {:<60} {:>+8} {:>9.4}%",
-                    item.rank, item.name, item.crates_added, item.cumulative_coverage)?;
+                let (status, detail) = match category {
+                    "Module" => {
+                        let (s, count) = wrapping.module_status(&item.name);
+                        let detail = count.map(|c| format!("{} methods", c)).unwrap_or_default();
+                        (s, detail)
+                    },
+                    "Data Type" => {
+                        let (s, count) = wrapping.type_status(&item.name);
+                        let detail = count.map(|c| format!("{} methods", c)).unwrap_or_default();
+                        (s, detail)
+                    },
+                    "Trait" => (wrapping.trait_status(&item.name), String::new()),
+                    "Method" => (wrapping.method_status(&item.name), String::new()),
+                    _ => ("UNKNOWN", String::new()),
+                };
+                
+                let status_str = if detail.is_empty() {
+                    format!("[{}]", status)
+                } else {
+                    format!("[{}: {}]", status, detail)
+                };
+                
+                writeln!(log, "{:>5}  {:<50} {:>+8} {:>9.4}%  {}",
+                    item.rank, item.name, item.crates_added, item.cumulative_coverage, status_str)?;
             }
             writeln!(log)?;
         }
