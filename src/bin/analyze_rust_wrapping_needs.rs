@@ -695,6 +695,32 @@ fn write_report(
     writeln!(log, "extract fully-qualified stdlib paths from the human-readable MIR text.")?;
     writeln!(log)?;
     
+    writeln!(log, "--- vstd's Two Approaches to Stdlib Support ---\n")?;
+    writeln!(log, "vstd provides stdlib support in two different ways:\n")?;
+    writeln!(log, "1. DIRECT WRAPPERS (assume_specification)")?;
+    writeln!(log, "   - Adds formal specs to existing stdlib methods")?;
+    writeln!(log, "   - Code using std::option::Option::unwrap works as-is")?;
+    writeln!(log, "   - Examples: Option, Result, Vec, HashMap, HashSet, slice, array")?;
+    writeln!(log)?;
+    writeln!(log, "2. REPLACEMENT MODULES (vstd-native types)")?;
+    writeln!(log, "   - Provides new types that must replace stdlib usage")?;
+    writeln!(log, "   - Code using std::thread::spawn must change to vstd::thread::spawn")?;
+    writeln!(log, "   - These show as [NEEDS WRAPPING] because direct stdlib isn't covered")?;
+    writeln!(log)?;
+    writeln!(log, "   Replacement modules:")?;
+    writeln!(log, "   vstd module     | Replaces              | Notes")?;
+    writeln!(log, "   ----------------|----------------------|----------------------------------")?;
+    writeln!(log, "   vstd::thread    | std::thread          | spawn, JoinHandle with specs")?;
+    writeln!(log, "   vstd::cell      | std::cell            | PCell with permission tokens")?;
+    writeln!(log, "   vstd::rwlock    | std::sync::RwLock    | Native verification state machine")?;
+    writeln!(log, "   vstd::raw_ptr   | std::ptr             | PPtr with ghost permissions")?;
+    writeln!(log, "   vstd::atomic    | std::sync::atomic    | Atomic types with ghost state")?;
+    writeln!(log)?;
+    writeln!(log, "   Note: HashMapWithView and StringHashMap in vstd::hash_map are hybrids -")?;
+    writeln!(log, "   they wrap std::collections::HashMap internally but require using the")?;
+    writeln!(log, "   vstd type names.")?;
+    writeln!(log)?;
+    
     writeln!(log, "--- Key Questions This Report Answers ---\n")?;
     writeln!(log, "Q1. How did we get the Rust data?")?;
     writeln!(log, "    -> MIR analysis of {} crates from the top {} downloaded projects.\n", 
