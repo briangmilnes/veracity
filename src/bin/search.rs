@@ -355,6 +355,7 @@ impl SearchArgs {
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut strict_match = false;
         let mut color = true;  // Color on by default
+        let mut no_vstd = false;  // vstd is ON by default
         let mut pattern_parts: Vec<String> = Vec::new();
         
         let mut i = 1;
@@ -368,6 +369,9 @@ impl SearchArgs {
                 }
                 "--no-color" => {
                     color = false;
+                }
+                "--no-vstd" => {
+                    no_vstd = true;
                 }
                 "--exclude" | "-e" => {
                     i += 1;
@@ -422,8 +426,9 @@ impl SearchArgs {
             i += 1;
         }
         
-        // Default to vstd if neither specified
-        if vstd_path.is_none() && codebase_path.is_none() {
+        // Default: vstd is always ON unless explicitly disabled with --no-vstd
+        // This ensures vstd is searched even when -C is specified
+        if vstd_path.is_none() && !no_vstd {
             vstd_path = Some(discover_vstd_path()?);
         }
         
@@ -453,7 +458,8 @@ impl SearchArgs {
         println!("Search for lemmas/proof functions by type-based pattern matching");
         println!();
         println!("Options:");
-        println!("  -v, --vstd [PATH]     Search vstd (auto-discovers from verus if no path)");
+        println!("  -v, --vstd [PATH]     Search vstd (ON by default, auto-discovers from `which verus`)");
+        println!("      --no-vstd         Disable vstd search");
         println!("  -b, --builtin         Search builtin primitives (int, nat, real, Ghost, etc.)");
         println!("  -C, --codebase PATH   Search codebase directory");
         println!("  -e, --exclude DIR     Exclude directory from search (can use multiple times)");

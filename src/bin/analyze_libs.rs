@@ -1591,9 +1591,30 @@ fn analyze_file_with_verus_syn(
 }
 
 fn find_vstd_path() -> Result<PathBuf> {
+    // First try: derive from `which verus`
+    // verus binary is at: .../source/target-verus/release/verus
+    // vstd source is at:  .../source/vstd
+    if let Ok(output) = std::process::Command::new("which").arg("verus").output() {
+        if output.status.success() {
+            let verus_path = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());
+            // Go up from release/verus -> target-verus -> source -> then into vstd
+            if let Some(source_dir) = verus_path.parent()  // release
+                .and_then(|p| p.parent())                   // target-verus
+                .and_then(|p| p.parent())                   // source
+            {
+                let vstd_path = source_dir.join("vstd");
+                if vstd_path.exists() {
+                    return Ok(vstd_path.canonicalize()?);
+                }
+            }
+        }
+    }
+    
+    // Fallback: hardcoded candidates
     let candidates = vec![
         PathBuf::from("tests/fixtures/verus-lang/source/vstd"),
         PathBuf::from("../verus-lang/source/vstd"),
+        PathBuf::from("../verus/source/vstd"),
     ];
     
     for path in candidates {
@@ -1602,7 +1623,7 @@ fn find_vstd_path() -> Result<PathBuf> {
         }
     }
     
-    bail!("Could not find vstd source")
+    bail!("Could not find vstd source. Ensure 'verus' is on PATH or vstd is in a known location.")
 }
 
 fn get_verus_version(vstd_path: &Path) -> String {

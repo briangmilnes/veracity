@@ -1,6 +1,6 @@
 VERUS STDLIB WRAPPING GAP ANALYSIS
 ===================================
-Generated: 2025-12-16 16:37:37 -08:00
+Generated: 2025-12-17 14:37:39 -08:00
 VStd Inventory: /home/milnes/projects/veracity/tests/fixtures/verus-lang/source/vstd (generated 2025-12-16 14:09:24 -08:00)
 Rusticate JSON: /home/milnes/projects/RustCodebases (generated 2025-12-16 08:10:33 -08:00)
 
@@ -34,6 +34,14 @@ PART III: SUMMARY & RECOMMENDATIONS
       14.2  80% Full Support Coverage
       14.3  90% Full Support Coverage
       14.4  100% Full Support Coverage
+
+PART IV: PROPOSED NEW VERUS WRAPPINGS
+  15. High-Impact Methods to Wrap Next
+  16. Methods Grouped by Type
+  17. Methods Grouped by Module
+  18. Quick Wins (Single Method Types)
+  19. Possible Next Wrappings
+  20. Actionable Methods (Non-IO, Wrapped Types Only)
 
 CONCLUSION
   - Key Findings
@@ -134,6 +142,9 @@ Q4. How many total Rust Methods does Verus wrap?
     -> 144 methods currently wrapped.
 
 Q5-Q11. Greedy coverage questions answered in Parts I and II below.
+
+Q12. What should vstd wrap next?
+    -> Part IV proposes 357 high-priority methods grouped by type/module.
 
 
 ================================================================================
@@ -7522,8 +7533,1970 @@ Legend: [WRAPPED] = vstd already wraps this, [NEEDS WRAPPING] = gap
 
 
 ================================================================================
+PART IV: PROPOSED NEW VERUS WRAPPINGS
+================================================================================
+
+This section proposes specific methods vstd should wrap next, organized
+for actionable implementation. Methods are prioritized by crate coverage impact.
+
+
+=== 15. HIGH-IMPACT METHODS TO WRAP NEXT ===
+
+358 actionable methods (filtered from 479 total).
+
+ Rank  Method                                                     +Crates
+---------------------------------------------------------------------------
+    1  core::option::Option::eq                                       +33
+    2  core::result::Result::eq                                       +21
+    3  alloc::alloc::exchange_malloc                                  +17
+    4  alloc::vec::Vec::deref                                         +17
+    5  core::result::Result::unwrap_or_else                           +19
+    6  alloc::boxed::Box::drop                                        +16
+    7  alloc::vec::Vec::eq                                            +20
+    8  alloc::vec::Vec::index                                         +18
+    9  alloc::vec::Vec::deref_mut                                     +18
+   10  alloc::vec::Vec::is_empty                                      +14
+   11  core::option::Option::ok_or_else                               +14
+   12  core::option::Option::and_then                                 +13
+   13  core::option::Option::clone                                    +13
+   14  alloc::vec::Vec::clone                                         +14
+   15  core::option::Option::unwrap_or_else                           +15
+   16  alloc::vec::Vec::index_mut                                     +16
+   17  alloc::vec::Vec::default                                       +13
+   18  core::option::Option::default                                  +13
+   19  core::option::Option::map_or                                   +13
+   20  core::result::Result::unwrap_or                                +13
+   21  core::option::Option::ne                                       +12
+   22  alloc::boxed::Box::pin                                         +10
+   23  alloc::vec::Vec::extend                                        +14
+   24  core::option::Option::unwrap_or_default                        +11
+   25  core::option::Option::as_deref                                  +8
+   26  alloc::sync::Arc::deref                                         +7
+   27  alloc::sync::Arc::clone                                        +23
+   28  core::option::Option::cloned                                    +9
+   29  core::option::Option::as_mut                                    +8
+   30  core::option::Option::copied                                    +8
+   31  core::result::Result::and_then                                  +8
+   32  alloc::vec::Vec::into_boxed_slice                               +8
+   33  core::option::Option::map_or_else                               +8
+   34  core::option::Option::or                                       +10
+   35  core::option::Option::or_else                                   +9
+   36  core::option::Option::filter                                    +8
+   37  alloc::vec::Vec::retain                                         +6
+   38  core::result::Result::or_else                                   +6
+   39  core::result::Result::unwrap_or_default                         +6
+   40  alloc::vec::Vec::drain                                          +5
+   41  alloc::boxed::Box::default                                      +5
+   42  alloc::vec::Vec::into                                           +5
+   43  core::option::Option::unwrap_unchecked                          +6
+   44  core::option::Option::is_some_and                               +6
+   45  core::result::Result::expect_err                                +6
+   46  alloc::vec::Vec::as_mut_slice                                   +5
+   47  alloc::string::String::deref                                    +5
+   48  alloc::boxed::Box::clone                                        +4
+   49  alloc::boxed::Box::eq                                           +5
+   50  core::option::Option::hash                                      +5
+   51  alloc::vec::Vec::hash                                           +5
+   52  alloc::boxed::Box::leak                                         +4
+   53  alloc::collections::BTreeSet::iter                              +4
+   54  alloc::vec::Vec::as_ptr                                         +4
+   55  alloc::vec::Vec::dedup                                          +4
+   56  alloc::vec::Vec::ne                                             +4
+   57  core::option::Option::get_or_insert                             +4
+   58  core::result::Result::copied                                   +10
+   59  alloc::vec::Vec::capacity                                       +4
+   60  core::result::Result::or                                        +4
+   61  core::option::Option::into_iter                                 +4
+   62  alloc::boxed::Box::as_ref                                       +3
+   63  alloc::boxed::Box::from                                         +3
+   64  alloc::string::String::new                                      +3
+   65  alloc::sync::Arc::default                                       +3
+   66  core::option::Option::is_none_or                                +4
+   67  alloc::vec::Vec::as_mut_ptr                                     +3
+   68  alloc::vec::Vec::set_len                                       +16
+   69  alloc::vec::Vec::from_iter                                      +3
+   70  alloc::vec::Vec::reserve_exact                                  +3
+   71  core::result::Result::and                                       +4
+   72  alloc::vec::Vec::shrink_to_fit                                  +3
+   73  alloc::vec::Vec::spare_capacity_mut                             +3
+   74  alloc::vec::Vec::splice                                         +3
+   75  alloc::vec::Vec::to_owned                                       +3
+   76  core::cmp::Ordering::reverse                                    +3
+   77  core::option::Option::into                                      +3
+   78  core::option::Option::replace                                   +3
+   79  core::option::Option::get_or_insert_with                        +4
+   80  alloc::vec::Vec::from                                           +3
+   81  core::str::slice_error_fail                                     +3
+   82  std::collections::HashMap::eq                                   +6
+   83  std::collections::HashMap::default                              +4
+   84  std::collections::HashMap::clone                                +5
+   85  std::collections::HashMap::entry                                +4
+   86  std::collections::HashMap::into_iter                            +4
+   87  core::result::Result::is_ok_and                                 +3
+   88  alloc::boxed::Box::hash                                         +2
+   89  alloc::boxed::Box::into                                         +2
+   90  alloc::rc::Rc::deref                                            +3
+   91  alloc::rc::Rc::downcast                                         +3
+   92  alloc::vec::Vec::from_hex                                       +3
+   93  alloc::boxed::Box::to_owned                                     +2
+   94  alloc::collections::BTreeMap::get                               +2
+   95  alloc::collections::BTreeMap::values                            +2
+   96  alloc::sync::Arc::downcast                                      +2
+   97  alloc::sync::Arc::from                                          +2
+   98  alloc::vec::Vec::serialize                                      +2
+   99  alloc::collections::BTreeMap::default                           +2
+  100  alloc::collections::BTreeMap::into_iter                         +2
+  101  alloc::vec::Vec::zeroize                                        +2
+  102  alloc::boxed::Box::as_mut                                       +2
+  103  core::char::from_u32                                            +2
+  104  core::cmp::Ordering::then                                       +2
+  105  core::option::Option::from                                      +2
+  106  core::option::Option::inspect                                   +2
+  107  core::option::Option::iter                                      +2
+  108  core::option::Option::zip                                       +2
+  109  core::ptr::Alignment::as_nonzero                                +2
+  110  alloc::vec::Vec::clone_from                                     +2
+  111  core::result::Result::clone                                     +2
+  112  core::result::Result::inspect_err                               +2
+  113  core::result::Result::unwrap_ok                                 +2
+  114  core::result::Result::unwrap_throw                              +2
+  115  core::option::Option::unwrap_throw                              +2
+  116  std::char::from_u32                                             +2
+  117  std::cmp::Ordering::reverse                                     +2
+  118  std::collections::HashSet::eq                                   +2
+  119  std::hash::RandomState::new                                     +2
+  120  std::ptr::Alignment::as_nonzero                                 +2
+  121  std::time::Duration::from_millis                                +2
+  122  alloc::alloc::alloc_zeroed                                      +1
+  123  alloc::boxed::Box::from_base32_decode                           +1
+  124  alloc::boxed::Box::into_raw                                     +9
+  125  alloc::collections::BTreeMap::len                               +2
+  126  std::cmp::Ordering::then_with                                   +2
+  127  alloc::boxed::Box::generic_fn                                   +1
+  128  alloc::boxed::Box::into_abi                                     +1
+  129  alloc::boxed::Box::new_uninit_slice                             +1
+  130  alloc::boxed::Box::run                                          +1
+  131  alloc::boxed::Box::to_tailer                                    +1
+  132  alloc::boxed::Box::zeroize                                      +1
+  133  alloc::collections::BTreeMap::contains_key                      +1
+  134  alloc::collections::BTreeMap::eq                                +1
+  135  alloc::collections::BTreeMap::new                               +1
+  136  alloc::collections::BTreeMap::insert                           +14
+  137  alloc::collections::BTreeMap::clone                             +2
+  138  alloc::collections::BTreeMap::iter                              +4
+  139  alloc::collections::BTreeMap::entry                             +2
+  140  alloc::rc::Rc::clone                                            +2
+  141  alloc::rc::Rc::strong_count                                     +2
+  142  alloc::string::String::default                                  +2
+  143  std::collections::HashSet::default                              +4
+  144  alloc::collections::BTreeMap::get_mut                           +2
+  145  alloc::collections::BTreeMap::is_empty                          +2
+  146  std::collections::HashMap::get_mut                              +2
+  147  std::collections::HashMap::retain                               +3
+  148  std::collections::HashSet::clone                                +2
+  149  std::collections::HashSet::extend                               +3
+  150  std::collections::HashSet::into_iter                            +3
+  151  std::collections::HashSet::from_iter                            +3
+  152  core::result::Result::map_or                                    +2
+  153  std::collections::HashSet::difference                           +2
+  154  std::collections::HashSet::union                                +2
+  155  std::cmp::Ordering::then                                        +2
+  156  alloc::collections::BTreeMap::clear                             +1
+  157  alloc::collections::BTreeMap::remove                            +1
+  158  alloc::collections::BTreeMap::keys                              +1
+  159  alloc::collections::BTreeMap::iter_mut                          +1
+  160  alloc::collections::BTreeMap::into_values                       +1
+  161  alloc::collections::BTreeMap::serialize                         +1
+  162  alloc::collections::BTreeSet::difference                        +1
+  163  alloc::collections::BTreeSet::insert                            +1
+  164  alloc::collections::BTreeSet::new                               +2
+  165  alloc::collections::BTreeSet::contains                          +1
+  166  alloc::collections::BTreeSet::remove                            +2
+  167  alloc::collections::BTreeSet::eq                                +1
+  168  alloc::collections::BTreeSet::default                           +1
+  169  alloc::collections::BTreeSet::extend                            +1
+  170  alloc::collections::BTreeSet::range                             +1
+  171  alloc::collections::BTreeSet::retain                            +1
+  172  alloc::sync::Arc::as_boolean                                    +1
+  173  alloc::sync::Arc::as_raw_fd                                     +1
+  174  alloc::sync::Arc::as_ref                                        +1
+  175  alloc::rc::Rc::as_ref                                           +1
+  176  alloc::sync::Arc::eq                                            +1
+  177  alloc::sync::Arc::hash                                          +1
+  178  alloc::sync::Arc::into                                          +1
+  179  alloc::sync::Arc::ptr_eq                                        +1
+  180  std::alloc::alloc_zeroed                                        +2
+  181  std::alloc::dealloc                                             +2
+  182  std::alloc::alloc                                               +4
+  183  alloc::sync::Arc::serialize                                     +1
+  184  alloc::sync::Arc::strong_count                                  +1
+  185  core::option::Option::as_pin_mut                                +2
+  186  alloc::sync::Arc::get_mut                                       +1
+  187  alloc::sync::Arc::le                                            +1
+  188  alloc::sync::Arc::try_unwrap                                    +1
+  189  alloc::vec::Vec::cmp                                            +2
+  190  alloc::vec::Vec::partial_cmp                                    +9
+  191  core::cmp::Ordering::then_with                                  +2
+  192  alloc::boxed::Box::serialize                                    +1
+  193  alloc::vec::Vec::as_mut                                         +1
+  194  alloc::vec::Vec::as_ref                                         +1
+  195  alloc::vec::Vec::by_ref                                         +1
+  196  alloc::vec::Vec::chain_mut                                      +1
+  197  alloc::vec::Vec::decode                                         +1
+  198  alloc::vec::Vec::dedup_by                                       +1
+  199  alloc::collections::BTreeSet::is_empty                          +1
+  200  alloc::collections::BTreeSet::clone                             +1
+  201  alloc::collections::BTreeSet::into_iter                         +2
+  202  alloc::collections::BTreeSet::len                               +2
+  203  alloc::collections::BTreeSet::clone_from                        +1
+  204  alloc::collections::BTreeSet::into_par_iter                     +1
+  205  alloc::vec::Vec::dedup_by_key                                   +1
+  206  alloc::vec::Vec::der_total_len                                  +1
+  207  alloc::vec::Vec::encode_hex                                     +1
+  208  alloc::vec::Vec::encode_with                                    +1
+  209  alloc::vec::Vec::extend_trusted                                 +1
+  210  alloc::vec::Vec::from_abi                                       +1
+  211  alloc::vec::Vec::get_attribute                                  +1
+  212  alloc::vec::Vec::gt                                             +1
+  213  alloc::vec::Vec::iat                                            +1
+  214  alloc::vec::Vec::indexes                                        +1
+  215  alloc::vec::Vec::into_par_iter                                  +1
+  216  std::collections::HashMap::values_mut                           +2
+  217  alloc::vec::Vec::into_response                                  +1
+  218  alloc::vec::Vec::phf_hash                                       +1
+  219  alloc::vec::Vec::process                                        +1
+  220  alloc::vec::Vec::push_arg_str                                   +1
+  221  alloc::vec::Vec::push_str                                       +1
+  222  alloc::vec::Vec::put                                            +1
+  223  alloc::vec::Vec::resize_with                                    +1
+  224  alloc::vec::Vec::shrink                                         +1
+  225  alloc::vec::Vec::str                                            +1
+  226  alloc::vec::Vec::tiny_help_message                              +1
+  227  alloc::vec::Vec::try_reserve                                    +1
+  228  core::option::Option::insert                                    +2
+  229  alloc::vec::Vec::try_reserve_exact                              +1
+  230  alloc::vec::Vec::validate_length                                +1
+  231  alloc::vec::Vec::validate                                       +1
+  232  core::cell::Cell::get                                           +1
+  233  core::cell::Cell::new                                           +2
+  234  core::cell::Cell::set                                          +32
+  235  core::cell::Cell::replace                                       +2
+  236  core::cell::RefCell::borrow                                     +2
+  237  core::cell::RefCell::new                                        +2
+  238  core::cell::RefCell::borrow_mut                                +13
+  239  std::collections::HashMap::iter_mut                             +2
+  240  alloc::collections::BTreeMap::append                            +1
+  241  alloc::collections::BTreeMap::retain                            +1
+  242  alloc::vec::Vec::as_slice_mut                                   +1
+  243  alloc::vec::Vec::drop                                           +1
+  244  alloc::vec::Vec::encode                                         +1
+  245  alloc::vec::Vec::drain_bytes                                    +1
+  246  core::cell::Cell::clone                                         +1
+  247  core::cell::Cell::default                                       +1
+  248  core::cell::Cell::eq                                            +1
+  249  alloc::sync::Arc::inner                                         +1
+  250  alloc::rc::Rc::inner                                            +1
+  251  core::cell::Cell::get_mut                                       +1
+  252  core::cell::RefCell::as_ptr                                     +1
+  253  core::cell::RefCell::default                                    +1
+  254  core::cell::RefCell::try_borrow                                 +1
+  255  core::cmp::Ordering::is_eq                                      +1
+  256  core::iter::Iterator::for_each::call                            +1
+  257  alloc::vec::Vec::extend_desugared                               +1
+  258  core::num::ParseIntError::kind                                  +1
+  259  core::num::int_log10::panic_for_nonpositive_argument            +1
+  260  core::iter::Iterator::try_for_each::call                        +1
+  261  core::num::niche_types::I32NotAllOnes::as_inner                 +1
+  262  core::num::niche_types::I32NotAllOnes::new                      +1
+  263  core::option::Option::and                                       +1
+  264  core::option::Option::as_deref_mut                              +1
+  265  alloc::collections::BTreeSet::intersection                      +1
+  266  core::option::Option::check_constraints                         +1
+  267  core::option::Option::encode                                    +1
+  268  core::option::Option::encoded_len                               +1
+  269  core::option::Option::expect_throw                              +1
+  270  core::option::Option::extend                                    +1
+  271  core::option::Option::from_meta                                 +1
+  272  core::option::Option::from_none                                 +2
+  273  core::option::Option::into_token_stream                         +1
+  274  core::option::Option::lt                                        +1
+  275  core::option::Option::gt                                        +1
+  276  core::option::Option::max                                       +1
+  277  core::option::Option::owned_to_ref                              +1
+  278  core::option::Option::set                                       +1
+  279  core::option::Option::span                                      +1
+  280  core::option::Option::clone_from                                +1
+  281  core::option::Option::to_token_stream                           +1
+  282  alloc::collections::BTreeMap::into                              +1
+  283  core::option::Option::unchecked_unwrap                          +1
+  284  core::option::Option::unzip                                     +1
+  285  core::option::Option::xor                                       +1
+  286  core::option::Option::zeroize                                   +1
+  287  core::option::unwrap_failed                                     +1
+  288  core::result::Result::allow_identifier_not_found                +1
+  289  alloc::collections::BTreeSet::clear                             +1
+  290  core::result::Result::as_deref                                  +1
+  291  alloc::collections::BTreeMap::values_mut                        +1
+  292  alloc::collections::BTreeSet::append                            +1
+  293  alloc::sync::Arc::make_mut                                      +1
+  294  alloc::vec::Vec::prop_map                                       +1
+  295  core::result::Result::as_mut                                    +1
+  296  alloc::boxed::Box::downcast                                     +1
+  297  alloc::string::String::hash                                     +1
+  298  core::result::Result::cloned                                    +1
+  299  core::result::Result::context                                   +1
+  300  core::result::Result::deserialize                               +1
+  301  core::option::Option::deserialize                               +1
+  302  core::result::Result::emit                                      +1
+  303  core::result::Result::expect_throw                              +1
+  304  core::result::Result::from_none                                 +1
+  305  core::result::Result::hash                                      +1
+  306  core::result::Result::into_iter                                 +1
+  307  core::result::Result::into_stream                               +1
+  308  core::result::Result::into_ts                                   +1
+  309  core::result::Result::is_err_and                                +1
+  310  core::result::Result::map_or_else                               +1
+  311  alloc::boxed::Box::deref                                        +1
+  312  core::result::Result::ne                                        +1
+  313  core::result::Result::unwrap_or_compile_error                   +1
+  314  core::result::Result::unwrap_or_saturate                        +1
+  315  core::result::Result::unwrap_unchecked                          +1
+  316  std::alloc::realloc                                             +2
+  317  alloc::boxed::Box::from_slice                                   +1
+  318  core::result::Result::unwrap_with_msg                           +1
+  319  core::result::Result::with_context                              +1
+  320  core::slice::memchr::memchr                                     +1
+  321  std::cmp::Ordering::is_eq                                       +1
+  322  std::collections::HashMap::contains                             +1
+  323  std::collections::HashMap::drain                                +1
+  324  std::collections::HashSet::ne                                   +2
+  325  std::collections::HashMap::remove_entry                         +1
+  326  alloc::sync::Arc::pin                                           +1
+  327  std::collections::HashMap::validate_does_not_contain            +1
+  328  std::collections::HashMap::with_hasher                          +1
+  329  alloc::boxed::Box::begin                                        +1
+  330  std::collections::HashMap::shrink_to_fit                        +1
+  331  std::collections::HashMap::with_capacity_and_hasher             +1
+  332  alloc::vec::Vec::into_pyarray                                   +1
+  333  alloc::boxed::Box::into_pyarray                                 +1
+  334  std::collections::HashMap::get_inner                            +1
+  335  core::num::niche_types::UsizeNoHighBit::new_unchecked           +1
+  336  std::collections::HashMap::serialize                            +1
+  337  std::collections::HashSet::retain                               +2
+  338  std::collections::HashSet::intersection                         +1
+  339  std::collections::HashSet::replace                              +1
+  340  core::result::Result::process                                   +1
+  341  std::iter::Iterator::find::check                                +1
+  342  std::iter::Iterator::for_each::call                             +1
+  343  std::num::ParseIntError::kind                                   +1
+  344  alloc::vec::Vec::insert_str                                     +1
+  345  core::cell::RefCell::try_borrow_mut                             +1
+  346  std::time::Duration::from_secs                                  +4
+  347  std::time::Duration::new                                        +2
+  348  alloc::vec::Vec::extract_if                                     +1
+  349  core::cell::Cell::take                                          +1
+  350  std::str::Utf8Error::valid_up_to                                +1
+  351  alloc::sync::Arc::data_type                                     +1
+  352  core::cell::RefCell::clone                                      +1
+  353  core::cell::RefCell::into_inner                                 +1
+  354  alloc::boxed::Box::into_response                                +1
+  355  std::str::from_utf8                                             +1
+  356  std::ascii::escape_default                                      +1
+  357  std::time::Duration::as_secs_f64                                +1
+  358  alloc::sync::Arc::sleep                                         +1
+
+
+=== 16. METHODS GROUPED BY TYPE ===
+
+Actionable methods organized by their parent type for batch implementation.
+
+--- Vec (74 methods, 294 total crate impact) ---
+
+    deref                                    +17 crates
+    eq                                       +20 crates
+    index                                    +18 crates
+    deref_mut                                +18 crates
+    is_empty                                 +14 crates
+    clone                                    +14 crates
+    index_mut                                +16 crates
+    default                                  +13 crates
+    extend                                   +14 crates
+    into_boxed_slice                         +8 crates
+    retain                                   +6 crates
+    drain                                    +5 crates
+    into                                     +5 crates
+    as_mut_slice                             +5 crates
+    hash                                     +5 crates
+    as_ptr                                   +4 crates
+    dedup                                    +4 crates
+    ne                                       +4 crates
+    capacity                                 +4 crates
+    as_mut_ptr                               +3 crates
+    set_len                                  +16 crates
+    from_iter                                +3 crates
+    reserve_exact                            +3 crates
+    shrink_to_fit                            +3 crates
+    spare_capacity_mut                       +3 crates
+    splice                                   +3 crates
+    to_owned                                 +3 crates
+    from                                     +3 crates
+    from_hex                                 +3 crates
+    serialize                                +2 crates
+    zeroize                                  +2 crates
+    clone_from                               +2 crates
+    cmp                                      +2 crates
+    partial_cmp                              +9 crates
+    as_mut                                   +1 crates
+    as_ref                                   +1 crates
+    by_ref                                   +1 crates
+    chain_mut                                +1 crates
+    decode                                   +1 crates
+    dedup_by                                 +1 crates
+    dedup_by_key                             +1 crates
+    der_total_len                            +1 crates
+    encode_hex                               +1 crates
+    encode_with                              +1 crates
+    extend_trusted                           +1 crates
+    from_abi                                 +1 crates
+    get_attribute                            +1 crates
+    gt                                       +1 crates
+    iat                                      +1 crates
+    indexes                                  +1 crates
+    into_par_iter                            +1 crates
+    into_response                            +1 crates
+    phf_hash                                 +1 crates
+    process                                  +1 crates
+    push_arg_str                             +1 crates
+    push_str                                 +1 crates
+    put                                      +1 crates
+    resize_with                              +1 crates
+    shrink                                   +1 crates
+    str                                      +1 crates
+    tiny_help_message                        +1 crates
+    try_reserve                              +1 crates
+    try_reserve_exact                        +1 crates
+    validate_length                          +1 crates
+    validate                                 +1 crates
+    as_slice_mut                             +1 crates
+    drop                                     +1 crates
+    encode                                   +1 crates
+    drain_bytes                              +1 crates
+    extend_desugared                         +1 crates
+    prop_map                                 +1 crates
+    into_pyarray                             +1 crates
+    insert_str                               +1 crates
+    extract_if                               +1 crates
+
+--- Option (56 methods, 282 total crate impact) ---
+
+    eq                                       +33 crates
+    ok_or_else                               +14 crates
+    and_then                                 +13 crates
+    clone                                    +13 crates
+    unwrap_or_else                           +15 crates
+    default                                  +13 crates
+    map_or                                   +13 crates
+    ne                                       +12 crates
+    unwrap_or_default                        +11 crates
+    as_deref                                 +8 crates
+    cloned                                   +9 crates
+    as_mut                                   +8 crates
+    copied                                   +8 crates
+    map_or_else                              +8 crates
+    or                                       +10 crates
+    or_else                                  +9 crates
+    filter                                   +8 crates
+    unwrap_unchecked                         +6 crates
+    is_some_and                              +6 crates
+    hash                                     +5 crates
+    get_or_insert                            +4 crates
+    into_iter                                +4 crates
+    is_none_or                               +4 crates
+    into                                     +3 crates
+    replace                                  +3 crates
+    get_or_insert_with                       +4 crates
+    from                                     +2 crates
+    inspect                                  +2 crates
+    iter                                     +2 crates
+    zip                                      +2 crates
+    unwrap_throw                             +2 crates
+    as_pin_mut                               +2 crates
+    insert                                   +2 crates
+    and                                      +1 crates
+    as_deref_mut                             +1 crates
+    check_constraints                        +1 crates
+    encode                                   +1 crates
+    encoded_len                              +1 crates
+    expect_throw                             +1 crates
+    extend                                   +1 crates
+    from_meta                                +1 crates
+    from_none                                +2 crates
+    into_token_stream                        +1 crates
+    lt                                       +1 crates
+    gt                                       +1 crates
+    max                                      +1 crates
+    owned_to_ref                             +1 crates
+    set                                      +1 crates
+    span                                     +1 crates
+    clone_from                               +1 crates
+    to_token_stream                          +1 crates
+    unchecked_unwrap                         +1 crates
+    unzip                                    +1 crates
+    xor                                      +1 crates
+    zeroize                                  +1 crates
+    deserialize                              +1 crates
+
+--- Result (38 methods, 132 total crate impact) ---
+
+    eq                                       +21 crates
+    unwrap_or_else                           +19 crates
+    unwrap_or                                +13 crates
+    and_then                                 +8 crates
+    or_else                                  +6 crates
+    unwrap_or_default                        +6 crates
+    expect_err                               +6 crates
+    copied                                   +10 crates
+    or                                       +4 crates
+    and                                      +4 crates
+    is_ok_and                                +3 crates
+    clone                                    +2 crates
+    inspect_err                              +2 crates
+    unwrap_ok                                +2 crates
+    unwrap_throw                             +2 crates
+    map_or                                   +2 crates
+    allow_identifier_not_found               +1 crates
+    as_deref                                 +1 crates
+    as_mut                                   +1 crates
+    cloned                                   +1 crates
+    context                                  +1 crates
+    deserialize                              +1 crates
+    emit                                     +1 crates
+    expect_throw                             +1 crates
+    from_none                                +1 crates
+    hash                                     +1 crates
+    into_iter                                +1 crates
+    into_stream                              +1 crates
+    into_ts                                  +1 crates
+    is_err_and                               +1 crates
+    map_or_else                              +1 crates
+    ne                                       +1 crates
+    unwrap_or_compile_error                  +1 crates
+    unwrap_or_saturate                       +1 crates
+    unwrap_unchecked                         +1 crates
+    unwrap_with_msg                          +1 crates
+    with_context                             +1 crates
+    process                                  +1 crates
+
+--- Box (27 methods, 81 total crate impact) ---
+
+    drop                                     +16 crates
+    pin                                      +10 crates
+    default                                  +5 crates
+    clone                                    +4 crates
+    eq                                       +5 crates
+    leak                                     +4 crates
+    as_ref                                   +3 crates
+    from                                     +3 crates
+    hash                                     +2 crates
+    into                                     +2 crates
+    to_owned                                 +2 crates
+    as_mut                                   +2 crates
+    from_base32_decode                       +1 crates
+    into_raw                                 +9 crates
+    generic_fn                               +1 crates
+    into_abi                                 +1 crates
+    new_uninit_slice                         +1 crates
+    run                                      +1 crates
+    to_tailer                                +1 crates
+    zeroize                                  +1 crates
+    serialize                                +1 crates
+    downcast                                 +1 crates
+    deref                                    +1 crates
+    from_slice                               +1 crates
+    begin                                    +1 crates
+    into_pyarray                             +1 crates
+    into_response                            +1 crates
+
+--- Arc (22 methods, 54 total crate impact) ---
+
+    deref                                    +7 crates
+    clone                                    +23 crates
+    default                                  +3 crates
+    downcast                                 +2 crates
+    from                                     +2 crates
+    as_boolean                               +1 crates
+    as_raw_fd                                +1 crates
+    as_ref                                   +1 crates
+    eq                                       +1 crates
+    hash                                     +1 crates
+    into                                     +1 crates
+    ptr_eq                                   +1 crates
+    serialize                                +1 crates
+    strong_count                             +1 crates
+    get_mut                                  +1 crates
+    le                                       +1 crates
+    try_unwrap                               +1 crates
+    inner                                    +1 crates
+    make_mut                                 +1 crates
+    pin                                      +1 crates
+    data_type                                +1 crates
+    sleep                                    +1 crates
+
+--- BTreeMap (24 methods, 49 total crate impact) ---
+
+    get                                      +2 crates
+    values                                   +2 crates
+    default                                  +2 crates
+    into_iter                                +2 crates
+    len                                      +2 crates
+    contains_key                             +1 crates
+    eq                                       +1 crates
+    new                                      +1 crates
+    insert                                   +14 crates
+    clone                                    +2 crates
+    iter                                     +4 crates
+    entry                                    +2 crates
+    get_mut                                  +2 crates
+    is_empty                                 +2 crates
+    clear                                    +1 crates
+    remove                                   +1 crates
+    keys                                     +1 crates
+    iter_mut                                 +1 crates
+    into_values                              +1 crates
+    serialize                                +1 crates
+    append                                   +1 crates
+    retain                                   +1 crates
+    into                                     +1 crates
+    values_mut                               +1 crates
+
+--- Cell (9 methods, 42 total crate impact) ---
+
+    get                                      +1 crates
+    new                                      +2 crates
+    set                                      +32 crates
+    replace                                  +2 crates
+    clone                                    +1 crates
+    default                                  +1 crates
+    eq                                       +1 crates
+    get_mut                                  +1 crates
+    take                                     +1 crates
+
+--- HashMap (18 methods, 41 total crate impact) ---
+
+    eq                                       +6 crates
+    default                                  +4 crates
+    clone                                    +5 crates
+    entry                                    +4 crates
+    into_iter                                +4 crates
+    get_mut                                  +2 crates
+    retain                                   +3 crates
+    values_mut                               +2 crates
+    iter_mut                                 +2 crates
+    contains                                 +1 crates
+    drain                                    +1 crates
+    remove_entry                             +1 crates
+    validate_does_not_contain                +1 crates
+    with_hasher                              +1 crates
+    shrink_to_fit                            +1 crates
+    with_capacity_and_hasher                 +1 crates
+    get_inner                                +1 crates
+    serialize                                +1 crates
+
+--- alloc (6 methods, 28 total crate impact) ---
+
+    exchange_malloc                          +17 crates
+    alloc_zeroed                             +1 crates
+    alloc_zeroed                             +2 crates
+    dealloc                                  +2 crates
+    alloc                                    +4 crates
+    realloc                                  +2 crates
+
+--- BTreeSet (20 methods, 27 total crate impact) ---
+
+    iter                                     +4 crates
+    difference                               +1 crates
+    insert                                   +1 crates
+    new                                      +2 crates
+    contains                                 +1 crates
+    remove                                   +2 crates
+    eq                                       +1 crates
+    default                                  +1 crates
+    extend                                   +1 crates
+    range                                    +1 crates
+    retain                                   +1 crates
+    is_empty                                 +1 crates
+    clone                                    +1 crates
+    into_iter                                +2 crates
+    len                                      +2 crates
+    clone_from                               +1 crates
+    into_par_iter                            +1 crates
+    intersection                             +1 crates
+    clear                                    +1 crates
+    append                                   +1 crates
+
+--- HashSet (12 methods, 27 total crate impact) ---
+
+    eq                                       +2 crates
+    default                                  +4 crates
+    clone                                    +2 crates
+    extend                                   +3 crates
+    into_iter                                +3 crates
+    from_iter                                +3 crates
+    difference                               +2 crates
+    union                                    +2 crates
+    ne                                       +2 crates
+    retain                                   +2 crates
+    intersection                             +1 crates
+    replace                                  +1 crates
+
+--- RefCell (9 methods, 23 total crate impact) ---
+
+    borrow                                   +2 crates
+    new                                      +2 crates
+    borrow_mut                               +13 crates
+    as_ptr                                   +1 crates
+    default                                  +1 crates
+    try_borrow                               +1 crates
+    try_borrow_mut                           +1 crates
+    clone                                    +1 crates
+    into_inner                               +1 crates
+
+--- Ordering (8 methods, 15 total crate impact) ---
+
+    reverse                                  +3 crates
+    then                                     +2 crates
+    reverse                                  +2 crates
+    then_with                                +2 crates
+    then                                     +2 crates
+    then_with                                +2 crates
+    is_eq                                    +1 crates
+    is_eq                                    +1 crates
+
+--- Rc (6 methods, 12 total crate impact) ---
+
+    deref                                    +3 crates
+    downcast                                 +3 crates
+    clone                                    +2 crates
+    strong_count                             +2 crates
+    as_ref                                   +1 crates
+    inner                                    +1 crates
+
+--- String (4 methods, 11 total crate impact) ---
+
+    deref                                    +5 crates
+    new                                      +3 crates
+    default                                  +2 crates
+    hash                                     +1 crates
+
+--- Duration (4 methods, 9 total crate impact) ---
+
+    from_millis                              +2 crates
+    from_secs                                +4 crates
+    new                                      +2 crates
+    as_secs_f64                              +1 crates
+
+--- Alignment (2 methods, 4 total crate impact) ---
+
+    as_nonzero                               +2 crates
+    as_nonzero                               +2 crates
+
+--- char (2 methods, 4 total crate impact) ---
+
+    from_u32                                 +2 crates
+    from_u32                                 +2 crates
+
+--- str (2 methods, 4 total crate impact) ---
+
+    slice_error_fail                         +3 crates
+    from_utf8                                +1 crates
+
+--- I32NotAllOnes (2 methods, 2 total crate impact) ---
+
+    as_inner                                 +1 crates
+    new                                      +1 crates
+
+--- ParseIntError (2 methods, 2 total crate impact) ---
+
+    kind                                     +1 crates
+    kind                                     +1 crates
+
+--- for_each (2 methods, 2 total crate impact) ---
+
+    call                                     +1 crates
+    call                                     +1 crates
+
+
+=== 17. METHODS GROUPED BY MODULE ===
+
+Actionable methods organized by module for understanding scope.
+
+--- alloc::vec (74 methods, 294 total crate impact) ---
+
+    Vec::deref                                    +17 crates
+    Vec::eq                                       +20 crates
+    Vec::index                                    +18 crates
+    Vec::deref_mut                                +18 crates
+    Vec::is_empty                                 +14 crates
+    Vec::clone                                    +14 crates
+    Vec::index_mut                                +16 crates
+    Vec::default                                  +13 crates
+    Vec::extend                                   +14 crates
+    Vec::into_boxed_slice                         +8 crates
+    Vec::retain                                   +6 crates
+    Vec::drain                                    +5 crates
+    Vec::into                                     +5 crates
+    Vec::as_mut_slice                             +5 crates
+    Vec::hash                                     +5 crates
+    Vec::as_ptr                                   +4 crates
+    Vec::dedup                                    +4 crates
+    Vec::ne                                       +4 crates
+    Vec::capacity                                 +4 crates
+    Vec::as_mut_ptr                               +3 crates
+    Vec::set_len                                  +16 crates
+    Vec::from_iter                                +3 crates
+    Vec::reserve_exact                            +3 crates
+    Vec::shrink_to_fit                            +3 crates
+    Vec::spare_capacity_mut                       +3 crates
+    Vec::splice                                   +3 crates
+    Vec::to_owned                                 +3 crates
+    Vec::from                                     +3 crates
+    Vec::from_hex                                 +3 crates
+    Vec::serialize                                +2 crates
+    Vec::zeroize                                  +2 crates
+    Vec::clone_from                               +2 crates
+    Vec::cmp                                      +2 crates
+    Vec::partial_cmp                              +9 crates
+    Vec::as_mut                                   +1 crates
+    Vec::as_ref                                   +1 crates
+    Vec::by_ref                                   +1 crates
+    Vec::chain_mut                                +1 crates
+    Vec::decode                                   +1 crates
+    Vec::dedup_by                                 +1 crates
+    Vec::dedup_by_key                             +1 crates
+    Vec::der_total_len                            +1 crates
+    Vec::encode_hex                               +1 crates
+    Vec::encode_with                              +1 crates
+    Vec::extend_trusted                           +1 crates
+    Vec::from_abi                                 +1 crates
+    Vec::get_attribute                            +1 crates
+    Vec::gt                                       +1 crates
+    Vec::iat                                      +1 crates
+    Vec::indexes                                  +1 crates
+    Vec::into_par_iter                            +1 crates
+    Vec::into_response                            +1 crates
+    Vec::phf_hash                                 +1 crates
+    Vec::process                                  +1 crates
+    Vec::push_arg_str                             +1 crates
+    Vec::push_str                                 +1 crates
+    Vec::put                                      +1 crates
+    Vec::resize_with                              +1 crates
+    Vec::shrink                                   +1 crates
+    Vec::str                                      +1 crates
+    Vec::tiny_help_message                        +1 crates
+    Vec::try_reserve                              +1 crates
+    Vec::try_reserve_exact                        +1 crates
+    Vec::validate_length                          +1 crates
+    Vec::validate                                 +1 crates
+    Vec::as_slice_mut                             +1 crates
+    Vec::drop                                     +1 crates
+    Vec::encode                                   +1 crates
+    Vec::drain_bytes                              +1 crates
+    Vec::extend_desugared                         +1 crates
+    Vec::prop_map                                 +1 crates
+    Vec::into_pyarray                             +1 crates
+    Vec::insert_str                               +1 crates
+    Vec::extract_if                               +1 crates
+
+--- core::option (57 methods, 283 total crate impact) ---
+
+    Option::eq                                    +33 crates
+    Option::ok_or_else                            +14 crates
+    Option::and_then                              +13 crates
+    Option::clone                                 +13 crates
+    Option::unwrap_or_else                        +15 crates
+    Option::default                               +13 crates
+    Option::map_or                                +13 crates
+    Option::ne                                    +12 crates
+    Option::unwrap_or_default                     +11 crates
+    Option::as_deref                              +8 crates
+    Option::cloned                                +9 crates
+    Option::as_mut                                +8 crates
+    Option::copied                                +8 crates
+    Option::map_or_else                           +8 crates
+    Option::or                                    +10 crates
+    Option::or_else                               +9 crates
+    Option::filter                                +8 crates
+    Option::unwrap_unchecked                      +6 crates
+    Option::is_some_and                           +6 crates
+    Option::hash                                  +5 crates
+    Option::get_or_insert                         +4 crates
+    Option::into_iter                             +4 crates
+    Option::is_none_or                            +4 crates
+    Option::into                                  +3 crates
+    Option::replace                               +3 crates
+    Option::get_or_insert_with                    +4 crates
+    Option::from                                  +2 crates
+    Option::inspect                               +2 crates
+    Option::iter                                  +2 crates
+    Option::zip                                   +2 crates
+    Option::unwrap_throw                          +2 crates
+    Option::as_pin_mut                            +2 crates
+    Option::insert                                +2 crates
+    Option::and                                   +1 crates
+    Option::as_deref_mut                          +1 crates
+    Option::check_constraints                     +1 crates
+    Option::encode                                +1 crates
+    Option::encoded_len                           +1 crates
+    Option::expect_throw                          +1 crates
+    Option::extend                                +1 crates
+    Option::from_meta                             +1 crates
+    Option::from_none                             +2 crates
+    Option::into_token_stream                     +1 crates
+    Option::lt                                    +1 crates
+    Option::gt                                    +1 crates
+    Option::max                                   +1 crates
+    Option::owned_to_ref                          +1 crates
+    Option::set                                   +1 crates
+    Option::span                                  +1 crates
+    Option::clone_from                            +1 crates
+    Option::to_token_stream                       +1 crates
+    Option::unchecked_unwrap                      +1 crates
+    Option::unzip                                 +1 crates
+    Option::xor                                   +1 crates
+    Option::zeroize                               +1 crates
+    unwrap_failed                                 +1 crates
+    Option::deserialize                           +1 crates
+
+--- core::result (38 methods, 132 total crate impact) ---
+
+    Result::eq                                    +21 crates
+    Result::unwrap_or_else                        +19 crates
+    Result::unwrap_or                             +13 crates
+    Result::and_then                              +8 crates
+    Result::or_else                               +6 crates
+    Result::unwrap_or_default                     +6 crates
+    Result::expect_err                            +6 crates
+    Result::copied                                +10 crates
+    Result::or                                    +4 crates
+    Result::and                                   +4 crates
+    Result::is_ok_and                             +3 crates
+    Result::clone                                 +2 crates
+    Result::inspect_err                           +2 crates
+    Result::unwrap_ok                             +2 crates
+    Result::unwrap_throw                          +2 crates
+    Result::map_or                                +2 crates
+    Result::allow_identifier_not_found            +1 crates
+    Result::as_deref                              +1 crates
+    Result::as_mut                                +1 crates
+    Result::cloned                                +1 crates
+    Result::context                               +1 crates
+    Result::deserialize                           +1 crates
+    Result::emit                                  +1 crates
+    Result::expect_throw                          +1 crates
+    Result::from_none                             +1 crates
+    Result::hash                                  +1 crates
+    Result::into_iter                             +1 crates
+    Result::into_stream                           +1 crates
+    Result::into_ts                               +1 crates
+    Result::is_err_and                            +1 crates
+    Result::map_or_else                           +1 crates
+    Result::ne                                    +1 crates
+    Result::unwrap_or_compile_error               +1 crates
+    Result::unwrap_or_saturate                    +1 crates
+    Result::unwrap_unchecked                      +1 crates
+    Result::unwrap_with_msg                       +1 crates
+    Result::with_context                          +1 crates
+    Result::process                               +1 crates
+
+--- alloc::boxed (27 methods, 81 total crate impact) ---
+
+    Box::drop                                     +16 crates
+    Box::pin                                      +10 crates
+    Box::default                                  +5 crates
+    Box::clone                                    +4 crates
+    Box::eq                                       +5 crates
+    Box::leak                                     +4 crates
+    Box::as_ref                                   +3 crates
+    Box::from                                     +3 crates
+    Box::hash                                     +2 crates
+    Box::into                                     +2 crates
+    Box::to_owned                                 +2 crates
+    Box::as_mut                                   +2 crates
+    Box::from_base32_decode                       +1 crates
+    Box::into_raw                                 +9 crates
+    Box::generic_fn                               +1 crates
+    Box::into_abi                                 +1 crates
+    Box::new_uninit_slice                         +1 crates
+    Box::run                                      +1 crates
+    Box::to_tailer                                +1 crates
+    Box::zeroize                                  +1 crates
+    Box::serialize                                +1 crates
+    Box::downcast                                 +1 crates
+    Box::deref                                    +1 crates
+    Box::from_slice                               +1 crates
+    Box::begin                                    +1 crates
+    Box::into_pyarray                             +1 crates
+    Box::into_response                            +1 crates
+
+--- alloc::collections (44 methods, 76 total crate impact) ---
+
+    BTreeSet::iter                                +4 crates
+    BTreeMap::get                                 +2 crates
+    BTreeMap::values                              +2 crates
+    BTreeMap::default                             +2 crates
+    BTreeMap::into_iter                           +2 crates
+    BTreeMap::len                                 +2 crates
+    BTreeMap::contains_key                        +1 crates
+    BTreeMap::eq                                  +1 crates
+    BTreeMap::new                                 +1 crates
+    BTreeMap::insert                              +14 crates
+    BTreeMap::clone                               +2 crates
+    BTreeMap::iter                                +4 crates
+    BTreeMap::entry                               +2 crates
+    BTreeMap::get_mut                             +2 crates
+    BTreeMap::is_empty                            +2 crates
+    BTreeMap::clear                               +1 crates
+    BTreeMap::remove                              +1 crates
+    BTreeMap::keys                                +1 crates
+    BTreeMap::iter_mut                            +1 crates
+    BTreeMap::into_values                         +1 crates
+    BTreeMap::serialize                           +1 crates
+    BTreeSet::difference                          +1 crates
+    BTreeSet::insert                              +1 crates
+    BTreeSet::new                                 +2 crates
+    BTreeSet::contains                            +1 crates
+    BTreeSet::remove                              +2 crates
+    BTreeSet::eq                                  +1 crates
+    BTreeSet::default                             +1 crates
+    BTreeSet::extend                              +1 crates
+    BTreeSet::range                               +1 crates
+    BTreeSet::retain                              +1 crates
+    BTreeSet::is_empty                            +1 crates
+    BTreeSet::clone                               +1 crates
+    BTreeSet::into_iter                           +2 crates
+    BTreeSet::len                                 +2 crates
+    BTreeSet::clone_from                          +1 crates
+    BTreeSet::into_par_iter                       +1 crates
+    BTreeMap::append                              +1 crates
+    BTreeMap::retain                              +1 crates
+    BTreeSet::intersection                        +1 crates
+    BTreeMap::into                                +1 crates
+    BTreeSet::clear                               +1 crates
+    BTreeMap::values_mut                          +1 crates
+    BTreeSet::append                              +1 crates
+
+--- std::collections (30 methods, 68 total crate impact) ---
+
+    HashMap::eq                                   +6 crates
+    HashMap::default                              +4 crates
+    HashMap::clone                                +5 crates
+    HashMap::entry                                +4 crates
+    HashMap::into_iter                            +4 crates
+    HashSet::eq                                   +2 crates
+    HashSet::default                              +4 crates
+    HashMap::get_mut                              +2 crates
+    HashMap::retain                               +3 crates
+    HashSet::clone                                +2 crates
+    HashSet::extend                               +3 crates
+    HashSet::into_iter                            +3 crates
+    HashSet::from_iter                            +3 crates
+    HashSet::difference                           +2 crates
+    HashSet::union                                +2 crates
+    HashMap::values_mut                           +2 crates
+    HashMap::iter_mut                             +2 crates
+    HashMap::contains                             +1 crates
+    HashMap::drain                                +1 crates
+    HashSet::ne                                   +2 crates
+    HashMap::remove_entry                         +1 crates
+    HashMap::validate_does_not_contain            +1 crates
+    HashMap::with_hasher                          +1 crates
+    HashMap::shrink_to_fit                        +1 crates
+    HashMap::with_capacity_and_hasher             +1 crates
+    HashMap::get_inner                            +1 crates
+    HashMap::serialize                            +1 crates
+    HashSet::retain                               +2 crates
+    HashSet::intersection                         +1 crates
+    HashSet::replace                              +1 crates
+
+--- core::cell (18 methods, 65 total crate impact) ---
+
+    Cell::get                                     +1 crates
+    Cell::new                                     +2 crates
+    Cell::set                                     +32 crates
+    Cell::replace                                 +2 crates
+    RefCell::borrow                               +2 crates
+    RefCell::new                                  +2 crates
+    RefCell::borrow_mut                           +13 crates
+    Cell::clone                                   +1 crates
+    Cell::default                                 +1 crates
+    Cell::eq                                      +1 crates
+    Cell::get_mut                                 +1 crates
+    RefCell::as_ptr                               +1 crates
+    RefCell::default                              +1 crates
+    RefCell::try_borrow                           +1 crates
+    RefCell::try_borrow_mut                       +1 crates
+    Cell::take                                    +1 crates
+    RefCell::clone                                +1 crates
+    RefCell::into_inner                           +1 crates
+
+--- alloc::sync (22 methods, 54 total crate impact) ---
+
+    Arc::deref                                    +7 crates
+    Arc::clone                                    +23 crates
+    Arc::default                                  +3 crates
+    Arc::downcast                                 +2 crates
+    Arc::from                                     +2 crates
+    Arc::as_boolean                               +1 crates
+    Arc::as_raw_fd                                +1 crates
+    Arc::as_ref                                   +1 crates
+    Arc::eq                                       +1 crates
+    Arc::hash                                     +1 crates
+    Arc::into                                     +1 crates
+    Arc::ptr_eq                                   +1 crates
+    Arc::serialize                                +1 crates
+    Arc::strong_count                             +1 crates
+    Arc::get_mut                                  +1 crates
+    Arc::le                                       +1 crates
+    Arc::try_unwrap                               +1 crates
+    Arc::inner                                    +1 crates
+    Arc::make_mut                                 +1 crates
+    Arc::pin                                      +1 crates
+    Arc::data_type                                +1 crates
+    Arc::sleep                                    +1 crates
+
+--- alloc::alloc (2 methods, 18 total crate impact) ---
+
+    exchange_malloc                               +17 crates
+    alloc_zeroed                                  +1 crates
+
+--- alloc::rc (6 methods, 12 total crate impact) ---
+
+    Rc::deref                                     +3 crates
+    Rc::downcast                                  +3 crates
+    Rc::clone                                     +2 crates
+    Rc::strong_count                              +2 crates
+    Rc::as_ref                                    +1 crates
+    Rc::inner                                     +1 crates
+
+--- alloc::string (4 methods, 11 total crate impact) ---
+
+    String::deref                                 +5 crates
+    String::new                                   +3 crates
+    String::default                               +2 crates
+    String::hash                                  +1 crates
+
+--- std::alloc (4 methods, 10 total crate impact) ---
+
+    alloc_zeroed                                  +2 crates
+    dealloc                                       +2 crates
+    alloc                                         +4 crates
+    realloc                                       +2 crates
+
+--- std::time (4 methods, 9 total crate impact) ---
+
+    Duration::from_millis                         +2 crates
+    Duration::from_secs                           +4 crates
+    Duration::new                                 +2 crates
+    Duration::as_secs_f64                         +1 crates
+
+--- core::cmp (4 methods, 8 total crate impact) ---
+
+    Ordering::reverse                             +3 crates
+    Ordering::then                                +2 crates
+    Ordering::then_with                           +2 crates
+    Ordering::is_eq                               +1 crates
+
+--- std::cmp (4 methods, 7 total crate impact) ---
+
+    Ordering::reverse                             +2 crates
+    Ordering::then_with                           +2 crates
+    Ordering::then                                +2 crates
+    Ordering::is_eq                               +1 crates
+
+--- core::num (5 methods, 5 total crate impact) ---
+
+    ParseIntError::kind                           +1 crates
+    int_log10::panic_for_nonpositive_argument     +1 crates
+    niche_types::I32NotAllOnes::as_inner          +1 crates
+    niche_types::I32NotAllOnes::new               +1 crates
+    niche_types::UsizeNoHighBit::new_unchecked    +1 crates
+
+--- core::str (1 methods, 3 total crate impact) ---
+
+    slice_error_fail                              +3 crates
+
+--- core::char (1 methods, 2 total crate impact) ---
+
+    from_u32                                      +2 crates
+
+--- core::iter (2 methods, 2 total crate impact) ---
+
+    Iterator::for_each::call                      +1 crates
+    Iterator::try_for_each::call                  +1 crates
+
+--- core::ptr (1 methods, 2 total crate impact) ---
+
+    Alignment::as_nonzero                         +2 crates
+
+--- std::char (1 methods, 2 total crate impact) ---
+
+    from_u32                                      +2 crates
+
+--- std::hash (1 methods, 2 total crate impact) ---
+
+    RandomState::new                              +2 crates
+
+--- std::iter (2 methods, 2 total crate impact) ---
+
+    Iterator::find::check                         +1 crates
+    Iterator::for_each::call                      +1 crates
+
+--- std::ptr (1 methods, 2 total crate impact) ---
+
+    Alignment::as_nonzero                         +2 crates
+
+--- std::str (2 methods, 2 total crate impact) ---
+
+    Utf8Error::valid_up_to                        +1 crates
+    from_utf8                                     +1 crates
+
+--- core::slice (1 methods, 1 total crate impact) ---
+
+    memchr::memchr                                +1 crates
+
+--- std::ascii (1 methods, 1 total crate impact) ---
+
+    escape_default                                +1 crates
+
+--- std::num (1 methods, 1 total crate impact) ---
+
+    ParseIntError::kind                           +1 crates
+
+
+=== 18. QUICK WINS (SINGLE METHOD TYPES) ===
+
+Types with only 1-2 unwrapped methods - easy to complete.
+
+Type                              Methods    Crate Impact
+------------------------------------------------------------
+Alignment                               2              +4
+char                                    2              +4
+str                                     2              +4
+I32NotAllOnes                           2              +2
+RandomState                             1              +2
+for_each                                2              +2
+UsizeNoHighBit                          1              +1
+ascii                                   1              +1
+find                                    1              +1
+int_log10                               1              +1
+memchr                                  1              +1
+try_for_each                            1              +1
+
+
+=== 19. POSSIBLE NEXT WRAPPINGS ===
+
+Potential phases for wrapping work, balancing impact with cohesion.
+
+--- PHASE 1: Complete Existing Wrapped Types ---
+
+Add missing methods to types vstd already wraps.
+
+Total: 283 methods across 10 types (+1007 crate coverage)
+
+  Arc (23 methods, +55 crates):
+    - deref
+    - clone
+    - default
+    - downcast
+    - from
+    - as_boolean
+    - as_raw_fd
+    - as_ref
+    - eq
+    - hash
+    - into
+    - ptr_eq
+    - serialize
+    - strong_count
+    - get_mut
+    - le
+    - try_unwrap
+    - inner
+    - make_mut
+    - to_string
+    - pin
+    - data_type
+    - sleep
+  Box (30 methods, +89 crates):
+    - drop
+    - pin
+    - default
+    - clone
+    - eq
+    - leak
+    - fmt
+    - to_string
+    - as_ref
+    - from
+    - hash
+    - into
+    - to_owned
+    - as_mut
+    - from_base32_decode
+    - from_raw
+    - into_raw
+    - generic_fn
+    - into_abi
+    - new_uninit_slice
+    - run
+    - to_tailer
+    - zeroize
+    - serialize
+    - downcast
+    - deref
+    - from_slice
+    - begin
+    - into_pyarray
+    - into_response
+  HashMap (19 methods, +42 crates):
+    - eq
+    - default
+    - clone
+    - entry
+    - into_iter
+    - get_mut
+    - retain
+    - values_mut
+    - iter_mut
+    - contains
+    - drain
+    - fmt
+    - remove_entry
+    - validate_does_not_contain
+    - with_hasher
+    - shrink_to_fit
+    - with_capacity_and_hasher
+    - get_inner
+    - serialize
+  HashSet (12 methods, +27 crates):
+    - eq
+    - default
+    - clone
+    - extend
+    - into_iter
+    - from_iter
+    - difference
+    - union
+    - ne
+    - retain
+    - intersection
+    - replace
+  Option (59 methods, +301 crates):
+    - eq
+    - ok_or_else
+    - and_then
+    - clone
+    - unwrap_or_else
+    - to_tokens
+    - default
+    - map_or
+    - ne
+    - unwrap_or_default
+    - as_deref
+    - cloned
+    - as_mut
+    - copied
+    - map_or_else
+    - or
+    - or_else
+    - filter
+    - unwrap_unchecked
+    - is_some_and
+    - hash
+    - get_or_insert
+    - into_iter
+    - is_none_or
+    - into
+    - replace
+    - get_or_insert_with
+    - from
+    - inspect
+    - iter
+    - zip
+    - unwrap_throw
+    - as_pin_mut
+    - insert
+    - and
+    - as_deref_mut
+    - check_constraints
+    - encode
+    - encoded_len
+    - expect_throw
+    - extend
+    - from_meta
+    - from_none
+    - into_token_stream
+    - lt
+    - gt
+    - max
+    - owned_to_ref
+    - parse
+    - set
+    - span
+    - clone_from
+    - to_token_stream
+    - unchecked_unwrap
+    - unzip
+    - write_json_value
+    - xor
+    - zeroize
+    - deserialize
+  Rc (6 methods, +12 crates):
+    - deref
+    - downcast
+    - clone
+    - strong_count
+    - as_ref
+    - inner
+  Result (40 methods, +134 crates):
+    - eq
+    - unwrap_or_else
+    - unwrap_or
+    - and_then
+    - or_else
+    - unwrap_or_default
+    - expect_err
+    - copied
+    - or
+    - and
+    - is_ok_and
+    - clone
+    - inspect_err
+    - unwrap_ok
+    - unwrap_throw
+    - map_or
+    - allow_identifier_not_found
+    - as_deref
+    - as_mut
+    - cloned
+    - context
+    - deserialize
+    - emit
+    - expect_throw
+    - from_none
+    - hash
+    - into_iter
+    - into_stream
+    - into_ts
+    - is_err_and
+    - map_or_else
+    - ne
+    - print_err
+    - to_debug
+    - unwrap_or_compile_error
+    - unwrap_or_saturate
+    - unwrap_unchecked
+    - unwrap_with_msg
+    - with_context
+    - process
+  String (7 methods, +30 crates):
+    - fmt
+    - write_fmt
+    - deref
+    - new
+    - write_str
+    - default
+    - hash
+  Vec (85 methods, +313 crates):
+    - deref
+    - eq
+    - index
+    - deref_mut
+    - is_empty
+    - clone
+    - index_mut
+    - default
+    - extend
+    - into_boxed_slice
+    - retain
+    - drain
+    - into
+    - as_mut_slice
+    - hash
+    - as_ptr
+    - dedup
+    - ne
+    - capacity
+    - as_mut_ptr
+    - set_len
+    - from_iter
+    - from_raw_parts
+    - reserve_exact
+    - shrink_to_fit
+    - spare_capacity_mut
+    - splice
+    - to_owned
+    - write_fmt
+    - from
+    - from_hex
+    - serialize
+    - zeroize
+    - clone_from
+    - write_all
+    - write
+    - flush
+    - cmp
+    - partial_cmp
+    - fmt
+    - as_mut
+    - as_ref
+    - by_ref
+    - chain_mut
+    - decode
+    - dedup_by
+    - dedup_by_key
+    - der_total_len
+    - encode_hex
+    - encode_with
+    - extend_trusted
+    - from_abi
+    - get_attribute
+    - gt
+    - iat
+    - indexes
+    - into_par_iter
+    - into_response
+    - phf_hash
+    - process
+    - push_arg_str
+    - push_str
+    - put
+    - read_from_row_group
+    - resize_with
+    - shrink
+    - str
+    - tiny_help_message
+    - try_reserve
+    - try_reserve_exact
+    - validate_length
+    - validate
+    - write_u16_le
+    - as_slice_mut
+    - drop
+    - encode
+    - from_path_lossy
+    - drain_bytes
+    - extend_desugared
+    - prop_map
+    - into_pyarray
+    - write_f64
+    - insert_str
+    - poll_write
+    - extract_if
+  str (2 methods, +4 crates):
+    - slice_error_fail
+    - from_utf8
+
+--- PHASE 2: High-Impact New Types ---
+
+New types to wrap with highest crate coverage impact.
+
+  BTreeMap (24 methods, +49 crates)
+  Cell (9 methods, +42 crates)
+  alloc (6 methods, +28 crates)
+  BTreeSet (20 methods, +27 crates)
+  RefCell (9 methods, +23 crates)
+  Ordering (8 methods, +15 crates)
+  Duration (4 methods, +9 crates)
+
+--- WRAPPING SUMMARY ---
+
+Total unwrapped methods needed for 100% coverage: 479
+Phase 1 (complete existing types): 283 methods
+Phase 2 (new high-impact types): 7 types
+
+
+=== 20. ACTIONABLE METHODS (NON-IO, WRAPPED TYPES ONLY) ===
+
+Methods that can be added to existing vstd wrapper files, excluding I/O types.
+These are the most immediately actionable items for vstd contributors.
+
+Summary:
+  Total methods on wrapped types: 283
+  Excluded as I/O-related: 24
+  Actionable non-I/O methods: 259
+  Total crate coverage impact: +938
+
+Excluded method patterns: fmt, write, read, format, display, debug, to_string, to_tokens, from_str, parse, print, flush, seek, stdin, stdout, stderr, ffi, path, socket, from_raw, unsafe, metadata, env, command
+Excluded type patterns: File, Formatter, BufRead, BufWriter, BufReader, TcpStream, TcpListener, UdpSocket, Socket, SocketAddr, Path, PathBuf, OsStr, OsString, CStr, Stdin, Stdout, Stderr, UnsafeArg, Metadata, SystemTime, Instant, Command, Child
+
+======================================================================
+TYPE: Vec (74 methods, +294 crate impact)
+vstd path: vstd::std_specs::vec
+source file: vstd/source/vstd/std_specs/vec.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  eq                                              +20
+    2  index                                           +18
+    3  deref_mut                                       +18
+    4  deref                                           +17
+    5  index_mut                                       +16
+    6  set_len                                         +16
+    7  is_empty                                        +14
+    8  clone                                           +14
+    9  extend                                          +14
+   10  default                                         +13
+   11  partial_cmp                                      +9
+   12  into_boxed_slice                                 +8
+   13  retain                                           +6
+   14  drain                                            +5
+   15  into                                             +5
+   16  as_mut_slice                                     +5
+   17  hash                                             +5
+   18  as_ptr                                           +4
+   19  dedup                                            +4
+   20  ne                                               +4
+   21  capacity                                         +4
+   22  as_mut_ptr                                       +3
+   23  from_iter                                        +3
+   24  reserve_exact                                    +3
+   25  shrink_to_fit                                    +3
+   26  spare_capacity_mut                               +3
+   27  splice                                           +3
+   28  to_owned                                         +3
+   29  from                                             +3
+   30  from_hex                                         +3
+   31  serialize                                        +2
+   32  zeroize                                          +2
+   33  clone_from                                       +2
+   34  cmp                                              +2
+   35  as_mut                                           +1
+   36  as_ref                                           +1
+   37  by_ref                                           +1
+   38  chain_mut                                        +1
+   39  decode                                           +1
+   40  dedup_by                                         +1
+   41  dedup_by_key                                     +1
+   42  der_total_len                                    +1
+   43  encode_hex                                       +1
+   44  encode_with                                      +1
+   45  extend_trusted                                   +1
+   46  from_abi                                         +1
+   47  get_attribute                                    +1
+   48  gt                                               +1
+   49  iat                                              +1
+   50  indexes                                          +1
+   51  into_par_iter                                    +1
+   52  into_response                                    +1
+   53  phf_hash                                         +1
+   54  process                                          +1
+   55  push_arg_str                                     +1
+   56  push_str                                         +1
+   57  put                                              +1
+   58  resize_with                                      +1
+   59  shrink                                           +1
+   60  str                                              +1
+   61  tiny_help_message                                +1
+   62  try_reserve                                      +1
+   63  try_reserve_exact                                +1
+   64  validate_length                                  +1
+   65  validate                                         +1
+   66  as_slice_mut                                     +1
+   67  drop                                             +1
+   68  encode                                           +1
+   69  drain_bytes                                      +1
+   70  extend_desugared                                 +1
+   71  prop_map                                         +1
+   72  into_pyarray                                     +1
+   73  insert_str                                       +1
+   74  extract_if                                       +1
+
+======================================================================
+TYPE: Option (56 methods, +282 crate impact)
+vstd path: vstd::std_specs::option
+source file: vstd/source/vstd/std_specs/option.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  eq                                              +33
+    2  unwrap_or_else                                  +15
+    3  ok_or_else                                      +14
+    4  and_then                                        +13
+    5  clone                                           +13
+    6  default                                         +13
+    7  map_or                                          +13
+    8  ne                                              +12
+    9  unwrap_or_default                               +11
+   10  or                                              +10
+   11  cloned                                           +9
+   12  or_else                                          +9
+   13  as_deref                                         +8
+   14  as_mut                                           +8
+   15  copied                                           +8
+   16  map_or_else                                      +8
+   17  filter                                           +8
+   18  unwrap_unchecked                                 +6
+   19  is_some_and                                      +6
+   20  hash                                             +5
+   21  get_or_insert                                    +4
+   22  into_iter                                        +4
+   23  is_none_or                                       +4
+   24  get_or_insert_with                               +4
+   25  into                                             +3
+   26  replace                                          +3
+   27  from                                             +2
+   28  inspect                                          +2
+   29  iter                                             +2
+   30  zip                                              +2
+   31  unwrap_throw                                     +2
+   32  as_pin_mut                                       +2
+   33  insert                                           +2
+   34  from_none                                        +2
+   35  and                                              +1
+   36  as_deref_mut                                     +1
+   37  check_constraints                                +1
+   38  encode                                           +1
+   39  encoded_len                                      +1
+   40  expect_throw                                     +1
+   41  extend                                           +1
+   42  from_meta                                        +1
+   43  into_token_stream                                +1
+   44  lt                                               +1
+   45  gt                                               +1
+   46  max                                              +1
+   47  owned_to_ref                                     +1
+   48  set                                              +1
+   49  span                                             +1
+   50  clone_from                                       +1
+   51  to_token_stream                                  +1
+   52  unchecked_unwrap                                 +1
+   53  unzip                                            +1
+   54  xor                                              +1
+   55  zeroize                                          +1
+   56  deserialize                                      +1
+
+======================================================================
+TYPE: Result (38 methods, +132 crate impact)
+vstd path: vstd::std_specs::result
+source file: vstd/source/vstd/std_specs/result.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  eq                                              +21
+    2  unwrap_or_else                                  +19
+    3  unwrap_or                                       +13
+    4  copied                                          +10
+    5  and_then                                         +8
+    6  or_else                                          +6
+    7  unwrap_or_default                                +6
+    8  expect_err                                       +6
+    9  or                                               +4
+   10  and                                              +4
+   11  is_ok_and                                        +3
+   12  clone                                            +2
+   13  inspect_err                                      +2
+   14  unwrap_ok                                        +2
+   15  unwrap_throw                                     +2
+   16  map_or                                           +2
+   17  allow_identifier_not_found                       +1
+   18  as_deref                                         +1
+   19  as_mut                                           +1
+   20  cloned                                           +1
+   21  context                                          +1
+   22  deserialize                                      +1
+   23  emit                                             +1
+   24  expect_throw                                     +1
+   25  from_none                                        +1
+   26  hash                                             +1
+   27  into_iter                                        +1
+   28  into_stream                                      +1
+   29  into_ts                                          +1
+   30  is_err_and                                       +1
+   31  map_or_else                                      +1
+   32  ne                                               +1
+   33  unwrap_or_compile_error                          +1
+   34  unwrap_or_saturate                               +1
+   35  unwrap_unchecked                                 +1
+   36  unwrap_with_msg                                  +1
+   37  with_context                                     +1
+   38  process                                          +1
+
+======================================================================
+TYPE: Box (27 methods, +81 crate impact)
+vstd path: vstd::view
+source file: vstd/source/vstd/view.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  drop                                            +16
+    2  pin                                             +10
+    3  into_raw                                         +9
+    4  default                                          +5
+    5  eq                                               +5
+    6  clone                                            +4
+    7  leak                                             +4
+    8  as_ref                                           +3
+    9  from                                             +3
+   10  hash                                             +2
+   11  into                                             +2
+   12  to_owned                                         +2
+   13  as_mut                                           +2
+   14  from_base32_decode                               +1
+   15  generic_fn                                       +1
+   16  into_abi                                         +1
+   17  new_uninit_slice                                 +1
+   18  run                                              +1
+   19  to_tailer                                        +1
+   20  zeroize                                          +1
+   21  serialize                                        +1
+   22  downcast                                         +1
+   23  deref                                            +1
+   24  from_slice                                       +1
+   25  begin                                            +1
+   26  into_pyarray                                     +1
+   27  into_response                                    +1
+
+======================================================================
+TYPE: Arc (22 methods, +54 crate impact)
+vstd path: vstd::view
+source file: vstd/source/vstd/view.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  clone                                           +23
+    2  deref                                            +7
+    3  default                                          +3
+    4  downcast                                         +2
+    5  from                                             +2
+    6  as_boolean                                       +1
+    7  as_raw_fd                                        +1
+    8  as_ref                                           +1
+    9  eq                                               +1
+   10  hash                                             +1
+   11  into                                             +1
+   12  ptr_eq                                           +1
+   13  serialize                                        +1
+   14  strong_count                                     +1
+   15  get_mut                                          +1
+   16  le                                               +1
+   17  try_unwrap                                       +1
+   18  inner                                            +1
+   19  make_mut                                         +1
+   20  pin                                              +1
+   21  data_type                                        +1
+   22  sleep                                            +1
+
+======================================================================
+TYPE: HashMap (18 methods, +41 crate impact)
+vstd path: vstd::std_specs::hash
+source file: vstd/source/vstd/std_specs/hash.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  eq                                               +6
+    2  clone                                            +5
+    3  default                                          +4
+    4  entry                                            +4
+    5  into_iter                                        +4
+    6  retain                                           +3
+    7  get_mut                                          +2
+    8  values_mut                                       +2
+    9  iter_mut                                         +2
+   10  contains                                         +1
+   11  drain                                            +1
+   12  remove_entry                                     +1
+   13  validate_does_not_contain                        +1
+   14  with_hasher                                      +1
+   15  shrink_to_fit                                    +1
+   16  with_capacity_and_hasher                         +1
+   17  get_inner                                        +1
+   18  serialize                                        +1
+
+======================================================================
+TYPE: HashSet (12 methods, +27 crate impact)
+vstd path: vstd::std_specs::hash
+source file: vstd/source/vstd/std_specs/hash.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  default                                          +4
+    2  extend                                           +3
+    3  into_iter                                        +3
+    4  from_iter                                        +3
+    5  eq                                               +2
+    6  clone                                            +2
+    7  difference                                       +2
+    8  union                                            +2
+    9  ne                                               +2
+   10  retain                                           +2
+   11  intersection                                     +1
+   12  replace                                          +1
+
+======================================================================
+TYPE: Rc (6 methods, +12 crate impact)
+vstd path: vstd::view
+source file: vstd/source/vstd/view.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  deref                                            +3
+    2  downcast                                         +3
+    3  clone                                            +2
+    4  strong_count                                     +2
+    5  as_ref                                           +1
+    6  inner                                            +1
+
+======================================================================
+TYPE: String (4 methods, +11 crate impact)
+vstd path: vstd::string
+source file: vstd/source/vstd/string.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  deref                                            +5
+    2  new                                              +3
+    3  default                                          +2
+    4  hash                                             +1
+
+======================================================================
+TYPE: str (2 methods, +4 crate impact)
+vstd path: vstd::string
+source file: vstd/source/vstd/string.rs
+======================================================================
+
+ Rank  Method                                      +Crates
+------------------------------------------------------------
+    1  slice_error_fail                                 +3
+    2  from_utf8                                        +1
+
+======================================================================
+ACTIONABLE TOTAL: 259 methods across 10 types (+938 crate coverage)
+======================================================================
+
+
+================================================================================
 CONCLUSION
 ================================================================================
+
+=== PART IV SUMMARY: PROPOSED WRAPPINGS ===
+
+Filtered to exclude system/IO types (ffi, fs, io, net, process, thread, sync, env, path).
+
+High-impact actionable methods: 358 (from 479 total unwrapped)
+Methods on already-wrapped types: 259 across 10 types
+Total crate coverage impact: +938
+
+Actionable types: Vec, Option, Result, Box, Arc, HashMap, HashSet, Rc, String, str
 
 === KEY FINDINGS ===
 
@@ -7568,9 +9541,9 @@ checking and validating the data. Known limitations:
 
 === REPORT METADATA ===
 
-Report started:  2025-12-16 16:37:37 -08:00
-Report finished: 2025-12-16 16:37:38 -08:00
-Report generation time: 0.86 seconds
+Report started:  2025-12-17 14:37:39 -08:00
+Report finished: 2025-12-17 14:37:40 -08:00
+Report generation time: 1.05 seconds
 
 ================================================================================
 END OF REPORT

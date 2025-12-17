@@ -29,6 +29,16 @@ Coverage   Modules   Types   Traits   Methods
 100%          84       48       79       552
 ```
 
+### Proposed New Wrappings (PART IV)
+
+Filtering out system/IO types (ffi, fs, io, net, process, thread, sync, env, path):
+
+- **358 actionable methods** from 479 total unwrapped
+- **259 methods on already-wrapped types** across 10 types
+- **+938 crate coverage impact**
+
+Actionable types: Vec, Option, Result, Box, Arc, HashMap, HashSet, Rc, String, str
+
 ### Two Approaches in vstd
 
 1. **Direct wrappers** (`assume_specification`): Option, Result, Vec, HashMap, HashSet, slice, array

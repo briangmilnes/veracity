@@ -423,6 +423,10 @@ struct WrappedRustType {
     rust_module: String,
     vstd_path: String,
     methods_wrapped: Vec<WrappedMethod>,
+    #[serde(default)]
+    source_file: String,
+    #[serde(default)]
+    source_line: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -640,6 +644,14 @@ fn write_report(
     writeln!(log, "      14.3  90% Full Support Coverage")?;
     writeln!(log, "      14.4  100% Full Support Coverage")?;
     writeln!(log)?;
+    writeln!(log, "PART IV: PROPOSED NEW VERUS WRAPPINGS")?;
+    writeln!(log, "  15. High-Impact Methods to Wrap Next")?;
+    writeln!(log, "  16. Methods Grouped by Type")?;
+    writeln!(log, "  17. Methods Grouped by Module")?;
+    writeln!(log, "  18. Quick Wins (Single Method Types)")?;
+    writeln!(log, "  19. Possible Next Wrappings")?;
+    writeln!(log, "  20. Actionable Methods (Non-IO, Wrapped Types Only)")?;
+    writeln!(log)?;
     writeln!(log, "CONCLUSION")?;
     writeln!(log, "  - Key Findings")?;
     writeln!(log, "  - Greedy Coverage Summary Table")?;
@@ -743,6 +755,10 @@ fn write_report(
     writeln!(log, "    -> {} methods currently wrapped.\n", vstd.summary.total_wrapped_methods)?;
     
     writeln!(log, "Q5-Q11. Greedy coverage questions answered in Parts I and II below.\n")?;
+    
+    writeln!(log, "Q12. What should vstd wrap next?")?;
+    writeln!(log, "    -> Part IV proposes {} high-priority methods grouped by type/module.\n",
+        rusticate.summary.coverage_to_support_100_pct.methods - vstd.external_specs.len())?;
     
     // ========================================================================
     // PART I: CURRENT STATE
@@ -1269,12 +1285,383 @@ fn write_report(
     }
     
     // ========================================================================
-    // CONCLUSION
+    // PART IV: PROPOSED NEW VERUS WRAPPINGS
     // ========================================================================
     writeln!(log, "\n{}", "=".repeat(80))?;
-    writeln!(log, "CONCLUSION")?;
+    writeln!(log, "PART IV: PROPOSED NEW VERUS WRAPPINGS")?;
     writeln!(log, "{}", "=".repeat(80))?;
     writeln!(log)?;
+    writeln!(log, "This section proposes specific methods vstd should wrap next, organized")?;
+    writeln!(log, "for actionable implementation. Methods are prioritized by crate coverage impact.")?;
+    writeln!(log)?;
+    
+    // Collect all unwrapped methods from 100% milestone with their metadata
+    let methods_100 = rusticate.analysis.greedy_cover.methods.full_support.milestones.get("100");
+    
+    if let Some(m100) = methods_100 {
+        // Build list of unwrapped methods with their info
+        let mut unwrapped_methods: Vec<(&GreedyItem, String, String)> = Vec::new(); // (item, type_name, module)
+        
+        for item in &m100.items {
+            let parts: Vec<&str> = item.name.split("::").collect();
+            let check_key = if parts.len() >= 2 {
+                format!("{}::{}", parts[parts.len()-2], parts[parts.len()-1])
+            } else {
+                item.name.clone()
+            };
+            
+            if !wrapped_methods.contains(&check_key) {
+                // Extract type name and module
+                let type_name = if parts.len() >= 2 {
+                    parts[parts.len()-2].to_string()
+                } else {
+                    "unknown".to_string()
+                };
+                let module = if parts.len() >= 3 {
+                    format!("{}::{}", parts[0], parts[1])
+                } else if parts.len() >= 2 {
+                    parts[0].to_string()
+                } else {
+                    "unknown".to_string()
+                };
+                unwrapped_methods.push((item, type_name, module));
+            }
+        }
+        
+        // Section 15: High-Impact Methods (filtered)
+        // Exclusion patterns for system/IO methods
+        let excluded_method_patterns = [
+            "fmt", "write", "read", "format", "display", "debug", 
+            "to_string", "to_tokens", "from_str", "parse", "print",
+            "flush", "seek", "stdin", "stdout", "stderr", "ffi", "path", "socket",
+            "from_raw", "unsafe", "metadata", "env", "command",
+        ];
+        let excluded_type_patterns = [
+            "File", "Formatter", "BufRead", "BufWriter", "BufReader",
+            "TcpStream", "TcpListener", "UdpSocket", "Socket", "SocketAddr", 
+            "Path", "PathBuf", "OsStr", "OsString", "CStr",
+            "Stdin", "Stdout", "Stderr", "UnsafeArg", "Metadata",
+            "SystemTime", "Instant", "Command", "Child", "Placeholder",
+            "from_raw_parts", "from_raw_parts_mut",
+        ];
+        let excluded_modules = [
+            "std::io", "std::fs", "std::net", "std::ffi", "core::ffi", "alloc::ffi",
+            "std::process", "std::thread", "std::sync", "std::env", "std::path",
+        ];
+        
+        let is_excluded = |item: &GreedyItem| -> bool {
+            let method_name = item.name.split("::").last().unwrap_or(&item.name).to_lowercase();
+            let parts: Vec<&str> = item.name.split("::").collect();
+            let type_name = if parts.len() >= 2 { parts[parts.len() - 2] } else { "" };
+            let full_path = &item.name;
+            
+            excluded_method_patterns.iter().any(|p| method_name.contains(&p.to_lowercase()))
+                || excluded_type_patterns.iter().any(|p| type_name.contains(p))
+                || excluded_modules.iter().any(|m| full_path.starts_with(m))
+        };
+        
+        let filtered_methods: Vec<_> = unwrapped_methods.iter()
+            .filter(|(item, _, _)| !is_excluded(item))
+            .collect();
+        
+        writeln!(log, "\n=== 15. HIGH-IMPACT METHODS TO WRAP NEXT ===\n")?;
+        writeln!(log, "{} actionable methods (filtered from {} total).\n", filtered_methods.len(), unwrapped_methods.len())?;
+        writeln!(log, "{:>5}  {:<55} {:>10}", "Rank", "Method", "+Crates")?;
+        writeln!(log, "{}", "-".repeat(75))?;
+        
+        for (i, (item, _, _)) in filtered_methods.iter().enumerate() {
+            writeln!(log, "{:>5}  {:<55} {:>+10}", i + 1, item.name, item.crates_added)?;
+        }
+        writeln!(log)?;
+        
+        // Section 16: Methods Grouped by Type (filtered)
+        writeln!(log, "\n=== 16. METHODS GROUPED BY TYPE ===\n")?;
+        writeln!(log, "Actionable methods organized by their parent type for batch implementation.\n")?;
+        
+        // Group filtered methods by type
+        let mut by_type: BTreeMap<String, Vec<&GreedyItem>> = BTreeMap::new();
+        for (item, type_name, _) in &filtered_methods {
+            by_type.entry(type_name.to_string()).or_default().push(item);
+        }
+        
+        // Sort types by total crate impact
+        let mut type_impact: Vec<(String, usize, Vec<&GreedyItem>)> = by_type
+            .into_iter()
+            .map(|(t, items)| {
+                let total_impact: usize = items.iter().map(|i| i.crates_added).sum();
+                (t, total_impact, items)
+            })
+            .collect();
+        type_impact.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        for (type_name, total_impact, items) in &type_impact {
+            if items.len() >= 2 {
+                writeln!(log, "--- {} ({} methods, {} total crate impact) ---\n", 
+                    type_name, items.len(), total_impact)?;
+                for item in items.iter() {
+                    let method_name = item.name.split("::").last().unwrap_or(&item.name);
+                    writeln!(log, "    {:<40} +{} crates", method_name, item.crates_added)?;
+                }
+                writeln!(log)?;
+            }
+        }
+        
+        // Section 17: Methods Grouped by Module (filtered)
+        writeln!(log, "\n=== 17. METHODS GROUPED BY MODULE ===\n")?;
+        writeln!(log, "Actionable methods organized by module for understanding scope.\n")?;
+        
+        // Group filtered methods by module
+        let mut by_module: BTreeMap<String, Vec<&GreedyItem>> = BTreeMap::new();
+        for (item, _, module) in &filtered_methods {
+            by_module.entry(module.to_string()).or_default().push(item);
+        }
+        
+        // Sort modules by total crate impact
+        let mut module_impact: Vec<(String, usize, Vec<&GreedyItem>)> = by_module
+            .into_iter()
+            .map(|(m, items)| {
+                let total_impact: usize = items.iter().map(|i| i.crates_added).sum();
+                (m, total_impact, items)
+            })
+            .collect();
+        module_impact.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        for (module, total_impact, items) in module_impact.iter() {
+            writeln!(log, "--- {} ({} methods, {} total crate impact) ---\n", 
+                module, items.len(), total_impact)?;
+            for item in items.iter() {
+                let short_name = item.name.split("::").skip(2).collect::<Vec<_>>().join("::");
+                let display_name = if short_name.is_empty() { &item.name } else { &short_name };
+                writeln!(log, "    {:<45} +{} crates", display_name, item.crates_added)?;
+            }
+            writeln!(log)?;
+        }
+        
+        // Section 18: Quick Wins
+        writeln!(log, "\n=== 18. QUICK WINS (SINGLE METHOD TYPES) ===\n")?;
+        writeln!(log, "Types with only 1-2 unwrapped methods - easy to complete.\n")?;
+        
+        // Types to exclude from quick wins (system/IO types)
+        let excluded_quick_win_types = [
+            "UnsafeArg", "ffi", "from_raw_parts", "from_raw_parts_mut", "process",
+            "TcpStream", "TcpListener", "Socket", "SocketAddr", "OsString", "OsStr", "CStr",
+            "Stdin", "Stdout", "Stderr", "File", "Path", "PathBuf",
+            "Metadata", "Child", "Utf8Error", "ParseIntError", "fmt", "env",
+            "SystemTime", "Instant", "Command", "io",
+        ];
+        
+        let quick_wins: Vec<_> = type_impact.iter()
+            .filter(|(t, _, items)| {
+                items.len() <= 2 && items.len() >= 1 
+                && !excluded_quick_win_types.iter().any(|ex| t.contains(ex))
+            })
+            .collect();
+        
+        writeln!(log, "{:<30} {:>10} {:>15}", "Type", "Methods", "Crate Impact")?;
+        writeln!(log, "{}", "-".repeat(60))?;
+        for (type_name, total_impact, items) in quick_wins.iter() {
+            writeln!(log, "{:<30} {:>10} {:>+15}", type_name, items.len(), total_impact)?;
+        }
+        writeln!(log)?;
+        
+        // Section 19: Possible Next Wrappings
+        writeln!(log, "\n=== 19. POSSIBLE NEXT WRAPPINGS ===\n")?;
+        writeln!(log, "Potential phases for wrapping work, balancing impact with cohesion.\n")?;
+        
+        // Phase 1: Complete existing types
+        writeln!(log, "--- PHASE 1: Complete Existing Wrapped Types ---\n")?;
+        writeln!(log, "Add missing methods to types vstd already wraps.\n")?;
+        
+        let existing_wrapped: HashSet<&str> = vstd.wrapped_rust_types
+            .iter()
+            .map(|t| t.rust_type.as_str())
+            .collect();
+        
+        let mut phase1_methods: Vec<(&str, &GreedyItem)> = Vec::new();
+        for (item, type_name, _) in &unwrapped_methods {
+            if existing_wrapped.contains(type_name.as_str()) {
+                phase1_methods.push((type_name.as_str(), item));
+            }
+        }
+        
+        // Group phase 1 by type
+        let mut phase1_by_type: BTreeMap<&str, Vec<&GreedyItem>> = BTreeMap::new();
+        for (type_name, item) in &phase1_methods {
+            phase1_by_type.entry(type_name).or_default().push(item);
+        }
+        
+        let phase1_total: usize = phase1_methods.iter().map(|(_, i)| i.crates_added).sum();
+        writeln!(log, "Total: {} methods across {} types (+{} crate coverage)\n",
+            phase1_methods.len(), phase1_by_type.len(), phase1_total)?;
+        
+        for (type_name, items) in &phase1_by_type {
+            let type_impact: usize = items.iter().map(|i| i.crates_added).sum();
+            writeln!(log, "  {} ({} methods, +{} crates):", type_name, items.len(), type_impact)?;
+            for item in items.iter() {
+                let method = item.name.split("::").last().unwrap_or(&item.name);
+                writeln!(log, "    - {}", method)?;
+            }
+        }
+        writeln!(log)?;
+        
+        // Phase 2: High-impact new types
+        writeln!(log, "--- PHASE 2: High-Impact New Types ---\n")?;
+        writeln!(log, "New types to wrap with highest crate coverage impact.\n")?;
+        
+        let phase2_types: Vec<_> = type_impact.iter()
+            .filter(|(t, _, items)| !existing_wrapped.contains(t.as_str()) && items.len() >= 3)
+            .collect();
+        
+        for (type_name, total_impact, items) in &phase2_types {
+            writeln!(log, "  {} ({} methods, +{} crates)", type_name, items.len(), total_impact)?;
+        }
+        writeln!(log)?;
+        
+        // Summary
+        writeln!(log, "--- WRAPPING SUMMARY ---\n")?;
+        writeln!(log, "Total unwrapped methods needed for 100% coverage: {}", unwrapped_methods.len())?;
+        writeln!(log, "Phase 1 (complete existing types): {} methods", phase1_methods.len())?;
+        writeln!(log, "Phase 2 (new high-impact types): {} types", phase2_types.len())?;
+        writeln!(log)?;
+        
+        // Section 20: Actionable Methods (Non-IO, Wrapped Types Only)
+        writeln!(log, "\n=== 20. ACTIONABLE METHODS (NON-IO, WRAPPED TYPES ONLY) ===\n")?;
+        writeln!(log, "Methods that can be added to existing vstd wrapper files, excluding I/O types.")?;
+        writeln!(log, "These are the most immediately actionable items for vstd contributors.\n")?;
+        
+        // Build type -> source file mapping from vstd
+        let mut type_source_files: BTreeMap<String, (String, String)> = BTreeMap::new(); // type -> (vstd_path, source_file)
+        for wt in &vstd.wrapped_rust_types {
+            type_source_files.insert(wt.rust_type.clone(), (wt.vstd_path.clone(), wt.source_file.clone()));
+        }
+        
+        // System/IO-related method names to exclude (checked against method name only, not full path)
+        let io_method_patterns = [
+            "fmt", "write", "read", "format", "display", "debug", 
+            "to_string", "to_tokens", "from_str", "parse", "print",
+            "flush", "seek", "stdin", "stdout", "stderr", "ffi", "path", "socket",
+            "from_raw", "unsafe", "metadata", "env", "command",
+        ];
+        
+        // System/IO-related type names to exclude (checked against type in path)
+        let io_type_patterns = [
+            "File", "Formatter", "BufRead", "BufWriter", "BufReader",
+            "TcpStream", "TcpListener", "UdpSocket", "Socket", "SocketAddr", 
+            "Path", "PathBuf", "OsStr", "OsString", "CStr",
+            "Stdin", "Stdout", "Stderr", "UnsafeArg", "Metadata",
+            "SystemTime", "Instant", "Command", "Child",
+        ];
+        
+        let is_io_method = |method_name: &str, full_path: &str| -> bool {
+            let method_lower = method_name.to_lowercase();
+            // Check method name against IO method patterns
+            if io_method_patterns.iter().any(|p| method_lower.contains(&p.to_lowercase())) {
+                return true;
+            }
+            // Check if the type in the path is an IO type
+            let parts: Vec<&str> = full_path.split("::").collect();
+            if parts.len() >= 2 {
+                let type_name = parts[parts.len() - 2];
+                if io_type_patterns.iter().any(|p| type_name.contains(p)) {
+                    return true;
+                }
+            }
+            false
+        };
+        
+        // Filter phase1 to exclude IO methods
+        let mut actionable_by_type: BTreeMap<&str, Vec<&GreedyItem>> = BTreeMap::new();
+        let mut total_actionable = 0;
+        let mut total_io_excluded = 0;
+        
+        for (type_name, item) in &phase1_methods {
+            let method_name = item.name.split("::").last().unwrap_or(&item.name);
+            if is_io_method(method_name, &item.name) {
+                total_io_excluded += 1;
+            } else {
+                actionable_by_type.entry(type_name).or_default().push(item);
+                total_actionable += 1;
+            }
+        }
+        
+        // Calculate total impact
+        let total_impact: usize = actionable_by_type.values()
+            .flat_map(|items| items.iter())
+            .map(|i| i.crates_added)
+            .sum();
+        
+        writeln!(log, "Summary:")?;
+        writeln!(log, "  Total methods on wrapped types: {}", phase1_methods.len())?;
+        writeln!(log, "  Excluded as I/O-related: {}", total_io_excluded)?;
+        writeln!(log, "  Actionable non-I/O methods: {}", total_actionable)?;
+        writeln!(log, "  Total crate coverage impact: +{}", total_impact)?;
+        writeln!(log)?;
+        
+        writeln!(log, "Excluded method patterns: {}", io_method_patterns.join(", "))?;
+        writeln!(log, "Excluded type patterns: {}\n", io_type_patterns.join(", "))?;
+        
+        // Sort types by impact
+        let mut sorted_types: Vec<_> = actionable_by_type.iter()
+            .map(|(t, items)| {
+                let impact: usize = items.iter().map(|i| i.crates_added).sum();
+                (*t, items, impact)
+            })
+            .collect();
+        sorted_types.sort_by(|a, b| b.2.cmp(&a.2));
+        
+        for (type_name, items, impact) in &sorted_types {
+            let (vstd_path, source_file) = type_source_files.get(*type_name)
+                .map(|(v, s)| (v.as_str(), s.as_str()))
+                .unwrap_or(("unknown", "unknown"));
+            
+            writeln!(log, "{}", "=".repeat(70))?;
+            writeln!(log, "TYPE: {} ({} methods, +{} crate impact)", type_name, items.len(), impact)?;
+            writeln!(log, "vstd path: {}", vstd_path)?;
+            writeln!(log, "source file: vstd/source/vstd/{}", source_file)?;
+            writeln!(log, "{}", "=".repeat(70))?;
+            writeln!(log)?;
+            
+            writeln!(log, "{:>5}  {:<40} {:>10}", "Rank", "Method", "+Crates")?;
+            writeln!(log, "{}", "-".repeat(60))?;
+            
+            // Sort items by impact within each type
+            let mut sorted_items: Vec<_> = items.iter().collect();
+            sorted_items.sort_by(|a, b| b.crates_added.cmp(&a.crates_added));
+            
+            for (i, item) in sorted_items.iter().enumerate() {
+                let method_name = item.name.split("::").last().unwrap_or(&item.name);
+                writeln!(log, "{:>5}  {:<40} {:>+10}", i + 1, method_name, item.crates_added)?;
+            }
+            writeln!(log)?;
+        }
+        
+        // Grand total
+        writeln!(log, "{}", "=".repeat(70))?;
+        writeln!(log, "ACTIONABLE TOTAL: {} methods across {} types (+{} crate coverage)",
+            total_actionable, sorted_types.len(), total_impact)?;
+        writeln!(log, "{}", "=".repeat(70))?;
+        writeln!(log)?;
+        
+        // Write PART IV summary in CONCLUSION
+        writeln!(log, "\n{}", "=".repeat(80))?;
+        writeln!(log, "CONCLUSION")?;
+        writeln!(log, "{}", "=".repeat(80))?;
+        writeln!(log)?;
+        
+        writeln!(log, "=== PART IV SUMMARY: PROPOSED WRAPPINGS ===\n")?;
+        writeln!(log, "Filtered to exclude system/IO types (ffi, fs, io, net, process, thread, sync, env, path).\n")?;
+        writeln!(log, "High-impact actionable methods: {} (from {} total unwrapped)", filtered_methods.len(), unwrapped_methods.len())?;
+        writeln!(log, "Methods on already-wrapped types: {} across {} types", total_actionable, sorted_types.len())?;
+        writeln!(log, "Total crate coverage impact: +{}\n", total_impact)?;
+        let type_names: Vec<&str> = sorted_types.iter().map(|(t, _, _)| *t).collect();
+        writeln!(log, "Actionable types: {}\n", type_names.join(", "))?;
+    } else {
+        // Fallback if no methods data
+        writeln!(log, "\n{}", "=".repeat(80))?;
+        writeln!(log, "CONCLUSION")?;
+        writeln!(log, "{}", "=".repeat(80))?;
+        writeln!(log)?;
+    }
     
     writeln!(log, "=== KEY FINDINGS ===\n")?;
     
