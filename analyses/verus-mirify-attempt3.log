@@ -1,0 +1,63 @@
+veracity-mirify
+=================
+Codebase: /home/milnes/projects/VerusCodebases
+Jobs: 4
+Max projects: 50
+Started: 2025-12-11 11:22:33 -08:00
+
+Limiting to 50 projects
+Found 41 projects
+
+  [BUILD]  NrOS ... FAILED: Build failed (see veracity-mirify.errs) (0.04s)
+  [CACHED] cortenmm-adv (0.00s)
+  [CACHED] cortenmm-rw (0.00s)
+  [BUILD]  verification ... FAILED: Build failed (see veracity-mirify.errs) (0.07s)
+  [BUILD]  anvil ... FAILED: Build failed (see veracity-mirify.errs) (0.22s)
+  [CACHED] extraction (0.00s)
+  [CACHED] extraction (0.00s)
+  [BUILD]  owl-hpke ... FAILED: Build failed (see veracity-mirify.errs) (0.68s)
+  [CACHED] rust-hpke (0.00s)
+  [CACHED] test_bench_hpke (0.00s)
+  [BUILD]  wireguard-rs ... OK (65.71s)
+  [BUILD]  verdict ... FAILED: Build failed (see veracity-mirify.errs) (169.54s)
+  [BUILD]  ironsht ... FAILED: Build failed (see veracity-mirify.errs) (14.75s)
+  [BUILD]  rust-jemalloc-wrapper ... OK (31.51s)
+  [BUILD]  test_libc ... OK (1.26s)
+  [BUILD]  single-threaded ... FAILED: Build failed (see veracity-mirify.errs) (0.40s)
+  [BUILD]  page-table ... FAILED: Build failed (see veracity-mirify.errs) (0.10s)
+  [BUILD]  verified-node-replication ... FAILED: Build failed (see veracity-mirify.errs) (43.77s)
+  [BUILD]  capybarakv ... FAILED: Build failed (see veracity-mirify.errs) (10.26s)
+  [BUILD]  pmcopy ... OK (2.89s)
+  [BUILD]  multilog ... FAILED: Build failed (see veracity-mirify.errs) (11.09s)
+  [BUILD]  pmsafe ... OK (2.45s)
+  [BUILD]  pmemlog ... OK (13.17s)
+  [BUILD]  metadata_kv ... OK (9.75s)
+  [BUILD]  multilog_test ... FAILED: Build failed (see veracity-mirify.errs) (0.09s)
+  [BUILD]  source ... FAILED: Build failed (see veracity-mirify.errs) (38.37s)
+  [BUILD]  cargo-v ... OK (9.77s)
+  [BUILD]  rust-parser ... FAILED: Build failed (see veracity-mirify.errs) (61.43s)
+  [BUILD]  verus-rustc ... OK (11.83s)
+  [BUILD]  prettyplease ... FAILED: Build failed (see veracity-mirify.errs) (0.10s)
+  [BUILD]  syn ... FAILED: Build failed (see veracity-mirify.errs) (6.44s)
+  [CACHED] source (0.00s)
+  [BUILD]  vargo ... OK (9.42s)
+  [BUILD]  veritas ... FAILED: Build failed (see veracity-mirify.errs) (4.99s)
+  [BUILD]  verus-analyzer ... OK (85.54s)
+  [BUILD]  wasm_rewrite ... OK (6.34s)
+  [BUILD]  wasmbin ... OK (14.83s)
+  [BUILD]  vest ... OK (8.91s)
+  [BUILD]  vest-dsl ... OK (7.46s)
+  [BUILD]  vest-examples ... FAILED: Build failed (see veracity-mirify.errs) (0.43s)
+  [BUILD]  vostd ... FAILED: Build failed (see veracity-mirify.errs) (0.06s)
+
+=== Summary ===
+Total projects: 41
+  MIR cached:   7
+  Compiled:     15 (36.6%)
+  Failed:       19
+
+TOTAL TIME: 643687 ms (643.69 seconds)
+Ended: 2025-12-11 11:33:17 -08:00
+
+Log: analyses/veracity-mirify.log
+Errors: analyses/veracity-mirify.errs

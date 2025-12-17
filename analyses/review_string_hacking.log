@@ -1,0 +1,79 @@
+Entering directory '/home/milnes/projects/veracity/src'
+
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1020: String hacking detected: code_content.contains("-> int") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1020: String hacking detected: code_content.contains("-> nat") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1021: String hacking detected: code_content.contains("<int>") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1021: String hacking detected: code_content.contains("<nat>") - Use AST traversal instead
+
+Total violations: 30 files checked, 4 violations found
+
+Completed in 27ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 30 files checked, 0 violations found
+
+Completed in 28ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 30 files checked, 0 violations found
+
+Completed in 31ms
+Entering directory 'src/bin/minimize_lib.rs'
+
+
+Total violations: 1 files checked, 0 violations found
+
+Completed in 7ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:655: String hacking detected: line.contains("spec fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:655: String hacking detected: line.contains("open spec fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1400: String hacking detected: line.contains("proof fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1400: String hacking detected: line.contains("pub proof fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1471: String hacking detected: line.contains("proof fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1475: String hacking detected: line.contains("fn ") - Use AST traversal instead
+/home/milnes/projects/veracity/src/bin/minimize_lib.rs:1494: String hacking detected: search_line.contains("let ") - Use AST traversal instead
+
+Total violations: 175 files checked, 7 violations found
+
+Completed in 102ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 175 files checked, 0 violations found
+
+Completed in 93ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 175 files checked, 0 violations found
+
+Completed in 101ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 175 files checked, 0 violations found
+
+Completed in 81ms
+Entering directory '/home/milnes/projects/veracity/src'
+
+
+Total violations: 175 files checked, 0 violations found
+
+Completed in 89ms
+Entering directory 'src/bin/lemma_search.rs'
+
+src/bin/lemma_search.rs:370: String hacking detected: text.replace() on code - Use AST node replacement instead
+
+Total violations: 1 files checked, 1 violations found
+
+Completed in 6ms
+Entering directory 'src/bin/lemma_search.rs'
+
+src/bin/lemma_search.rs:499: String hacking detected: text.replace() on code - Use AST node replacement instead
+
+Total violations: 1 files checked, 1 violations found
+
+Completed in 6ms

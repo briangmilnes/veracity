@@ -1,0 +1,637 @@
+VERUS RUST STDLIB WRAPPING ANALYSIS
+====================================
+Generated: 2025-12-12 08:25:10 -08:00
+vstd path: /home/milnes/projects/VerusCodebases/verus/source/vstd
+rusticate log: /home/milnes/projects/rusticate/analyses/analyze_modules_mir.log
+
+=== ABSTRACT ===
+
+vstd currently wraps:
+  - 32 Rust stdlib types
+  - 203 methods across those types
+
+Rust stdlib usage (from rusticate):
+  - 44 types used in Rust crates
+  - 6 types already wrapped by vstd (13.6%)
+  - 38 types NOT wrapped (gaps)
+
+=== TABLE OF CONTENTS ===
+
+1. VSTD TYPE COVERAGE - What types vstd wraps
+2. VSTD METHOD COVERAGE - Methods per type with spec details
+3. RUST USAGE BY TYPE - What Rust types are actually used
+4. WRAPPING GAPS - Types used but not wrapped
+5. METHOD GAPS PER TYPE - Methods used but not wrapped
+6. PRIORITIZED WRAPPING NEEDS - What to wrap next
+7. SUMMARY
+
+=== 1. VSTD TYPE COVERAGE ===
+
+This helps us answer: What Rust stdlib types does vstd already wrap?
+
+Type                         Methods          Status
+-------------------------------------------------------
+Vec                               24         wrapped
+DefaultHasher                     23         wrapped
+Option                            22         wrapped
+HashMap                           21         wrapped
+hash_set                          21         wrapped
+VecDeque                          15         wrapped
+Result                            13         wrapped
+hash_map                          11         wrapped
+Keys                               8         wrapped
+Values                             8         wrapped
+u32                                6         wrapped
+f32                                5         wrapped
+f64                                5         wrapped
+i32                                4         wrapped
+u16                                4         wrapped
+u64                                4         wrapped
+u8                                 4         wrapped
+core                               3         wrapped
+bool                               1         wrapped
+char                               1         wrapped
+Atomic                             0         partial
+Borrow                             0         partial
+Box                                0         partial
+Clone                              0         partial
+ControlFlow                        0         partial
+Ord                                0         partial
+Range                              0         partial
+alloc                              0         partial
+bits                               0         partial
+num                                0         partial
+ops                                0         partial
+slice                              0         partial
+
+=== 2. VSTD METHOD COVERAGE ===
+
+This helps us answer: For each wrapped type, what methods have specs?
+
+TYPE: Vec (24 methods)
+  axiom_spec_into_iter [ensures]
+  axiom_spec_len [ensures]
+  axiom_vec_index_decreases [requires, ensures]
+  eq_spec [external_body]
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  lemma_vec_obeys_deep_eq [requires, ensures]
+  lemma_vec_obeys_eq_spec [requires, ensures]
+  lemma_vec_obeys_view_eq [requires, ensures]
+  obeys_eq_spec [external_body]
+  spec_index [spec]
+  spec_index_set_ensures [spec]
+  spec_index_set_requires [spec]
+  spec_into_iter [ensures]
+  spec_vec_len [ensures]
+  vec_clone_deep_view_proof [requires, ensures]
+  vec_clone_trigger [ensures]
+  vec_index [external_body, requires, ensures]
+  view [spec]
+
+TYPE: DefaultHasher (23 methods)
+  axiom_bool_obeys_hash_table_key_model [ensures]
+  axiom_box_bool_obeys_hash_table_key_model [requires, ensures]
+  axiom_box_integer_type_obeys_hash_table_key_model [requires, ensures]
+  axiom_i128_obeys_hash_table_key_model [ensures]
+  axiom_i164_obeys_hash_table_key_model [ensures]
+  axiom_i16_obeys_hash_table_key_model [ensures]
+  axiom_i32_obeys_hash_table_key_model [ensures]
+  axiom_i8_obeys_hash_table_key_model [ensures]
+  axiom_isize_obeys_hash_table_key_model [ensures]
+  axiom_random_state_builds_valid_hashers [external_body, ensures]
+  axiom_u128_obeys_hash_table_key_model [ensures]
+  axiom_u16_obeys_hash_table_key_model [ensures]
+  axiom_u32_obeys_hash_table_key_model [ensures]
+  axiom_u64_obeys_hash_table_key_model [ensures]
+  axiom_u8_obeys_hash_table_key_model [ensures]
+  axiom_usize_obeys_hash_table_key_model [ensures]
+  builds_valid_hashers [external_body, ensures]
+  finish [assume_spec]
+  new [assume_spec]
+  obeys_key_model [external_body, ensures]
+  spec_finish [external_body, ensures]
+  view [ensures]
+  write [assume_spec]
+
+TYPE: Option (22 methods)
+  arrow_0 [spec]
+  arrow_Some_0 [spec]
+  cmp_spec [spec]
+  eq_spec [spec]
+  get_Some_0 [spec]
+  is_None [spec]
+  is_Some [spec]
+  is_none [ensures]
+  is_some [ensures]
+  obeys_cmp_spec [spec]
+  obeys_eq_spec [spec]
+  obeys_partial_cmp_spec [spec]
+  partial_cmp_spec [spec]
+  spec_expect [requires, ensures, recommends]
+  spec_ok_or [ensures]
+  spec_unwrap [requires, ensures, recommends]
+  spec_unwrap_or [ensures]
+  tracked_borrow [spec]
+  tracked_expect [spec]
+  tracked_is_some [spec]
+  tracked_take [spec]
+  tracked_unwrap [spec]
+
+TYPE: HashMap (21 methods)
+  axiom_box_key_removed [ensures]
+  axiom_contains_box [ensures]
+  axiom_contains_deref_key [ensures]
+  axiom_deref_key_removed [ensures]
+  axiom_hashmap_decreases [external_body, ensures]
+  axiom_hashmap_deepview_borrow [requires, ensures]
+  axiom_hashmap_view_finite_dom [ensures]
+  axiom_maps_box_key_to_value [ensures]
+  axiom_maps_deref_key_to_value [ensures]
+  axiom_spec_hash_map_len [ensures]
+  borrowed_key_removed [ensures]
+  contains_borrowed_key [ensures]
+  deep_view [spec]
+  hash_map_deep_view_impl [spec]
+  lemma_hashmap_deepview_dom [requires, ensures]
+  lemma_hashmap_deepview_properties [requires, ensures]
+  lemma_hashmap_deepview_values [requires, ensures]
+  maps_borrowed_key_to_value [ensures]
+  spec_hash_map_len [ensures]
+  spec_index [spec]
+  view [external_body, ensures]
+
+TYPE: hash_set (21 methods)
+  axiom_hashset_decreases [ensures]
+  axiom_set_box_key_removed [ensures]
+  axiom_set_box_key_to_value [ensures]
+  axiom_set_contains_box [ensures]
+  axiom_set_contains_deref_key [ensures]
+  axiom_set_deref_key_removed [ensures]
+  axiom_set_deref_key_to_value [ensures]
+  axiom_spec_hash_set_len [ensures]
+  deep_view [ensures]
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  set_contains_borrowed_key [ensures]
+  sets_borrowed_key_to_key [ensures]
+  sets_differ_by_borrowed_key [ensures]
+  spec_hash_set_len [ensures]
+  view [ensures]
+
+TYPE: VecDeque (15 methods)
+  axiom_spec_iter [ensures]
+  axiom_spec_len [requires, ensures]
+  axiom_vec_dequeue_index_decreases [external_body, requires, ensures]
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  spec_index [ensures]
+  spec_iter [ensures]
+  spec_vec_dequeue_len [ensures]
+  vec_dequeue_clone_trigger [ensures]
+  view [ensures]
+
+TYPE: Result (13 methods)
+  arrow_Err_0 [ensures]
+  arrow_Ok_0 [spec]
+  err [ensures]
+  get_Err_0 [spec]
+  get_Ok_0 [spec]
+  is_Err [spec]
+  is_Ok [spec]
+  is_err [ensures]
+  is_ok [ensures]
+  ok [ensures]
+  spec_expect [requires, ensures, recommends]
+  spec_unwrap [requires, ensures, recommends]
+  spec_unwrap_err [requires, ensures, recommends]
+
+TYPE: hash_map (11 methods)
+  axiom_spec_hash_map_iter [ensures]
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  spec_hash_map_iter [ensures]
+  spec_index [recommends]
+  view [spec]
+
+TYPE: Keys (8 methods)
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  view [ensures]
+
+TYPE: Values (8 methods)
+  exec_invariant [spec]
+  ghost_advance [spec]
+  ghost_decrease [spec]
+  ghost_ensures [spec]
+  ghost_invariant [spec]
+  ghost_iter [spec]
+  ghost_peek_next [spec]
+  view [ensures]
+
+TYPE: u32 (6 methods)
+  checked_rem [assume_spec]
+  checked_rem_euclid [assume_spec]
+  leading_ones [assume_spec]
+  leading_zeros [assume_spec]
+  trailing_ones [assume_spec]
+  trailing_zeros [assume_spec]
+
+TYPE: f32 (5 methods)
+  add [assume_spec]
+  div [assume_spec]
+  mul [assume_spec]
+  neg [assume_spec]
+  sub [assume_spec]
+
+TYPE: f64 (5 methods)
+  add [assume_spec]
+  div [assume_spec]
+  mul [assume_spec]
+  neg [assume_spec]
+  sub [assume_spec]
+
+TYPE: i32 (4 methods)
+  checked_div [assume_spec]
+  checked_div_euclid [assume_spec]
+  checked_rem [assume_spec]
+  checked_rem_euclid [assume_spec]
+
+TYPE: u16 (4 methods)
+  leading_ones [assume_spec]
+  leading_zeros [assume_spec]
+  trailing_ones [assume_spec]
+  trailing_zeros [assume_spec]
+
+TYPE: u64 (4 methods)
+  leading_ones [assume_spec]
+  leading_zeros [assume_spec]
+  trailing_ones [assume_spec]
+  trailing_zeros [assume_spec]
+
+TYPE: u8 (4 methods)
+  leading_ones [assume_spec]
+  leading_zeros [assume_spec]
+  trailing_ones [assume_spec]
+  trailing_zeros [assume_spec]
+
+TYPE: core (3 methods)
+  convert [assume_spec]
+  hint [assume_spec]
+  intrinsics [assume_spec]
+
+TYPE: bool (1 methods)
+  clone [assume_spec]
+
+TYPE: char (1 methods)
+  clone [assume_spec]
+
+=== 3. RUST USAGE BY TYPE ===
+
+This helps us answer: What Rust types are actually used in the wild?
+
+Type                            Crates      Methods   Wrapped?
+-----------------------------------------------------------------
+Result                            3209           22        YES
+Box                               1513           26        YES
+HashMap                            501           17        YES
+BTreeMap                           260           13         NO
+HashSet                            256           13         NO
+Mutex                              250            4         NO
+String                             183           22         NO
+RefCell                            179            4         NO
+Cell                               174            4         NO
+Rc                                 171            9         NO
+VecDeque                           148            7        YES
+BTreeSet                           132           11         NO
+File                               110            4         NO
+Path                                81            8         NO
+RwLock                              78            4         NO
+Once                                41            1         NO
+BinaryHeap                          37            5         NO
+Command                             34            1         NO
+Ordering                            32            6         NO
+LinkedList                          26            4         NO
+OsStr                               18            4         NO
+TcpStream                           16            3         NO
+SystemTime                          15            2         NO
+PathBuf                             12            3         NO
+TcpListener                         11            2         NO
+OpenOptions                          8            0         NO
+OsString                             8            0         NO
+Child                                7            0         NO
+Condvar                              7            0         NO
+Stdout                               7            0         NO
+Formatter                            4            0         NO
+Stdin                                4            0         NO
+UdpSocket                            4            0         NO
+Stderr                               3            0         NO
+Arguments                            2            0         NO
+Barrier                              2            0         NO
+Arc                                  1            8         NO
+Duration                             1            5         NO
+Error                                1            6         NO
+Instant                              1            1         NO
+MaybeUninit                          1            0         NO
+Option                               1           30        YES
+Thread                               1            0         NO
+Vec                                  1           27        YES
+
+=== 4. WRAPPING GAPS - TYPES ===
+
+This helps us answer: Which used Rust types does vstd NOT wrap?
+
+Type                            Crates Methods Used
+-------------------------------------------------------
+BTreeMap                           260           13
+HashSet                            256           13
+Mutex                              250            4
+String                             183           22
+RefCell                            179            4
+Cell                               174            4
+Rc                                 171            9
+BTreeSet                           132           11
+File                               110            4
+Path                                81            8
+RwLock                              78            4
+Once                                41            1
+BinaryHeap                          37            5
+Command                             34            1
+Ordering                            32            6
+LinkedList                          26            4
+OsStr                               18            4
+TcpStream                           16            3
+SystemTime                          15            2
+PathBuf                             12            3
+TcpListener                         11            2
+OpenOptions                          8            0
+OsString                             8            0
+Child                                7            0
+Condvar                              7            0
+Stdout                               7            0
+Formatter                            4            0
+Stdin                                4            0
+UdpSocket                            4            0
+Stderr                               3            0
+Arguments                            2            0
+Barrier                              2            0
+Arc                                  1            8
+Duration                             1            5
+Error                                1            6
+Instant                              1            1
+MaybeUninit                          1            0
+Thread                               1            0
+
+Total unwrapped types: 38
+
+=== 5. METHOD GAPS PER TYPE ===
+
+This helps us answer: For wrapped types, which methods are missing?
+
+TYPE: Result (wrapped, 19 methods missing)
+  vstd has: arrow_Err_0, arrow_Ok_0, err, get_Err_0, get_Ok_0, is_Err, is_Ok, is_err, is_ok, ok, spec_expect, spec_unwrap, spec_unwrap_err
+  Missing methods:
+    unwrap (1474 crates)
+    branch (511 crates)
+    expect (79 crates)
+    map_err (49 crates)
+    map (22 crates)
+    eq (19 crates)
+    unwrap_or_else (9 crates)
+    unwrap_or (7 crates)
+    unwrap_err (6 crates)
+    unwrap_throw (3 crates)
+    deserialize (2 crates)
+    map_or_else (2 crates)
+    and (1 crates)
+    as_mut (1 crates)
+    expect_err (1 crates)
+    expect_or_abort (1 crates)
+    is_ok_and (1 crates)
+    unwrap_ok (1 crates)
+    unwrap_or_default (1 crates)
+
+TYPE: Box (wrapped, 26 methods missing)
+  vstd has: 
+  Missing methods:
+    new (524 crates)
+    drop (179 crates)
+    pin (36 crates)
+    clone (30 crates)
+    from_raw (23 crates)
+    fmt (8 crates)
+    from (8 crates)
+    default (7 crates)
+    into (6 crates)
+    as_ref (3 crates)
+    leak (3 crates)
+    to_string (3 crates)
+    eq (2 crates)
+    as_byte_slice (1 crates)
+    as_mut (1 crates)
+    borrow (1 crates)
+    close (1 crates)
+    deref_mut (1 crates)
+    from_base32_decode (1 crates)
+    into_abi (1 crates)
+    into_pyarray (1 crates)
+    into_raw (1 crates)
+    into_raw_with_allocator (1 crates)
+    new_in (1 crates)
+    run (1 crates)
+    unpark (1 crates)
+
+TYPE: HashMap (wrapped, 17 methods missing)
+  vstd has: axiom_box_key_removed, axiom_contains_box, axiom_contains_deref_key, axiom_deref_key_removed, axiom_hashmap_decreases, axiom_hashmap_deepview_borrow, axiom_hashmap_view_finite_dom, axiom_maps_box_key_to_value, axiom_maps_deref_key_to_value, axiom_spec_hash_map_len, borrowed_key_removed, contains_borrowed_key, deep_view, hash_map_deep_view_impl, lemma_hashmap_deepview_dom, lemma_hashmap_deepview_properties, lemma_hashmap_deepview_values, maps_borrowed_key_to_value, spec_hash_map_len, spec_index, view
+  Missing methods:
+    insert (234 crates)
+    get (47 crates)
+    new (20 crates)
+    iter (14 crates)
+    clone (9 crates)
+    into_iter (8 crates)
+    keys (5 crates)
+    len (4 crates)
+    entry (3 crates)
+    eq (3 crates)
+    remove (2 crates)
+    clear (1 crates)
+    default (1 crates)
+    entry_sync (1 crates)
+    validate_length (1 crates)
+    values (1 crates)
+    with_capacity_and_hasher (1 crates)
+
+TYPE: VecDeque (wrapped, 7 methods missing)
+  vstd has: axiom_spec_iter, axiom_spec_len, axiom_vec_dequeue_index_decreases, exec_invariant, ghost_advance, ghost_decrease, ghost_ensures, ghost_invariant, ghost_iter, ghost_peek_next, spec_index, spec_iter, spec_vec_dequeue_len, vec_dequeue_clone_trigger, view
+  Missing methods:
+    push_back (85 crates)
+    len (17 crates)
+    pop_front (9 crates)
+    iter (3 crates)
+    new (3 crates)
+    clone (1 crates)
+    decode (1 crates)
+
+TYPE: Option (wrapped, 28 methods missing)
+  vstd has: arrow_0, arrow_Some_0, cmp_spec, eq_spec, get_Some_0, is_None, is_Some, is_none, is_some, obeys_cmp_spec, obeys_eq_spec, obeys_partial_cmp_spec, partial_cmp_spec, spec_expect, spec_ok_or, spec_unwrap, spec_unwrap_or, tracked_borrow, tracked_expect, tracked_is_some, tracked_take, tracked_unwrap
+  Missing methods:
+    unwrap (1203 crates)
+    map (197 crates)
+    eq (121 crates)
+    expect (89 crates)
+    unwrap_or (53 crates)
+    ok_or (37 crates)
+    ok_or_else (30 crates)
+    take (13 crates)
+    from_residual (12 crates)
+    clone (11 crates)
+    unwrap_or_else (8 crates)
+    default (7 crates)
+    map_or (7 crates)
+    to_tokens (5 crates)
+    and_then (4 crates)
+    copied (4 crates)
+    ne (3 crates)
+    unwrap_or_default (3 crates)
+    unwrap_unchecked (2 crates)
+    approx_eq (1 crates)
+    branch (1 crates)
+    cloned (1 crates)
+    cmp (1 crates)
+    expect_throw (1 crates)
+    get_or_insert_with (1 crates)
+    into_iter (1 crates)
+    iter (1 crates)
+    map_or_else (1 crates)
+
+TYPE: Vec (wrapped, 27 methods missing)
+  vstd has: axiom_spec_into_iter, axiom_spec_len, axiom_vec_index_decreases, eq_spec, exec_invariant, ghost_advance, ghost_decrease, ghost_ensures, ghost_invariant, ghost_iter, ghost_peek_next, lemma_vec_obeys_deep_eq, lemma_vec_obeys_eq_spec, lemma_vec_obeys_view_eq, obeys_eq_spec, spec_index, spec_index_set_ensures, spec_index_set_requires, spec_into_iter, spec_vec_len, vec_clone_deep_view_proof, vec_clone_trigger, vec_index, view
+  Missing methods:
+    deref (1150 crates)
+    new (287 crates)
+    index (81 crates)
+    into_iter (48 crates)
+    with_capacity (39 crates)
+    eq (30 crates)
+    as_slice (24 crates)
+    len (17 crates)
+    deref_mut (11 crates)
+    push (10 crates)
+    into (6 crates)
+    clone (5 crates)
+    index_mut (4 crates)
+    is_empty (4 crates)
+    default (3 crates)
+    extend_from_slice (3 crates)
+    into_boxed_slice (2 crates)
+    str (2 crates)
+    encode_hex (1 crates)
+    extend (1 crates)
+    hash (1 crates)
+    into_response (1 crates)
+    mean (1 crates)
+    ne (1 crates)
+    retain (1 crates)
+    serialize (1 crates)
+    truncate (1 crates)
+
+=== 6. PRIORITIZED WRAPPING NEEDS ===
+
+This helps us answer: What should vstd wrap next?
+
+Type                 Item                          Crates Notes
+----------------------------------------------------------------------
+Result               unwrap                          1474 method on wrapped type
+Option               unwrap                          1203 method on wrapped type
+Vec                  deref                           1150 method on wrapped type
+Box                  new                              524 method on wrapped type
+Result               branch                           511 method on wrapped type
+Vec                  new                              287 method on wrapped type
+BTreeMap             TYPE                             260 new type needed
+HashSet              TYPE                             256 new type needed
+Mutex                TYPE                             250 new type needed
+HashMap              insert                           234 method on wrapped type
+Option               map                              197 method on wrapped type
+String               TYPE                             183 new type needed
+RefCell              TYPE                             179 new type needed
+Box                  drop                             179 method on wrapped type
+Cell                 TYPE                             174 new type needed
+Rc                   TYPE                             171 new type needed
+BTreeSet             TYPE                             132 new type needed
+Option               eq                               121 method on wrapped type
+File                 TYPE                             110 new type needed
+Option               expect                            89 method on wrapped type
+VecDeque             push_back                         85 method on wrapped type
+Path                 TYPE                              81 new type needed
+Vec                  index                             81 method on wrapped type
+Result               expect                            79 method on wrapped type
+RwLock               TYPE                              78 new type needed
+Option               unwrap_or                         53 method on wrapped type
+Result               map_err                           49 method on wrapped type
+Vec                  into_iter                         48 method on wrapped type
+HashMap              get                               47 method on wrapped type
+Once                 TYPE                              41 new type needed
+Vec                  with_capacity                     39 method on wrapped type
+BinaryHeap           TYPE                              37 new type needed
+Option               ok_or                             37 method on wrapped type
+Box                  pin                               36 method on wrapped type
+Command              TYPE                              34 new type needed
+Ordering             TYPE                              32 new type needed
+Box                  clone                             30 method on wrapped type
+Option               ok_or_else                        30 method on wrapped type
+Vec                  eq                                30 method on wrapped type
+LinkedList           TYPE                              26 new type needed
+Vec                  as_slice                          24 method on wrapped type
+Box                  from_raw                          23 method on wrapped type
+Result               map                               22 method on wrapped type
+HashMap              new                               20 method on wrapped type
+Result               eq                                19 method on wrapped type
+OsStr                TYPE                              18 new type needed
+VecDeque             len                               17 method on wrapped type
+Vec                  len                               17 method on wrapped type
+TcpStream            TYPE                              16 new type needed
+SystemTime           TYPE                              15 new type needed
+... and 112 more items
+
+=== 7. SUMMARY ===
+
+VSTD Coverage:
+  Types wrapped: 32
+  Methods wrapped: 203
+
+Rust Usage Coverage:
+  Types used: 44
+  Types wrapped: 6 (13.6%)
+  Types missing: 38
+
+  Methods used: 276
+  Methods wrapped: 5 (1.8%)
+  Methods missing: 271
+
+Time: 0.31s

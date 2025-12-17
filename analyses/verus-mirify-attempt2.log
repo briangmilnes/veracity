@@ -1,0 +1,32 @@
+veracity-mirify
+=================
+Codebase: /home/milnes/projects/VerusCodebases
+Jobs: 4
+Max projects: 10
+Started: 2025-12-11 11:19:35 -08:00
+
+Limiting to 10 projects
+Found 10 projects
+
+  [BUILD]  NrOS ... FAILED: Build failed (see veracity-mirify.errs) (0.05s)
+  [CACHED] cortenmm-adv (0.00s)
+  [CACHED] cortenmm-rw (0.00s)
+  [BUILD]  verification ... FAILED: Build failed (see veracity-mirify.errs) (0.08s)
+  [BUILD]  anvil ... FAILED: Build failed (see veracity-mirify.errs) (0.32s)
+  [BUILD]  extraction ... OK (66.59s)
+  [BUILD]  extraction ... FAILED: Build failed (see veracity-mirify.errs) (36.90s)
+  [BUILD]  owl-hpke ... FAILED: Build failed (see veracity-mirify.errs) (10.16s)
+  [BUILD]  rust-hpke ... OK (15.32s)
+  [BUILD]  test_bench_hpke ... FAILED: Build failed (see veracity-mirify.errs) (42.40s)
+
+=== Summary ===
+Total projects: 10
+  MIR cached:   2
+  Compiled:     2 (20.0%)
+  Failed:       6
+
+TOTAL TIME: 171840 ms (171.84 seconds)
+Ended: 2025-12-11 11:22:26 -08:00
+
+Log: analyses/veracity-mirify.log
+Errors: analyses/veracity-mirify.errs

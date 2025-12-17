@@ -1,0 +1,2388 @@
+veracity-analyze-libs
+======================
+
+Started at: 2025-12-16 14:09:24 -08:00
+vstd path: /home/milnes/projects/veracity/tests/fixtures/verus-lang/source/vstd
+Verus version: main@d3fefb4
+Using: verus_syn AST parser
+
+Parsed 6 builtin types and 2 builtin traits from verus_items.rs
+Found 87 source files
+
+=== TABLE OF CONTENTS ===
+
+1. INTRODUCTION
+2. MODULES
+3. COMPILER BUILTIN TYPES
+4. PRIMITIVE TYPE SPECS (vstd/std_specs/)
+5. GHOST TYPES
+   5.1 Mathematical Types (Seq, Set, Map, Multiset)
+   5.2 Ex* Ghost Wrappers (ghost views of Rust types)
+   5.3 Permission/Token Types
+6. TRACKED TYPES
+7. WRAPPED RUST TYPES
+8. TRAITS
+9. SPEC FUNCTIONS
+10. PROOF FUNCTIONS
+11. AXIOMS
+12. BROADCAST GROUPS
+13. SUMMARY
+
+=== 1. INTRODUCTION ===
+
+This inventory catalogs Verus's vstd library using verus_syn AST parsing.
+
+This helps us answer:
+
+  - What mathematical types does Verus provide for specifications?
+    → Section 3 (int, nat, real) + Section 5.1 (Seq, Set, Map, Multiset)
+
+  - What Rust primitive types does vstd specify?
+    → Section 4 (u8-u128, i8-i128, usize/isize, atomics, operators, ranges)
+
+  - Which Rust stdlib types does vstd wrap with Verus specs?
+    → Section 7 (HashMap, Option, Result, Vec, etc.)
+
+  - What methods are specified for each type?
+    → Listed under each type in Sections 4, 5, 7
+
+  - What ghost/tracked wrappers exist for permission tracking?
+    → Section 3 (Ghost<T>, Tracked<T>), Section 5.3 (tokens), Section 6
+
+  - What traits does vstd define?
+    → Section 8 (View, Ex* traits, invariant predicates, etc.)
+
+  - How much proof infrastructure does vstd provide?
+    → Sections 9-12 (spec functions, proof functions, axioms, broadcast groups)
+
+  - What modules make up vstd?
+    → Section 2 (87 modules including arithmetic, collections, concurrency)
+
+  - How complete is vstd's coverage of Rust stdlib?
+    → Sections 4 + 7 show what's wrapped; gaps indicate verification limits
+
+Note: Compiler builtins (int, nat, etc.) are defined in the Verus compiler,
+not in vstd source. They are listed separately in section 3.
+
+=== 2. MODULES (87) ===
+
+vstd::arithmetic
+vstd::arithmetic::div_mod
+vstd::arithmetic::internals
+vstd::arithmetic::internals::div_internals
+vstd::arithmetic::internals::div_internals_nonlinear
+vstd::arithmetic::internals::general_internals
+vstd::arithmetic::internals::mul_internals
+vstd::arithmetic::internals::mul_internals_nonlinear
+vstd::arithmetic::internals_internals
+vstd::arithmetic::internals_internals_nonlinear
+vstd::arithmetic::logarithm
+vstd::arithmetic::mul
+vstd::arithmetic::overflow
+vstd::arithmetic::power
+vstd::arithmetic::power2
+vstd::array
+vstd::atomic
+vstd::atomic_ghost
+vstd::bits
+vstd::build
+vstd::bytes
+vstd::calc_macro
+vstd::cell
+vstd::compute
+vstd::contrib
+vstd::contrib::exec_spec
+vstd::float
+vstd::function
+vstd::hash_map
+vstd::hash_set
+vstd::invariant
+vstd::laws_cmp
+vstd::laws_eq
+vstd::layout
+vstd::logatom
+vstd::map
+vstd::map_lib
+vstd::math
+vstd::modes
+vstd::multiset
+vstd::multiset_lib
+vstd::pcm
+vstd::pcm_lib
+vstd::pervasive
+vstd::prelude
+vstd::proph
+vstd::raw_ptr
+vstd::relations
+vstd::rwlock
+vstd::seq
+vstd::seq_lib
+vstd::set
+vstd::set_lib
+vstd::shared
+vstd::simple_pptr
+vstd::slice
+vstd::state_machine_internal
+vstd::std_specs
+vstd::std_specs::alloc
+vstd::std_specs::atomic
+vstd::std_specs::bits
+vstd::std_specs::borrow
+vstd::std_specs::clone
+vstd::std_specs::cmp
+vstd::std_specs::control_flow
+vstd::std_specs::convert
+vstd::std_specs::core
+vstd::std_specs::hash
+vstd::std_specs::num
+vstd::std_specs::ops
+vstd::std_specs::option
+vstd::std_specs::range
+vstd::std_specs::result
+vstd::std_specs::slice
+vstd::std_specs::smart_ptrs
+vstd::std_specs::vec
+vstd::std_specs::vecdeque
+vstd::storage_protocol
+vstd::string
+vstd::thread
+vstd::tokens
+vstd::tokens::frac
+vstd::tokens::map
+vstd::tokens::seq
+vstd::tokens::set
+vstd::view
+vstd::vstd
+
+=== 3. COMPILER BUILTIN TYPES ===
+
+These types are defined in the Verus compiler (verus_builtin), not vstd:
+
+Mathematical Types:
+  int - Mathematical unbounded integer (can be negative)
+  nat - Natural number (non-negative integer, >= 0)
+  real - Mathematical real number (arbitrary precision)
+
+Wrapper Types:
+  Ghost<T> - Ghost wrapper - data exists only in proofs, erased at runtime
+  Tracked<T> - Tracked wrapper - linear/affine data for permission tracking
+
+Function Types:
+  FnSpec - Specification-only function type (ghost callable)
+
+Builtin Traits:
+  Integer - Marker trait for integer types (int, nat, u8..u128, i8..i128)
+  Sealed - Sealed trait pattern - prevents external implementations
+
+=== 4. PRIMITIVE TYPE SPECS (vstd/std_specs/) ===
+
+Primitive Integer Types (via num_specs! macro):
+vstd provides specs for all Rust primitive integers:
+  u8/i8 (8-bit): 19 methods, 12 operator traits, Range<u8> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+    From<u8> -> u16, u32, u64, usize, u128
+  u16/i16 (16-bit): 19 methods, 12 operator traits, Range<u16> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+    From<u16> -> u32, u64, usize, u128
+  u32/i32 (32-bit): 19 methods, 12 operator traits, Range<u32> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+    From<u32> -> u64, u128
+  u64/i64 (64-bit): 19 methods, 12 operator traits, Range<u64> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+    From<u64> -> u128
+  u128/i128 (128-bit): 19 methods, 12 operator traits, Range<u128> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+  usize/isize (arch-bit): 19 methods, 12 operator traits, Range<usize> support
+    Methods: clone, eq, ne, cmp, partial_cmp, lt, le, gt, ge, wrapping_add, wrapping_sub, wrapping_mul, checked_add, checked_sub, checked_mul, checked_div, checked_div_euclid, saturating_add, saturating_sub
+    Operators: Add, Sub, Mul, Div, Rem, Neg, Not, BitAnd, BitOr, BitXor, Shl, Shr
+
+
+Atomic Types (via atomic_specs! macros):
+vstd provides specs for Rust std::sync::atomic types:
+  AtomicU8 (u8) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicU16 (u16) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicU32 (u32) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicU64 (u64) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicUsize (usize) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicI8 (i8) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicI16 (i16) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicI32 (i32) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicI64 (i64) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicIsize (isize) - 12 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand, fetch_add, fetch_sub
+  AtomicBool (bool) - 10 methods
+    new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand
+
+=== 5. GHOST TYPES (44 total) ===
+
+--- 5.1 Mathematical Types (4) ---
+Core specification collection types (purely mathematical, no runtime representation)
+
+Map<K, V> (Rust: HashMap) - 9 methods
+    spec: empty
+    spec: total [open]
+    spec: new [open]
+    spec: dom
+    spec: index
+    spec: spec_index [open]
+    spec: insert
+    spec: remove
+    spec: len [open]
+Multiset<V> (Rust: HashMap) - 21 methods
+    spec: count [uninterp]
+    spec: len [uninterp]
+    spec: empty [uninterp]
+    spec: from_map [uninterp]
+    spec: from_set [open]
+    spec: singleton [uninterp]
+    spec: add [uninterp]
+    spec: sub [uninterp]
+    spec: insert [open]
+    spec: remove [open]
+    spec: update [open]
+    spec: subset_of [open]
+    spec: spec_le [open]
+    spec: filter [uninterp]
+    spec: choose [open]
+    spec: contains [open]
+    spec: spec_has [open]
+    spec: intersection_with [open]
+    spec: difference_with [open]
+    spec: is_disjoint_from [open]
+    spec: dom [open]
+Seq<A> (Rust: Vec) - 14 methods
+    spec: empty [uninterp]
+    spec: new [uninterp]
+    spec: len [uninterp]
+    spec: index [uninterp]
+    spec: spec_index [open]
+    spec: push [uninterp]
+    spec: update [uninterp]
+    spec: subrange [uninterp]
+    spec: take [open]
+    spec: skip [open]
+    spec: add [uninterp]
+    spec: spec_add [open]
+    spec: last [open]
+    spec: first [open]
+Set<A> (Rust: HashSet) - 23 methods
+    spec: empty
+    spec: new
+    spec: full [open]
+    spec: contains
+    spec: spec_has [open]
+    spec: subset_of [open]
+    spec: spec_le [open]
+    spec: insert
+    spec: remove
+    spec: union
+    spec: spec_add [open]
+    spec: intersect
+    spec: spec_mul [open]
+    spec: difference
+    spec: spec_sub [open]
+    spec: complement
+    spec: filter [open]
+    spec: finite
+    spec: len
+    spec: choose [open]
+    spec: mk_map [uninterp]
+    spec: disjoint [open]
+    spec: fold
+
+--- 5.2 Ex* Ghost Wrappers (26) ---
+Ghost views of Rust exec types for use in specifications
+
+ExAssertParamIsClone<T> - 0 methods
+ExAssertParamIsEq<T> - 0 methods
+ExChars - 0 methods
+ExDefaultHasher - 0 methods
+ExDuration - 0 methods
+ExFnProof<Options, ArgModes, OutMode, Args, Output> - 0 methods
+ExFnProofOptionReqEns<R> - 0 methods
+ExFnProofOptionTracked - 0 methods
+ExFnProofOptions<ReqEns> - 0 methods
+ExGlobal - 0 methods
+ExHashMap<Key, Value, S> - 0 methods
+ExHashSet<Key, S> - 0 methods
+ExInfallible - 0 methods
+ExIntoIter<T, A> - 0 methods
+ExIter<T> - 0 methods
+ExIter<T> - 0 methods
+ExKeys<Key, Value> - 0 methods
+ExManuallyDrop<V> - 0 methods
+ExMapIter<Key, Value> - 0 methods
+ExRandomState - 0 methods
+ExRangeInclusive<Idx> - 0 methods
+ExSetIter<Key> - 0 methods
+ExString - 0 methods
+ExValues<Key, Value> - 0 methods
+ExVec<T, A> - 0 methods
+ExVecDeque<T, A> - 0 methods
+
+--- 5.3 Permission/Token Types (14) ---
+Ghost types for tracking permissions, ownership, and linear resources
+
+CellId - 0 methods
+Dealloc - 5 methods
+    spec: view [uninterp]
+    spec: addr [open]
+    spec: size [open]
+    spec: align [open]
+    spec: provenance [open]
+IsExposed - 2 methods
+    spec: view [open]
+    spec: provenance [uninterp]
+IsThread - 1 methods
+    spec: view [uninterp]
+IsThread - 1 methods
+    spec: view [uninterp]
+JoinHandle<Ret> - 1 methods
+    spec: predicate [uninterp]
+OpenInvariantCredit - 0 methods
+PCell<V> - 1 methods
+    spec: id [uninterp]
+Provenance - 1 methods
+    spec: null [uninterp]
+Resource<P> - 2 methods
+    spec: value [uninterp]
+    spec: loc [uninterp]
+SharedReference<T> - 2 methods
+    spec: value [uninterp]
+    spec: ptr [uninterp]
+StorageResource<K, V, P> - 2 methods
+    spec: value [uninterp]
+    spec: loc [uninterp]
+ThreadId - 0 methods
+ThreadShareable<V> - 2 methods
+    spec: view [uninterp]
+    spec: id [uninterp]
+
+=== 6. TRACKED TYPES (8) ===
+
+MapToken - modes: proof, exec
+MultisetToken - modes: proof, exec
+PointsTo - modes: proof, exec
+PointsTo - modes: proof, exec
+PointsTo - modes: proof, exec
+PointsToRaw - modes: proof, exec
+SetToken - modes: proof, exec
+Shared - modes: proof, exec
+
+=== 7. WRAPPED RUST TYPES (29) ===
+
+*const T (core::ptr) - 1 methods
+    view
+*mut T (core::ptr) - 1 methods
+    view
+Arc (alloc::sync) - 2 methods
+    view
+    deep_view
+AssertParamIsEq (core::cmp) - 8 methods
+    is_eq
+    is_ne
+    is_lt
+    is_le
+    is_gt
+    is_ge
+    obeys_eq_spec
+    eq_spec
+Box (alloc::boxed) - 2 methods
+    view
+    deep_view
+Chars (core::str) - 9 methods
+    view
+    deep_view
+    ghost_iter
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+Cow (alloc::borrow) - 2 methods
+    view
+    deep_view
+DefaultHasher (std::collections::hash_map) - 2 methods
+    view
+    spec_finish
+HashMap (std::collections::hash_map) - 8 methods
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+    view
+    ghost_iter
+HashMap (std::collections) - 3 methods
+    spec_index
+    view
+    deep_view
+HashSet (std::collections::hash_set) - 7 methods
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+    view
+HashSet (std::collections) - 2 methods
+    view
+    deep_view
+IntoIter (alloc::vec) - 2 methods
+    view
+    ghost_iter
+Iter (core::slice) - 3 methods
+    view
+    ghost_iter
+    deep_view
+Keys (std::collections::hash_map) - 2 methods
+    view
+    ghost_iter
+Option (core::option) - 13 methods
+    is_Some
+    get_Some_0
+    is_None
+    arrow_Some_0
+    arrow_0
+    obeys_eq_spec
+    eq_spec
+    obeys_partial_cmp_spec
+    partial_cmp_spec
+    obeys_cmp_spec
+    cmp_spec
+    view
+    deep_view
+PointsTo (vstd::raw_ptr) - 10 methods
+    view
+    ptr
+    opt_value
+    is_init
+    is_uninit
+    value
+    provenance
+    dom
+    is_range
+    contains_range
+Range (core::ops) - 10 methods
+    obeys_contains
+    contains_spec
+    ghost_iter
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+    view
+RangeInclusive (core::ops) - 3 methods
+    obeys_contains
+    contains_spec
+    view
+Rc (alloc::rc) - 2 methods
+    view
+    deep_view
+Result (core::result) - 6 methods
+    is_Ok
+    get_Ok_0
+    arrow_Ok_0
+    is_Err
+    get_Err_0
+    arrow_Err_0
+String (alloc::string) - 2 methods
+    view
+    deep_view
+TryFromIntError (core::num) - 2 methods
+    obeys_into_spec
+    into_spec
+Values (std::collections::hash_map) - 2 methods
+    view
+    ghost_iter
+Vec (alloc::vec) - 13 methods
+    spec_index
+    spec_index_set_requires
+    spec_index_set_ensures
+    obeys_eq_spec
+    eq_spec
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+    view
+    deep_view
+VecDeque (alloc::collections) - 9 methods
+    view
+    deep_view
+    spec_index
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+array (core::array) - 5 methods
+    spec_index_set_requires
+    spec_index_set_ensures
+    view
+    deep_view
+    spec_index
+slice (core::slice) - 11 methods
+    spec_index_set_requires
+    spec_index_set_ensures
+    exec_invariant
+    ghost_invariant
+    ghost_ensures
+    ghost_decrease
+    ghost_peek_next
+    ghost_advance
+    view
+    deep_view
+    spec_index
+str (core::str) - 2 methods
+    view
+    deep_view
+
+=== 8. TRAITS (91) ===
+
+ArrayAdditionalExecFns - 0 spec, 0 proof, 1 exec methods
+    exec: set
+ArrayAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+AtomicInvariantPredicate - 1 spec, 0 proof, 0 exec methods
+    spec: atomic_inv
+ContainsSpec - 2 spec, 0 proof, 0 exec methods
+    spec: obeys_contains
+    spec: contains_spec
+CountToken : Sized - 2 spec, 4 proof, 0 exec methods
+    spec: instance_id
+    spec: count
+    proof: join
+    proof: split
+    proof: weaken_shared
+    proof: arbitrary
+DeepView - 1 spec, 0 proof, 0 exec methods
+    spec: deep_view
+DeepViewClone : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: deep_clone
+DefaultHasherAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: spec_finish
+ElementToken : Sized - 2 spec, 1 proof, 0 exec methods
+    spec: instance_id
+    spec: element
+    proof: arbitrary
+ExAllocator - 0 spec, 0 proof, 0 exec methods
+ExBorrow - 0 spec, 0 proof, 0 exec methods
+ExBuildHasher - 0 spec, 0 proof, 0 exec methods
+ExClone : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: clone
+ExDebug : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExDeref : PointeeSized - 0 spec, 0 proof, 1 exec methods
+    exec: deref
+ExDisplay : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExEq : PartialEq + PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExFreeze : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExFrom : Sized - 2 spec, 0 proof, 1 exec methods
+    spec: obeys_from_spec
+    spec: from_spec
+    exec: from
+ExHash : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExHasher - 0 spec, 0 proof, 0 exec methods
+ExIndex - 0 spec, 0 proof, 0 exec methods
+ExIndexMut : core :: ops :: Index < Idx > - 0 spec, 0 proof, 0 exec methods
+ExInteger : Copy - 0 spec, 0 proof, 0 exec methods
+ExInto : Sized - 2 spec, 0 proof, 1 exec methods
+    spec: obeys_into_spec
+    spec: into_spec
+    exec: into
+ExIntoIterator - 0 spec, 0 proof, 0 exec methods
+ExIterStep : Clone + PartialOrd + Sized - 0 spec, 0 proof, 0 exec methods
+ExIterator - 0 spec, 0 proof, 1 exec methods
+    exec: next
+ExMetaSized - 0 spec, 0 proof, 0 exec methods
+ExOrd : Eq + PartialOrd + PointeeSized - 2 spec, 0 proof, 4 exec methods
+    spec: obeys_cmp_spec
+    spec: cmp_spec
+    exec: cmp
+    exec: max
+    exec: min
+    exec: clamp
+ExPartialEq : PointeeSized - 2 spec, 0 proof, 2 exec methods
+    spec: obeys_eq_spec
+    spec: eq_spec
+    exec: eq
+    exec: ne
+ExPartialOrd : PartialEq < Rhs > + PointeeSized - 2 spec, 0 proof, 5 exec methods
+    spec: obeys_partial_cmp_spec
+    spec: partial_cmp_spec
+    exec: partial_cmp
+    exec: lt
+    exec: le
+    exec: gt
+    exec: ge
+ExProofFn : ProofFnMut - 0 spec, 0 proof, 0 exec methods
+ExProofFnMut : ProofFnOnce - 0 spec, 0 proof, 0 exec methods
+ExProofFnOnce - 0 spec, 0 proof, 0 exec methods
+ExProofFnReqEns : ProofFnReqEnsAssoc < ReqEns = R > - 0 spec, 0 proof, 0 exec methods
+ExProofFnReqEnsAssoc - 0 spec, 0 proof, 0 exec methods
+ExProofFnSpecification - 2 spec, 0 proof, 0 exec methods
+    spec: req
+    spec: ens
+ExPtrPointee : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExSliceIndex - 0 spec, 0 proof, 0 exec methods
+ExSpecOrd - 0 spec, 0 proof, 0 exec methods
+ExStructural - 0 spec, 0 proof, 0 exec methods
+ExToOwned - 0 spec, 0 proof, 0 exec methods
+ExecSpecEq : DeepView + Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_eq
+ExecSpecIndex : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_index
+ExecSpecLen - 0 spec, 0 proof, 1 exec methods
+    exec: exec_len
+ExecSpecType - 0 spec, 0 proof, 0 exec methods
+FloatBitsProperties - 6 spec, 0 proof, 0 exec methods
+    spec: to_bits_spec
+    spec: to_bits_abs_spec
+    spec: is_sign_negative_spec
+    spec: is_finite_spec
+    spec: is_infinite_spec
+    spec: is_nan_spec
+FnWithRequiresEnsures : Sized - 2 spec, 0 proof, 0 exec methods
+    spec: requires
+    spec: ensures
+ForLoopGhostIterator - 6 spec, 0 proof, 0 exec methods
+    spec: exec_invariant
+    spec: ghost_invariant
+    spec: ghost_ensures
+    spec: ghost_decrease
+    spec: ghost_peek_next
+    spec: ghost_advance
+ForLoopGhostIteratorNew - 1 spec, 0 proof, 0 exec methods
+    spec: ghost_iter
+HashMapAdditionalSpecFns : View < V = Map < Key , Value > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+IndexSetTrustedSpec : core :: ops :: IndexMut < Idx > + TrustedSpecSealed - 2 spec, 0 proof, 0 exec methods
+    spec: spec_index_set_requires
+    spec: spec_index_set_ensures
+InvariantPredicate - 1 spec, 0 proof, 0 exec methods
+    spec: inv
+KeyValueToken : Sized - 3 spec, 2 proof, 0 exec methods
+    spec: instance_id
+    spec: key
+    spec: value
+    proof: agree
+    proof: arbitrary
+KeysAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: view
+MapIterAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: view
+MonotonicCountToken : Sized - 2 spec, 2 proof, 0 exec methods
+    spec: instance_id
+    spec: count
+    proof: weaken
+    proof: arbitrary
+MutLinearizer : Sized - 3 spec, 2 proof, 0 exec methods
+    spec: namespaces
+    spec: pre
+    spec: post
+    proof: apply
+    proof: peek
+MutOperation : Sized - 4 spec, 0 proof, 0 exec methods
+    spec: requires
+    spec: ensures
+    spec: peek_requires
+    spec: peek_ensures
+OptionAdditionalFns : Sized - 5 spec, 4 proof, 0 exec methods
+    spec: is_Some
+    spec: get_Some_0
+    spec: is_None
+    spec: arrow_Some_0
+    spec: arrow_0
+    proof: tracked_unwrap
+    proof: tracked_expect
+    proof: tracked_borrow
+    proof: tracked_take
+PCM : Sized - 3 spec, 5 proof, 0 exec methods
+    spec: valid
+    spec: op
+    spec: unit
+    proof: closed_under_incl
+    proof: commutative
+    proof: associative
+    proof: op_unit
+    proof: unit_valid
+PartialEqIs : PartialEq < Rhs > + PointeeSized - 2 spec, 0 proof, 0 exec methods
+    spec: is_eq
+    spec: is_ne
+PartialOrdIs : PartialOrd < Rhs > + PointeeSized - 4 spec, 0 proof, 0 exec methods
+    spec: is_lt
+    spec: is_le
+    spec: is_gt
+    spec: is_ge
+Protocol : Sized - 3 spec, 3 proof, 0 exec methods
+    spec: op
+    spec: rel
+    spec: unit
+    proof: commutative
+    proof: associative
+    proof: op_unit
+RangeAll - 1 spec, 0 proof, 0 exec methods
+    spec: all_spec
+ReadLinearizer : Sized - 3 spec, 2 proof, 0 exec methods
+    spec: namespaces
+    spec: pre
+    spec: post
+    proof: apply
+    proof: peek
+ReadOperation : Sized - 3 spec, 0 proof, 0 exec methods
+    spec: requires
+    spec: peek_requires
+    spec: peek_ensures
+ResultAdditionalSpecFns - 6 spec, 4 proof, 0 exec methods
+    spec: is_Ok
+    spec: get_Ok_0
+    spec: arrow_Ok_0
+    spec: is_Err
+    spec: get_Err_0
+    spec: arrow_Err_0
+    proof: tracked_unwrap
+    proof: tracked_unwrap_err
+    proof: tracked_expect
+    proof: tracked_expect_err
+RwLockPredicate : Sized - 1 spec, 0 proof, 0 exec methods
+    spec: inv
+SetIterAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: view
+SimpleToken : Sized - 1 spec, 1 proof, 0 exec methods
+    spec: instance_id
+    proof: arbitrary
+SliceAdditionalExecFns - 0 spec, 0 proof, 1 exec methods
+    exec: set
+SliceAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+StepSpec - 7 spec, 0 proof, 0 exec methods
+    spec: spec_is_lt
+    spec: spec_steps_between
+    spec: spec_steps_between_int
+    spec: spec_forward_checked
+    spec: spec_forward_checked_int
+    spec: spec_backward_checked
+    spec: spec_backward_checked_int
+StrSliceExecFns - 0 spec, 0 proof, 6 exec methods
+    exec: unicode_len
+    exec: get_char
+    exec: substring_ascii
+    exec: substring_char
+    exec: get_ascii
+    exec: as_bytes_vec
+StringExecFns : Sized - 0 spec, 0 proof, 3 exec methods
+    exec: from_str
+    exec: append
+    exec: concat
+StringExecFnsIsAscii : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: is_ascii
+ToOwned : Sized + DeepView < V = T :: V > - 0 spec, 0 proof, 1 exec methods
+    exec: get_owned
+ToRef : Sized + DeepView < V = T :: V > - 0 spec, 0 proof, 1 exec methods
+    exec: get_ref
+TrustedSpecSealed - 0 spec, 0 proof, 0 exec methods
+UniqueElementToken : ElementToken < Element > - 0 spec, 1 proof, 0 exec methods
+    proof: unique
+UniqueKeyValueToken : KeyValueToken < Key , Value > - 0 spec, 1 proof, 0 exec methods
+    proof: unique
+UniqueSimpleToken : SimpleToken - 0 spec, 1 proof, 0 exec methods
+    proof: unique
+UniqueValueToken : ValueToken < Value > - 0 spec, 1 proof, 0 exec methods
+    proof: unique
+ValueToken : Sized - 2 spec, 2 proof, 0 exec methods
+    spec: instance_id
+    spec: value
+    proof: agree
+    proof: arbitrary
+ValuesAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: view
+VecAdditionalExecFns - 0 spec, 0 proof, 2 exec methods
+    exec: set
+    exec: set_and_swap
+VecAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+VecDequeAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+View - 1 spec, 0 proof, 0 exec methods
+    spec: view
+
+=== 9. SPEC FUNCTIONS (203) ===
+
+vstd::arithmetic::div_mod::is_mod_equivalent [open]
+vstd::arithmetic::internals::div_internals::div_auto [open]
+vstd::arithmetic::internals::div_internals::div_auto_minus [open]
+vstd::arithmetic::internals::div_internals::div_auto_plus [open]
+vstd::arithmetic::internals::div_internals::div_pos [open]
+vstd::arithmetic::internals::div_internals::div_recursive [open]
+vstd::arithmetic::internals::general_internals::is_le [open]
+vstd::arithmetic::internals::mul_internals::mul_auto [open]
+vstd::arithmetic::internals::mul_internals::mul_pos [open]
+vstd::arithmetic::internals::mul_internals::mul_recursive [open]
+vstd::arithmetic::internals_internals::mod_auto [open]
+vstd::arithmetic::internals_internals::mod_auto_minus [open]
+vstd::arithmetic::internals_internals::mod_auto_plus [open]
+vstd::arithmetic::internals_internals::mod_recursive [open]
+vstd::arithmetic::internals_internals_nonlinear::modulus [open]
+vstd::arithmetic::logarithm::log [open]
+vstd::arithmetic::power2::pow2 [open]
+vstd::arithmetic::power::pow [open]
+vstd::array::array_view [open]
+vstd::array::spec_array_as_slice [uninterp]
+vstd::array::spec_array_fill_for_copy_type [uninterp]
+vstd::bits::low_bits_mask [open]
+vstd::bytes::spec_u128_from_le_bytes
+vstd::bytes::spec_u128_to_le_bytes
+vstd::bytes::spec_u16_from_le_bytes
+vstd::bytes::spec_u16_to_le_bytes
+vstd::bytes::spec_u32_from_le_bytes
+vstd::bytes::spec_u32_to_le_bytes
+vstd::bytes::spec_u64_from_le_bytes
+vstd::bytes::spec_u64_to_le_bytes
+vstd::bytes::spec_u64_to_le_bytes_open [open]
+vstd::cell::option_from_mem_contents [open]
+vstd::compute::range_all_spec_rec [open]
+vstd::laws_cmp::obeys_cmp_ord [open]
+vstd::laws_cmp::obeys_cmp_partial_ord [open]
+vstd::laws_cmp::obeys_cmp_spec [open]
+vstd::laws_cmp::obeys_partial_cmp_spec_properties [open]
+vstd::laws_eq::obeys_concrete_eq [open]
+vstd::laws_eq::obeys_deep_eq [open]
+vstd::laws_eq::obeys_eq_spec [open]
+vstd::laws_eq::obeys_eq_spec_properties [open]
+vstd::laws_eq::obeys_view_eq [open]
+vstd::layout::align_of [uninterp]
+vstd::layout::align_of_as_usize [open]
+vstd::layout::is_power_2 [open]
+vstd::layout::is_sized [uninterp]
+vstd::layout::size_of [uninterp]
+vstd::layout::size_of_as_usize [open]
+vstd::layout::valid_layout [open]
+vstd::map::check_argument_is_map [open]
+vstd::math::abs [open]
+vstd::math::add [open]
+vstd::math::clip [open]
+vstd::math::div [open]
+vstd::math::max [open]
+vstd::math::max3 [open]
+vstd::math::min [open]
+vstd::math::sub [open]
+vstd::pcm::conjunct_shared [open]
+vstd::pcm::frame_preserving_update [open]
+vstd::pcm::frame_preserving_update_nondeterministic [open]
+vstd::pcm::incl [open]
+vstd::pcm::set_op [open]
+vstd::pcm_lib::combine_values [open]
+vstd::pervasive::allow_panic [open]
+vstd::pervasive::arbitrary [uninterp]
+vstd::pervasive::cloned [open]
+vstd::pervasive::spec_affirm
+vstd::pervasive::strictly_cloned [open]
+vstd::pervasive::trigger [open]
+vstd::raw_ptr::ptr_from_data [open]
+vstd::raw_ptr::ptr_mut_from_data [uninterp]
+vstd::raw_ptr::ptr_null [open]
+vstd::raw_ptr::ptr_null_mut [open]
+vstd::raw_ptr::spec_cast_array_ptr_to_slice_ptr [open]
+vstd::raw_ptr::spec_cast_ptr_to_thin_ptr [open]
+vstd::raw_ptr::spec_cast_ptr_to_usize [open]
+vstd::raw_ptr::view_reverse_for_eq [uninterp]
+vstd::raw_ptr::view_reverse_for_eq_sized
+vstd::relations::antisymmetric [open]
+vstd::relations::associative [open]
+vstd::relations::asymmetric [open]
+vstd::relations::commutative [open]
+vstd::relations::connected [open]
+vstd::relations::equivalence_relation [open]
+vstd::relations::injective [open]
+vstd::relations::injective_on [open]
+vstd::relations::irreflexive [open]
+vstd::relations::is_greatest [open]
+vstd::relations::is_least [open]
+vstd::relations::is_maximal [open]
+vstd::relations::is_minimal [open]
+vstd::relations::partial_ordering [open]
+vstd::relations::pre_ordering [open]
+vstd::relations::reflexive [open]
+vstd::relations::sorted_by [open]
+vstd::relations::strict_total_ordering [open]
+vstd::relations::strongly_connected [open]
+vstd::relations::symmetric [open]
+vstd::relations::total_ordering [open]
+vstd::relations::transitive [open]
+vstd::seq_lib::check_argument_is_seq [open]
+vstd::seq_lib::commutative_foldl [open]
+vstd::seq_lib::commutative_foldr [open]
+vstd::seq_lib::merge_sorted_with
+vstd::seq_lib::seq_to_set_rec
+vstd::set::fold_graph
+vstd::set::is_fun_commutative [open]
+vstd::set::surj_on
+vstd::set::trigger_finite
+vstd::set::trigger_fold_graph
+vstd::set_lib::check_argument_is_set [open]
+vstd::set_lib::set_int_range [open]
+vstd::slice::spec_slice_get [uninterp]
+vstd::slice::spec_slice_len [uninterp]
+vstd::state_machine_internal::nat_max [open]
+vstd::state_machine_internal::opt_add [open]
+vstd::state_machine_internal::opt_agree [open]
+vstd::state_machine_internal::opt_ge [open]
+vstd::state_machine_internal::opt_is_none [open]
+vstd::state_machine_internal::opt_sub [open]
+vstd::std_specs::bits::u16_leading_ones [open]
+vstd::std_specs::bits::u16_leading_zeros
+vstd::std_specs::bits::u16_trailing_ones [open]
+vstd::std_specs::bits::u16_trailing_zeros
+vstd::std_specs::bits::u32_leading_ones [open]
+vstd::std_specs::bits::u32_leading_zeros
+vstd::std_specs::bits::u32_trailing_ones [open]
+vstd::std_specs::bits::u32_trailing_zeros
+vstd::std_specs::bits::u64_leading_ones [open]
+vstd::std_specs::bits::u64_leading_zeros [open]
+vstd::std_specs::bits::u64_trailing_ones [open]
+vstd::std_specs::bits::u64_trailing_zeros
+vstd::std_specs::bits::u8_leading_ones [open]
+vstd::std_specs::bits::u8_leading_zeros
+vstd::std_specs::bits::u8_trailing_ones [open]
+vstd::std_specs::bits::u8_trailing_zeros
+vstd::std_specs::cmp::eq_ensures [uninterp]
+vstd::std_specs::cmp::ge_ensures [uninterp]
+vstd::std_specs::cmp::gt_ensures [uninterp]
+vstd::std_specs::cmp::le_ensures [uninterp]
+vstd::std_specs::cmp::lt_ensures [uninterp]
+vstd::std_specs::cmp::ne_ensures [uninterp]
+vstd::std_specs::cmp::partial_cmp_ensures [uninterp]
+vstd::std_specs::control_flow::spec_from [uninterp]
+vstd::std_specs::core::iter_into_iter_spec [open]
+vstd::std_specs::hash::borrowed_key_removed [uninterp]
+vstd::std_specs::hash::builds_valid_hashers [uninterp]
+vstd::std_specs::hash::contains_borrowed_key [uninterp]
+vstd::std_specs::hash::hash_map_deep_view_impl [open]
+vstd::std_specs::hash::maps_borrowed_key_to_value [uninterp]
+vstd::std_specs::hash::obeys_key_model [uninterp]
+vstd::std_specs::hash::set_contains_borrowed_key [uninterp]
+vstd::std_specs::hash::sets_borrowed_key_to_key [uninterp]
+vstd::std_specs::hash::sets_differ_by_borrowed_key [uninterp]
+vstd::std_specs::hash::spec_hash_map_iter [uninterp]
+vstd::std_specs::hash::spec_hash_map_len [uninterp]
+vstd::std_specs::hash::spec_hash_set_len [uninterp]
+vstd::std_specs::ops::add_ensures [uninterp]
+vstd::std_specs::ops::div_ensures [uninterp]
+vstd::std_specs::ops::mul_ensures [uninterp]
+vstd::std_specs::ops::neg_ensures [uninterp]
+vstd::std_specs::ops::sub_ensures [uninterp]
+vstd::std_specs::option::is_none [open]
+vstd::std_specs::option::is_some [open]
+vstd::std_specs::option::spec_expect [open]
+vstd::std_specs::option::spec_ok_or [open]
+vstd::std_specs::option::spec_unwrap [open]
+vstd::std_specs::option::spec_unwrap_or [open]
+vstd::std_specs::range::spec_range_next [uninterp]
+vstd::std_specs::result::err [open]
+vstd::std_specs::result::is_err [open]
+vstd::std_specs::result::is_ok [open]
+vstd::std_specs::result::ok [open]
+vstd::std_specs::result::spec_expect [open]
+vstd::std_specs::result::spec_unwrap [open]
+vstd::std_specs::result::spec_unwrap_err [open]
+vstd::std_specs::slice::spec_slice_iter [uninterp]
+vstd::std_specs::vec::spec_into_iter [uninterp]
+vstd::std_specs::vec::spec_vec_len [uninterp]
+vstd::std_specs::vec::vec_clone_trigger [open]
+vstd::std_specs::vecdeque::spec_iter [uninterp]
+vstd::std_specs::vecdeque::spec_vec_dequeue_len [uninterp]
+vstd::std_specs::vecdeque::vec_dequeue_clone_trigger [open]
+vstd::storage_protocol::deposits [open]
+vstd::storage_protocol::exchanges [open]
+vstd::storage_protocol::exchanges_nondeterministic [open]
+vstd::storage_protocol::guards [open]
+vstd::storage_protocol::incl [open]
+vstd::storage_protocol::set_op [open]
+vstd::storage_protocol::updates [open]
+vstd::storage_protocol::withdraws [open]
+vstd::string::new_strlit_spec [open]
+vstd::string::str_slice_is_ascii [uninterp]
+vstd::string::string_is_ascii [uninterp]
+vstd::string::to_string_from_display_ensures [uninterp]
+vstd::tokens::bool_value_eq_option_token [open]
+vstd::tokens::bool_value_le_option_token [open]
+vstd::tokens::fresh
+vstd::tokens::map_values
+vstd::tokens::option_value_eq_option_token [open]
+vstd::tokens::option_value_le_option_token [open]
+vstd::tokens::seq::seq_to_map [open]
+
+=== 10. PROOF FUNCTIONS (515) ===
+
+Lemmas: 313, Broadcast: 367
+
+vstd::arithmetic::div_mod::lemma_add_mod_noop [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_add_mod_noop_right [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_basic_div [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_basic_div_specific_divisor [lemma]
+vstd::arithmetic::div_mod::lemma_breakdown [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_basics [lemma]
+vstd::arithmetic::div_mod::lemma_div_basics_1 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_basics_2 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_basics_3 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_basics_4 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_basics_5 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_by_multiple [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_by_multiple_is_strongly_ordered [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_by_self [lemma]
+vstd::arithmetic::div_mod::lemma_div_decreases [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_denominator [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_is_div_recursive [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_is_ordered [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_is_ordered_by_denominator [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_is_strictly_smaller [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_minus_one [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_multiples_vanish [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_multiples_vanish_fancy [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_multiples_vanish_quotient [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_non_zero [lemma]
+vstd::arithmetic::div_mod::lemma_div_nonincreasing [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_of0 [lemma]
+vstd::arithmetic::div_mod::lemma_div_plus_one [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_div_pos_is_pos [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_dividing_sums [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod_converse [lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod_converse_div [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod_converse_helper_1 [lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod_converse_helper_2 [lemma]
+vstd::arithmetic::div_mod::lemma_fundamental_div_mod_converse_mod [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_hoist_over_denominator [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_indistinguishable_quotients [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_add_multiples_vanish [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_adds [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_bound [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_breakdown [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_decreases [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_division_less_than_divisor [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_equivalence [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_is_mod_recursive [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_is_zero [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_mod [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_mul_equivalent [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_multiples_basic [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_multiples_vanish [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_neg_neg [lemma]
+vstd::arithmetic::div_mod::lemma_mod_ordering [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_pos_bound [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_self_0 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_sub_multiples_vanish [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_subtraction [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mod_twice [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mul_hoist_inequality [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mul_mod_noop [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mul_mod_noop_general [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mul_mod_noop_left [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_mul_mod_noop_right [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_multiply_divide_le [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_multiply_divide_lt [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_part_bound1 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_part_bound2 [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_remainder [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_remainder_lower [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_remainder_upper [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_round_down [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_small_div_converse [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_small_mod [lemma]
+vstd::arithmetic::div_mod::lemma_sub_mod_noop [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_sub_mod_noop_right [broadcast, lemma]
+vstd::arithmetic::div_mod::lemma_truncate_middle [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_auto [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_auto_minus [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_auto_plus [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_basics [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_induction_auto [lemma]
+vstd::arithmetic::internals::div_internals::lemma_div_induction_auto_forall [lemma]
+vstd::arithmetic::internals::div_internals_nonlinear::lemma_div_by_self [lemma]
+vstd::arithmetic::internals::div_internals_nonlinear::lemma_div_of0 [lemma]
+vstd::arithmetic::internals::div_internals_nonlinear::lemma_small_div [lemma]
+vstd::arithmetic::internals::general_internals::lemma_induction_helper [lemma]
+vstd::arithmetic::internals::general_internals::lemma_induction_helper_neg [lemma]
+vstd::arithmetic::internals::general_internals::lemma_induction_helper_pos [lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_commutes [broadcast, lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_distributes_minus [broadcast, lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_distributes_plus [broadcast, lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_induction [lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_induction_auto [lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_induction_auto_forall [lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_properties_internal_prove_mul_auto [lemma]
+vstd::arithmetic::internals::mul_internals::lemma_mul_successor [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_is_associative [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_is_distributive_add [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_nonzero [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_ordering [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_strict_inequality [lemma]
+vstd::arithmetic::internals::mul_internals_nonlinear::lemma_mul_strictly_positive [lemma]
+vstd::arithmetic::internals_internals::lemma_div_add_denominator [lemma]
+vstd::arithmetic::internals_internals::lemma_div_sub_denominator [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_add_denominator [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_auto [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_basics [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_below_denominator [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_induction_auto [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_induction_auto_forall [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_induction_forall [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_induction_forall2 [lemma]
+vstd::arithmetic::internals_internals::lemma_mod_sub_denominator [lemma]
+vstd::arithmetic::internals_internals::lemma_quotient_and_remainder [lemma]
+vstd::arithmetic::internals_internals_nonlinear::lemma_0_mod_anything [lemma]
+vstd::arithmetic::internals_internals_nonlinear::lemma_fundamental_div_mod [lemma]
+vstd::arithmetic::internals_internals_nonlinear::lemma_mod_of_zero_is_zero [lemma]
+vstd::arithmetic::internals_internals_nonlinear::lemma_mod_range [lemma]
+vstd::arithmetic::internals_internals_nonlinear::lemma_small_mod [lemma]
+vstd::arithmetic::logarithm::lemma_log0 [lemma]
+vstd::arithmetic::logarithm::lemma_log_is_ordered [lemma]
+vstd::arithmetic::logarithm::lemma_log_nonnegative [lemma]
+vstd::arithmetic::logarithm::lemma_log_pow [lemma]
+vstd::arithmetic::logarithm::lemma_log_s [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_basics [lemma]
+vstd::arithmetic::mul::lemma_mul_basics_1 [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_basics_2 [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_basics_3 [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_basics_4 [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_by_zero_is_zero [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_cancels_negatives [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_equality_converse [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_increases [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_inequality [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_inequality_converse [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_associative [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_commutative [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_distributive [lemma]
+vstd::arithmetic::mul::lemma_mul_is_distributive_add [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_distributive_add_other_way [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_distributive_sub [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_distributive_sub_other_way [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_is_mul_pos [lemma]
+vstd::arithmetic::mul::lemma_mul_is_mul_recursive [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_left_inequality [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_nonnegative [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_nonzero [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_ordering [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_properties_prove_mul_properties_auto [lemma]
+vstd::arithmetic::mul::lemma_mul_strict_inequality [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_strict_inequality_converse [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_strict_upper_bound [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_strictly_increases [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_strictly_positive [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_unary_negation [broadcast, lemma]
+vstd::arithmetic::mul::lemma_mul_upper_bound [broadcast, lemma]
+vstd::arithmetic::power2::lemma2_to64 [lemma]
+vstd::arithmetic::power2::lemma2_to64_rest [lemma]
+vstd::arithmetic::power2::lemma_pow2 [broadcast, lemma]
+vstd::arithmetic::power2::lemma_pow2_adds [broadcast, lemma]
+vstd::arithmetic::power2::lemma_pow2_pos [broadcast, lemma]
+vstd::arithmetic::power2::lemma_pow2_strictly_increases [broadcast, lemma]
+vstd::arithmetic::power2::lemma_pow2_subtracts [broadcast, lemma]
+vstd::arithmetic::power2::lemma_pow2_unfold [broadcast, lemma]
+vstd::arithmetic::power::lemma0_pow [broadcast, lemma]
+vstd::arithmetic::power::lemma1_pow [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow0 [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow1 [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_adds [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_distributes [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_division_inequality [lemma]
+vstd::arithmetic::power::lemma_pow_increases [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_increases_converse [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_mod [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_mod_noop [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_multiplies [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_positive [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_properties_prove_pow_auto [lemma]
+vstd::arithmetic::power::lemma_pow_strictly_increases [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_strictly_increases_converse [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_sub_add_cancel [broadcast, lemma]
+vstd::arithmetic::power::lemma_pow_subtracts [broadcast, lemma]
+vstd::arithmetic::power::lemma_pull_out_pows [broadcast, lemma]
+vstd::arithmetic::power::lemma_square_is_pow2 [broadcast, lemma]
+vstd::array::array_len_matches_n [broadcast]
+vstd::array::axiom_array_ext_equal [broadcast]
+vstd::array::axiom_spec_array_as_slice [broadcast]
+vstd::array::axiom_spec_array_fill_for_copy_type [broadcast]
+vstd::array::lemma_array_index [broadcast, lemma]
+vstd::bits::lemma_low_bits_mask_div2 [broadcast, lemma]
+vstd::bits::lemma_low_bits_mask_is_odd [broadcast, lemma]
+vstd::bits::lemma_low_bits_mask_unfold [broadcast, lemma]
+vstd::bits::lemma_low_bits_mask_values [lemma]
+vstd::bytes::lemma_auto_spec_u128_to_from_le_bytes [lemma]
+vstd::bytes::lemma_auto_spec_u16_to_from_le_bytes [lemma]
+vstd::bytes::lemma_auto_spec_u32_to_from_le_bytes [lemma]
+vstd::bytes::lemma_auto_spec_u64_to_from_le_bytes [lemma]
+vstd::bytes::spec_u64_to_le_bytes_to_open
+vstd::compute::all_spec_ensures [broadcast]
+vstd::function::axiom_proof_fn_ensures [broadcast]
+vstd::function::axiom_proof_fn_requires [broadcast]
+vstd::function::proof_fn_as_req_ens
+vstd::hash_map::axiom_hash_map_with_view_spec_len [broadcast]
+vstd::hash_map::axiom_string_hash_map_spec_len [broadcast]
+vstd::hash_set::axiom_hash_set_with_view_spec_len [broadcast]
+vstd::hash_set::axiom_string_hash_set_spec_len [broadcast]
+vstd::invariant::spend_open_invariant_credit_in_proof
+vstd::laws_cmp::lemma_option_obeys_cmp_spec [broadcast, lemma]
+vstd::laws_eq::axiom_structural_obeys_concrete_eq [broadcast]
+vstd::laws_eq::lemma_option_obeys_concrete_eq [broadcast, lemma]
+vstd::laws_eq::lemma_option_obeys_deep_eq [broadcast, lemma]
+vstd::laws_eq::lemma_option_obeys_eq_spec [broadcast, lemma]
+vstd::laws_eq::lemma_option_obeys_view_eq [broadcast, lemma]
+vstd::layout::layout_of_primitives [broadcast]
+vstd::layout::layout_of_references_and_pointers [broadcast]
+vstd::layout::layout_of_references_and_pointers_for_sized_types [broadcast]
+vstd::layout::layout_of_unit_tuple [broadcast]
+vstd::map::axiom_map_empty [broadcast]
+vstd::map::axiom_map_ext_equal [broadcast]
+vstd::map::axiom_map_ext_equal_deep [broadcast]
+vstd::map::axiom_map_index_decreases_finite [broadcast]
+vstd::map::axiom_map_index_decreases_infinite [broadcast]
+vstd::map::axiom_map_insert_different [broadcast]
+vstd::map::axiom_map_insert_domain [broadcast]
+vstd::map::axiom_map_insert_same [broadcast]
+vstd::map::axiom_map_remove_different [broadcast]
+vstd::map::axiom_map_remove_domain [broadcast]
+vstd::map_lib::lemma_disjoint_union_size [broadcast, lemma]
+vstd::map_lib::lemma_map_new_domain [broadcast, lemma]
+vstd::map_lib::lemma_map_new_values [broadcast, lemma]
+vstd::map_lib::lemma_map_properties [lemma]
+vstd::map_lib::lemma_submap_of_trans [broadcast, lemma]
+vstd::map_lib::lemma_union_dom [broadcast, lemma]
+vstd::map_lib::lemma_union_insert_left [broadcast, lemma]
+vstd::map_lib::lemma_union_insert_right [broadcast, lemma]
+vstd::map_lib::lemma_union_remove_left [broadcast, lemma]
+vstd::map_lib::lemma_union_remove_right [broadcast, lemma]
+vstd::map_lib::lemma_values_finite [lemma]
+vstd::modes::tracked_static_ref
+vstd::modes::tracked_swap
+vstd::multiset::axiom_choose_count [broadcast]
+vstd::multiset::axiom_count_le_len [broadcast]
+vstd::multiset::axiom_filter_count [broadcast]
+vstd::multiset::axiom_len_add [broadcast]
+vstd::multiset::axiom_len_empty [broadcast]
+vstd::multiset::axiom_len_singleton [broadcast]
+vstd::multiset::axiom_len_sub [broadcast]
+vstd::multiset::axiom_multiset_add [broadcast]
+vstd::multiset::axiom_multiset_always_finite [broadcast]
+vstd::multiset::axiom_multiset_contained [broadcast]
+vstd::multiset::axiom_multiset_empty [broadcast]
+vstd::multiset::axiom_multiset_ext_equal [broadcast]
+vstd::multiset::axiom_multiset_ext_equal_deep [broadcast]
+vstd::multiset::axiom_multiset_new_not_contained [broadcast]
+vstd::multiset::axiom_multiset_singleton [broadcast]
+vstd::multiset::axiom_multiset_singleton_different [broadcast]
+vstd::multiset::axiom_multiset_sub [broadcast]
+vstd::multiset::lemma_difference_bottoms_out [broadcast, lemma]
+vstd::multiset::lemma_difference_count [broadcast, lemma]
+vstd::multiset::lemma_insert_containment [broadcast, lemma]
+vstd::multiset::lemma_insert_increases_count_by_1 [broadcast, lemma]
+vstd::multiset::lemma_insert_len [broadcast, lemma]
+vstd::multiset::lemma_insert_non_decreasing [broadcast, lemma]
+vstd::multiset::lemma_insert_other_elements_unchanged [broadcast, lemma]
+vstd::multiset::lemma_intersection_count [broadcast, lemma]
+vstd::multiset::lemma_left_pseudo_idempotence [broadcast, lemma]
+vstd::multiset::lemma_multiset_empty_len [broadcast, lemma]
+vstd::multiset::lemma_multiset_properties [lemma]
+vstd::multiset::lemma_right_pseudo_idempotence [broadcast, lemma]
+vstd::multiset::lemma_update_different [broadcast, lemma]
+vstd::multiset::lemma_update_same [broadcast, lemma]
+vstd::pcm_lib::aggregate_resources_from_map_starting_at_offset
+vstd::pcm_lib::copy_duplicable_part
+vstd::pcm_lib::duplicate
+vstd::pcm_lib::extract
+vstd::pcm_lib::incorporate
+vstd::pcm_lib::lemma_pcm_properties [lemma]
+vstd::pcm_lib::redistribute
+vstd::pcm_lib::split_mut
+vstd::pcm_lib::store_resources_into_map_starting_at_offset
+vstd::pcm_lib::update_and_redistribute
+vstd::pcm_lib::update_mut
+vstd::pcm_lib::validate_3
+vstd::pcm_lib::validate_4
+vstd::pcm_lib::validate_5
+vstd::pcm_lib::validate_multiple
+vstd::pervasive::affirm
+vstd::pervasive::assert
+vstd::pervasive::assume
+vstd::pervasive::proof_from_false
+vstd::pervasive::proof_nonstatic_call
+vstd::raw_ptr::axiom_ptr_mut_from_data [broadcast]
+vstd::raw_ptr::ptrs_mut_eq [broadcast]
+vstd::raw_ptr::ptrs_mut_eq_sized [broadcast]
+vstd::relations::lemma_new_first_element_still_sorted_by [lemma]
+vstd::seq::axiom_seq_add_index1 [broadcast]
+vstd::seq::axiom_seq_add_index2 [broadcast]
+vstd::seq::axiom_seq_add_len [broadcast]
+vstd::seq::axiom_seq_empty [broadcast]
+vstd::seq::axiom_seq_ext_equal [broadcast]
+vstd::seq::axiom_seq_ext_equal_deep [broadcast]
+vstd::seq::axiom_seq_index_decreases [broadcast]
+vstd::seq::axiom_seq_len_decreases
+vstd::seq::axiom_seq_new_index [broadcast]
+vstd::seq::axiom_seq_new_len [broadcast]
+vstd::seq::axiom_seq_push_index_different [broadcast]
+vstd::seq::axiom_seq_push_index_same [broadcast]
+vstd::seq::axiom_seq_push_len [broadcast]
+vstd::seq::axiom_seq_subrange_decreases [broadcast]
+vstd::seq::axiom_seq_subrange_index [broadcast]
+vstd::seq::axiom_seq_subrange_len [broadcast]
+vstd::seq::axiom_seq_update_different [broadcast]
+vstd::seq::axiom_seq_update_len [broadcast]
+vstd::seq::axiom_seq_update_same [broadcast]
+vstd::seq_lib::lemma_append_last [lemma]
+vstd::seq_lib::lemma_concat_associative [lemma]
+vstd::seq_lib::lemma_exactly_one_view [lemma]
+vstd::seq_lib::lemma_filter_view_commute [lemma]
+vstd::seq_lib::lemma_flatten_alt_concat [lemma]
+vstd::seq_lib::lemma_flatten_concat [lemma]
+vstd::seq_lib::lemma_fold_left_permutation [lemma]
+vstd::seq_lib::lemma_fold_right_permutation [lemma]
+vstd::seq_lib::lemma_max_of_concat [lemma]
+vstd::seq_lib::lemma_merge_sorted_with_ensures [lemma]
+vstd::seq_lib::lemma_min_of_concat [lemma]
+vstd::seq_lib::lemma_multiset_commutative [broadcast, lemma]
+vstd::seq_lib::lemma_no_dup_in_concat [lemma]
+vstd::seq_lib::lemma_seq_append_take_skip [broadcast, lemma]
+vstd::seq_lib::lemma_seq_concat_contains_all_elements [broadcast, lemma]
+vstd::seq_lib::lemma_seq_contains [broadcast, lemma]
+vstd::seq_lib::lemma_seq_contains_after_push [broadcast, lemma]
+vstd::seq_lib::lemma_seq_empty_contains_nothing [broadcast, lemma]
+vstd::seq_lib::lemma_seq_empty_equality [broadcast, lemma]
+vstd::seq_lib::lemma_seq_properties [lemma]
+vstd::seq_lib::lemma_seq_skip_build_commut [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_contains [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_index [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_index2 [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_len [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_nothing [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_of_skip [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_update_commut1 [broadcast, lemma]
+vstd::seq_lib::lemma_seq_skip_update_commut2 [broadcast, lemma]
+vstd::seq_lib::lemma_seq_subrange_elements [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_contains [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_index [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_len [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_nothing [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_update_commut1 [broadcast, lemma]
+vstd::seq_lib::lemma_seq_take_update_commut2 [broadcast, lemma]
+vstd::seq_lib::lemma_seq_union_to_multiset_commutative [broadcast, lemma]
+vstd::seq_lib::lemma_sorted_unique [lemma]
+vstd::seq_lib::lemma_update_is_remove_insert [broadcast, lemma]
+vstd::seq_lib::seq_to_set_distributes_over_add
+vstd::seq_lib::seq_to_set_equal_rec
+vstd::seq_lib::seq_to_set_is_finite [broadcast]
+vstd::seq_lib::seq_to_set_rec_contains
+vstd::seq_lib::seq_to_set_rec_is_finite
+vstd::seq_lib::subrange_of_matching_take
+vstd::seq_lib::to_multiset_build [broadcast]
+vstd::seq_lib::to_multiset_contains [broadcast]
+vstd::seq_lib::to_multiset_insert [broadcast]
+vstd::seq_lib::to_multiset_len [broadcast]
+vstd::seq_lib::to_multiset_remove [broadcast]
+vstd::seq_lib::to_multiset_update [broadcast]
+vstd::set::axiom_mk_map_domain [broadcast]
+vstd::set::axiom_mk_map_index [broadcast]
+vstd::set::axiom_set_choose_infinite [broadcast]
+vstd::set::axiom_set_choose_len [broadcast]
+vstd::set::axiom_set_complement [broadcast]
+vstd::set::axiom_set_contains_len [broadcast]
+vstd::set::axiom_set_difference [broadcast]
+vstd::set::axiom_set_difference_finite [broadcast]
+vstd::set::axiom_set_empty [broadcast]
+vstd::set::axiom_set_empty_finite [broadcast]
+vstd::set::axiom_set_empty_len [broadcast]
+vstd::set::axiom_set_ext_equal [broadcast]
+vstd::set::axiom_set_ext_equal_deep [broadcast]
+vstd::set::axiom_set_insert_different [broadcast]
+vstd::set::axiom_set_insert_finite [broadcast]
+vstd::set::axiom_set_insert_len [broadcast]
+vstd::set::axiom_set_insert_same [broadcast]
+vstd::set::axiom_set_intersect [broadcast]
+vstd::set::axiom_set_intersect_finite [broadcast]
+vstd::set::axiom_set_new [broadcast]
+vstd::set::axiom_set_remove_different [broadcast]
+vstd::set::axiom_set_remove_finite [broadcast]
+vstd::set::axiom_set_remove_insert [broadcast]
+vstd::set::axiom_set_remove_len [broadcast]
+vstd::set::axiom_set_remove_same [broadcast]
+vstd::set::axiom_set_union [broadcast]
+vstd::set::axiom_set_union_finite [broadcast]
+vstd::set::lemma_finite_set_induct [lemma]
+vstd::set::lemma_finite_set_induct_aux [lemma]
+vstd::set::lemma_fold_empty [broadcast, lemma]
+vstd::set::lemma_fold_graph_deterministic [lemma]
+vstd::set::lemma_fold_graph_empty_elim [lemma]
+vstd::set::lemma_fold_graph_empty_intro [lemma]
+vstd::set::lemma_fold_graph_exists [lemma]
+vstd::set::lemma_fold_graph_finite [lemma]
+vstd::set::lemma_fold_graph_induct [lemma]
+vstd::set::lemma_fold_graph_insert_elim [lemma]
+vstd::set::lemma_fold_graph_insert_elim_aux [lemma]
+vstd::set::lemma_fold_graph_insert_intro [lemma]
+vstd::set::lemma_fold_insert [broadcast, lemma]
+vstd::set::lemma_fold_is_fold_graph [lemma]
+vstd::set_lib::axiom_is_empty [broadcast]
+vstd::set_lib::axiom_is_empty_len0 [broadcast]
+vstd::set_lib::lemma_disjoint_iff_empty_intersection [lemma]
+vstd::set_lib::lemma_int_range [lemma]
+vstd::set_lib::lemma_len_difference [lemma]
+vstd::set_lib::lemma_len_intersect [lemma]
+vstd::set_lib::lemma_len_subset [lemma]
+vstd::set_lib::lemma_len_union [lemma]
+vstd::set_lib::lemma_len_union_ind [lemma]
+vstd::set_lib::lemma_map_size [lemma]
+vstd::set_lib::lemma_map_size_bound [lemma]
+vstd::set_lib::lemma_set_difference2 [broadcast, lemma]
+vstd::set_lib::lemma_set_difference_len [broadcast, lemma]
+vstd::set_lib::lemma_set_disjoint [broadcast, lemma]
+vstd::set_lib::lemma_set_disjoint_lens [broadcast, lemma]
+vstd::set_lib::lemma_set_empty_equivalency_len [broadcast, lemma]
+vstd::set_lib::lemma_set_insert_finite_iff [broadcast, lemma]
+vstd::set_lib::lemma_set_intersect_again1 [broadcast, lemma]
+vstd::set_lib::lemma_set_intersect_again2 [broadcast, lemma]
+vstd::set_lib::lemma_set_intersect_union_lens [broadcast, lemma]
+vstd::set_lib::lemma_set_properties [lemma]
+vstd::set_lib::lemma_set_remove_finite_iff [broadcast, lemma]
+vstd::set_lib::lemma_set_subset_finite [broadcast, lemma]
+vstd::set_lib::lemma_set_union_again1 [broadcast, lemma]
+vstd::set_lib::lemma_set_union_again2 [broadcast, lemma]
+vstd::set_lib::lemma_set_union_finite_iff [broadcast, lemma]
+vstd::set_lib::lemma_set_union_finite_implies_sets_finite [lemma]
+vstd::set_lib::lemma_sets_eq_iff_injective_map_eq [lemma]
+vstd::set_lib::lemma_subset_equality [lemma]
+vstd::slice::axiom_slice_ext_equal [broadcast]
+vstd::slice::axiom_slice_get_usize [broadcast]
+vstd::slice::axiom_spec_len [broadcast]
+vstd::std_specs::bits::axiom_u16_leading_ones [broadcast]
+vstd::std_specs::bits::axiom_u16_leading_zeros [broadcast]
+vstd::std_specs::bits::axiom_u16_trailing_ones [broadcast]
+vstd::std_specs::bits::axiom_u16_trailing_zeros [broadcast]
+vstd::std_specs::bits::axiom_u32_leading_ones [broadcast]
+vstd::std_specs::bits::axiom_u32_leading_zeros [broadcast]
+vstd::std_specs::bits::axiom_u32_trailing_ones [broadcast]
+vstd::std_specs::bits::axiom_u32_trailing_zeros [broadcast]
+vstd::std_specs::bits::axiom_u64_leading_ones [broadcast]
+vstd::std_specs::bits::axiom_u64_leading_zeros [broadcast]
+vstd::std_specs::bits::axiom_u64_trailing_ones [broadcast]
+vstd::std_specs::bits::axiom_u64_trailing_zeros [broadcast]
+vstd::std_specs::bits::axiom_u8_leading_ones [broadcast]
+vstd::std_specs::bits::axiom_u8_leading_zeros [broadcast]
+vstd::std_specs::bits::axiom_u8_trailing_ones [broadcast]
+vstd::std_specs::bits::axiom_u8_trailing_zeros [broadcast]
+vstd::std_specs::control_flow::spec_from_blanket_identity [broadcast]
+vstd::std_specs::hash::axiom_bool_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_box_bool_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_box_integer_type_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_box_key_removed [broadcast]
+vstd::std_specs::hash::axiom_contains_box [broadcast]
+vstd::std_specs::hash::axiom_contains_deref_key [broadcast]
+vstd::std_specs::hash::axiom_deref_key_removed [broadcast]
+vstd::std_specs::hash::axiom_hashmap_decreases [broadcast]
+vstd::std_specs::hash::axiom_hashmap_deepview_borrow [broadcast]
+vstd::std_specs::hash::axiom_hashmap_view_finite_dom [broadcast]
+vstd::std_specs::hash::axiom_hashset_decreases [broadcast]
+vstd::std_specs::hash::axiom_i128_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_i164_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_i16_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_i32_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_i8_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_isize_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_maps_box_key_to_value [broadcast]
+vstd::std_specs::hash::axiom_maps_deref_key_to_value [broadcast]
+vstd::std_specs::hash::axiom_random_state_builds_valid_hashers [broadcast]
+vstd::std_specs::hash::axiom_set_box_key_removed [broadcast]
+vstd::std_specs::hash::axiom_set_box_key_to_value [broadcast]
+vstd::std_specs::hash::axiom_set_contains_box [broadcast]
+vstd::std_specs::hash::axiom_set_contains_deref_key [broadcast]
+vstd::std_specs::hash::axiom_set_deref_key_removed [broadcast]
+vstd::std_specs::hash::axiom_set_deref_key_to_value [broadcast]
+vstd::std_specs::hash::axiom_spec_hash_map_iter [broadcast]
+vstd::std_specs::hash::axiom_spec_hash_map_len [broadcast]
+vstd::std_specs::hash::axiom_spec_hash_set_len [broadcast]
+vstd::std_specs::hash::axiom_u128_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_u16_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_u32_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_u64_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_u8_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_usize_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::lemma_hashmap_deepview_dom [broadcast, lemma]
+vstd::std_specs::hash::lemma_hashmap_deepview_properties [broadcast, lemma]
+vstd::std_specs::hash::lemma_hashmap_deepview_values [broadcast, lemma]
+vstd::std_specs::slice::axiom_spec_slice_iter [broadcast]
+vstd::std_specs::vec::axiom_spec_into_iter [broadcast]
+vstd::std_specs::vec::axiom_spec_len [broadcast]
+vstd::std_specs::vec::axiom_vec_index_decreases [broadcast]
+vstd::std_specs::vec::lemma_vec_obeys_deep_eq [broadcast, lemma]
+vstd::std_specs::vec::lemma_vec_obeys_eq_spec [broadcast, lemma]
+vstd::std_specs::vec::lemma_vec_obeys_view_eq [broadcast, lemma]
+vstd::std_specs::vec::vec_clone_deep_view_proof [broadcast]
+vstd::std_specs::vecdeque::axiom_spec_iter [broadcast]
+vstd::std_specs::vecdeque::axiom_spec_len [broadcast]
+vstd::std_specs::vecdeque::axiom_vec_dequeue_index_decreases [broadcast]
+vstd::string::axiom_str_literal_get_char [broadcast]
+vstd::string::axiom_str_literal_is_ascii [broadcast]
+vstd::string::axiom_str_literal_len [broadcast]
+vstd::string::to_string_from_display_ensures_for_str [broadcast]
+vstd::thread::ghost_thread_id
+vstd::tokens::fresh_is_fresh
+vstd::tokens::get_key_for_value
+vstd::tokens::map::lemma_submap_of_op [broadcast, lemma]
+vstd::tokens::map::lemma_submap_of_op_frac [lemma]
+vstd::tokens::map_values_insert_not_in
+vstd::tokens::map_values_remove
+
+=== 11. AXIOMS (161) ===
+
+Auto-broadcast: 155 (REVIEW!)
+
+Category: arithmetic (25 axioms)
+    axiom_multiset_add [AUTO-BROADCAST]
+    axiom_multiset_always_finite [AUTO-BROADCAST]
+    axiom_multiset_contained [AUTO-BROADCAST]
+    axiom_multiset_empty [AUTO-BROADCAST]
+    axiom_multiset_ext_equal [AUTO-BROADCAST]
+    axiom_multiset_ext_equal_deep [AUTO-BROADCAST]
+    axiom_multiset_new_not_contained [AUTO-BROADCAST]
+    axiom_multiset_singleton [AUTO-BROADCAST]
+    axiom_multiset_singleton_different [AUTO-BROADCAST]
+    axiom_multiset_sub [AUTO-BROADCAST]
+    axiom_bool_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_box_bool_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_box_integer_type_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i128_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i164_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i16_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i32_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i8_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_isize_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_u128_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_u16_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_u32_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_u64_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_u8_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_usize_obeys_hash_table_key_model [AUTO-BROADCAST]
+Category: map (21 axioms)
+    axiom_hash_map_with_view_spec_len [AUTO-BROADCAST]
+    axiom_string_hash_map_spec_len [AUTO-BROADCAST]
+    axiom_map_empty [AUTO-BROADCAST]
+    axiom_map_ext_equal [AUTO-BROADCAST]
+    axiom_map_ext_equal_deep [AUTO-BROADCAST]
+    axiom_map_index_decreases_finite [AUTO-BROADCAST]
+    axiom_map_index_decreases_infinite [AUTO-BROADCAST]
+    axiom_map_insert_different [AUTO-BROADCAST]
+    axiom_map_insert_domain [AUTO-BROADCAST]
+    axiom_map_insert_same [AUTO-BROADCAST]
+    axiom_map_remove_different [AUTO-BROADCAST]
+    axiom_map_remove_domain [AUTO-BROADCAST]
+    axiom_mk_map_domain [AUTO-BROADCAST]
+    axiom_mk_map_index [AUTO-BROADCAST]
+    axiom_hashmap_decreases [AUTO-BROADCAST]
+    axiom_hashmap_deepview_borrow [AUTO-BROADCAST]
+    axiom_hashmap_view_finite_dom [AUTO-BROADCAST]
+    axiom_maps_box_key_to_value [AUTO-BROADCAST]
+    axiom_maps_deref_key_to_value [AUTO-BROADCAST]
+    axiom_spec_hash_map_iter [AUTO-BROADCAST]
+    axiom_spec_hash_map_len [AUTO-BROADCAST]
+Category: memory (2 axioms)
+    axiom_ptr_mut_from_data [AUTO-BROADCAST]
+    ptrs_mut_eq [AUTO-BROADCAST]
+Category: other (31 axioms)
+    array_len_matches_n [AUTO-BROADCAST]
+    axiom_array_ext_equal [AUTO-BROADCAST]
+    axiom_spec_array_as_slice [AUTO-BROADCAST]
+    axiom_spec_array_fill_for_copy_type [AUTO-BROADCAST]
+    axiom_proof_fn_ensures [AUTO-BROADCAST]
+    axiom_proof_fn_requires [AUTO-BROADCAST]
+    proof_fn_as_req_ens
+    axiom_structural_obeys_concrete_eq [AUTO-BROADCAST]
+    layout_of_primitives [AUTO-BROADCAST]
+    layout_of_references_and_pointers [AUTO-BROADCAST]
+    layout_of_references_and_pointers_for_sized_types [AUTO-BROADCAST]
+    layout_of_unit_tuple [AUTO-BROADCAST]
+    tracked_static_ref
+    tracked_swap
+    axiom_choose_count [AUTO-BROADCAST]
+    axiom_count_le_len [AUTO-BROADCAST]
+    axiom_filter_count [AUTO-BROADCAST]
+    axiom_len_add [AUTO-BROADCAST]
+    axiom_len_empty [AUTO-BROADCAST]
+    axiom_len_singleton [AUTO-BROADCAST]
+    axiom_len_sub [AUTO-BROADCAST]
+    proof_from_false
+    axiom_is_empty [AUTO-BROADCAST]
+    axiom_is_empty_len0 [AUTO-BROADCAST]
+    axiom_slice_ext_equal [AUTO-BROADCAST]
+    axiom_slice_get_usize [AUTO-BROADCAST]
+    axiom_spec_len [AUTO-BROADCAST]
+    axiom_str_literal_get_char [AUTO-BROADCAST]
+    axiom_str_literal_is_ascii [AUTO-BROADCAST]
+    axiom_str_literal_len [AUTO-BROADCAST]
+    ghost_thread_id
+Category: rust_semantics (28 axioms)
+    axiom_u16_leading_ones [AUTO-BROADCAST]
+    axiom_u16_leading_zeros [AUTO-BROADCAST]
+    axiom_u16_trailing_ones [AUTO-BROADCAST]
+    axiom_u16_trailing_zeros [AUTO-BROADCAST]
+    axiom_u32_leading_ones [AUTO-BROADCAST]
+    axiom_u32_leading_zeros [AUTO-BROADCAST]
+    axiom_u32_trailing_ones [AUTO-BROADCAST]
+    axiom_u32_trailing_zeros [AUTO-BROADCAST]
+    axiom_u64_leading_ones [AUTO-BROADCAST]
+    axiom_u64_leading_zeros [AUTO-BROADCAST]
+    axiom_u64_trailing_ones [AUTO-BROADCAST]
+    axiom_u64_trailing_zeros [AUTO-BROADCAST]
+    axiom_u8_leading_ones [AUTO-BROADCAST]
+    axiom_u8_leading_zeros [AUTO-BROADCAST]
+    axiom_u8_trailing_ones [AUTO-BROADCAST]
+    axiom_u8_trailing_zeros [AUTO-BROADCAST]
+    axiom_box_key_removed [AUTO-BROADCAST]
+    axiom_contains_box [AUTO-BROADCAST]
+    axiom_contains_deref_key [AUTO-BROADCAST]
+    axiom_deref_key_removed [AUTO-BROADCAST]
+    axiom_random_state_builds_valid_hashers [AUTO-BROADCAST]
+    axiom_spec_slice_iter [AUTO-BROADCAST]
+    axiom_spec_into_iter [AUTO-BROADCAST]
+    axiom_spec_len [AUTO-BROADCAST]
+    axiom_vec_index_decreases [AUTO-BROADCAST]
+    axiom_spec_iter [AUTO-BROADCAST]
+    axiom_spec_len [AUTO-BROADCAST]
+    axiom_vec_dequeue_index_decreases [AUTO-BROADCAST]
+Category: sequence (19 axioms)
+    axiom_seq_add_index1 [AUTO-BROADCAST]
+    axiom_seq_add_index2 [AUTO-BROADCAST]
+    axiom_seq_add_len [AUTO-BROADCAST]
+    axiom_seq_empty [AUTO-BROADCAST]
+    axiom_seq_ext_equal [AUTO-BROADCAST]
+    axiom_seq_ext_equal_deep [AUTO-BROADCAST]
+    axiom_seq_index_decreases [AUTO-BROADCAST]
+    axiom_seq_len_decreases
+    axiom_seq_new_index [AUTO-BROADCAST]
+    axiom_seq_new_len [AUTO-BROADCAST]
+    axiom_seq_push_index_different [AUTO-BROADCAST]
+    axiom_seq_push_index_same [AUTO-BROADCAST]
+    axiom_seq_push_len [AUTO-BROADCAST]
+    axiom_seq_subrange_decreases [AUTO-BROADCAST]
+    axiom_seq_subrange_index [AUTO-BROADCAST]
+    axiom_seq_subrange_len [AUTO-BROADCAST]
+    axiom_seq_update_different [AUTO-BROADCAST]
+    axiom_seq_update_len [AUTO-BROADCAST]
+    axiom_seq_update_same [AUTO-BROADCAST]
+Category: set (35 axioms)
+    axiom_hash_set_with_view_spec_len [AUTO-BROADCAST]
+    axiom_string_hash_set_spec_len [AUTO-BROADCAST]
+    axiom_set_choose_infinite [AUTO-BROADCAST]
+    axiom_set_choose_len [AUTO-BROADCAST]
+    axiom_set_complement [AUTO-BROADCAST]
+    axiom_set_contains_len [AUTO-BROADCAST]
+    axiom_set_difference [AUTO-BROADCAST]
+    axiom_set_difference_finite [AUTO-BROADCAST]
+    axiom_set_empty [AUTO-BROADCAST]
+    axiom_set_empty_finite [AUTO-BROADCAST]
+    axiom_set_empty_len [AUTO-BROADCAST]
+    axiom_set_ext_equal [AUTO-BROADCAST]
+    axiom_set_ext_equal_deep [AUTO-BROADCAST]
+    axiom_set_insert_different [AUTO-BROADCAST]
+    axiom_set_insert_finite [AUTO-BROADCAST]
+    axiom_set_insert_len [AUTO-BROADCAST]
+    axiom_set_insert_same [AUTO-BROADCAST]
+    axiom_set_intersect [AUTO-BROADCAST]
+    axiom_set_intersect_finite [AUTO-BROADCAST]
+    axiom_set_new [AUTO-BROADCAST]
+    axiom_set_remove_different [AUTO-BROADCAST]
+    axiom_set_remove_finite [AUTO-BROADCAST]
+    axiom_set_remove_insert [AUTO-BROADCAST]
+    axiom_set_remove_len [AUTO-BROADCAST]
+    axiom_set_remove_same [AUTO-BROADCAST]
+    axiom_set_union [AUTO-BROADCAST]
+    axiom_set_union_finite [AUTO-BROADCAST]
+    axiom_hashset_decreases [AUTO-BROADCAST]
+    axiom_set_box_key_removed [AUTO-BROADCAST]
+    axiom_set_box_key_to_value [AUTO-BROADCAST]
+    axiom_set_contains_box [AUTO-BROADCAST]
+    axiom_set_contains_deref_key [AUTO-BROADCAST]
+    axiom_set_deref_key_removed [AUTO-BROADCAST]
+    axiom_set_deref_key_to_value [AUTO-BROADCAST]
+    axiom_spec_hash_set_len [AUTO-BROADCAST]
+
+=== 12. BROADCAST GROUPS (46) ===
+
+group_div_basics (5 members)
+    lemma_div_basics_1
+    lemma_div_basics_2
+    lemma_div_basics_3
+    lemma_div_basics_4
+    lemma_div_basics_5
+group_fundamental_div_mod_converse (2 members)
+    lemma_fundamental_div_mod_converse_mod
+    lemma_fundamental_div_mod_converse_div
+group_mod_basics (2 members)
+    lemma_mod_self_0
+    lemma_mod_twice
+group_mod_properties (2 members)
+    group_mod_basics
+    lemma_mod_division_less_than_divisor
+group_mul_properties_internal (3 members)
+    lemma_mul_commutes
+    lemma_mul_distributes_plus
+    lemma_mul_distributes_minus
+group_mul_basics (4 members)
+    lemma_mul_basics_1
+    lemma_mul_basics_2
+    lemma_mul_basics_3
+    lemma_mul_basics_4
+group_mul_is_commutative_and_distributive (2 members)
+    lemma_mul_is_commutative
+    group_mul_is_distributive
+group_mul_is_distributive (4 members)
+    lemma_mul_is_distributive_add
+    lemma_mul_is_distributive_add_other_way
+    lemma_mul_is_distributive_sub
+    lemma_mul_is_distributive_sub_other_way
+group_mul_properties (10 members)
+    group_mul_basics
+    lemma_mul_strict_inequality
+    lemma_mul_inequality
+    group_mul_is_commutative_and_distributive
+    lemma_mul_is_associative
+    lemma_mul_ordering
+    lemma_mul_nonzero
+    lemma_mul_nonnegative
+    lemma_mul_strictly_increases
+    lemma_mul_increases
+group_pow_properties (8 members)
+    lemma_pow0
+    lemma_pow1
+    lemma_pow_distributes
+    lemma_pow_adds
+    lemma_pow_sub_add_cancel
+    group_mul_properties_internal
+    lemma_mul_increases
+    lemma_mul_strictly_increases
+group_array_axioms (5 members)
+    array_len_matches_n
+    lemma_array_index
+    axiom_spec_array_as_slice
+    axiom_spec_array_fill_for_copy_type
+    axiom_array_ext_equal
+group_function_axioms (2 members)
+    axiom_proof_fn_requires
+    axiom_proof_fn_ensures
+group_hash_map_axioms (2 members)
+    axiom_hash_map_with_view_spec_len
+    axiom_string_hash_map_spec_len
+group_hash_set_axioms (2 members)
+    axiom_hash_set_with_view_spec_len
+    axiom_string_hash_set_spec_len
+group_laws_cmp (13 members)
+    u8_laws :: lemma_obeys_cmp_spec
+    i8_laws :: lemma_obeys_cmp_spec
+    u16_laws :: lemma_obeys_cmp_spec
+    i16_laws :: lemma_obeys_cmp_spec
+    u32_laws :: lemma_obeys_cmp_spec
+    i32_laws :: lemma_obeys_cmp_spec
+    u64_laws :: lemma_obeys_cmp_spec
+    i64_laws :: lemma_obeys_cmp_spec
+    u128_laws :: lemma_obeys_cmp_spec
+    i128_laws :: lemma_obeys_cmp_spec
+    usize_laws :: lemma_obeys_cmp_spec
+    isize_laws :: lemma_obeys_cmp_spec
+    lemma_option_obeys_cmp_spec
+group_laws_eq (18 members)
+    axiom_structural_obeys_concrete_eq
+    bool_laws :: group_laws_eq
+    u8_laws :: group_laws_eq
+    i8_laws :: group_laws_eq
+    u16_laws :: group_laws_eq
+    i16_laws :: group_laws_eq
+    u32_laws :: group_laws_eq
+    i32_laws :: group_laws_eq
+    u64_laws :: group_laws_eq
+    i64_laws :: group_laws_eq
+    u128_laws :: group_laws_eq
+    i128_laws :: group_laws_eq
+    usize_laws :: group_laws_eq
+    isize_laws :: group_laws_eq
+    lemma_option_obeys_eq_spec
+    lemma_option_obeys_concrete_eq
+    lemma_option_obeys_view_eq
+    lemma_option_obeys_deep_eq
+group_layout_axioms (4 members)
+    layout_of_primitives
+    layout_of_unit_tuple
+    layout_of_references_and_pointers
+    layout_of_references_and_pointers_for_sized_types
+group_map_axioms (10 members)
+    axiom_map_index_decreases_finite
+    axiom_map_index_decreases_infinite
+    axiom_map_empty
+    axiom_map_insert_domain
+    axiom_map_insert_same
+    axiom_map_insert_different
+    axiom_map_remove_domain
+    axiom_map_remove_different
+    axiom_map_ext_equal
+    axiom_map_ext_equal_deep
+group_map_extra (8 members)
+    Map :: lemma_map_remove_keys_insert
+    Map :: lemma_filter_keys_insert
+    Map :: lemma_insert_contains_value
+    Map :: lemma_insert_invariant_contains
+    Map :: lemma_prefixed_entries_get
+    Map :: lemma_prefixed_entries_contains
+    Map :: lemma_prefixed_entries_insert
+    Map :: lemma_prefixed_entries_union
+group_map_properties (2 members)
+    lemma_map_new_domain
+    lemma_map_new_values
+group_map_union (6 members)
+    lemma_union_dom
+    lemma_union_remove_left
+    lemma_union_remove_right
+    lemma_union_insert_left
+    lemma_union_insert_right
+    lemma_disjoint_union_size
+group_multiset_axioms (17 members)
+    axiom_multiset_empty
+    axiom_multiset_contained
+    axiom_multiset_new_not_contained
+    axiom_multiset_singleton
+    axiom_multiset_singleton_different
+    axiom_multiset_add
+    axiom_multiset_sub
+    axiom_multiset_ext_equal
+    axiom_multiset_ext_equal_deep
+    axiom_len_empty
+    axiom_len_singleton
+    axiom_len_add
+    axiom_len_sub
+    axiom_count_le_len
+    axiom_filter_count
+    axiom_choose_count
+    axiom_multiset_always_finite
+group_multiset_properties (12 members)
+    lemma_update_same
+    lemma_update_different
+    lemma_insert_containment
+    lemma_insert_increases_count_by_1
+    lemma_insert_non_decreasing
+    lemma_insert_other_elements_unchanged
+    lemma_insert_len
+    lemma_intersection_count
+    lemma_left_pseudo_idempotence
+    lemma_right_pseudo_idempotence
+    lemma_difference_count
+    lemma_difference_bottoms_out
+group_raw_ptr_axioms (3 members)
+    axiom_ptr_mut_from_data
+    ptrs_mut_eq
+    ptrs_mut_eq_sized
+group_seq_axioms (18 members)
+    axiom_seq_index_decreases
+    axiom_seq_subrange_decreases
+    axiom_seq_empty
+    axiom_seq_new_len
+    axiom_seq_new_index
+    axiom_seq_push_len
+    axiom_seq_push_index_same
+    axiom_seq_push_index_different
+    axiom_seq_update_len
+    axiom_seq_update_same
+    axiom_seq_update_different
+    axiom_seq_ext_equal
+    axiom_seq_ext_equal_deep
+    axiom_seq_subrange_len
+    axiom_seq_subrange_index
+    axiom_seq_add_len
+    axiom_seq_add_index1
+    axiom_seq_add_index2
+group_filter_ensures (3 members)
+    Seq :: lemma_filter_len
+    Seq :: lemma_filter_pred
+    Seq :: lemma_filter_contains
+group_seq_extra (19 members)
+    Seq :: < _ > :: lemma_seq_skip_skip
+    Seq :: < _ > :: lemma_remove_duplicates_properties
+    Seq :: < _ > :: lemma_filter_contains_rev
+    Seq :: < _ > :: lemma_filter_map_take_succ
+    Seq :: < _ > :: lemma_filter_prepend
+    Seq :: < _ > :: lemma_filter_len_push
+    Seq :: < _ > :: lemma_take_len
+    Seq :: < _ > :: lemma_take_any_succ
+    Seq :: < _ > :: lemma_push_map_commute
+    Seq :: < _ > :: lemma_push_to_set_commute
+    Seq :: < _ > :: lemma_filter_push
+    Seq :: < _ > :: lemma_flat_map_take_append
+    Seq :: < _ > :: lemma_flat_map_singleton
+    Seq :: < _ > :: lemma_map_take_succ
+    Seq :: < _ > :: lemma_prefix_index_eq
+    Seq :: < _ > :: lemma_prefix_concat
+    Seq :: < _ > :: lemma_prefix_chain_contains
+    Seq :: < _ > :: lemma_prefix_append_unique
+    Seq :: < _ > :: lemma_all_push
+group_seq_flatten (2 members)
+    Seq :: < _ > :: lemma_flatten_push
+    Seq :: < _ > :: lemma_flatten_singleton
+group_seq_lib_default (8 members)
+    group_filter_ensures
+    Seq :: add_empty_left
+    Seq :: add_empty_right
+    Seq :: push_distributes_over_add
+    Seq :: filter_distributes_over_add
+    seq_to_set_is_finite
+    Seq :: lemma_fold_right_split
+    Seq :: lemma_fold_left_split
+group_seq_properties (22 members)
+    lemma_seq_contains
+    lemma_seq_empty_contains_nothing
+    lemma_seq_empty_equality
+    lemma_seq_concat_contains_all_elements
+    lemma_seq_contains_after_push
+    lemma_seq_subrange_elements
+    lemma_seq_take_len
+    lemma_seq_take_contains
+    lemma_seq_take_index
+    lemma_seq_skip_len
+    lemma_seq_skip_contains
+    lemma_seq_skip_index
+    lemma_seq_skip_index2
+    lemma_seq_append_take_skip
+    lemma_seq_take_update_commut1
+    lemma_seq_take_update_commut2
+    lemma_seq_skip_update_commut1
+    lemma_seq_skip_update_commut2
+    lemma_seq_skip_build_commut
+    lemma_seq_skip_nothing
+    lemma_seq_take_nothing
+    group_to_multiset_ensures
+group_to_multiset_ensures (6 members)
+    to_multiset_build
+    to_multiset_remove
+    to_multiset_len
+    to_multiset_contains
+    to_multiset_insert
+    to_multiset_update
+group_set_axioms (27 members)
+    axiom_set_empty
+    axiom_set_new
+    axiom_set_insert_same
+    axiom_set_insert_different
+    axiom_set_remove_same
+    axiom_set_remove_insert
+    axiom_set_remove_different
+    axiom_set_union
+    axiom_set_intersect
+    axiom_set_difference
+    axiom_set_complement
+    axiom_set_ext_equal
+    axiom_set_ext_equal_deep
+    axiom_mk_map_domain
+    axiom_mk_map_index
+    axiom_set_empty_finite
+    axiom_set_insert_finite
+    axiom_set_remove_finite
+    axiom_set_union_finite
+    axiom_set_intersect_finite
+    axiom_set_difference_finite
+    axiom_set_choose_infinite
+    axiom_set_empty_len
+    axiom_set_insert_len
+    axiom_set_remove_len
+    axiom_set_contains_len
+    axiom_set_choose_len
+group_set_axioms_early (16 members)
+    axiom_set_empty
+    axiom_set_new
+    axiom_set_insert_same
+    axiom_set_insert_different
+    axiom_set_remove_same
+    axiom_set_remove_insert
+    axiom_set_remove_different
+    axiom_set_union
+    axiom_set_intersect
+    axiom_set_difference
+    axiom_set_complement
+    axiom_set_ext_equal
+    axiom_set_ext_equal_deep
+    axiom_set_empty_finite
+    axiom_set_insert_finite
+    axiom_set_remove_finite
+group_set_lib_default (3 members)
+    axiom_is_empty
+    axiom_is_empty_len0
+    lemma_set_subset_finite
+group_set_properties (10 members)
+    lemma_set_union_again1
+    lemma_set_union_again2
+    lemma_set_intersect_again1
+    lemma_set_intersect_again2
+    lemma_set_difference2
+    lemma_set_disjoint
+    lemma_set_disjoint_lens
+    lemma_set_intersect_union_lens
+    lemma_set_difference_len
+    lemma_set_empty_equivalency_len
+group_slice_axioms (3 members)
+    axiom_spec_len
+    axiom_slice_get_usize
+    axiom_slice_ext_equal
+group_bits_axioms (16 members)
+    axiom_u8_trailing_zeros
+    axiom_u8_trailing_ones
+    axiom_u8_leading_zeros
+    axiom_u8_leading_ones
+    axiom_u16_trailing_zeros
+    axiom_u16_trailing_ones
+    axiom_u16_leading_zeros
+    axiom_u16_leading_ones
+    axiom_u32_trailing_zeros
+    axiom_u32_trailing_ones
+    axiom_u32_leading_zeros
+    axiom_u32_leading_ones
+    axiom_u64_trailing_zeros
+    axiom_u64_trailing_ones
+    axiom_u64_leading_zeros
+    axiom_u64_leading_ones
+group_control_flow_axioms (1 members)
+    spec_from_blanket_identity
+group_hash_axioms (35 members)
+    axiom_box_key_removed
+    axiom_contains_deref_key
+    axiom_contains_box
+    axiom_deref_key_removed
+    axiom_maps_deref_key_to_value
+    axiom_maps_box_key_to_value
+    axiom_hashmap_deepview_borrow
+    axiom_hashmap_view_finite_dom
+    axiom_bool_obeys_hash_table_key_model
+    axiom_u8_obeys_hash_table_key_model
+    axiom_u16_obeys_hash_table_key_model
+    axiom_u32_obeys_hash_table_key_model
+    axiom_u64_obeys_hash_table_key_model
+    axiom_u128_obeys_hash_table_key_model
+    axiom_usize_obeys_hash_table_key_model
+    axiom_i8_obeys_hash_table_key_model
+    axiom_i16_obeys_hash_table_key_model
+    axiom_i32_obeys_hash_table_key_model
+    axiom_i164_obeys_hash_table_key_model
+    axiom_i128_obeys_hash_table_key_model
+    axiom_isize_obeys_hash_table_key_model
+    axiom_box_bool_obeys_hash_table_key_model
+    axiom_box_integer_type_obeys_hash_table_key_model
+    axiom_random_state_builds_valid_hashers
+    axiom_spec_hash_map_len
+    axiom_set_box_key_removed
+    axiom_set_contains_deref_key
+    axiom_set_contains_box
+    axiom_set_deref_key_removed
+    axiom_set_deref_key_to_value
+    axiom_set_box_key_to_value
+    axiom_spec_hash_set_len
+    axiom_spec_hash_map_iter
+    axiom_hashmap_decreases
+    axiom_hashset_decreases
+group_range_axioms (12 members)
+    axiom_spec_range_next_u8
+    axiom_spec_range_next_u16
+    axiom_spec_range_next_u32
+    axiom_spec_range_next_u64
+    axiom_spec_range_next_u128
+    axiom_spec_range_next_usize
+    axiom_spec_range_next_i8
+    axiom_spec_range_next_i16
+    axiom_spec_range_next_i32
+    axiom_spec_range_next_i64
+    axiom_spec_range_next_i128
+    axiom_spec_range_next_isize
+group_slice_axioms (1 members)
+    axiom_spec_slice_iter
+group_vec_axioms (4 members)
+    axiom_spec_len
+    axiom_vec_index_decreases
+    vec_clone_deep_view_proof
+    axiom_spec_into_iter
+group_vec_dequeue_axioms (3 members)
+    axiom_spec_len
+    axiom_vec_dequeue_index_decreases
+    axiom_spec_iter
+group_string_axioms (3 members)
+    axiom_str_literal_is_ascii
+    axiom_str_literal_len
+    axiom_str_literal_get_char
+group_string_axioms (4 members)
+    axiom_str_literal_is_ascii
+    axiom_str_literal_len
+    axiom_str_literal_get_char
+    to_string_from_display_ensures_for_str
+group_vstd_default [DEFAULT] (22 members)
+    seq :: group_seq_axioms
+    seq_lib :: group_seq_lib_default
+    map :: group_map_axioms
+    set :: group_set_axioms
+    set_lib :: group_set_lib_default
+    multiset :: group_multiset_axioms
+    compute :: all_spec_ensures
+    function :: group_function_axioms
+    laws_eq :: group_laws_eq
+    laws_cmp :: group_laws_cmp
+    slice :: group_slice_axioms
+    array :: group_array_axioms
+    string :: group_string_axioms
+    raw_ptr :: group_raw_ptr_axioms
+    layout :: group_layout_axioms
+    std_specs :: range :: group_range_axioms
+    std_specs :: bits :: group_bits_axioms
+    std_specs :: control_flow :: group_control_flow_axioms
+    std_specs :: slice :: group_slice_axioms
+    # [cfg (feature = "alloc")] std_specs :: vec :: group_vec_axioms
+    # [cfg (feature = "alloc")] std_specs :: vecdeque :: group_vec_dequeue_axioms
+    # [cfg (all (feature = "alloc" , feature = "std"))] std_specs :: hash :: group_hash_axioms
+
+=== 13. SUMMARY ===
+
+Compiler builtins:           6 types, 2 traits
+Primitive type specs (vstd):
+  Primitive integers:        6 pairs (114 methods total)
+  Atomic types:              11 types (130 methods total)
+Modules:                     87
+Ghost types:                 44
+  Ghost type methods:        87
+Tracked types:               8
+Wrapped Rust types:          29
+  Wrapped methods:           144
+Traits:                      91
+Spec functions:              203
+Proof functions:             515
+  Lemmas:                    313
+  Broadcast:                 367
+Axioms:                      161
+  Auto-broadcast:            155
+Broadcast groups:            46
+Macros:                      81
+External specs (stdlib):     195
+
+=== 14. EXTERNAL SPECS (STDLIB WRAPPERS) (195) ===
+
+These are Rust stdlib methods that vstd wraps via assume_specification.
+
+  core::mem::swap::<T> [ensures]
+  IntoIterator::into_iter [ensures]
+  core::intrinsics::likely [ensures]
+  core::intrinsics::unlikely [ensures]
+  bool::then [ensures]
+  ::into_vec [ensures]
+  Box::<T>::new [ensures]
+  Rc::<T>::new [ensures]
+  Arc::<T>::new [ensures]
+  Clone::clone [ensures]
+  Rc::<T,A>::try_unwrap [ensures]
+  Rc::<T,A>::into_inner [ensures]
+  Option::<T>::is_some [ensures]
+  Option::<T>::is_none [ensures]
+  Option::<T>::as_ref [ensures]
+  Option::<T>::unwrap [requires, ensures]
+  Option::<T>::unwrap_or [ensures]
+  Option::<T>::expect [requires, ensures]
+  Option::<T>::take [ensures]
+  Option::<T>::map [requires, ensures]
+  Clone::clone [ensures]
+  PartialEq::eq []
+  PartialOrd::partial_cmp []
+  Ord::cmp []
+  Option::ok_or [ensures]
+  Into<U>::into [ensures]
+  DefaultHasher::new [ensures]
+  DefaultHasher::write [ensures]
+  DefaultHasher::finish [ensures]
+  Keys::<'a,Key,Value>::next [ensures]
+  Values::<'a,Key,Value>::next [ensures]
+  hash_map::Iter::<'a,Key,Value>::next [ensures]
+  HashMap::<Key,Value,S>::iter [ensures]
+  HashMap::<Key,Value,S>::len [ensures]
+  HashMap::<Key,Value,S>::is_empty [ensures]
+  Clone::clone [ensures]
+  HashMap::<Key,Value>::new [ensures]
+  HashMap::<Key,Value>::with_capacity [ensures]
+  HashMap::<Key,Value,S,>::reserve [ensures]
+  HashMap::<Key,Value,S>::insert [ensures]
+  HashMap::<Key,Value,S>::contains_key::<Q> [ensures]
+  HashMap::<Key,Value,S>::get::<Q> [ensures]
+  HashMap::<Key,Value,S>::remove::<Q> [ensures]
+  HashMap::<Key,Value,S>::clear [ensures]
+  HashMap::<Key,Value,S>::keys [ensures]
+  HashMap::<Key,Value,S>::values [ensures]
+  hash_set::Iter::<'a,Key>::next [ensures]
+  HashSet::<Key,S>::len [ensures]
+  HashSet::<Key,S>::is_empty [ensures]
+  HashSet::<Key>::new [ensures]
+  HashSet::<Key>::with_capacity [ensures]
+  HashSet::<Key,S>::reserve [ensures]
+  HashSet::<Key,S>::insert [ensures]
+  HashSet::<Key,S>::contains [ensures]
+  HashSet::<Key,S>::get::<Q> [ensures]
+  HashSet::<Key,S>::remove::<Q> [ensures]
+  HashSet::<Key,S>::clear [ensures]
+  HashSet::<Key,S>::iter [ensures]
+  Range::<A>::next [ensures]
+  Range::<Idx>::contains [ensures]
+  RangeInclusive::<Idx>::contains [ensures]
+  RangeInclusive::<Idx>::new [ensures]
+  Clone::clone []
+  Clone::clone []
+  Clone::clone [ensures]
+  Clone::clone [ensures]
+  Clone::clone [ensures]
+  alloc::boxed::box_new [ensures]
+  VecDeque::<T,A>::index [requires, ensures]
+  VecDeque::<T,A>::len [ensures]
+  VecDeque::<T>::new [ensures]
+  VecDeque::<T>::with_capacity [ensures]
+  VecDeque::<T,A>::reserve [ensures]
+  VecDeque::<T,A>::push_back [ensures]
+  VecDeque::<T,A>::push_front [ensures]
+  VecDeque::<T,A>::pop_back [ensures]
+  VecDeque::<T,A>::pop_front [ensures]
+  VecDeque::<T,A>::append [ensures]
+  VecDeque::<T,A>::insert [requires, ensures]
+  VecDeque::<T,A>::remove [ensures]
+  VecDeque::<T,A>::clear [ensures]
+  VecDeque::<T,A>::split_off [requires, ensures]
+  Clone::clone [ensures]
+  VecDeque::<T,A>::truncate [ensures]
+  VecDeque::<T,A>::resize [ensures]
+  Iter::<'a,T>::next [ensures]
+  VecDeque::<T,A>::iter [ensures]
+  core::ops::Neg::neg [ensures]
+  core::ops::Add::add [ensures]
+  core::ops::Sub::sub [ensures]
+  core::ops::Mul::mul [ensures]
+  core::ops::Div::div [ensures]
+  core::ops::Neg::neg [ensures]
+  core::ops::Add::add [ensures]
+  core::ops::Sub::sub [ensures]
+  core::ops::Mul::mul [ensures]
+  core::ops::Div::div [ensures]
+  PartialEq<bool>::eq []
+  PartialEq<bool>::ne []
+  PartialEq<f32>::eq [ensures]
+  PartialEq<f32>::ne [ensures]
+  PartialOrd<f32>::partial_cmp [ensures]
+  PartialOrd<f32>::lt [ensures]
+  PartialOrd<f32>::le [ensures]
+  PartialOrd<f32>::gt [ensures]
+  PartialOrd<f32>::ge [ensures]
+  PartialEq<f64>::eq [ensures]
+  PartialEq<f64>::ne [ensures]
+  PartialOrd<f64>::partial_cmp [ensures]
+  PartialOrd<f64>::lt [ensures]
+  PartialOrd<f64>::le [ensures]
+  PartialOrd<f64>::gt [ensures]
+  PartialOrd<f64>::ge [ensures]
+  u8::trailing_zeros [ensures]
+  u8::trailing_ones [ensures]
+  u8::leading_zeros [ensures]
+  u8::leading_ones [ensures]
+  u16::trailing_zeros [ensures]
+  u16::trailing_ones [ensures]
+  u16::leading_zeros [ensures]
+  u16::leading_ones [ensures]
+  u32::trailing_zeros [ensures]
+  u32::trailing_ones [ensures]
+  u32::leading_zeros [ensures]
+  u32::leading_ones [ensures]
+  u64::trailing_zeros [ensures]
+  u64::trailing_ones [ensures]
+  u64::leading_zeros [ensures]
+  u64::leading_ones [ensures]
+  core::hint::unreachable_unchecked [requires]
+  Iter::<'a,T>::next [ensures]
+  ::iter [ensures]
+  Result::<T,E>::is_ok [ensures]
+  Result::<T,E>::is_err [ensures]
+  Result::<T,E>::as_ref [ensures]
+  Result::<T,E>::unwrap [requires, ensures]
+  Result::<T,E>::unwrap_err [requires, ensures]
+  Result::<T,E>::expect [requires, ensures]
+  Result::<T,E>::map [requires, ensures]
+  Result::<T,E>::map_err [requires, ensures]
+  Result::<T,E>::ok [ensures]
+  Result::<T,E>::err [ensures]
+  u32::checked_rem [ensures]
+  u32::checked_rem_euclid [ensures]
+  i32::checked_div [ensures]
+  i32::checked_div_euclid [ensures]
+  i32::checked_rem [ensures]
+  i32::checked_rem_euclid [ensures]
+  Vec::<T,A>::len [ensures]
+  Vec::<T>::new [ensures]
+  Vec::<T,A>::new_in [ensures]
+  Vec::<T>::with_capacity [ensures]
+  Vec::<T,A>::with_capacity_in [ensures]
+  Vec::<T,A>::reserve [ensures]
+  Vec::<T,A>::push [ensures]
+  Vec::<T,A>::pop [ensures]
+  Vec::<T,A>::append [ensures]
+  Vec::<T,A>::extend_from_slice [ensures]
+  Vec::<T,A>::swap_remove [requires, ensures]
+  Vec::<T,A>::insert [requires, ensures]
+  ::is_empty [ensures]
+  Vec::<T,A>::remove [requires, ensures]
+  Vec::<T,A>::clear [ensures]
+  Vec::<T,A>::as_slice [ensures]
+  core::ops::Deref::deref [ensures]
+  Vec::<T,A>::split_off [requires, ensures]
+  Clone::clone [ensures]
+  Vec::<T,A>::truncate [ensures]
+  Vec::<T,A>::resize [ensures]
+  PartialEq<Vec<U,A2>>::eq []
+  IntoIter::<T,A>::next [ensures]
+  alloc::vec::from_elem [ensures]
+  Vec::<T,A>::into_iter [ensures]
+  Result::<T,E>::branch [ensures]
+  Option::<T>::branch [ensures]
+  Option::<T>::from_residual [ensures]
+  Result::<T,F>::from_residual [ensures]
+  PartialEq<*mutT>::eq [ensures]
+  PartialEq<*constT>::eq [ensures]
+  core::ptr::null [ensures]
+  core::ptr::null_mut [ensures]
+  str::is_ascii [ensures]
+  str::to_owned [ensures]
+  ToString::to_string [ensures]
+  String::is_ascii [ensures]
+  String::as_str [ensures]
+  Clone::clone [ensures]
+  PartialEq::eq [ensures]
+  str::chars [ensures]
+  Chars::<'a>::next [ensures]
+  core::mem::size_of::<V> [ensures]
+  core::mem::align_of::<V> [ensures]
+  ::as_slice [ensures]
+  ::len [ensures]
+  ::get::<I> []
+
+
+Completed in 899 ms.
+JSON output: analyses/vstd_inventory.json
+Log output: analyses/vstd_inventory.log

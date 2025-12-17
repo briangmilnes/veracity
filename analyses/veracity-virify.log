@@ -1,0 +1,56 @@
+veracity-virify
+=================
+Command: ./target/release/veracity-virify -C /home/milnes/projects/VerusCodebases --clean
+Codebase: /home/milnes/projects/VerusCodebases
+cargo-verus: /home/milnes/projects/verus-lang/source/target-verus/release/cargo-verus
+Started: 2025-12-11 16:35:56 -08:00
+
+Found 38 Verus projects
+
+  [VIR] APAS-VERUS ... OK (35.74s)
+  [VIR] verification ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.07s)
+  [VIR] anvil ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.25s)
+  [VIR] atmosphere ... FAILED: cargo-verus failed (see veracity-virify.errs) (51.84s)
+  [VIR] extraction ... FAILED: cargo-verus failed (see veracity-virify.errs) (18.68s)
+  [VIR] extraction ... FAILED: cargo-verus failed (see veracity-virify.errs) (18.29s)
+  [VIR] owl-hpke ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.92s)
+  [VIR] wireguard-rs ... FAILED: cargo-verus failed (see veracity-virify.errs) (22.79s)
+  [VIR] verdict ... FAILED: cargo-verus failed (see veracity-virify.errs) (15.95s)
+  [VIR] ironsht ... FAILED: cargo-verus failed (see veracity-virify.errs) (30.33s)
+  [VIR] verified ... FAILED: cargo-verus failed (see veracity-virify.errs) (102.65s)
+  [VIR] verified-node-replication ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.14s)
+  [VIR] single-threaded ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.09s)
+  [VIR] page-table ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.08s)
+  [VIR] verified ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.06s)
+  [VIR] verified-node-replication ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.06s)
+  [VIR] capybarakv ... FAILED: cargo-verus failed (see veracity-virify.errs) (15.20s)
+  [VIR] pmcopy ... OK (3.09s)
+  [VIR] multilog ... FAILED: cargo-verus failed (see veracity-virify.errs) (15.36s)
+  [VIR] pmsafe ... OK (2.50s)
+  [VIR] pmemlog ... OK (35.62s)
+  [VIR] metadata_kv ... OK (9.11s)
+  [VIR] source ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.56s)
+  [VIR] rust-parser ... FAILED: cargo-verus failed (see veracity-virify.errs) (2.58s)
+  [VIR] verus-rustc ... OK (9.16s)
+  [VIR] prettyplease ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.07s)
+  [VIR] syn ... OK (5.43s)
+  [VIR] library ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.10s)
+  [VIR] test ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.07s)
+  [VIR] source ... FAILED: cargo-verus failed (see veracity-virify.errs) (14.37s)
+  [VIR] ide-assists ... OK (67.76s)
+  [VIR] parser ... OK (4.54s)
+  [VIR] rust-analyzer ... OK (86.48s)
+  [VIR] syntax ... OK (8.74s)
+  [VIR] vest ... FAILED: cargo-verus failed (see veracity-virify.errs) (10.87s)
+  [VIR] vest-dsl ... OK (9.89s)
+  [VIR] vest-examples ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.34s)
+  [VIR] vostd ... FAILED: cargo-verus failed (see veracity-virify.errs) (0.06s)
+
+=== Summary ===
+Total projects: 38
+  VIR cached:   0
+  Generated:    12 (31.6%)
+  Failed:       26
+
+TOTAL TIME: 600.09 seconds
+Ended: 2025-12-11 16:45:56 -08:00

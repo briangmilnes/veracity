@@ -1,0 +1,501 @@
+veracity-analyze-modules-mir
+================================
+Path: /home/milnes/projects/VerusCodebases
+Started: 2025-12-11 12:43:04.649738973 -08:00
+
+Multi-project MIR analysis mode
+Found 28 projects with MIR files
+
+Analyzing 28 projects in parallel...
+
+
+================================================================================
+                  VSTD (VERUS STANDARD LIBRARY) USAGE ANALYSIS                  
+================================================================================
+
+i. ABSTRACT
+----------------------------------------
+
+This report analyzes vstd usage across 28 Verus projects (602 unique crates)
+compiled to MIR. We identify which vstd modules, types, and methods are most used,
+and compute minimum sets needed to cover 70-99% of real-world usage.
+
+Key findings:
+  - 106 crates (17.6080%) have no vstd usage
+  - 496 crates use vstd
+  - 19 unique vstd modules detected
+  - 823 unique vstd methods/functions detected
+
+TABLE OF CONTENTS
+----------------------------------------
+
+  i.   ABSTRACT
+  1.   OVERVIEW
+  2.   VSTD MODULES (by crate count)
+  3.   CRATES WITHOUT VSTD USAGE
+  4.   VSTD TYPES (by crate count)
+  5.   ALL VSTD METHODS/FUNCTIONS (by crate count)
+  6.   GREEDY COVER: VSTD MODULES
+  7.   GREEDY COVER: VSTD TYPES
+  8.   GREEDY COVER: VSTD METHODS/FUNCTIONS
+  9.   BUILTIN CALLS
+ 10.   STDLIB USAGE (for comparison)
+ 11.   SUMMARY
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+MIR (Mid-level Intermediate Representation) analysis for Verus codebases.
+We extract vstd:: paths, builtin:: calls, and stdlib usage from MIR files.
+
+Denominator for greedy covers: 496 crates with vstd usage
+
+Total projects: 28
+Projects crates: 602 (496 with vstd, 106 without)
+Vstd modules: 19
+Vstd types: 15
+Vstd methods: 823 (803 excluding type names)
+
+MIR files analyzed: 1927
+
+=== 2. VSTD MODULES (by crate count) ===
+Module                                                 Crates     Crates%       No-use     No-use%
+vstd::std_specs::option                                   428    86.2903%           68    13.7097%
+vstd::std_specs::result                                   398    80.2419%           98    19.7581%
+vstd::std_specs::vec                                      316    63.7097%          180    36.2903%
+vstd::std_specs::smart_ptrs                               178    35.8871%          318    64.1129%
+vstd::string                                              105    21.1694%          391    78.8306%
+vstd::std_specs::hash                                      90    18.1452%          406    81.8548%
+vstd::std_specs::core                                      80    16.1290%          416    83.8710%
+vstd::std_specs::sync                                      39     7.8629%          457    92.1371%
+vstd::std_specs::vecdeque                                  23     4.6371%          473    95.3629%
+vstd::pervasive                                             6     1.2097%          490    98.7903%
+vstd::seq                                                   6     1.2097%          490    98.7903%
+vstd::slice                                                 6     1.2097%          490    98.7903%
+vstd::prelude                                               4     0.8065%          492    99.1935%
+vstd::array                                                 1     0.2016%          495    99.7984%
+vstd::bytes                                                 1     0.2016%          495    99.7984%
+vstd::hash_set                                              1     0.2016%          495    99.7984%
+vstd::promoted                                              1     0.2016%          495    99.7984%
+vstd::seq_lib                                               1     0.2016%          495    99.7984%
+vstd::thread                                                1     0.2016%          495    99.7984%
+
+=== 3. CRATES WITHOUT VSTD USAGE ===
+(106 crates - these are likely non-Verus dependencies)
+  - TestFibonacciMt
+  - ostd_pod
+  - bit_field
+  - stable_deref_trait
+  - rust_jemalloc_wrapper
+  - nohash_hasher
+  - nodrop
+  - limit
+  - crc64fast
+  - drop_bomb
+  - maybe_uninit
+  - num_integer
+  - is_terminal
+  - ghash
+  - fnv
+  - cpufeatures
+  - linux_boot_params
+  - pin_project_lite
+  - group
+  - darling_macro
+  - time_core
+  - perf_event_open_sys
+  - crossbeam
+  - adler
+  - rustc_std_workspace_core
+  - int_to_c_enum
+  - builtin
+  - volatile
+  - libcrux_hacl
+  - unsafe_any_ors
+  - ciborium_io
+  - ppv_lite86
+  - libz_sys
+  - atty
+  - proc_macro_test
+  - inout
+  - memoffset
+  - darling
+  - rfc6979
+  - tinyvec_macros
+  - constant_time_eq
+  - oorandom
+  - opaque_debug
+  - TestRelationStEph
+  - cfg_aliases
+  - libcrux_traits
+  - TestUnDirGraphStEph
+  - inotify_sys
+  - crypto_mac
+  - permutation_iterator
+  ... and 56 more
+
+=== 4. VSTD TYPES (by crate count) ===
+Type                                                   Crates     Crates%
+vstd::std_specs::option::Option                           428    86.2903%
+vstd::std_specs::result::Result                           398    80.2419%
+vstd::std_specs::vec::Vec                                 316    63.7097%
+vstd::std_specs::smart_ptrs::Box                          153    30.8468%
+vstd::string::String                                      102    20.5645%
+vstd::std_specs::hash::HashMap                             68    13.7097%
+vstd::std_specs::core::Cell                                67    13.5081%
+vstd::std_specs::smart_ptrs::Arc                           66    13.3065%
+vstd::std_specs::hash::HashSet                             51    10.2823%
+vstd::std_specs::sync::Mutex                               36     7.2581%
+vstd::std_specs::core::RefCell                             23     4.6371%
+vstd::std_specs::vecdeque::VecDeque                        23     4.6371%
+vstd::std_specs::smart_ptrs::Rc                            21     4.2339%
+vstd::std_specs::sync::RwLock                              17     3.4274%
+vstd::modes::Tracked                                        1     0.2016%
+
+=== 5. ALL VSTD METHODS/FUNCTIONS (by crate count) ===
+(803 entries)
+Method/Function                                                  Crates     Crates%
+vstd::std_specs::option::Option::unwrap                             235    47.3790%
+vstd::std_specs::vec::Vec::deref                                    231    46.5726%
+vstd::std_specs::vec::Vec::new                                      231    46.5726%
+vstd::std_specs::vec::Vec::push                                     229    46.1694%
+vstd::std_specs::result::Result::branch                             226    45.5645%
+vstd::std_specs::option::Option::map                                222    44.7581%
+vstd::std_specs::result::Result::unwrap                             203    40.9274%
+vstd::std_specs::option::Option::unwrap_or                          201    40.5242%
+vstd::std_specs::option::Option::is_some                            200    40.3226%
+vstd::std_specs::vec::Vec::len                                      197    39.7177%
+vstd::std_specs::option::Option::is_none                            166    33.4677%
+vstd::std_specs::option::Option::expect                             156    31.4516%
+vstd::std_specs::result::Result::map_err                            155    31.2500%
+vstd::std_specs::vec::Vec::clone                                    147    29.6371%
+vstd::std_specs::vec::Vec::is_empty                                 140    28.2258%
+vstd::std_specs::option::Option::as_ref                             131    26.4113%
+vstd::std_specs::result::Result::map                                130    26.2097%
+vstd::std_specs::vec::Vec::deref_mut                                127    25.6048%
+vstd::std_specs::vec::Vec::into_iter                                126    25.4032%
+vstd::std_specs::result::Result::ok                                 125    25.2016%
+vstd::std_specs::option::Option::eq                                 122    24.5968%
+vstd::std_specs::smart_ptrs::Box::new                               117    23.5887%
+vstd::std_specs::option::Option::and_then                           113    22.7823%
+vstd::std_specs::option::Option::unwrap_or_else                     111    22.3790%
+vstd::std_specs::option::Option::clone                              110    22.1774%
+vstd::std_specs::option::Option::branch                             108    21.7742%
+vstd::std_specs::option::Option::take                               101    20.3629%
+vstd::std_specs::vec::Vec::pop                                       98    19.7581%
+vstd::std_specs::vec::Vec::with_capacity                             98    19.7581%
+vstd::std_specs::result::Result::is_ok                               96    19.3548%
+vstd::std_specs::option::Option::map_or                              94    18.9516%
+vstd::std_specs::result::Result::expect                              91    18.3468%
+vstd::std_specs::vec::Vec::eq                                        82    16.5323%
+vstd::std_specs::option::Option::ok_or_else                          79    15.9274%
+vstd::std_specs::option::Option::ok_or                               78    15.7258%
+vstd::std_specs::vec::Vec::default                                   71    14.3145%
+vstd::std_specs::vec::Vec::as_slice                                  65    13.1048%
+vstd::std_specs::vec::Vec::clear                                     63    12.7016%
+vstd::string::String::as_str                                         60    12.0968%
+vstd::std_specs::result::Result::is_err                              59    11.8952%
+vstd::std_specs::core::Cell::new                                     58    11.6935%
+vstd::string::String::new                                            57    11.4919%
+vstd::std_specs::core::Cell::get                                     56    11.2903%
+vstd::std_specs::option::Option::unwrap_or_default                   56    11.2903%
+vstd::std_specs::smart_ptrs::Box::drop                               56    11.2903%
+vstd::std_specs::result::Result::unwrap_or_else                      54    10.8871%
+vstd::std_specs::option::Option::or_else                             53    10.6855%
+vstd::std_specs::smart_ptrs::Arc::new                                53    10.6855%
+vstd::std_specs::vec::Vec::truncate                                  52    10.4839%
+vstd::std_specs::option::Option::as_mut                              51    10.2823%
+vstd::std_specs::vec::Vec::extend_from_slice                         51    10.2823%
+vstd::std_specs::hash::HashMap::insert                               49     9.8790%
+vstd::std_specs::option::Option::cloned                              49     9.8790%
+vstd::std_specs::core::Cell::set                                     48     9.6774%
+vstd::std_specs::option::Option::or                                  46     9.2742%
+vstd::std_specs::option::Option::default                             45     9.0726%
+vstd::std_specs::result::Result::unwrap_or                           45     9.0726%
+vstd::std_specs::smart_ptrs::Arc::deref                              43     8.6694%
+vstd::std_specs::vec::Vec::hash                                      43     8.6694%
+vstd::std_specs::vec::Vec::into_boxed_slice                          42     8.4677%
+vstd::std_specs::result::Result::and_then                            40     8.0645%
+vstd::std_specs::hash::HashSet::insert                               39     7.8629%
+vstd::std_specs::option::Option::ne                                  39     7.8629%
+vstd::string::String::push                                           39     7.8629%
+vstd::std_specs::hash::HashMap::new                                  38     7.6613%
+vstd::string::String::push_str                                       38     7.6613%
+vstd::std_specs::hash::HashMap::get                                  37     7.4597%
+vstd::std_specs::option::Option::copied                              37     7.4597%
+vstd::std_specs::vec::Vec::drain                                     37     7.4597%
+vstd::string::String::len                                            37     7.4597%
+vstd::std_specs::smart_ptrs::Box::clone                              36     7.2581%
+vstd::std_specs::vec::Vec::insert                                    36     7.2581%
+vstd::string::String::is_empty                                       34     6.8548%
+vstd::std_specs::option::Option::filter                              33     6.6532%
+vstd::std_specs::smart_ptrs::Arc::clone                              33     6.6532%
+vstd::std_specs::vec::Vec::remove                                    33     6.6532%
+vstd::std_specs::vec::Vec::retain                                    33     6.6532%
+vstd::std_specs::option::Option::as_deref                            32     6.4516%
+vstd::std_specs::option::Option::hash                                32     6.4516%
+vstd::std_specs::sync::Mutex::lock                                   31     6.2500%
+vstd::std_specs::vec::Vec::append                                    31     6.2500%
+vstd::std_specs::vec::Vec::reserve                                   30     6.0484%
+vstd::std_specs::vec::Vec::resize                                    30     6.0484%
+vstd::std_specs::hash::HashSet::new                                  29     5.8468%
+vstd::std_specs::option::Option::to_tokens                           29     5.8468%
+vstd::std_specs::vec::Vec::capacity                                  29     5.8468%
+vstd::std_specs::hash::HashSet::contains                             28     5.6452%
+vstd::std_specs::option::Option::map_or_else                         28     5.6452%
+vstd::std_specs::sync::Mutex::new                                    27     5.4435%
+vstd::std_specs::vec::Vec::as_mut_ptr                                26     5.2419%
+vstd::std_specs::option::Option::into_iter                           23     4.6371%
+vstd::std_specs::smart_ptrs::Box::into_raw                           23     4.6371%
+vstd::std_specs::core::RefCell::new                                  21     4.2339%
+vstd::std_specs::smart_ptrs::Box::from_raw                           21     4.2339%
+vstd::std_specs::vec::Vec::set_len                                   21     4.2339%
+vstd::std_specs::vec::Vec::shrink_to_fit                             19     3.8306%
+vstd::string::String::clear                                          19     3.8306%
+vstd::string::String::from_utf8                                      19     3.8306%
+vstd::std_specs::hash::HashMap::len                                  18     3.6290%
+vstd::std_specs::option::Option::get_or_insert_with                  18     3.6290%
+... and 703 more
+
+=== 6. GREEDY COVER: VSTD MODULES ===
+
+  --- Target: 70% (348 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+  => 1 modules achieve 86.2903%
+
+  --- Target: 80% (397 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+  => 1 modules achieve 86.2903%
+
+  --- Target: 90% (447 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+     2. vstd::std_specs::result + 54 (97.1774%)
+  => 2 modules achieve 97.1774%
+
+  --- Target: 95% (472 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+     2. vstd::std_specs::result + 54 (97.1774%)
+  => 2 modules achieve 97.1774%
+
+  --- Target: 99% (492 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+     2. vstd::std_specs::result + 54 (97.1774%)
+     3. vstd::std_specs::vec + 7 (98.5887%)
+     4. vstd::std_specs::core + 4 (99.3952%)
+  => 4 modules achieve 99.3952%
+
+  --- Target: 100% (496 crates) ---
+     1. vstd::std_specs::option + 428 (86.2903%)
+     2. vstd::std_specs::result + 54 (97.1774%)
+     3. vstd::std_specs::vec + 7 (98.5887%)
+     4. vstd::std_specs::core + 4 (99.3952%)
+     5. vstd::std_specs::smart_ptrs + 2 (99.7984%)
+     6. vstd::std_specs::hash + 1 (100.0000%)
+  => 6 modules achieve 100.0000%
+
+
+=== 7. GREEDY COVER: VSTD TYPES ===
+
+  --- Target: 70% (348 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+  => 1 types achieve 86.2903%
+
+  --- Target: 80% (397 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+  => 1 types achieve 86.2903%
+
+  --- Target: 90% (447 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+     2. vstd::std_specs::result::Result + 54 (97.1774%)
+  => 2 types achieve 97.1774%
+
+  --- Target: 95% (472 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+     2. vstd::std_specs::result::Result + 54 (97.1774%)
+  => 2 types achieve 97.1774%
+
+  --- Target: 99% (492 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+     2. vstd::std_specs::result::Result + 54 (97.1774%)
+     3. vstd::std_specs::vec::Vec + 7 (98.5887%)
+     4. vstd::std_specs::core::Cell + 4 (99.3952%)
+  => 4 types achieve 99.3952%
+
+  --- Target: 100% (496 crates) ---
+     1. vstd::std_specs::option::Option + 428 (86.2903%)
+     2. vstd::std_specs::result::Result + 54 (97.1774%)
+     3. vstd::std_specs::vec::Vec + 7 (98.5887%)
+     4. vstd::std_specs::core::Cell + 4 (99.3952%)
+     5. vstd::std_specs::hash::HashSet + 1 (99.5968%)
+     6. vstd::std_specs::smart_ptrs::Arc + 1 (99.7984%)
+     7. vstd::std_specs::smart_ptrs::Box + 1 (100.0000%)
+  => 7 types achieve 100.0000%
+
+
+=== 8. GREEDY COVER: VSTD METHODS/FUNCTIONS ===
+
+  --- Target: 70% (348 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+  => 3 methods achieve 76.8145%
+
+  --- Target: 80% (397 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+     4. vstd::std_specs::option::Option::expect + 28 (82.4597%)
+  => 4 methods achieve 82.4597%
+
+  --- Target: 90% (447 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+     4. vstd::std_specs::option::Option::expect + 28 (82.4597%)
+     5. vstd::std_specs::option::Option::map + 19 (86.2903%)
+     6. vstd::std_specs::vec::Vec::deref + 11 (88.5081%)
+     7. vstd::std_specs::option::Option::unwrap_or + 8 (90.1210%)
+  => 7 methods achieve 90.1210%
+
+  --- Target: 95% (472 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+     4. vstd::std_specs::option::Option::expect + 28 (82.4597%)
+     5. vstd::std_specs::option::Option::map + 19 (86.2903%)
+     6. vstd::std_specs::vec::Vec::deref + 11 (88.5081%)
+     7. vstd::std_specs::option::Option::unwrap_or + 8 (90.1210%)
+     8. vstd::std_specs::option::Option::is_some + 6 (91.3306%)
+     9. vstd::std_specs::result::Result::is_ok + 5 (92.3387%)
+    10. vstd::std_specs::core::Cell::get + 4 (93.1452%)
+    11. vstd::std_specs::option::Option::eq + 4 (93.9516%)
+    12. vstd::std_specs::option::Option::is_none + 4 (94.7581%)
+    13. vstd::std_specs::option::Option::map_or + 4 (95.5645%)
+  => 13 methods achieve 95.5645%
+
+  --- Target: 99% (492 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+     4. vstd::std_specs::option::Option::expect + 28 (82.4597%)
+     5. vstd::std_specs::option::Option::map + 19 (86.2903%)
+     6. vstd::std_specs::vec::Vec::deref + 11 (88.5081%)
+     7. vstd::std_specs::option::Option::unwrap_or + 8 (90.1210%)
+     8. vstd::std_specs::option::Option::is_some + 6 (91.3306%)
+     9. vstd::std_specs::result::Result::is_ok + 5 (92.3387%)
+    10. vstd::std_specs::core::Cell::get + 4 (93.1452%)
+    11. vstd::std_specs::option::Option::eq + 4 (93.9516%)
+    12. vstd::std_specs::option::Option::is_none + 4 (94.7581%)
+    13. vstd::std_specs::option::Option::map_or + 4 (95.5645%)
+    14. vstd::std_specs::option::Option::unwrap_or_else + 3 (96.1694%)
+    15. vstd::std_specs::result::Result::expect + 3 (96.7742%)
+    16. vstd::std_specs::option::Option::branch + 2 (97.1774%)
+    17. vstd::std_specs::option::Option::default + 2 (97.5806%)
+    18. vstd::std_specs::result::Result::map_err + 2 (97.9839%)
+    19. vstd::std_specs::vec::Vec::clone + 2 (98.3871%)
+    20. vstd::std_specs::hash::HashSet::insert + 1 (98.5887%)
+    21. vstd::std_specs::option::Option::ok_or + 1 (98.7903%)
+    22. vstd::std_specs::option::Option::ok_or_else + 1 (98.9919%)
+    23. vstd::std_specs::result::Result::as_deref + 1 (99.1935%)
+  => 23 methods achieve 99.1935%
+
+  --- Target: 100% (496 crates) ---
+     1. vstd::std_specs::option::Option::unwrap + 235 (47.3790%)
+     2. vstd::std_specs::result::Result::branch + 108 (69.1532%)
+     3. vstd::std_specs::result::Result::unwrap + 38 (76.8145%)
+     4. vstd::std_specs::option::Option::expect + 28 (82.4597%)
+     5. vstd::std_specs::option::Option::map + 19 (86.2903%)
+     6. vstd::std_specs::vec::Vec::deref + 11 (88.5081%)
+     7. vstd::std_specs::option::Option::unwrap_or + 8 (90.1210%)
+     8. vstd::std_specs::option::Option::is_some + 6 (91.3306%)
+     9. vstd::std_specs::result::Result::is_ok + 5 (92.3387%)
+    10. vstd::std_specs::core::Cell::get + 4 (93.1452%)
+    11. vstd::std_specs::option::Option::eq + 4 (93.9516%)
+    12. vstd::std_specs::option::Option::is_none + 4 (94.7581%)
+    13. vstd::std_specs::option::Option::map_or + 4 (95.5645%)
+    14. vstd::std_specs::option::Option::unwrap_or_else + 3 (96.1694%)
+    15. vstd::std_specs::result::Result::expect + 3 (96.7742%)
+    16. vstd::std_specs::option::Option::branch + 2 (97.1774%)
+    17. vstd::std_specs::option::Option::default + 2 (97.5806%)
+    18. vstd::std_specs::result::Result::map_err + 2 (97.9839%)
+    19. vstd::std_specs::vec::Vec::clone + 2 (98.3871%)
+    20. vstd::std_specs::hash::HashSet::insert + 1 (98.5887%)
+    21. vstd::std_specs::option::Option::ok_or + 1 (98.7903%)
+    22. vstd::std_specs::option::Option::ok_or_else + 1 (98.9919%)
+    23. vstd::std_specs::result::Result::as_deref + 1 (99.1935%)
+    24. vstd::std_specs::result::Result::is_err + 1 (99.3952%)
+    25. vstd::std_specs::smart_ptrs::Arc::as_ptr + 1 (99.5968%)
+    26. vstd::std_specs::smart_ptrs::Box::new + 1 (99.7984%)
+    27. vstd::std_specs::vec::Vec::push + 1 (100.0000%)
+  => 27 methods achieve 100.0000%
+
+
+=== 9. BUILTIN CALLS ===
+Call                                                             Crates
+builtin::Ghost                                                        6
+builtin::Ghost::                                                      6
+builtin::Tracked                                                      4
+builtin::Tracked::                                                    4
+builtin::FnSpec                                                       3
+builtin::FOpts                                                        1
+builtin::FnProof                                                      1
+builtin::RqEn                                                         1
+builtin::SyncSendIfSyncSend                                           1
+builtin::Trk                                                          1
+builtin::add                                                          1
+builtin::default_ensures                                              1
+builtin::int                                                          1
+builtin::mul                                                          1
+builtin::nat                                                          1
+builtin::sub                                                          1
+
+=== 10. STDLIB USAGE (for comparison) ===
+Top stdlib modules used by Verus crates:
+Module                                                 Crates
+core::fmt                                                 470
+core::slice                                               387
+std::result                                               373
+std::option                                               368
+std::fmt                                                  362
+std::ops                                                  343
+core::num                                                 293
+std::string                                               293
+std::slice                                                285
+std::vec                                                  285
+core::str                                                 271
+std::iter                                                 269
+std::convert                                              267
+core::panicking                                           248
+std::boxed                                                220
+std::ptr                                                  217
+std::cmp                                                  185
+core::result                                              182
+std::str                                                  177
+core::option                                              176
+std::mem                                                  171
+core::ops                                                 161
+std::io                                                   161
+std::collections                                          152
+alloc::alloc                                              134
+std::num                                                  128
+std::alloc                                                127
+std::sync                                                 125
+core::iter                                                107
+std::borrow                                               105
+... and 431 more modules
+
+=== 11. SUMMARY ===
+
+Projects analyzed: 28
+Projects crates: 602 (496 with vstd, 106 without)
+Vstd modules: 19
+Vstd types: 15
+Vstd methods: 823 (803 excluding type names)
+Builtin calls: 16
+Stdlib modules used: 461
+
+MIR files analyzed: 1927
+Total time: 2.205856111s
+
+Analysis complete: 2025-12-11 12:43:06.855654683 -08:00

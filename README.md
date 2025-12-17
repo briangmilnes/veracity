@@ -55,6 +55,31 @@ $ veracity-count-loc -d src/
      253/     277/     743 total (Spec/Proof/Exec)
 ```
 
+### 📈 veracity-analyze-libs & veracity-analyze-rust-wrapping-needs
+
+Analyze vstd's Rust stdlib coverage and identify gaps.
+
+```bash
+# Parse vstd to inventory what's wrapped
+veracity-analyze-libs
+# Output: analyses/vstd_inventory.json
+
+# Compare against real Rust usage (from rusticate MIR analysis)
+veracity-analyze-rust-wrapping-needs \
+  -i analyses/vstd_inventory.json \
+  -j ~/projects/rusticate/analyses/rusticate-analyze-modules-mir.json
+# Output: analyses/analyze_rust_wrapping_needs.log
+```
+
+**Key findings** (from analysis of 3336 crates):
+- vstd wraps 29 types with 195 methods via `assume_specification`
+- To fully support 70% of real codebases: 40 modules, 9 types, 301 methods needed
+- See `analyses/analyze_rust_wrapping_needs.log` for full gap analysis
+
+**Two approaches in vstd:**
+1. **Direct wrappers** (`assume_specification`): Option, Result, Vec, HashMap...
+2. **Replacement modules**: vstd::thread, vstd::cell, vstd::rwlock (use vstd types instead of stdlib)
+
 ## Installation
 
 ```bash

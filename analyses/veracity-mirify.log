@@ -1,0 +1,19 @@
+veracity-mirify
+=================
+Command: ./target/release/veracity-mirify -C /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS -j 4
+Codebase: /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS
+Jobs: 4
+Started: 2025-12-11 11:33:37 -08:00
+
+Found 1 projects
+
+  [CACHED] APAS-VERUS (0.00s)
+
+=== Summary ===
+Total projects: 1
+  MIR cached:   1
+  Compiled:     0 (0.0%)
+  Failed:       0
+
+TOTAL TIME: 2 ms (0.00 seconds)
+Ended: 2025-12-11 11:33:37 -08:00

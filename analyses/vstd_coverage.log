@@ -1,0 +1,713 @@
+VSTD Coverage Analysis
+======================
+Rusticate log: /home/milnes/projects/rusticate/analyses/analyze_modules_mir.log
+VSTD path: /home/milnes/projects/VerusCodebases/verus/source/vstd
+Started: 2025-12-11 11:49:06.461971331 -08:00
+
+=== RUSTICATE DATA ===
+Total crates: 3636
+Crates with stdlib: 3343
+Types found: 56
+
+=== VSTD DATA ===
+Types with specs: 29
+Modules found: 85
+
+================================================================================
+                          VSTD COVERAGE ANALYSIS                               
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+  1. EXECUTIVE SUMMARY
+  2. TYPES COVERED BY VSTD
+  3. TYPES NOT COVERED BY VSTD (GAPS)
+  4. METHOD COVERAGE PER TYPE
+  5. PRIORITY LIST FOR VSTD EXTENSIONS
+  6. DETAILED GAP ANALYSIS
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+Rust Stdlib Types Used (from rusticate): 56
+VSTD Wrapped Types: 29
+Types with VSTD coverage: 10
+Types missing VSTD coverage: 42
+
+Crate Coverage by Types:
+  Total type usages: 10770 (across all crates)
+  Covered by vstd: 8897 (82.61%)
+
+================================================================================
+2. TYPES COVERED BY VSTD
+================================================================================
+
+Type                                                   Crates    Methods
+------------------------------------------------------------------------
+core::result::Result                                     2303         22
+core::option::Option                                     2194         30
+alloc::vec::Vec                                          1735         27
+alloc::boxed::Box                                         845         26
+std::string::String                                       445         14
+alloc::sync::Arc                                          375          8
+std::collections::HashMap                                 355         17
+std::collections::HashSet                                 229         13
+alloc::string::String                                     183         14
+alloc::collections::VecDeque                              119          7
+alloc::rc::Rc                                             111          9
+std::option::Option                                         1          0
+std::sync::Arc                                              1          0
+std::vec::Vec                                               1          0
+
+================================================================================
+3. TYPES NOT COVERED BY VSTD (GAPS)
+================================================================================
+
+Type                                                   Crates    Methods
+------------------------------------------------------------------------
+std::io::Error                                            404          6
+alloc::collections::BTreeMap                              215         13
+std::sync::Mutex                                          179          4
+core::cell::Cell                                          150          4
+alloc::collections::BTreeSet                              121         11
+std::fs::File                                             110          4
+core::cell::RefCell                                        97          4
+std::path::Path                                            81          8
+std::cmp::Ordering                                         70          6
+std::time::Duration                                        54          5
+std::sync::RwLock                                          53          4
+std::sync::Once                                            41          1
+std::process::Command                                      34          1
+core::cmp::Ordering                                        32          5
+alloc::collections::BinaryHeap                             24          5
+std::time::Instant                                         24          1
+alloc::collections::LinkedList                             22          4
+std::ffi::OsStr                                            18          4
+std::net::TcpStream                                        16          3
+std::time::SystemTime                                      15          2
+core::time::Duration                                       12          2
+std::path::PathBuf                                         12          3
+std::net::TcpListener                                      11          2
+core::fmt::Arguments                                        8          0
+core::fmt::Formatter                                        8          0
+std::ffi::OsString                                          8          0
+std::fs::OpenOptions                                        8          0
+std::io::Stdout                                             7          0
+std::process::Child                                         7          0
+std::sync::Condvar                                          7          0
+std::fmt::Formatter                                         4          0
+std::io::Stdin                                              4          0
+std::net::UdpSocket                                         4          0
+std::io::Stderr                                             3          0
+std::fmt::Arguments                                         2          0
+std::sync::Barrier                                          2          0
+alloc::arc::Arc                                             1          0
+core::duration::Duration                                    1          0
+core::error::Error                                          1          0
+core::instant::Instant                                      1          0
+core::mem::MaybeUninit                                      1          0
+std::thread::Thread                                         1          0
+
+================================================================================
+4. METHOD COVERAGE PER TYPE
+================================================================================
+
+============================================================
+TYPE: core::result::Result (2303 crates)
+============================================================
+
+Methods used: 22
+Methods with vstd spec: 9
+Methods missing spec: 13
+
+MISSING METHODS (by usage):
+  - eq (19 crates)
+  - unwrap_or_else (9 crates)
+  - unwrap_or (7 crates)
+  - unwrap_throw (3 crates)
+  - deserialize (2 crates)
+  - map_or_else (2 crates)
+  - expect_or_abort (1 crates)
+  - unwrap_ok (1 crates)
+  - expect_err (1 crates)
+  - as_mut (1 crates)
+  - is_ok_and (1 crates)
+  - and (1 crates)
+  - unwrap_or_default (1 crates)
+
+============================================================
+TYPE: core::option::Option (2194 crates)
+============================================================
+
+Methods used: 30
+Methods with vstd spec: 13
+Methods missing spec: 17
+
+MISSING METHODS (by usage):
+  - ok_or_else (30 crates)
+  - unwrap_or_else (8 crates)
+  - map_or (7 crates)
+  - default (7 crates)
+  - to_tokens (5 crates)
+  - and_then (4 crates)
+  - copied (4 crates)
+  - unwrap_or_default (3 crates)
+  - ne (3 crates)
+  - unwrap_unchecked (2 crates)
+  - iter (1 crates)
+  - approx_eq (1 crates)
+  - map_or_else (1 crates)
+  - into_iter (1 crates)
+  - get_or_insert_with (1 crates)
+  - expect_throw (1 crates)
+  - cloned (1 crates)
+
+============================================================
+TYPE: alloc::vec::Vec (1735 crates)
+============================================================
+
+Methods used: 27
+Methods with vstd spec: 11
+Methods missing spec: 16
+
+MISSING METHODS (by usage):
+  - eq (30 crates)
+  - deref_mut (11 crates)
+  - into (6 crates)
+  - is_empty (4 crates)
+  - index_mut (4 crates)
+  - default (3 crates)
+  - str (2 crates)
+  - into_boxed_slice (2 crates)
+  - hash (1 crates)
+  - extend (1 crates)
+  - ne (1 crates)
+  - retain (1 crates)
+  - serialize (1 crates)
+  - into_response (1 crates)
+  - encode_hex (1 crates)
+  - mean (1 crates)
+
+============================================================
+TYPE: alloc::boxed::Box (845 crates)
+============================================================
+
+Methods used: 26
+Methods with vstd spec: 2
+Methods missing spec: 24
+
+MISSING METHODS (by usage):
+  - drop (179 crates)
+  - pin (36 crates)
+  - from_raw (23 crates)
+  - from (8 crates)
+  - fmt (8 crates)
+  - default (7 crates)
+  - into (6 crates)
+  - as_ref (3 crates)
+  - to_string (3 crates)
+  - leak (3 crates)
+  - eq (2 crates)
+  - into_raw_with_allocator (1 crates)
+  - new_in (1 crates)
+  - as_byte_slice (1 crates)
+  - as_mut (1 crates)
+  - into_pyarray (1 crates)
+  - into_abi (1 crates)
+  - run (1 crates)
+  - borrow (1 crates)
+  - unpark (1 crates)
+  ... and 4 more
+
+============================================================
+TYPE: std::string::String (445 crates)
+============================================================
+
+Methods used: 14
+Methods with vstd spec: 1
+Methods missing spec: 13
+
+MISSING METHODS (by usage):
+  - new (106 crates)
+  - len (20 crates)
+  - from_utf8 (15 crates)
+  - push_str (12 crates)
+  - from_utf8_lossy (7 crates)
+  - as_bytes (6 crates)
+  - push (5 crates)
+  - is_empty (5 crates)
+  - into_boxed_str (5 crates)
+  - into_bytes (4 crates)
+  - with_capacity (3 crates)
+  - from_utf8_unchecked (2 crates)
+  - from_utf16_lossy (1 crates)
+
+============================================================
+TYPE: alloc::sync::Arc (375 crates)
+============================================================
+
+Methods used: 8
+Methods with vstd spec: 1
+Methods missing spec: 7
+
+MISSING METHODS (by usage):
+  - deref (304 crates)
+  - from_raw (6 crates)
+  - as_ref (2 crates)
+  - from (2 crates)
+  - make_mut (1 crates)
+  - borrow (1 crates)
+  - default (1 crates)
+
+============================================================
+TYPE: std::collections::HashMap (355 crates)
+============================================================
+
+Methods used: 17
+Methods with vstd spec: 7
+Methods missing spec: 10
+
+MISSING METHODS (by usage):
+  - get (47 crates)
+  - clone (9 crates)
+  - into_iter (8 crates)
+  - entry (3 crates)
+  - eq (3 crates)
+  - remove (2 crates)
+  - validate_length (1 crates)
+  - entry_sync (1 crates)
+  - with_capacity_and_hasher (1 crates)
+  - default (1 crates)
+
+============================================================
+TYPE: std::collections::HashSet (229 crates)
+============================================================
+
+Methods used: 13
+Methods with vstd spec: 5
+Methods missing spec: 8
+
+MISSING METHODS (by usage):
+  - contains (26 crates)
+  - eq (6 crates)
+  - into_iter (5 crates)
+  - union (2 crates)
+  - difference (2 crates)
+  - validate (1 crates)
+  - ne (1 crates)
+  - with_capacity_and_hasher (1 crates)
+
+============================================================
+TYPE: alloc::string::String (183 crates)
+============================================================
+
+Methods used: 14
+Methods with vstd spec: 1
+Methods missing spec: 13
+
+MISSING METHODS (by usage):
+  - write_fmt (78 crates)
+  - fmt (30 crates)
+  - new (25 crates)
+  - deref (20 crates)
+  - as_bytes (6 crates)
+  - into_boxed_str (4 crates)
+  - hash (4 crates)
+  - default (4 crates)
+  - write_str (3 crates)
+  - to_socket_addrs (1 crates)
+  - push_str (1 crates)
+  - write (1 crates)
+  - from_utf8_lossy (1 crates)
+
+============================================================
+TYPE: alloc::collections::VecDeque (119 crates)
+============================================================
+
+Methods used: 7
+Methods with vstd spec: 6
+Methods missing spec: 1
+
+MISSING METHODS (by usage):
+  - decode (1 crates)
+
+============================================================
+TYPE: alloc::rc::Rc (111 crates)
+============================================================
+
+Methods used: 9
+Methods with vstd spec: 1
+Methods missing spec: 8
+
+MISSING METHODS (by usage):
+  - deref (76 crates)
+  - from (6 crates)
+  - as_ref (2 crates)
+  - from_raw (2 crates)
+  - borrow (1 crates)
+  - default (1 crates)
+  - fmt (1 crates)
+  - make_mut (1 crates)
+
+============================================================
+TYPE: std::option::Option (1 crates)
+============================================================
+
+Methods used: 0
+Methods with vstd spec: 0
+Methods missing spec: 0
+
+
+============================================================
+TYPE: std::sync::Arc (1 crates)
+============================================================
+
+Methods used: 0
+Methods with vstd spec: 0
+Methods missing spec: 0
+
+
+============================================================
+TYPE: std::vec::Vec (1 crates)
+============================================================
+
+Methods used: 0
+Methods with vstd spec: 0
+Methods missing spec: 0
+
+
+================================================================================
+5. PRIORITY LIST FOR VSTD EXTENSIONS
+================================================================================
+
+Based on crate usage, these types should be prioritized for vstd coverage:
+
+HIGH PRIORITY (>1000 crates):
+
+MEDIUM PRIORITY (100-1000 crates):
+  - std::io::Error (404 crates)
+  - alloc::collections::BTreeMap (215 crates)
+  - std::sync::Mutex (179 crates)
+  - core::cell::Cell (150 crates)
+  - alloc::collections::BTreeSet (121 crates)
+  - std::fs::File (110 crates)
+
+LOWER PRIORITY (<100 crates):
+  - core::cell::RefCell (97 crates)
+  - std::path::Path (81 crates)
+  - std::cmp::Ordering (70 crates)
+  - std::time::Duration (54 crates)
+  - std::sync::RwLock (53 crates)
+  - std::sync::Once (41 crates)
+  - std::process::Command (34 crates)
+  - core::cmp::Ordering (32 crates)
+  - alloc::collections::BinaryHeap (24 crates)
+  - std::time::Instant (24 crates)
+  - alloc::collections::LinkedList (22 crates)
+  - std::ffi::OsStr (18 crates)
+  - std::net::TcpStream (16 crates)
+  - std::time::SystemTime (15 crates)
+
+================================================================================
+6. DETAILED GAP ANALYSIS - METHODS NEEDED PER TYPE
+================================================================================
+
+For each type, showing methods that need vstd specs to achieve coverage targets.
+
+============================================================
+TYPE: core::result::Result (2303 crates, 2303 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ unwrap
+    2. ✓ branch
+    3. ✓ expect
+    4. ✓ is_ok
+    5. ✓ map_err
+    6. ✓ ok
+    7. ✓ map
+    8.   eq
+    9. ✓ is_err
+   10.   unwrap_or_else
+   11.   unwrap_or
+   12. ✓ unwrap_err
+   13.   unwrap_throw
+   14.   deserialize
+   15.   map_or_else
+   16.   and
+   17.   as_mut
+   18.   expect_err
+   19.   expect_or_abort
+   20.   is_ok_and
+   21.   unwrap_ok
+   22.   unwrap_or_default
+
+Coverage: 8/10 of top-10 methods, 9/20 of top-20 methods
+
+============================================================
+TYPE: core::option::Option (2194 crates, 2194 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ unwrap
+    2. ✓ is_some
+    3. ✓ map
+    4. ✓ eq
+    5. ✓ expect
+    6. ✓ unwrap_or
+    7. ✓ ok_or
+    8.   ok_or_else
+    9. ✓ is_none
+   10. ✓ take
+   11. ✓ from_residual
+   12. ✓ clone
+   13.   unwrap_or_else
+   14.   default
+   15.   map_or
+   16.   to_tokens
+   17.   and_then
+   18.   copied
+   19.   ne
+   20.   unwrap_or_default
+   21.   unwrap_unchecked
+   22.   approx_eq
+   23. ✓ branch
+   24.   cloned
+   25. ✓ cmp
+   26.   expect_throw
+   27.   get_or_insert_with
+   28.   into_iter
+   29.   iter
+   30.   map_or_else
+
+Coverage: 9/10 of top-10 methods, 11/20 of top-20 methods
+
+============================================================
+TYPE: alloc::vec::Vec (1735 crates, 1735 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ deref
+    2. ✓ new
+    3. ✓ index
+    4. ✓ into_iter
+    5. ✓ with_capacity
+    6.   eq
+    7. ✓ as_slice
+    8. ✓ len
+    9.   deref_mut
+   10. ✓ push
+   11.   into
+   12. ✓ clone
+   13.   index_mut
+   14.   is_empty
+   15.   default
+   16. ✓ extend_from_slice
+   17.   into_boxed_slice
+   18.   str
+   19.   encode_hex
+   20.   extend
+   21.   hash
+   22.   into_response
+   23.   mean
+   24.   ne
+   25.   retain
+   26.   serialize
+   27. ✓ truncate
+
+Coverage: 8/10 of top-10 methods, 10/20 of top-20 methods
+
+============================================================
+TYPE: alloc::boxed::Box (845 crates, 845 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ new
+    2.   drop
+    3.   pin
+    4. ✓ clone
+    5.   from_raw
+    6.   fmt
+    7.   from
+    8.   default
+    9.   into
+   10.   as_ref
+   11.   leak
+   12.   to_string
+   13.   eq
+   14.   as_byte_slice
+   15.   as_mut
+   16.   borrow
+   17.   close
+   18.   deref_mut
+   19.   from_base32_decode
+   20.   into_abi
+   21.   into_pyarray
+   22.   into_raw
+   23.   into_raw_with_allocator
+   24.   new_in
+   25.   run
+   26.   unpark
+
+Coverage: 2/10 of top-10 methods, 2/20 of top-20 methods
+
+============================================================
+TYPE: std::string::String (445 crates, 445 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ as_str
+    2.   new
+    3.   len
+    4.   from_utf8
+    5.   push_str
+    6.   from_utf8_lossy
+    7.   as_bytes
+    8.   into_boxed_str
+    9.   is_empty
+   10.   push
+   11.   into_bytes
+   12.   with_capacity
+   13.   from_utf8_unchecked
+   14.   from_utf16_lossy
+
+Coverage: 1/10 of top-10 methods, 1/14 of top-20 methods
+
+============================================================
+TYPE: alloc::sync::Arc (375 crates, 375 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1.   deref
+    2. ✓ new
+    3.   from_raw
+    4.   as_ref
+    5.   from
+    6.   borrow
+    7.   default
+    8.   make_mut
+
+Coverage: 1/8 of top-10 methods, 1/8 of top-20 methods
+
+============================================================
+TYPE: std::collections::HashMap (355 crates, 355 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ insert
+    2.   get
+    3. ✓ new
+    4. ✓ iter
+    5.   clone
+    6.   into_iter
+    7. ✓ keys
+    8. ✓ len
+    9.   entry
+   10.   eq
+   11.   remove
+   12. ✓ clear
+   13.   default
+   14.   entry_sync
+   15.   validate_length
+   16. ✓ values
+   17.   with_capacity_and_hasher
+
+Coverage: 5/10 of top-10 methods, 7/17 of top-20 methods
+
+============================================================
+TYPE: std::collections::HashSet (229 crates, 229 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ insert
+    2.   contains
+    3. ✓ iter
+    4.   eq
+    5.   into_iter
+    6.   difference
+    7. ✓ new
+    8.   union
+    9. ✓ clear
+   10. ✓ len
+   11.   ne
+   12.   validate
+   13.   with_capacity_and_hasher
+
+Coverage: 5/10 of top-10 methods, 5/13 of top-20 methods
+
+============================================================
+TYPE: alloc::string::String (183 crates, 183 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1.   write_fmt
+    2.   fmt
+    3.   new
+    4.   deref
+    5.   as_bytes
+    6. ✓ as_str
+    7.   default
+    8.   hash
+    9.   into_boxed_str
+   10.   write_str
+   11.   from_utf8_lossy
+   12.   push_str
+   13.   to_socket_addrs
+   14.   write
+
+Coverage: 1/10 of top-10 methods, 1/14 of top-20 methods
+
+============================================================
+TYPE: alloc::collections::VecDeque (119 crates, 119 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1. ✓ push_back
+    2. ✓ len
+    3. ✓ pop_front
+    4. ✓ iter
+    5. ✓ new
+    6. ✓ clone
+    7.   decode
+
+Coverage: 6/7 of top-10 methods, 6/7 of top-20 methods
+
+============================================================
+TYPE: alloc::rc::Rc (111 crates, 111 method calls)
+============================================================
+
+Greedy method cover (vstd-wrapped methods marked with ✓):
+
+    1.   deref
+    2. ✓ new
+    3.   from
+    4.   as_ref
+    5.   from_raw
+    6.   borrow
+    7.   default
+    8.   fmt
+    9.   make_mut
+
+Coverage: 1/9 of top-10 methods, 1/9 of top-20 methods
+
+================================================================================
+SUMMARY
+================================================================================
+
+To achieve comprehensive Verus verification of Rust codebases, vstd needs:
+
+1. Types to add specifications for: 42
+2. Additional methods to specify (for covered types): 130
+
+Analysis complete: 2025-12-11 11:49:06.811627117 -08:00
