@@ -2,7 +2,38 @@ Logging to: /home/milnes/projects/veracity/analyses/veracity-search.log
 Verus Search
 ============
 
-Pattern: proof fn linked
+Pattern: to_multiset^+
 Searching: /home/milnes/projects/verus/source/vstd
-Files: 87, Functions: 2138, Matches: 0
+Files: 87, Functions: 2138, Matches: 19
 
+[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:151: [0m
+[38;5;22m    pub proof fn lemma_sort_by_ensures(self, leq: spec_fn(A, A) -> bool)[0m
+[38;5;22m        requires[0m
+[38;5;22m            total_ordering(leq),[0m
+[38;5;22m        ensures[0m
+[38;5;22m            self.to_multiset() =~= self.sort_by(leq).to_multiset(),[0m
+[38;5;22m            sorted_by(self.sort_by(leq), leq),[0m
+[38;5;22m            forall|x: A| !self.contains(x) ==> !(#[trigger] self.sort_by(leq).contains(x)),[0m
+[38;5;22m        decreases self.len(),[0m
+
+[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:544: [0m
+/// Proof of function to_multiset() correctness
+[38;5;22m    pub broadcast proof fn to_multiset_ensures(self)[0m
+[38;5;22m        ensures[0m
+[38;5;22m            forall|a: A| #[trigger] (self.push(a).to_multiset()) =~= self.to_multiset().insert(a),  // to_multiset_build[0m
+[38;5;22m            forall|i: int|[0m
+[38;5;22m                0 <= i < self.len() ==> #[trigger] (self.remove(i).to_multiset())[0m
+[38;5;22m                    =~= self.to_multiset().remove(self[i]),  // to_multiset_remove[0m
+[38;5;22m            self.len() == #[trigger] self.to_multiset().len(),  // to_multiset_len[0m
+[38;5;22m            forall|a: A|[0m
+[38;5;22m                self.contains(a) <==> #[trigger] self.to_multiset().count(a)[0m
+[38;5;22m                    > 0,  // to_multiset_contains[0m
+
+[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:883: [0m
+/// Given a sequence with no duplicates, each element occurs only
+/// once in its conversion to a multiset
+[38;5;22m    pub proof fn lemma_multiset_has_no_duplicates(self)[0m
+[38;5;22m        requires[0m
+[38;5;22m            self.no_duplicates(),[0m
+[38;5;22m        ensures[0m
+[38;5;22m            forall|x: A| self.to_multiset().contains(x) ==> self.to_multiset().count(x) == 1,[0m

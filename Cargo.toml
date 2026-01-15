@@ -122,3 +122,7 @@ path = "src/bin/review_string_hacking.rs"
 # - metrics_verification_time.rs - Track verification times (stub)
 # - fix_add_requires.rs - Auto-generate requires (stub)
 # - fix_add_ensures.rs - Auto-generate ensures (stub)
+
+[[bin]]
+name = "veracity-fix-comment-formatting"
+path = "src/bin/fix_comment_formatting.rs"
