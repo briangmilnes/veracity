@@ -86,11 +86,18 @@ veracity-search --no-vstd -C ~/myproject 'holes'  # search codebase only
 
 ### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*
 
-Automatically minimize vstd library dependencies. 11 phases test each lemma to find what's truly needed.
+Automatically minimize vstd library dependencies. 12 phases test lemmas, asserts, and proof blocks.
 
 ```bash
-veracity-minimize-lib -c ./myproject -l ./myproject/src/vstdplus -L -b -a
+# Full minimization (all phases)
+veracity-minimize-lib -c ./myproject -l ./myproject/src/vstdplus -L -b -a -p
+
+# Single-file mode: fast pre-commit check (skips library analysis)
+veracity-minimize-lib -c ./myproject -l ./myproject/src/vstdplus \
+  -F ./myproject/src/main.rs -a -p --danger
 ```
+
+**Single-file mode** (`-F`): Skips phases 2-8 (library analysis) and directly tests asserts (`-a`) and proof blocks (`-p`) in one file. ~10s baseline + ~15s per test.
 
 ### 🕳️ [veracity-review-proof-holes](docs/veracity-proof-holes.md) — *[full docs](docs/veracity-proof-holes.md)*
 

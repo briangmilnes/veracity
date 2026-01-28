@@ -80,12 +80,15 @@ struct MinimizeArgs {
     dry_run: bool,
     max_lemmas: Option<usize>,
     max_asserts: Option<usize>,
+    max_proof_blocks: Option<usize>,
     exclude_dirs: Vec<String>,
     danger_mode: bool,
     fail_fast: bool,
     update_broadcasts: bool,
     apply_lib_broadcasts: bool,
     assert_minimization: bool,
+    proof_block_minimization: bool,
+    single_file: Option<PathBuf>,
 }
 
 /// A discovered broadcast group from vstd
@@ -174,12 +177,15 @@ impl MinimizeArgs {
         let mut dry_run = false;
         let mut max_lemmas: Option<usize> = None;
         let mut max_asserts: Option<usize> = None;
+        let mut max_proof_blocks: Option<usize> = None;
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut update_broadcasts = false;
         let mut apply_lib_broadcasts = false;
         let mut danger_mode = false;
         let mut fail_fast = false;
         let mut assert_minimization = false;
+        let mut proof_block_minimization = false;
+        let mut single_file: Option<PathBuf> = None;
         
         let mut i = 1;
         while i < args.len() {
@@ -267,6 +273,36 @@ impl MinimizeArgs {
                     assert_minimization = true; // -A implies -a
                     i += 1;
                 }
+                "--proof-block-minimization" | "-p" => {
+                    proof_block_minimization = true;
+                    i += 1;
+                }
+                "--max-proof-blocks" | "-P" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-P/--max-proof-blocks requires a number"));
+                    }
+                    let n: usize = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid number: {}", args[i]))?;
+                    max_proof_blocks = Some(n);
+                    proof_block_minimization = true; // -P implies -p
+                    i += 1;
+                }
+                "--file" | "-F" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-F/--file requires a file path"));
+                    }
+                    let path = PathBuf::from(&args[i]);
+                    if !path.exists() {
+                        return Err(anyhow::anyhow!("File not found: {}", path.display()));
+                    }
+                    if !path.is_file() {
+                        return Err(anyhow::anyhow!("Not a file: {}", path.display()));
+                    }
+                    single_file = Some(path);
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -280,7 +316,22 @@ impl MinimizeArgs {
         let codebase = codebase.ok_or_else(|| anyhow::anyhow!("-c/--codebase is required"))?;
         let library = library.ok_or_else(|| anyhow::anyhow!("-l/--library is required"))?;
         
-        Ok(MinimizeArgs { codebase, library, dry_run, max_lemmas, max_asserts, exclude_dirs, update_broadcasts, apply_lib_broadcasts, danger_mode, fail_fast, assert_minimization })
+        Ok(MinimizeArgs { 
+            codebase, 
+            library, 
+            dry_run, 
+            max_lemmas, 
+            max_asserts, 
+            max_proof_blocks,
+            exclude_dirs, 
+            update_broadcasts, 
+            apply_lib_broadcasts, 
+            danger_mode, 
+            fail_fast, 
+            assert_minimization,
+            proof_block_minimization,
+            single_file,
+        })
     }
     
     fn print_usage(program_name: &str) {
@@ -296,9 +347,12 @@ impl MinimizeArgs {
         log!("Options:");
         log!("  -c, --codebase DIR          Path to the codebase to verify");
         log!("  -l, --library DIR           Path to the library directory");
+        log!("  -F, --file FILE             Analyze only this single file (skip full codebase)");
         log!("  -N, --number-of-lemmas N    Limit to testing N lemmas (for incremental runs)");
         log!("  -a, --assert-minimization   Enable assert minimization (Phase 9 & 10)");
         log!("  -A, --max-asserts N         Limit to testing N asserts (implies -a)");
+        log!("  -p, --proof-block-minimization  Test if proof {{}} blocks are necessary");
+        log!("  -P, --max-proof-blocks N    Limit to testing N proof blocks (implies -p)");
         log!("  -e, --exclude DIR           Exclude directory from analysis (can use multiple times)");
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
@@ -321,7 +375,13 @@ impl MinimizeArgs {
         log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a", name);
         log!();
         log!("  # Full minimization (all phases, all tests):");
-        log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a -e experiments", name);
+        log!("  {} -c ./my-project -l ./my-project/src/lib -L -b -a -p -e experiments", name);
+        log!();
+        log!("  # Test proof blocks in a single file:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -F ./my-project/src/main.rs -p", name);
+        log!();
+        log!("  # Quick test: 5 proof blocks in a single file:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -F ./my-project/src/main.rs -P 5", name);
     }
 }
 
@@ -2439,6 +2499,319 @@ fn test_assert(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Proof block detection and testing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A proof { } block found inside a function
+#[derive(Debug, Clone)]
+struct ProofBlock {
+    file: PathBuf,
+    start_line: usize,
+    end_line: usize,
+    context: String,      // Function name it's in
+    content_preview: String, // First line of content for display
+}
+
+/// Find all proof { } blocks in a file using AST parsing
+/// These are inline proof blocks inside exec/spec functions, NOT proof fn declarations
+fn find_proof_blocks_in_file(file: &Path) -> Result<Vec<ProofBlock>> {
+    let content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    let mut proof_blocks = Vec::new();
+    
+    let mut current_context = String::from("unknown");
+    let mut i = 0;
+    
+    while i < lines.len() {
+        let line_num = i + 1;
+        let trimmed = lines[i].trim();
+        
+        // Track context (function we're in)
+        if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") ||
+           trimmed.starts_with("exec fn ") || trimmed.starts_with("pub exec fn ") ||
+           trimmed.starts_with("spec fn ") || trimmed.starts_with("pub spec fn ") ||
+           trimmed.starts_with("open spec fn ") || trimmed.starts_with("pub open spec fn ") ||
+           trimmed.contains(" fn ") {
+            // Extract function name
+            if let Some(fn_start) = trimmed.find("fn ") {
+                let after_fn = &trimmed[fn_start + 3..];
+                if let Some(paren) = after_fn.find('(') {
+                    current_context = after_fn[..paren].trim().to_string();
+                } else if let Some(lt) = after_fn.find('<') {
+                    current_context = after_fn[..lt].trim().to_string();
+                }
+            }
+        }
+        
+        // Skip comments
+        if trimmed.starts_with("//") {
+            i += 1;
+            continue;
+        }
+        
+        // Skip "proof fn" declarations - we only want inline "proof { }" blocks
+        if trimmed.starts_with("proof fn ") || trimmed.starts_with("pub proof fn ") ||
+           trimmed.contains(" proof fn ") {
+            i += 1;
+            continue;
+        }
+        
+        // Look for "proof {" or "proof{" pattern (inline proof block)
+        let proof_patterns = ["proof {", "proof{"];
+        let mut found_proof = false;
+        
+        for pattern in &proof_patterns {
+            if let Some(pos) = trimmed.find(pattern) {
+                // Make sure it's at word boundary (not part of longer identifier)
+                let before_ok = pos == 0 || !trimmed.chars().nth(pos - 1).map_or(false, |c| c.is_alphanumeric() || c == '_');
+                
+                if before_ok {
+                    // Found a proof block start, now find its end
+                    let start_line = line_num;
+                    let mut brace_depth = 0;
+                    let mut end_line = start_line;
+                    let mut content_preview = String::new();
+                    
+                    // Count braces from this line forward
+                    for j in i..lines.len() {
+                        let check_line = lines[j];
+                        for ch in check_line.chars() {
+                            if ch == '{' {
+                                brace_depth += 1;
+                            } else if ch == '}' {
+                                brace_depth -= 1;
+                                if brace_depth == 0 {
+                                    end_line = j + 1;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Capture first non-proof line as preview
+                        if content_preview.is_empty() && j > i {
+                            let preview_trimmed = lines[j].trim();
+                            if !preview_trimmed.is_empty() && !preview_trimmed.starts_with("//") {
+                                content_preview = if preview_trimmed.len() > 50 {
+                                    format!("{}...", &preview_trimmed[..50])
+                                } else {
+                                    preview_trimmed.to_string()
+                                };
+                            }
+                        }
+                        
+                        if brace_depth == 0 {
+                            break;
+                        }
+                    }
+                    
+                    if content_preview.is_empty() {
+                        content_preview = "(empty or single-line)".to_string();
+                    }
+                    
+                    proof_blocks.push(ProofBlock {
+                        file: file.to_path_buf(),
+                        start_line,
+                        end_line,
+                        context: current_context.clone(),
+                        content_preview,
+                    });
+                    
+                    found_proof = true;
+                    break;
+                }
+            }
+        }
+        
+        if !found_proof {
+            i += 1;
+        } else {
+            // Skip to end of this proof block
+            if let Some(last) = proof_blocks.last() {
+                i = last.end_line;
+            } else {
+                i += 1;
+            }
+        }
+    }
+    
+    Ok(proof_blocks)
+}
+
+/// Test if a proof block is necessary by commenting it out
+/// Returns (needed, verify_time, time_saved)
+fn test_proof_block(
+    block: &ProofBlock,
+    codebase: &Path,
+    baseline_time: Duration,
+) -> Result<(bool, Duration, Duration)> {
+    // Comment out the proof block
+    let original = comment_out_lines(&block.file, block.start_line, block.end_line, "TESTING proof block")?;
+    
+    // Run verification with timing
+    let start = Instant::now();
+    let (success, _stderr) = run_verus(codebase)?;
+    let verify_time = start.elapsed();
+    
+    if success {
+        // Verification passed without this proof block - it's unneeded
+        // Update the marker to permanent
+        restore_lines(&block.file, block.start_line, &original)?;
+        comment_out_lines(&block.file, block.start_line, block.end_line, "UNNEEDED proof block")?;
+        
+        let time_saved = if baseline_time > verify_time {
+            baseline_time - verify_time
+        } else {
+            Duration::ZERO
+        };
+        
+        Ok((false, verify_time, time_saved)) // false = not needed
+    } else {
+        // Verification failed - proof block is needed
+        restore_lines(&block.file, block.start_line, &original)?;
+        
+        Ok((true, verify_time, Duration::ZERO)) // true = needed
+    }
+}
+
+/// Run single-file mode: just test asserts and proof blocks in one file
+/// Skips all library analysis (phases 2-8)
+fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
+    let file = args.single_file.as_ref().unwrap();
+    let rel_path = file.strip_prefix(&args.codebase).unwrap_or(file);
+    
+    log!("Target file: {}", rel_path.display());
+    log!();
+    
+    // Find asserts in the file
+    let asserts = find_asserts_in_file(file)?;
+    log!("Found {} assert statements", asserts.len());
+    
+    // Find proof blocks in the file
+    let proof_blocks = find_proof_blocks_in_file(file)?;
+    log!("Found {} proof {{}} blocks", proof_blocks.len());
+    log!();
+    
+    if asserts.is_empty() && proof_blocks.is_empty() {
+        log!("Nothing to test in this file.");
+        return Ok(());
+    }
+    
+    // Test asserts if enabled
+    if args.assert_minimization && !asserts.is_empty() {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Testing asserts");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        
+        let test_count = match args.max_asserts {
+            Some(n) => asserts.len().min(n),
+            None => asserts.len(),
+        };
+        
+        let mut tested = 0;
+        let mut removed = 0;
+        let mut time_saved = Duration::ZERO;
+        
+        for (i, assert_info) in asserts.iter().take(test_count).enumerate() {
+            log_no_newline!("  [{}/{}] {} at line {} in fn {}... ",
+                i + 1, test_count,
+                assert_info.assert_type,
+                assert_info.line,
+                assert_info.context);
+            
+            if args.dry_run {
+                log!("(dry-run, skipped)");
+                continue;
+            }
+            
+            let (needed, verify_time, saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            tested += 1;
+            
+            if needed {
+                log!("NEEDED [{}]", format_duration(verify_time));
+            } else {
+                removed += 1;
+                time_saved += saved;
+                log!("UNNEEDED [{}]", format_duration(verify_time));
+            }
+            
+            if args.fail_fast && !needed {
+                break;
+            }
+        }
+        
+        log!();
+        log!("Assert summary: {} tested, {} removed, {} time saved",
+            tested, removed, format_duration(time_saved));
+        log!();
+    }
+    
+    // Test proof blocks if enabled
+    if args.proof_block_minimization && !proof_blocks.is_empty() {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Testing proof {{}} blocks");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        
+        // List the proof blocks
+        if proof_blocks.len() <= 20 {
+            for block in &proof_blocks {
+                log!("  lines {}-{} in fn {} // {}",
+                    block.start_line, block.end_line,
+                    block.context, block.content_preview);
+            }
+            log!();
+        }
+        
+        let test_count = match args.max_proof_blocks {
+            Some(n) => proof_blocks.len().min(n),
+            None => proof_blocks.len(),
+        };
+        
+        let mut tested = 0;
+        let mut removed = 0;
+        let mut time_saved = Duration::ZERO;
+        
+        for (i, block) in proof_blocks.iter().take(test_count).enumerate() {
+            log_no_newline!("  [{}/{}] lines {}-{} in fn {}... ",
+                i + 1, test_count,
+                block.start_line,
+                block.end_line,
+                block.context);
+            
+            if args.dry_run {
+                log!("(dry-run, skipped)");
+                continue;
+            }
+            
+            let (needed, verify_time, saved) = test_proof_block(block, &args.codebase, baseline_time)?;
+            tested += 1;
+            
+            if needed {
+                log!("NEEDED [{}]", format_duration(verify_time));
+            } else {
+                removed += 1;
+                time_saved += saved;
+                log!("UNNEEDED [{}]", format_duration(verify_time));
+            }
+            
+            if args.fail_fast && !needed {
+                break;
+            }
+        }
+        
+        log!();
+        log!("Proof block summary: {} tested, {} removed, {} time saved",
+            tested, removed, format_duration(time_saved));
+    }
+    
+    log!();
+    log!("✓ Single-file mode complete.");
+    
+    Ok(())
+}
+
 enum GitStatus {
     Clean,           // In git, committed
     Uncommitted,     // In git, has uncommitted changes
@@ -2500,12 +2873,15 @@ fn main() -> Result<()> {
     log!("Arguments:");
     log!("  -c, --codebase:     {}", args.codebase.display());
     log!("  -l, --library:      {}", args.library.display());
+    log!("  -F, --file:         {}", args.single_file.as_ref().map(|p| p.display().to_string()).unwrap_or_else(|| "(all files)".to_string()));
     log!("  -n, --dry-run:      {}", args.dry_run);
     log!("  -b, --broadcasts:   {}", args.update_broadcasts);
     log!("  -L, --lib-broadcasts: {}", args.apply_lib_broadcasts);
     log!("  -N, --max-lemmas:   {}", args.max_lemmas.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
     log!("  -a, --asserts:      {}", args.assert_minimization);
     log!("  -A, --max-asserts:  {}", args.max_asserts.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
+    log!("  -p, --proof-blocks: {}", args.proof_block_minimization);
+    log!("  -P, --max-proof-blocks: {}", args.max_proof_blocks.map(|n| n.to_string()).unwrap_or_else(|| "all".to_string()));
     log!("  -e, --exclude:      {}", if args.exclude_dirs.is_empty() { "(none)".to_string() } else { args.exclude_dirs.join(", ") });
     log!("  -f, --fail-fast:    {}", args.fail_fast);
     log!("  --danger:           {}", args.danger_mode);
@@ -2589,7 +2965,8 @@ fn main() -> Result<()> {
     log!("  Phase 8:  Test lemma necessity (can codebase verify without it?)");
     log!("  Phase 9:  Test library asserts (can we remove any?)");
     log!("  Phase 10: Test codebase asserts (can we remove any?)");
-    log!("  Phase 11: Analyze and verify final codebase");
+    log!("  Phase 11: Test proof {{}} blocks (-p flag)");
+    log!("  Phase 12: Analyze and verify final codebase");
     log!();
     log!("Comment markers inserted:");
     log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
@@ -2598,6 +2975,7 @@ fn main() -> Result<()> {
     log!("  // Veracity: USED                   - Phase 8: Lemma required, restored after test");
     log!("  // Veracity: UNUSED                 - Phase 8: Lemma not needed, left commented out");
     log!("  // Veracity: UNNEEDED assert        - Phase 9/10: Assert not needed, left commented");
+    log!("  // Veracity: UNNEEDED proof block   - Phase 11: Proof block not needed, left commented");
     log!("  // Veracity: UNNEEDED               - Phase 8: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
@@ -2635,6 +3013,17 @@ fn main() -> Result<()> {
         return Ok(());
     }
     log!();
+    
+    // Single-file mode: skip phases 2-8 and go directly to assert/proof block testing
+    if args.single_file.is_some() {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Single-file mode: Skipping phases 2-8 (library analysis)");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        
+        // Jump directly to single-file assert and proof block testing
+        return run_single_file_mode(&args, initial_duration);
+    }
     
     // Phase 2: Analyze library structure
     log!("Phase 2: Analyzing library structure...");
@@ -3494,6 +3883,104 @@ fn main() -> Result<()> {
         log!("Phase 10: Skipped (use -a flag to enable assert minimization)");
     }
     
+    // Phase 11: Test proof blocks
+    if args.proof_block_minimization {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 11: Testing proof {{}} blocks");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        
+        // Determine which files to scan
+        let files_to_scan: Vec<PathBuf> = if let Some(ref single_file) = args.single_file {
+            vec![single_file.clone()]
+        } else {
+            find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs)
+        };
+        
+        // Find all proof blocks
+        let mut all_proof_blocks: Vec<ProofBlock> = Vec::new();
+        for file in &files_to_scan {
+            if let Ok(blocks) = find_proof_blocks_in_file(file) {
+                all_proof_blocks.extend(blocks);
+            }
+        }
+        
+        log!("  Found {} proof {{}} blocks in {} files", all_proof_blocks.len(), files_to_scan.len());
+        
+        // List the proof blocks found
+        if !all_proof_blocks.is_empty() && all_proof_blocks.len() <= 20 {
+            for block in &all_proof_blocks {
+                let rel_path = block.file.strip_prefix(&args.codebase).unwrap_or(&block.file);
+                log!("    {}:{}-{} in fn {} // {}", 
+                    rel_path.display(), block.start_line, block.end_line, 
+                    block.context, block.content_preview);
+            }
+        }
+        
+        if all_proof_blocks.is_empty() {
+            log!("  No proof blocks to test.");
+        } else {
+            // Apply limit if specified
+            let test_count = match args.max_proof_blocks {
+                Some(n) => all_proof_blocks.len().min(n),
+                None => all_proof_blocks.len(),
+            };
+            
+            log!("  Testing {} proof blocks{}...", 
+                test_count,
+                if test_count < all_proof_blocks.len() { 
+                    format!(" (limited from {})", all_proof_blocks.len()) 
+                } else { 
+                    String::new() 
+                });
+            log!();
+            
+            let baseline_time = initial_duration;
+            let mut blocks_tested = 0;
+            let mut blocks_removed = 0;
+            let mut time_saved = Duration::ZERO;
+            
+            for (i, block) in all_proof_blocks.iter().take(test_count).enumerate() {
+                let rel_path = block.file.strip_prefix(&args.codebase).unwrap_or(&block.file);
+                log_no_newline!("  [{}/{}] Testing proof block at {}:{}-{} in fn {}... ",
+                    i + 1, test_count,
+                    rel_path.display(),
+                    block.start_line,
+                    block.end_line,
+                    block.context);
+                
+                if args.dry_run {
+                    log!("(dry-run, skipped)");
+                    continue;
+                }
+                
+                let (needed, verify_time, saved) = test_proof_block(block, &args.codebase, baseline_time)?;
+                blocks_tested += 1;
+                
+                if needed {
+                    log!("NEEDED (restored) [{}]", format_duration(verify_time));
+                } else {
+                    blocks_removed += 1;
+                    time_saved += saved;
+                    log!("UNNEEDED (commented) [{}]", format_duration(verify_time));
+                }
+                
+                if args.fail_fast && !needed {
+                    log!("  (fail-fast: stopping after first unneeded proof block)");
+                    break;
+                }
+            }
+            
+            log!();
+            log!("Phase 11 Summary: {} tested, {} removed (commented), {} time saved", 
+                blocks_tested, blocks_removed, format_duration(time_saved));
+        }
+    } else {
+        log!();
+        log!("Phase 11: Skipped (use -p flag to enable proof block minimization)");
+    }
+    
     // Update stats
     stats.total_time = total_start.elapsed();
     
@@ -3504,10 +3991,10 @@ fn main() -> Result<()> {
         }
     }
     
-    // Phase 11: Final verification and LOC count
+    // Phase 12: Final verification and LOC count
     log!();
     log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 11: Analyzing and verifying final codebase");
+    log!("Phase 12: Analyzing and verifying final codebase");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     
