@@ -2,5 +2,6 @@
 **/*.rs.bk
 *.pdb
 tests/fixtures/verus-lang
+tests/fixtures/APAS-VERUS
 # Keep emacs backup files out
 \#*\#
