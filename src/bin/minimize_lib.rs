@@ -28,8 +28,10 @@ thread_local! {
     static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
 
-fn init_logging(codebase: &Path) -> PathBuf {
+/// Initialize logging, returns (log_path, created_analyses_dir)
+fn init_logging(codebase: &Path) -> (PathBuf, bool) {
     let analyses_dir = codebase.join("analyses");
+    let created_dir = !analyses_dir.exists();
     let _ = std::fs::create_dir_all(&analyses_dir);
     let log_path = analyses_dir.join("veracity-minimize-lib.log");
     // Clear the log file
@@ -37,7 +39,7 @@ fn init_logging(codebase: &Path) -> PathBuf {
     LOG_FILE_PATH.with(|p| {
         *p.borrow_mut() = Some(log_path.clone());
     });
-    log_path
+    (log_path, created_dir)
 }
 
 fn log_impl(msg: &str, newline: bool) {
@@ -148,6 +150,56 @@ struct LemmaResult {
     call_sites_in_lib: Vec<CallSite>,
     call_sites_in_codebase: Vec<CallSite>,
     module_used: bool,
+}
+
+/// Tracks line number shifts caused by inserting USED markers
+/// When a `// Veracity: USED` line is inserted before a lemma,
+/// all subsequent line numbers in that file shift by 1.
+#[derive(Debug, Default, Clone)]
+struct LineShiftTracker {
+    /// Map from file path to list of (insertion_line, shift_amount) pairs
+    /// sorted by insertion_line ascending
+    shifts: std::collections::HashMap<PathBuf, Vec<(usize, usize)>>,
+}
+
+impl LineShiftTracker {
+    fn new() -> Self {
+        Self { shifts: std::collections::HashMap::new() }
+    }
+    
+    /// Record that a line was inserted at the given position in a file
+    fn record_insertion(&mut self, file: &Path, at_line: usize) {
+        let entry = self.shifts.entry(file.to_path_buf()).or_default();
+        entry.push((at_line, 1));
+        entry.sort_by_key(|(line, _)| *line);
+    }
+    
+    /// Get the adjusted line number accounting for all insertions before it
+    fn adjust_line(&self, file: &Path, original_line: usize) -> usize {
+        if let Some(insertions) = self.shifts.get(file) {
+            let mut shift = 0;
+            for (at_line, amount) in insertions {
+                if *at_line <= original_line + shift {
+                    shift += amount;
+                }
+            }
+            original_line + shift
+        } else {
+            original_line
+        }
+    }
+    
+    /// Get the total shift for lines after a given position
+    fn total_shift_after(&self, file: &Path, after_line: usize) -> usize {
+        if let Some(insertions) = self.shifts.get(file) {
+            insertions.iter()
+                .filter(|(line, _)| *line <= after_line)
+                .map(|(_, amount)| amount)
+                .sum()
+        } else {
+            0
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -1022,6 +1074,23 @@ fn find_call_sites(lemma_name: &str, codebase: &Path, library: &Path) -> Result<
 
 /// Run verus verification and return (success, stderr_output)
 fn run_verus(codebase: &Path) -> Result<(bool, String)> {
+    // Check if this is a cargo-verus project (has Cargo.toml with verus metadata)
+    let cargo_toml = codebase.join("Cargo.toml");
+    if cargo_toml.exists() {
+        let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
+        if content.contains("[package.metadata.verus]") || content.contains("vstd") {
+            // Use cargo verus build for cargo-verus projects
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(codebase);
+            cmd.args(["verus", "build"]);
+            
+            let output = cmd.output()?;
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Ok((output.status.success(), stderr));
+        }
+    }
+    
+    // Fall back to direct verus invocation for non-cargo projects
     let mut cmd = Command::new("verus");
     cmd.current_dir(codebase);
     cmd.args([
@@ -1961,17 +2030,29 @@ fn restore_file(file: &Path, original: &str) -> Result<()> {
 /// Returns (success, has_z3_errors, duration)
 fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, Duration)> {
     let start = Instant::now();
-    let mut cmd = Command::new("verus");
-    cmd.current_dir(codebase);
-    cmd.args([
-        "--crate-type=lib",
-        "src/lib.rs",
-        "--multiple-errors",
-        "20",
-        "--expand-errors",
-    ]);
     
-    let output = cmd.output()?;
+    // Check if this is a cargo-verus project
+    let cargo_toml = codebase.join("Cargo.toml");
+    let output = if cargo_toml.exists() {
+        let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
+        if content.contains("[package.metadata.verus]") || content.contains("vstd") {
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(codebase);
+            cmd.args(["verus", "build"]);
+            cmd.output()?
+        } else {
+            let mut cmd = Command::new("verus");
+            cmd.current_dir(codebase);
+            cmd.args(["--crate-type=lib", "src/lib.rs", "--multiple-errors", "20", "--expand-errors"]);
+            cmd.output()?
+        }
+    } else {
+        let mut cmd = Command::new("verus");
+        cmd.current_dir(codebase);
+        cmd.args(["--crate-type=lib", "src/lib.rs", "--multiple-errors", "20", "--expand-errors"]);
+        cmd.output()?
+    };
+    
     let duration = start.elapsed();
     let success = output.status.success();
     
@@ -1982,6 +2063,161 @@ fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, Duration)>
     
     Ok((success, has_z3_errors, stderr, duration))
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 0: Strip existing Veracity markers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Count Veracity markers in a directory using AST parsing
+fn count_veracity_markers(dir: &Path) -> Result<usize> {
+    let mut count = 0;
+    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.extension().map_or(false, |ext| ext == "rs") {
+            if let Ok(content) = std::fs::read_to_string(path) {
+                // Parse with ra_ap_syntax to find comments
+                let parsed = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+                let tree = parsed.tree();
+                
+                for token in tree.syntax().descendants_with_tokens() {
+                    if let Some(token) = token.into_token() {
+                        if token.kind() == SyntaxKind::COMMENT {
+                            let text = token.text();
+                            if text.contains("// Veracity:") || text.starts_with("// Veracity:") {
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(count)
+}
+
+/// Strip Veracity markers from a single file using AST parsing
+/// Returns the number of markers removed
+fn strip_veracity_markers_from_file(file: &Path) -> Result<usize> {
+    let content = std::fs::read_to_string(file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    let mut new_lines: Vec<String> = Vec::new();
+    let mut markers_removed = 0;
+    let mut skip_broadcast_block = false;
+    let mut broadcast_brace_depth = 0;
+    
+    for line in &lines {
+        let trimmed = line.trim();
+        
+        // Handle broadcast block deletion (multi-line)
+        if skip_broadcast_block {
+            for ch in line.chars() {
+                match ch {
+                    '{' => broadcast_brace_depth += 1,
+                    '}' => {
+                        broadcast_brace_depth -= 1;
+                        if broadcast_brace_depth == 0 {
+                            skip_broadcast_block = false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            markers_removed += 1;
+            continue;
+        }
+        
+        // Check for Veracity markers
+        if trimmed.starts_with("// Veracity:") {
+            let marker_content = &trimmed["// Veracity:".len()..].trim_start();
+            
+            // Standalone markers - delete entire line
+            // Note: trim() handles trailing whitespace edge case like "UNUSED "
+            let marker_trimmed = marker_content.trim();
+            if marker_trimmed == "USED" ||
+               marker_trimmed == "UNUSED" ||
+               marker_trimmed == "DEPENDENT" ||
+               marker_trimmed == "INDEPENDENT" ||
+               marker_trimmed == "TESTING-EMPTY-BODY" {
+                markers_removed += 1;
+                continue; // Skip this line
+            }
+            
+            // Broadcast group marker - delete this and following broadcast use block
+            if marker_content.starts_with("added broadcast group") {
+                markers_removed += 1;
+                skip_broadcast_block = true;
+                broadcast_brace_depth = 0;
+                continue;
+            }
+            
+            // Markers with code after them - uncomment the code
+            // Patterns: UNUSED <code>, TESTING <code>, UNNEEDED assert <code>, etc.
+            let code_start = if marker_content.starts_with("UNUSED ") {
+                Some("UNUSED ".len())
+            } else if marker_content.starts_with("TESTING ") {
+                Some("TESTING ".len())
+            } else if marker_content.starts_with("UNNEEDED assert ") {
+                Some("UNNEEDED assert ".len())
+            } else if marker_content.starts_with("UNNEEDED proof block ") {
+                Some("UNNEEDED proof block ".len())
+            } else if marker_content.starts_with("UNNEEDED call to ") {
+                // Find the end of "UNNEEDED call to <name> "
+                if let Some(space_after_name) = marker_content["UNNEEDED call to ".len()..].find(' ') {
+                    Some("UNNEEDED call to ".len() + space_after_name + 1)
+                } else {
+                    None
+                }
+            } else if marker_content.starts_with("UNNEEDED ") {
+                Some("UNNEEDED ".len())
+            } else {
+                None
+            };
+            
+            if let Some(offset) = code_start {
+                // Restore the original code
+                // The code preserves original indentation from the marker format
+                let code = &marker_content[offset..];
+                // Preserve the leading whitespace from the original line
+                let leading_ws = &line[..line.len() - line.trim_start().len()];
+                new_lines.push(format!("{}{}", leading_ws, code));
+                markers_removed += 1;
+                continue;
+            }
+            
+            // Unknown marker format - keep it but log warning
+            new_lines.push(line.to_string());
+        } else {
+            new_lines.push(line.to_string());
+        }
+    }
+    
+    if markers_removed > 0 {
+        std::fs::write(file, new_lines.join("\n") + "\n")?;
+    }
+    
+    Ok(markers_removed)
+}
+
+/// Strip all Veracity markers from files in a directory
+fn strip_veracity_markers(dir: &Path) -> Result<usize> {
+    let mut total_removed = 0;
+    let files = find_rust_files(dir);
+    
+    for file in &files {
+        match strip_veracity_markers_from_file(file) {
+            Ok(count) => total_removed += count,
+            Err(e) => {
+                log!("  Warning: Could not clean {}: {}", file.display(), e);
+            }
+        }
+    }
+    
+    Ok(total_removed)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Comment out / restore utilities
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Comment out lines in a file (1-indexed, inclusive)
 fn comment_out_lines(file: &Path, start_line: usize, end_line: usize, marker: &str) -> Result<Vec<String>> {
@@ -2203,14 +2439,19 @@ fn test_lemma(
     lemma: &ProofFn,
     codebase_calls: &[CallSite],
     codebase: &Path,
+    line_shifts: &mut LineShiftTracker,
 ) -> Result<(bool, Duration)> {
     let start = Instant::now();
+    
+    // Adjust line numbers for any previous insertions in this file
+    let adjusted_start = line_shifts.adjust_line(&lemma.file, lemma.start_line);
+    let adjusted_end = line_shifts.adjust_line(&lemma.file, lemma.end_line);
     
     // Step 1: Comment out the lemma definition
     let original_lemma = comment_out_lines(
         &lemma.file, 
-        lemma.start_line, 
-        lemma.end_line, 
+        adjusted_start, 
+        adjusted_end, 
         "TESTING"
     )?;
     
@@ -2218,8 +2459,9 @@ fn test_lemma(
     let mut call_originals: Vec<(PathBuf, usize, String)> = Vec::new();
     for cs in codebase_calls {
         if !cs.in_library {
-            let orig = comment_out_line(&cs.file, cs.line, "TESTING")?;
-            call_originals.push((cs.file.clone(), cs.line, orig));
+            let adjusted_line = line_shifts.adjust_line(&cs.file, cs.line);
+            let orig = comment_out_line(&cs.file, adjusted_line, "TESTING")?;
+            call_originals.push((cs.file.clone(), adjusted_line, orig));
         }
     }
     
@@ -2231,8 +2473,8 @@ fn test_lemma(
     if success {
         // Verification passed - lemma is NOT needed
         // Update markers to permanent
-        restore_lines(&lemma.file, lemma.start_line, &original_lemma)?;
-        comment_out_lines(&lemma.file, lemma.start_line, lemma.end_line, "UNUSED")?;
+        restore_lines(&lemma.file, adjusted_start, &original_lemma)?;
+        comment_out_lines(&lemma.file, adjusted_start, adjusted_end, "UNUSED")?;
         
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
@@ -2243,7 +2485,7 @@ fn test_lemma(
     } else {
         // Verification failed - lemma IS needed
         // Restore everything
-        restore_lines(&lemma.file, lemma.start_line, &original_lemma)?;
+        restore_lines(&lemma.file, adjusted_start, &original_lemma)?;
         
         // Add USED marker as a comment before the lemma
         let content = std::fs::read_to_string(&lemma.file)?;
@@ -2251,12 +2493,15 @@ fn test_lemma(
         let mut new_lines: Vec<String> = Vec::new();
         
         for (i, line) in lines.iter().enumerate() {
-            if i + 1 == lemma.start_line {
+            if i + 1 == adjusted_start {
                 new_lines.push("// Veracity: USED".to_string());
             }
             new_lines.push(line.to_string());
         }
         std::fs::write(&lemma.file, new_lines.join("\n") + "\n")?;
+        
+        // Record the insertion so subsequent operations adjust correctly
+        line_shifts.record_insertion(&lemma.file, adjusted_start);
         
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
@@ -2271,27 +2516,32 @@ fn test_lemma_group(
     lemmas: &[&ProofFn],
     codebase_calls: &[CallSite],
     codebase: &Path,
+    line_shifts: &mut LineShiftTracker,
 ) -> Result<(bool, Duration)> {
     let start = Instant::now();
     
     // Step 1: Comment out ALL lemma definitions in the group
-    let mut original_lemmas: Vec<(&ProofFn, Vec<String>)> = Vec::new();
+    // Track adjusted line numbers for each lemma
+    let mut original_lemmas: Vec<(&ProofFn, Vec<String>, usize, usize)> = Vec::new();
     for lemma in lemmas {
+        let adjusted_start = line_shifts.adjust_line(&lemma.file, lemma.start_line);
+        let adjusted_end = line_shifts.adjust_line(&lemma.file, lemma.end_line);
         let orig = comment_out_lines(
             &lemma.file, 
-            lemma.start_line, 
-            lemma.end_line, 
+            adjusted_start, 
+            adjusted_end, 
             "TESTING"
         )?;
-        original_lemmas.push((*lemma, orig));
+        original_lemmas.push((*lemma, orig, adjusted_start, adjusted_end));
     }
     
     // Step 2: Comment out all call sites in codebase for ALL variants
     let mut call_originals: Vec<(PathBuf, usize, String)> = Vec::new();
     for cs in codebase_calls {
         if !cs.in_library {
-            let orig = comment_out_line(&cs.file, cs.line, "TESTING")?;
-            call_originals.push((cs.file.clone(), cs.line, orig));
+            let adjusted_line = line_shifts.adjust_line(&cs.file, cs.line);
+            let orig = comment_out_line(&cs.file, adjusted_line, "TESTING")?;
+            call_originals.push((cs.file.clone(), adjusted_line, orig));
         }
     }
     
@@ -2303,9 +2553,9 @@ fn test_lemma_group(
     if success {
         // Verification passed - NO lemma in the group is needed
         // Update markers to permanent for ALL variants
-        for (lemma, orig) in &original_lemmas {
-            restore_lines(&lemma.file, lemma.start_line, orig)?;
-            comment_out_lines(&lemma.file, lemma.start_line, lemma.end_line, "UNUSED")?;
+        for (lemma, orig, adjusted_start, adjusted_end) in &original_lemmas {
+            restore_lines(&lemma.file, *adjusted_start, orig)?;
+            comment_out_lines(&lemma.file, *adjusted_start, *adjusted_end, "UNUSED")?;
         }
         
         for (file, line, orig) in &call_originals {
@@ -2319,8 +2569,8 @@ fn test_lemma_group(
         // Restore ALL variants and mark them ALL as USED
         
         // First, restore all lemma definitions
-        for (lemma, orig) in &original_lemmas {
-            restore_lines(&lemma.file, lemma.start_line, orig)?;
+        for (lemma, orig, adjusted_start, _) in &original_lemmas {
+            restore_lines(&lemma.file, *adjusted_start, orig)?;
         }
         
         // Restore call sites
@@ -2331,14 +2581,14 @@ fn test_lemma_group(
         // Group lemmas by file to handle line number shifts correctly
         let mut by_file: std::collections::HashMap<&Path, Vec<usize>> = 
             std::collections::HashMap::new();
-        for (lemma, _) in &original_lemmas {
+        for (lemma, _, adjusted_start, _) in &original_lemmas {
             by_file.entry(lemma.file.as_path())
                 .or_default()
-                .push(lemma.start_line);
+                .push(*adjusted_start);
         }
         
         // For each file, add "// USED" markers in REVERSE order (highest line first)
-        // so that earlier insertions don't shift later line numbers
+        // so that earlier insertions don't shift later line numbers within this group
         for (file, mut lines) in by_file {
             lines.sort();
             lines.reverse(); // Process highest line numbers first
@@ -2355,6 +2605,9 @@ fn test_lemma_group(
                     new_lines.push(line.to_string());
                 }
                 std::fs::write(file, new_lines.join("\n") + "\n")?;
+                
+                // Record the insertion for subsequent lemma groups
+                line_shifts.record_insertion(file, target_line);
             }
         }
         
@@ -2677,6 +2930,7 @@ fn test_proof_block(
 /// Run single-file mode: just test asserts and proof blocks in one file
 /// Skips all library analysis (phases 2-8)
 fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
+    let start_time = Instant::now();
     let file = args.single_file.as_ref().unwrap();
     let rel_path = file.strip_prefix(&args.codebase).unwrap_or(file);
     
@@ -2807,7 +3061,7 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
     }
     
     log!();
-    log!("✓ Single-file mode complete.");
+    log!("✓ Single-file mode complete in {}.", format_duration(start_time.elapsed()));
     
     Ok(())
 }
@@ -2820,7 +3074,7 @@ enum GitStatus {
 }
 
 /// Check if codebase is in git and has no uncommitted changes
-/// Ignores the veracity log file (analyses/veracity-minimize-lib.log)
+/// Ignores the analyses/ directory which Veracity creates for logging
 fn check_git_status(codebase: &Path) -> GitStatus {
     // Check if .git exists
     let git_dir = codebase.join(".git");
@@ -2837,10 +3091,10 @@ fn check_git_status(codebase: &Path) -> GitStatus {
     match status {
         Ok(output) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            // Filter out our own log file from the status
+            // Filter out the analyses/ directory (Veracity creates this for logs)
             let significant_changes: Vec<&str> = stdout
                 .lines()
-                .filter(|line| !line.ends_with("veracity-minimize-lib.log"))
+                .filter(|line| !line.contains("analyses/") && !line.ends_with("analyses"))
                 .collect();
             if significant_changes.is_empty() {
                 GitStatus::Clean
@@ -2856,9 +3110,7 @@ fn main() -> Result<()> {
     let args = MinimizeArgs::parse()?;
     
     // Initialize logging first so all output goes to the log
-    // Note: This creates a log file which may show as untracked in git.
-    // Add *.log to your .gitignore in the analyses/ directory.
-    let log_path = init_logging(&args.codebase);
+    let (log_path, created_analyses_dir) = init_logging(&args.codebase);
     
     // Check git status (ignore our log file - it's expected to be untracked)
     let git_status = check_git_status(&args.codebase);
@@ -2869,6 +3121,9 @@ fn main() -> Result<()> {
     log!("in Verus. Thanks Verus team!");
     log!();
     log!("Logging to: {}", log_path.display());
+    if created_analyses_dir {
+        log!("  (Created analyses/ directory for logging - add to .gitignore)");
+    }
     log!();
     log!("Arguments:");
     log!("  -c, --codebase:     {}", args.codebase.display());
@@ -2955,6 +3210,7 @@ fn main() -> Result<()> {
     log!("You will need to review each // Veracity: line and decide what to keep.");
     log!();
     log!("Phases:");
+    log!("  Phase 0:  Strip existing Veracity markers (if any)");
     log!("  Phase 1:  Analyze and verify codebase");
     log!("  Phase 2:  Analyze library structure (lemmas, modules, call sites, spec fns)");
     log!("  Phase 3:  Discover vstd broadcast groups from verus installation");
@@ -2980,6 +3236,21 @@ fn main() -> Result<()> {
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
     log!();
+    
+    // Phase 0: Strip existing Veracity markers if any
+    let marker_count = count_veracity_markers(&args.codebase)?;
+    if marker_count > 0 {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 0: Stripping existing Veracity markers");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        log!("  Found {} existing Veracity markers", marker_count);
+        log!("  Cleaning up for fresh analysis...");
+        
+        let removed = strip_veracity_markers(&args.codebase)?;
+        log!("  ✓ Removed {} markers", removed);
+        log!();
+    }
     
     // Phase 1: Verify codebase
     log!("═══════════════════════════════════════════════════════════════");
@@ -3656,6 +3927,9 @@ fn main() -> Result<()> {
     // Track dependent lemmas that are still needed (DEPENDENT but USED)
     let mut dependent_but_used: Vec<(String, PathBuf, String)> = Vec::new();
     
+    // Track line shifts from USED marker insertions
+    let mut line_shifts = LineShiftTracker::new();
+    
     // Test each lemma GROUP (type variants tested together)
     for (i, ((name, file), variants)) in sorted_groups.iter().enumerate() {
         let variant_count = variants.len();
@@ -3690,6 +3964,7 @@ fn main() -> Result<()> {
             &group_lemmas,
             &all_call_sites,
             &args.codebase,
+            &mut line_shifts,
         )?;
         
         stats.lemmas_tested += variant_count;

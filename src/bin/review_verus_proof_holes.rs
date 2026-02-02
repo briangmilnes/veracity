@@ -1,23 +1,59 @@
 use anyhow::Result;
 use ra_ap_syntax::{ast::{self, AstNode}, SyntaxKind, SyntaxNode};
 use veracity::{StandardArgs, find_rust_files};
-use std::{collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, time::Instant};
+use std::{cell::RefCell, collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, time::Instant};
 use walkdir::WalkDir;
 // verus_syn no longer needed - using ra_ap_syntax token-based approach
+
+thread_local! {
+    static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+}
+
+fn init_logging(base_dir: &Path) -> PathBuf {
+    let analyses_dir = base_dir.join("analyses");
+    let _ = std::fs::create_dir_all(&analyses_dir);
+    let log_path = analyses_dir.join("veracity-review-verus-proof-holes.log");
+    // Clear the log file for fresh run
+    let _ = std::fs::write(&log_path, "");
+    LOG_FILE_PATH.with(|p| {
+        *p.borrow_mut() = Some(log_path.clone());
+    });
+    log_path
+}
 
 macro_rules! log {
     ($($arg:tt)*) => {{
         use std::io::Write;
         let msg = format!($($arg)*);
         println!("{}", msg);
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("analyses/veracity-review-verus-proof-holes.log")
-        {
-            let _ = writeln!(file, "{}", msg);
-        }
+        LOG_FILE_PATH.with(|p| {
+            if let Some(ref log_path) = *p.borrow() {
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(log_path)
+                {
+                    let _ = writeln!(file, "{}", msg);
+                }
+            }
+        });
     }};
+}
+
+/// Write to log file only (for use in emacs mode where we also need terminal output)
+fn write_to_log(msg: &str) {
+    use std::io::Write;
+    LOG_FILE_PATH.with(|p| {
+        if let Some(ref log_path) = *p.borrow() {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_path)
+            {
+                let _ = writeln!(file, "{}", msg);
+            }
+        }
+    });
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -243,6 +279,9 @@ fn main() -> Result<()> {
     
     let args = ProofHolesArgs::parse()?;
     
+    // Initialize logging to the codebase's analyses directory
+    let log_path = init_logging(&args.standard.base_dir());
+    
     if args.emacs_mode {
         // Emacs mode - quiet output, just file:line: messages
         run_emacs_mode(&args.standard)?;
@@ -250,6 +289,8 @@ fn main() -> Result<()> {
     }
     
     log!("Verus Proof Hole Detection");
+    log!("Logging to: {}", log_path.display());
+    log!("");
     log!("Looking for:");
     log!("  - assume(false), assume(), Tracked::assume_new(), admit()");
     log!("  - unsafe fn, unsafe impl, unsafe {{}} blocks");
@@ -309,29 +350,41 @@ fn run_emacs_mode(args: &StandardArgs) -> Result<()> {
             
             if has_holes {
                 // Print file header with ❌
-                println!("❌ {}", path_str);
+                let msg = format!("❌ {}", path_str);
+                println!("{}", msg);
+                write_to_log(&msg);
                 
                 // Print each hole in Emacs format (no indent - Emacs needs col 0)
                 for hole in &stats.holes.holes {
-                    println!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
+                    let msg = format!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
+                    println!("{}", msg);
+                    write_to_log(&msg);
                 }
                 
                 // Print hole counts
-                println!("   Holes: {} total", stats.holes.total_holes);
-                print_hole_counts(&stats.holes, "      ");
+                let msg = format!("   Holes: {} total", stats.holes.total_holes);
+                println!("{}", msg);
+                write_to_log(&msg);
+                print_hole_counts_with_log(&stats.holes, "      ");
                 
                 if stats.proof_functions > 0 {
-                    println!("   Proof functions: {} total ({} clean, {} holed)", 
+                    let msg = format!("   Proof functions: {} total ({} clean, {} holed)", 
                              stats.proof_functions, 
                              stats.clean_proof_functions, 
                              stats.holed_proof_functions);
+                    println!("{}", msg);
+                    write_to_log(&msg);
                 }
             } else {
-                println!("✓ {}", path_str);
+                let msg = format!("✓ {}", path_str);
+                println!("{}", msg);
+                write_to_log(&msg);
                 if stats.proof_functions > 0 {
-                    println!("   {} clean proof function{}", 
+                    let msg = format!("   {} clean proof function{}", 
                              stats.proof_functions,
                              if stats.proof_functions == 1 { "" } else { "s" });
+                    println!("{}", msg);
+                    write_to_log(&msg);
                 }
             }
             
@@ -339,14 +392,93 @@ fn run_emacs_mode(args: &StandardArgs) -> Result<()> {
         }
     }
     
-    // Print summary
+    // Print summary (uses log! macro which writes to both stdout and log file)
     let summary = compute_summary(&file_stats_map);
     print_summary(&summary);
     
     Ok(())
 }
 
-/// Print hole counts with a given prefix
+/// Print hole counts with a given prefix (and log)
+fn print_hole_counts_with_log(holes: &ProofHoleStats, prefix: &str) {
+    if holes.assume_false_count > 0 {
+        let msg = format!("{}{} × assume(false)", prefix, holes.assume_false_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.assume_count > 0 {
+        let msg = format!("{}{} × assume()", prefix, holes.assume_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.assume_new_count > 0 {
+        let msg = format!("{}{} × Tracked::assume_new()", prefix, holes.assume_new_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.assume_specification_count > 0 {
+        let msg = format!("{}{} × assume_specification", prefix, holes.assume_specification_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.admit_count > 0 {
+        let msg = format!("{}{} × admit()", prefix, holes.admit_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.unsafe_fn_count > 0 {
+        let msg = format!("{}{} × unsafe fn", prefix, holes.unsafe_fn_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.unsafe_impl_count > 0 {
+        let msg = format!("{}{} × unsafe impl", prefix, holes.unsafe_impl_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.unsafe_block_count > 0 {
+        let msg = format!("{}{} × unsafe {{}}", prefix, holes.unsafe_block_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_body_count > 0 {
+        let msg = format!("{}{} × external_body", prefix, holes.external_body_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_fn_spec_count > 0 {
+        let msg = format!("{}{} × external_fn_specification", prefix, holes.external_fn_spec_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_trait_spec_count > 0 {
+        let msg = format!("{}{} × external_trait_specification", prefix, holes.external_trait_spec_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_type_spec_count > 0 {
+        let msg = format!("{}{} × external_type_specification", prefix, holes.external_type_spec_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_trait_ext_count > 0 {
+        let msg = format!("{}{} × external_trait_extension", prefix, holes.external_trait_ext_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.external_count > 0 {
+        let msg = format!("{}{} × external", prefix, holes.external_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+    if holes.opaque_count > 0 {
+        let msg = format!("{}{} × opaque", prefix, holes.opaque_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
+}
+
+/// Print hole counts with a given prefix (no log)
 fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     if holes.assume_false_count > 0 {
         println!("{}{} × assume(false)", prefix, holes.assume_false_count);
