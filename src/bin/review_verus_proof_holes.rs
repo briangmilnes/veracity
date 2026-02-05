@@ -155,24 +155,27 @@ struct ProofHolesArgs {
     standard: StandardArgs,
     /// Emacs-compatible diagnostics output (file:line: message)
     emacs_mode: bool,
+    /// Directories to exclude from analysis
+    exclude_dirs: Vec<PathBuf>,
 }
 
 impl ProofHolesArgs {
     fn parse() -> Result<Self> {
         let args: Vec<String> = std::env::args().collect();
         
-        let standard = Self::parse_args(&args)?;
+        let (standard, exclude_dirs) = Self::parse_args(&args)?;
         
         Ok(ProofHolesArgs {
             standard,
             emacs_mode: true,  // Always use emacs-compatible output
+            exclude_dirs,
         })
     }
     
-    fn parse_args(args: &[String]) -> Result<StandardArgs> {
+    fn parse_args(args: &[String]) -> Result<(StandardArgs, Vec<PathBuf>)> {
         if args.len() == 1 {
             let current_dir = std::env::current_dir()?;
-            return Ok(StandardArgs { 
+            return Ok((StandardArgs { 
                 paths: vec![current_dir],
                 is_module_search: false,
                 project: None,
@@ -182,12 +185,13 @@ impl ProofHolesArgs {
                 src_dirs: vec!["src".to_string(), "source".to_string()],
                 test_dirs: vec!["tests".to_string(), "test".to_string()],
                 bench_dirs: vec!["benches".to_string()],
-            });
+            }, Vec::new()));
         }
         
         let mut i = 1;
         let mut paths = Vec::new();
         let mut multi_codebase = None;
+        let mut exclude_dirs = Vec::new();
         
         while i < args.len() {
             match args[i].as_str() {
@@ -209,6 +213,21 @@ impl ProofHolesArgs {
                         i += 1;
                     }
                 }
+                "--exclude" | "-e" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--exclude requires a directory path"));
+                    }
+                    let exclude_path = PathBuf::from(&args[i]);
+                    // Resolve to absolute path
+                    let resolved = if exclude_path.is_absolute() {
+                        exclude_path
+                    } else {
+                        std::env::current_dir()?.join(&exclude_path)
+                    };
+                    exclude_dirs.push(resolved);
+                    i += 1;
+                }
                 "--multi-codebase" | "-M" => {
                     i += 1;
                     if i >= args.len() {
@@ -229,8 +248,14 @@ impl ProofHolesArgs {
                     println!();
                     println!("Options:");
                     println!("  -d, --dir DIR [DIR...]     Analyze specific directories");
+                    println!("  -e, --exclude DIR          Exclude directory (can be repeated)");
                     println!("  -M, --multi-codebase DIR   Scan multiple independent projects");
                     println!("  -h, --help                 Show this help message");
+                    println!();
+                    println!("Examples:");
+                    println!("  veracity-review-proof-holes");
+                    println!("  veracity-review-proof-holes -e src/experiments -e tests");
+                    println!("  veracity-review-proof-holes -d src -e src/legacy");
                     std::process::exit(0);
                 }
                 other if other.starts_with('-') => {
@@ -260,7 +285,7 @@ impl ProofHolesArgs {
             paths.push(current_dir);
         }
         
-        Ok(StandardArgs {
+        Ok((StandardArgs {
             paths,
             is_module_search: false,
             project: None,
@@ -270,7 +295,7 @@ impl ProofHolesArgs {
             src_dirs: vec!["src".to_string(), "source".to_string()],
             test_dirs: vec!["tests".to_string(), "test".to_string()],
             bench_dirs: vec!["benches".to_string()],
-        })
+        }, exclude_dirs))
     }
 }
 
@@ -284,7 +309,7 @@ fn main() -> Result<()> {
     
     if args.emacs_mode {
         // Emacs mode - quiet output, just file:line: messages
-        run_emacs_mode(&args.standard)?;
+        run_emacs_mode(&args.standard, &args.exclude_dirs)?;
         return Ok(());
     }
     
@@ -306,10 +331,10 @@ fn main() -> Result<()> {
     // Check for multi-codebase mode
     if let Some(multi_base) = &args.standard.multi_codebase {
         // Multi-codebase scanning mode
-        run_multi_codebase_analysis(multi_base)?;
+        run_multi_codebase_analysis(multi_base, &args.exclude_dirs)?;
     } else {
         // Single project mode
-        run_single_project_analysis(&args.standard)?;
+        run_single_project_analysis(&args.standard, &args.exclude_dirs)?;
     }
     
     let elapsed = start_time.elapsed();
@@ -319,18 +344,44 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/// Check if a path should be excluded based on exclude_dirs
+fn should_exclude(path: &Path, exclude_dirs: &[PathBuf]) -> bool {
+    for exclude in exclude_dirs {
+        // Check if the path starts with the exclude directory
+        if let Ok(canonical_path) = path.canonicalize() {
+            if let Ok(canonical_exclude) = exclude.canonicalize() {
+                if canonical_path.starts_with(&canonical_exclude) {
+                    return true;
+                }
+            }
+        }
+        // Also check without canonicalization for relative paths
+        if path.starts_with(exclude) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Run in Emacs compilation buffer mode - outputs file:line: message format
 /// Interleaved with nice file summaries
-fn run_emacs_mode(args: &StandardArgs) -> Result<()> {
+fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
     let mut all_files: Vec<PathBuf> = Vec::new();
     let base_dir = args.base_dir();
     
     // Handle both file and directory modes
     for path in &args.paths {
         if path.is_file() && path.extension().map_or(false, |e| e == "rs") {
-            all_files.push(path.clone());
+            if !should_exclude(path, exclude_dirs) {
+                all_files.push(path.clone());
+            }
         } else if path.is_dir() {
-            all_files.extend(find_rust_files(&[path.clone()]));
+            let files = find_rust_files(&[path.clone()]);
+            for file in files {
+                if !should_exclude(&file, exclude_dirs) {
+                    all_files.push(file);
+                }
+            }
         }
     }
     
@@ -528,7 +579,7 @@ fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
 }
 
 /// Run analysis on a single project (standard mode)
-fn run_single_project_analysis(args: &StandardArgs) -> Result<()> {
+fn run_single_project_analysis(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
     // Collect all Rust files from the specified paths
     let mut all_files: Vec<PathBuf> = Vec::new();
     let base_dir = args.base_dir();
@@ -536,9 +587,16 @@ fn run_single_project_analysis(args: &StandardArgs) -> Result<()> {
     // Handle both file and directory modes
     for path in &args.paths {
         if path.is_file() && path.extension().map_or(false, |e| e == "rs") {
-            all_files.push(path.clone());
+            if !should_exclude(path, exclude_dirs) {
+                all_files.push(path.clone());
+            }
         } else if path.is_dir() {
-            all_files.extend(find_rust_files(&[path.clone()]));
+            let files = find_rust_files(&[path.clone()]);
+            for file in files {
+                if !should_exclude(&file, exclude_dirs) {
+                    all_files.push(file);
+                }
+            }
         }
     }
     
@@ -565,13 +623,16 @@ fn run_single_project_analysis(args: &StandardArgs) -> Result<()> {
 }
 
 /// Run analysis on multiple projects (multi-codebase mode)
-fn run_multi_codebase_analysis(base_dir: &Path) -> Result<()> {
+fn run_multi_codebase_analysis(base_dir: &Path, exclude_dirs: &[PathBuf]) -> Result<()> {
     log!("Multi-codebase scanning mode");
     log!("Base directory: {}", base_dir.display());
+    if !exclude_dirs.is_empty() {
+        log!("Excluding: {:?}", exclude_dirs.iter().map(|p| p.display().to_string()).collect::<Vec<_>>());
+    }
     log!("");
     
     // Discover all projects with Verus files
-    let projects = discover_verus_projects(base_dir)?;
+    let projects = discover_verus_projects(base_dir, exclude_dirs)?;
     
     if projects.is_empty() {
         log!("No Verus projects found in {}", base_dir.display());
@@ -629,7 +690,7 @@ fn run_multi_codebase_analysis(base_dir: &Path) -> Result<()> {
 }
 
 /// Discover all projects containing Verus files in a directory
-fn discover_verus_projects(base_dir: &Path) -> Result<HashMap<String, Vec<PathBuf>>> {
+fn discover_verus_projects(base_dir: &Path, exclude_dirs: &[PathBuf]) -> Result<HashMap<String, Vec<PathBuf>>> {
     let mut projects: HashMap<String, Vec<PathBuf>> = HashMap::new();
     
     // Find all subdirectories (potential projects)
@@ -641,8 +702,12 @@ fn discover_verus_projects(base_dir: &Path) -> Result<HashMap<String, Vec<PathBu
             if let Some(name) = path.file_name() {
                 let name_str = name.to_string_lossy();
                 if !name_str.starts_with('.') && name_str != "target" {
+                    // Skip excluded directories
+                    if should_exclude(&path, exclude_dirs) {
+                        continue;
+                    }
                     let project_name = name.to_string_lossy().to_string();
-                    let verus_files = find_verus_files_in_project(&path)?;
+                    let verus_files = find_verus_files_in_project(&path, exclude_dirs)?;
                     
                     if !verus_files.is_empty() {
                         projects.insert(project_name, verus_files);
@@ -656,12 +721,16 @@ fn discover_verus_projects(base_dir: &Path) -> Result<HashMap<String, Vec<PathBu
 }
 
 /// Find all Verus files in a project directory
-fn find_verus_files_in_project(project_dir: &Path) -> Result<Vec<PathBuf>> {
+fn find_verus_files_in_project(project_dir: &Path, exclude_dirs: &[PathBuf]) -> Result<Vec<PathBuf>> {
     let mut verus_files = Vec::new();
     
     // Find all .rs files
     for entry in WalkDir::new(project_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
+        // Skip excluded directories
+        if should_exclude(path, exclude_dirs) {
+            continue;
+        }
         if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
             // Check if it contains verus! macro
             if contains_verus_macro(path)? {
