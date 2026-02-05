@@ -82,6 +82,7 @@ struct MinimizeArgs {
     dry_run: bool,
     max_lemmas: Option<usize>,
     max_asserts: Option<usize>,
+    max_admits: Option<usize>,
     max_proof_blocks: Option<usize>,
     exclude_dirs: Vec<String>,
     danger_mode: bool,
@@ -89,6 +90,7 @@ struct MinimizeArgs {
     update_broadcasts: bool,
     apply_lib_broadcasts: bool,
     assert_minimization: bool,
+    admit_minimization: bool,
     proof_block_minimization: bool,
     single_file: Option<PathBuf>,
 }
@@ -229,6 +231,7 @@ impl MinimizeArgs {
         let mut dry_run = false;
         let mut max_lemmas: Option<usize> = None;
         let mut max_asserts: Option<usize> = None;
+        let mut max_admits: Option<usize> = None;
         let mut max_proof_blocks: Option<usize> = None;
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut update_broadcasts = false;
@@ -236,6 +239,7 @@ impl MinimizeArgs {
         let mut danger_mode = false;
         let mut fail_fast = false;
         let mut assert_minimization = false;
+        let mut admit_minimization = false;
         let mut proof_block_minimization = false;
         let mut single_file: Option<PathBuf> = None;
         
@@ -325,6 +329,21 @@ impl MinimizeArgs {
                     assert_minimization = true; // -A implies -a
                     i += 1;
                 }
+                "--admit-minimization" | "-m" => {
+                    admit_minimization = true;
+                    i += 1;
+                }
+                "--max-admits" | "-M" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-M/--max-admits requires a number"));
+                    }
+                    let n: usize = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid number: {}", args[i]))?;
+                    max_admits = Some(n);
+                    admit_minimization = true; // -M implies -m
+                    i += 1;
+                }
                 "--proof-block-minimization" | "-p" => {
                     proof_block_minimization = true;
                     i += 1;
@@ -374,6 +393,7 @@ impl MinimizeArgs {
             dry_run, 
             max_lemmas, 
             max_asserts, 
+            max_admits,
             max_proof_blocks,
             exclude_dirs, 
             update_broadcasts, 
@@ -381,6 +401,7 @@ impl MinimizeArgs {
             danger_mode, 
             fail_fast, 
             assert_minimization,
+            admit_minimization,
             proof_block_minimization,
             single_file,
         })
@@ -403,6 +424,8 @@ impl MinimizeArgs {
         log!("  -N, --number-of-lemmas N    Limit to testing N lemmas (for incremental runs)");
         log!("  -a, --assert-minimization   Enable assert minimization (Phase 9 & 10)");
         log!("  -A, --max-asserts N         Limit to testing N asserts (implies -a)");
+        log!("  -m, --admit-minimization    Test if admit() calls can be removed (Phase 11)");
+        log!("  -M, --max-admits N          Limit to testing N admits (implies -m)");
         log!("  -p, --proof-block-minimization  Test if proof {{}} blocks are necessary");
         log!("  -P, --max-proof-blocks N    Limit to testing N proof blocks (implies -p)");
         log!("  -e, --exclude DIR           Exclude directory from analysis (can use multiple times)");
@@ -2753,6 +2776,136 @@ fn test_assert(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Admit detection and testing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct AdmitInfo {
+    file: PathBuf,
+    line: usize,
+    content: String,      // The admit() statement
+    context: String,      // Function/lemma name it's in
+}
+
+/// Find all admit() calls in a file using ra_ap_syntax token-based parsing
+/// This works correctly with Verus code inside verus! { } blocks
+fn find_admits_in_file(file: &Path) -> Result<Vec<AdmitInfo>> {
+    let content = std::fs::read_to_string(file)?;
+    let mut admits = Vec::new();
+    
+    // Parse with ra_ap_syntax for token-based analysis
+    let parse = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+    let syntax = parse.tree().syntax().clone();
+    
+    // Collect all tokens
+    let tokens: Vec<_> = syntax.descendants_with_tokens()
+        .filter_map(|it| it.into_token())
+        .collect();
+    
+    // Track current function context
+    let mut current_fn = "unknown".to_string();
+    
+    // Helper to get line number from offset
+    let line_from_offset = |content: &str, offset: usize| -> usize {
+        content[..offset.min(content.len())].lines().count()
+    };
+    
+    for (i, token) in tokens.iter().enumerate() {
+        // Track function context
+        if token.kind() == SyntaxKind::FN_KW {
+            // Look ahead for the function name (IDENT after fn)
+            for j in (i + 1)..tokens.len().min(i + 5) {
+                if tokens[j].kind() == SyntaxKind::IDENT {
+                    current_fn = tokens[j].text().to_string();
+                    break;
+                }
+            }
+        }
+        
+        // Look for admit() calls
+        if token.kind() == SyntaxKind::IDENT && token.text() == "admit" {
+            // Check if followed by (
+            if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::L_PAREN {
+                let offset: usize = token.text_range().start().into();
+                let line = line_from_offset(&content, offset);
+                
+                admits.push(AdmitInfo {
+                    file: file.to_path_buf(),
+                    line,
+                    content: "admit()".to_string(),
+                    context: current_fn.clone(),
+                });
+            }
+        }
+    }
+    
+    Ok(admits)
+}
+
+/// Comment out an admit and run verification
+/// Returns (needed, verify_time, time_saved) where needed=true means verification failed
+fn test_admit(
+    admit_info: &AdmitInfo,
+    codebase: &Path,
+    baseline_time: Duration,
+) -> Result<(bool, Duration, Duration)> {
+    // Read the file
+    let content = std::fs::read_to_string(&admit_info.file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    
+    // Find the full extent of the admit (may span multiple lines with parentheses)
+    let start_line = admit_info.line;
+    let mut end_line = start_line;
+    let mut paren_depth = 0;
+    let mut found_open_paren = false;
+    
+    for i in (start_line - 1)..lines.len() {
+        let line = lines[i];
+        for ch in line.chars() {
+            if ch == '(' {
+                paren_depth += 1;
+                found_open_paren = true;
+            } else if ch == ')' {
+                paren_depth -= 1;
+            }
+        }
+        end_line = i + 1;
+        if found_open_paren && paren_depth == 0 {
+            break;
+        }
+    }
+    
+    // Comment out the admit
+    let original = comment_out_lines(&admit_info.file, start_line, end_line, "TESTING admit")?;
+    
+    // Run verification with timing
+    let start = Instant::now();
+    let (success, _stderr) = run_verus(codebase)?;
+    let verify_time = start.elapsed();
+    
+    if success {
+        // Verification passed without this admit - proof is now complete!
+        // Update the marker to permanent
+        restore_lines(&admit_info.file, start_line, &original)?;
+        comment_out_lines(&admit_info.file, start_line, end_line, "UNNEEDED admit")?;
+        
+        let time_saved = if baseline_time > verify_time {
+            baseline_time - verify_time
+        } else {
+            Duration::ZERO
+        };
+        
+        Ok((false, verify_time, time_saved)) // false = not needed (proof complete!)
+    } else {
+        // Verification failed - admit is still needed (proof hole remains)
+        restore_lines(&admit_info.file, start_line, &original)?;
+        
+        Ok((true, verify_time, Duration::ZERO)) // true = needed (still a proof hole)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Proof block detection and testing
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3221,8 +3374,9 @@ fn main() -> Result<()> {
     log!("  Phase 8:  Test lemma necessity (can codebase verify without it?)");
     log!("  Phase 9:  Test library asserts (can we remove any?)");
     log!("  Phase 10: Test codebase asserts (can we remove any?)");
-    log!("  Phase 11: Test proof {{}} blocks (-p flag)");
-    log!("  Phase 12: Analyze and verify final codebase");
+    log!("  Phase 11: Test admits (can we remove any? -m flag)");
+    log!("  Phase 12: Test proof {{}} blocks (-p flag)");
+    log!("  Phase 13: Analyze and verify final codebase");
     log!();
     log!("Comment markers inserted:");
     log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
@@ -3231,7 +3385,8 @@ fn main() -> Result<()> {
     log!("  // Veracity: USED                   - Phase 8: Lemma required, restored after test");
     log!("  // Veracity: UNUSED                 - Phase 8: Lemma not needed, left commented out");
     log!("  // Veracity: UNNEEDED assert        - Phase 9/10: Assert not needed, left commented");
-    log!("  // Veracity: UNNEEDED proof block   - Phase 11: Proof block not needed, left commented");
+    log!("  // Veracity: UNNEEDED admit         - Phase 11: Admit not needed, left commented");
+    log!("  // Veracity: UNNEEDED proof block   - Phase 12: Proof block not needed, left commented");
     log!("  // Veracity: UNNEEDED               - Phase 8: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
@@ -4158,11 +4313,102 @@ fn main() -> Result<()> {
         log!("Phase 10: Skipped (use -a flag to enable assert minimization)");
     }
     
-    // Phase 11: Test proof blocks
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 11: Test admits (only if -m flag)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    if args.admit_minimization {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 11: Testing admits");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        log!("For each admit: comment out, verify. If passes → proof is complete!");
+        log!();
+        
+        // Get updated baseline
+        let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
+        
+        // Determine which files to scan
+        let files_to_scan: Vec<PathBuf> = if let Some(ref single_file) = args.single_file {
+            vec![single_file.clone()]
+        } else {
+            // Scan all files (library + codebase)
+            let mut all_files = find_rust_files(&args.library);
+            all_files.extend(find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs));
+            all_files
+        };
+        
+        // Find all admits
+        let mut all_admits: Vec<AdmitInfo> = Vec::new();
+        for file in &files_to_scan {
+            if let Ok(admits) = find_admits_in_file(file) {
+                all_admits.extend(admits);
+            }
+        }
+        
+        let test_count = args.max_admits.unwrap_or(all_admits.len()).min(all_admits.len());
+        log!("Found {} admits, testing {}", all_admits.len(), test_count);
+        log!();
+        
+        let mut admits_tested = 0;
+        let mut admits_removed = 0;
+        let mut time_saved = Duration::ZERO;
+        
+        for (i, admit_info) in all_admits.iter().take(test_count).enumerate() {
+            let rel_path = admit_info.file.strip_prefix(&args.codebase).unwrap_or(&admit_info.file);
+            log_no_newline!("[{}/{}] admit L{} in {} ({})... ",
+                i + 1, test_count,
+                admit_info.line,
+                admit_info.context,
+                rel_path.display());
+            
+            if args.dry_run {
+                log!("(dry-run, skipped)");
+                continue;
+            }
+            
+            let (needed, verify_time, saved) = test_admit(admit_info, &args.codebase, baseline_time)?;
+            admits_tested += 1;
+            
+            let time_diff = verify_time.as_secs_f64() - baseline_time.as_secs_f64();
+            let time_note = if time_diff.abs() < 0.05 {
+                "~0s".to_string()
+            } else if time_diff > 0.0 {
+                format!("+{:.1}s", time_diff)
+            } else {
+                format!("{:.1}s", time_diff)
+            };
+            
+            if needed {
+                log!("NEEDED (proof hole remains) [initial {} -> now {} (incremental {})]", 
+                    format_duration(baseline_time), format_duration(verify_time), time_note);
+            } else {
+                admits_removed += 1;
+                time_saved += saved;
+                log!("UNNEEDED (proof complete!) [initial {} -> now {} (incremental {})]", 
+                    format_duration(baseline_time), format_duration(verify_time), time_note);
+            }
+            
+            if args.fail_fast && !needed {
+                log!("  (fail-fast: stopping after first removable admit)");
+                break;
+            }
+        }
+        
+        log!();
+        log!("Phase 11 Summary: {} tested, {} removed (proof holes closed!), {} time saved", 
+            admits_tested, admits_removed, format_duration(time_saved));
+    } else {
+        log!();
+        log!("Phase 11: Skipped (use -m flag to enable admit minimization)");
+    }
+    
+    // Phase 12: Test proof blocks
     if args.proof_block_minimization {
         log!();
         log!("═══════════════════════════════════════════════════════════════");
-        log!("Phase 11: Testing proof {{}} blocks");
+        log!("Phase 12: Testing proof {{}} blocks");
         log!("═══════════════════════════════════════════════════════════════");
         log!();
         
@@ -4248,12 +4494,12 @@ fn main() -> Result<()> {
             }
             
             log!();
-            log!("Phase 11 Summary: {} tested, {} removed (commented), {} time saved", 
+            log!("Phase 12 Summary: {} tested, {} removed (commented), {} time saved", 
                 blocks_tested, blocks_removed, format_duration(time_saved));
         }
     } else {
         log!();
-        log!("Phase 11: Skipped (use -p flag to enable proof block minimization)");
+        log!("Phase 12: Skipped (use -p flag to enable proof block minimization)");
     }
     
     // Update stats
@@ -4266,10 +4512,10 @@ fn main() -> Result<()> {
         }
     }
     
-    // Phase 12: Final verification and LOC count
+    // Phase 13: Final verification and LOC count
     log!();
     log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 12: Analyzing and verifying final codebase");
+    log!("Phase 13: Analyzing and verifying final codebase");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     
