@@ -2,38 +2,83 @@ Logging to: /home/milnes/projects/veracity/analyses/veracity-search.log
 Verus Search
 ============
 
-Pattern: to_multiset^+
+Pattern: subset finite lemma
 Searching: /home/milnes/projects/verus/source/vstd
-Files: 87, Functions: 2138, Matches: 19
+Files: 89, Functions: 2155, Matches: 12
 
-[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:151: [0m
-[38;5;22m    pub proof fn lemma_sort_by_ensures(self, leq: spec_fn(A, A) -> bool)[0m
+[31m/home/milnes/projects/verus/source/vstd/multiset.rs:116: [0m
+/// Returns `true` is the left argument is contained in the right argument,
+/// that is, if for each value `v`, the number of occurences in the left
+/// is at most the number of occurences in the right.
+[38;5;22m    pub open spec fn subset_of(self, m2: Self) -> bool[0m
+
+[31m/home/milnes/projects/verus/source/vstd/tokens/set.rs:742: [0m
+/// Shows that if a [`GhostSingleton`] and a [`GhostSubset`] are not owning the same value
+[38;5;22m    pub proof fn disjoint_subset(tracked &mut self, tracked other: &GhostSubset<T>)[0m
 [38;5;22m        requires[0m
-[38;5;22m            total_ordering(leq),[0m
+[38;5;22m            old(self).id() == other.id(),[0m
 [38;5;22m        ensures[0m
-[38;5;22m            self.to_multiset() =~= self.sort_by(leq).to_multiset(),[0m
-[38;5;22m            sorted_by(self.sort_by(leq), leq),[0m
-[38;5;22m            forall|x: A| !self.contains(x) ==> !(#[trigger] self.sort_by(leq).contains(x)),[0m
-[38;5;22m        decreases self.len(),[0m
+[38;5;22m            self.id() == old(self).id(),[0m
+[38;5;22m            self@ == old(self)@,[0m
+[38;5;22m            !other@.contains(self@),[0m
 
-[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:544: [0m
-/// Proof of function to_multiset() correctness
-[38;5;22m    pub broadcast proof fn to_multiset_ensures(self)[0m
-[38;5;22m        ensures[0m
-[38;5;22m            forall|a: A| #[trigger] (self.push(a).to_multiset()) =~= self.to_multiset().insert(a),  // to_multiset_build[0m
-[38;5;22m            forall|i: int|[0m
-[38;5;22m                0 <= i < self.len() ==> #[trigger] (self.remove(i).to_multiset())[0m
-[38;5;22m                    =~= self.to_multiset().remove(self[i]),  // to_multiset_remove[0m
-[38;5;22m            self.len() == #[trigger] self.to_multiset().len(),  // to_multiset_len[0m
-[38;5;22m            forall|a: A|[0m
-[38;5;22m                self.contains(a) <==> #[trigger] self.to_multiset().count(a)[0m
-[38;5;22m                    > 0,  // to_multiset_contains[0m
-
-[31m/home/milnes/projects/verus/source/vstd/seq_lib.rs:883: [0m
-/// Given a sequence with no duplicates, each element occurs only
-/// once in its conversion to a multiset
-[38;5;22m    pub proof fn lemma_multiset_has_no_duplicates(self)[0m
+[31m/home/milnes/projects/verus/source/vstd/tokens/set.rs:754: [0m
+/// Shows that if a [`GhostSingleton`] and a [`GhostPersistentSubset`] are not owning the same value
+[38;5;22m    pub proof fn disjoint_persistent_subset([0m
+[38;5;22m        tracked &mut self,[0m
+[38;5;22m        tracked other: &GhostPersistentSubset<T>,[0m
+[38;5;22m    )[0m
 [38;5;22m        requires[0m
-[38;5;22m            self.no_duplicates(),[0m
+[38;5;22m            old(self).id() == other.id(),[0m
 [38;5;22m        ensures[0m
-[38;5;22m            forall|x: A| self.to_multiset().contains(x) ==> self.to_multiset().count(x) == 1,[0m
+[38;5;22m            self.id() == old(self).id(),[0m
+[38;5;22m            self@ == old(self)@,[0m
+[38;5;22m            !other@.contains(self@),[0m
+
+[31m/home/milnes/projects/verus/source/vstd/tokens/set.rs:769: [0m
+/// Convert the [`GhostSingleton`] a [`GhostSubset`]
+[38;5;22m    pub proof fn subset(tracked self) -> (tracked r: GhostSubset<T>)[0m
+[38;5;22m        ensures[0m
+[38;5;22m            r.id() == self.id(),[0m
+[38;5;22m            r@ == set![self@],[0m
+
+[31m/home/milnes/projects/verus/source/vstd/tokens/set.rs:866: [0m
+/// Shows that if a [`GhostPersistentSingleton`] and a [`GhostSubset`] are not owning the same value
+[38;5;22m    pub proof fn disjoint_subset(tracked &mut self, tracked other: &GhostSubset<T>)[0m
+[38;5;22m        requires[0m
+[38;5;22m            old(self).id() == other.id(),[0m
+[38;5;22m        ensures[0m
+[38;5;22m            self.id() == old(self).id(),[0m
+[38;5;22m            self@ == old(self)@,[0m
+[38;5;22m            !other@.contains(self@),[0m
+
+[31m/home/milnes/projects/verus/source/vstd/tokens/set.rs:878: [0m
+/// Convert the [`GhostPersistentSingleton`] a [`GhostPersistentSubset`]
+[38;5;22m    pub proof fn subset(tracked self) -> (tracked r: GhostPersistentSubset<T>)[0m
+[38;5;22m        ensures[0m
+[38;5;22m            r.id() == self.id(),[0m
+[38;5;22m            r@ == set![self@],[0m
+
+[31m/home/milnes/projects/verus/source/vstd/set_lib.rs:422: [0m
+/// If there is an element not present in a subset, its length is stricly smaller.
+[38;5;22m    pub proof fn lemma_subset_not_in_lt(self: Set<A>, s2: Set<A>, elt: A)[0m
+[38;5;22m        requires[0m
+[38;5;22m            self.subset_of(s2),[0m
+[38;5;22m            s2.finite(),[0m
+[38;5;22m            !self.contains(elt),[0m
+[38;5;22m            s2.contains(elt),[0m
+[38;5;22m        ensures[0m
+[38;5;22m            self.len() < s2.len(),[0m
+
+[31m/home/milnes/projects/verus/source/vstd/set_lib.rs:626: [0m
+[38;5;22m    pub broadcast proof fn lemma_set_all_subset(self, s2: Set<A>, p: spec_fn(A) -> bool)[0m
+[38;5;22m        requires[0m
+[38;5;22m            #[trigger] self.subset_of(s2),[0m
+[38;5;22m            s2.all(p),[0m
+[38;5;22m        ensures[0m
+[38;5;22m            #[trigger] self.all(p),[0m
+
+[31m/home/milnes/projects/verus/source/vstd/set_lib.rs:866: [0m
+/// If `s1` is a subset of finite set `s2`, then the size of `s1` is less than or equal to
+/// the size of `s2` and `s1` must be finite.
+[38;5;22mpub proof fn lemma_len_subset<A>(s1: Set<A>, s2: Set<A>)[0m

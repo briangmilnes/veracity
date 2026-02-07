@@ -1,5 +1,4 @@
 # Shortcuts for release builds (cargo b, cargo r, cargo t)
-# Note: can't alias built-in commands, use `make` instead
 [alias]
 b = "build --release -j 6"
 r = "run --release"

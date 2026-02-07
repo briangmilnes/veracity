@@ -1,0 +1,11 @@
+---
+description: Do not automatically clean up or restore the fixture after modification
+globs:
+alwaysApply: true
+---
+
+# Fixture Cleanup Policy
+
+**NEVER run `git checkout`, `git restore`, or any cleanup on `tests/fixtures/APAS-VERUS` unless the user explicitly asks.**
+
+After reordering or modifying the fixture, leave it in its modified state. The user may want to inspect the results.

@@ -1,0 +1,30 @@
+---
+description: NEVER modify, write, run tools on, or commit to any repository outside of /home/milnes/projects/veracity
+globs:
+alwaysApply: true
+---
+
+# External Repository Protection
+
+**ABSOLUTE RULE: You may NEVER modify any file outside of `/home/milnes/projects/veracity`.**
+
+This includes but is not limited to:
+
+- `/home/milnes/projects/APAS-VERUS/` — the live codebase. NEVER run reorder, write, or any file-modifying command against it.
+- Any other repository under `/home/milnes/projects/` that is not `veracity`.
+
+## What you CAN do
+
+- Read files in external repos for reference (grep, cat, read).
+- Run the veracity analysis tools in **read-only mode** (no `-r`/`--reorder`) against external repos.
+- Run dry-run (`-n`/`--dry-run`) against external repos.
+
+## The fixture
+
+- The ONLY copy of APAS-VERUS you may modify is the fixture at `tests/fixtures/APAS-VERUS/`.
+- After any modification to the fixture, you MUST `git checkout -- .` to restore it before ending your task.
+- NEVER commit changes to the fixture's git repository.
+
+## Why
+
+Running file-modifying tools (`-r`, `--reorder`) on the live APAS-VERUS repo pollutes it with generated content (ToC headers, section markers, reordered code) that then gets accidentally committed upstream. This happened and caused real damage.

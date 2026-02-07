@@ -130,3 +130,7 @@ path = "src/bin/review_string_hacking.rs"
 [[bin]]
 name = "veracity-fix-comment-formatting"
 path = "src/bin/fix_comment_formatting.rs"
+
+[[bin]]
+name = "veracity-review-verus-style"
+path = "src/bin/review_verus_style.rs"

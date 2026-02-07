@@ -19,6 +19,7 @@ struct VerusLocCounts {
     spec: usize,
     proof: usize,
     exec: usize,
+    rust: usize,  // Plain Rust code outside verus! blocks
     total: usize,
 }
 
@@ -35,6 +36,9 @@ fn count_verus_lines_in_file(path: &Path) -> Result<VerusLocCounts> {
     let mut counts = VerusLocCounts::default();
     counts.total = content.lines().count();
     
+    // Track which lines are inside verus! blocks
+    let mut verus_lines = std::collections::HashSet::new();
+    
     // Find verus! macro calls and analyze their token tree
     for node in root.descendants() {
         if node.kind() == SyntaxKind::MACRO_CALL {
@@ -42,6 +46,16 @@ fn count_verus_lines_in_file(path: &Path) -> Result<VerusLocCounts> {
                 // Check if this is a verus! macro
                 if let Some(path) = macro_call.path() {
                     if path.to_string() == "verus" {
+                        // Track which lines are in this verus! block
+                        let range = macro_call.syntax().text_range();
+                        let start_offset: usize = range.start().into();
+                        let end_offset: usize = range.end().into();
+                        let start_line = content[..start_offset].lines().count();
+                        let end_line = content[..end_offset].lines().count();
+                        for line in start_line..=end_line {
+                            verus_lines.insert(line);
+                        }
+                        
                         // Extract the token tree and walk it directly
                         if let Some(token_tree) = macro_call.token_tree() {
                             let tree_start: usize = token_tree.syntax().text_range().start().into();
@@ -49,6 +63,19 @@ fn count_verus_lines_in_file(path: &Path) -> Result<VerusLocCounts> {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    // Count non-verus lines as plain Rust (code outside verus! blocks)
+    // Only count non-blank, non-comment-only lines
+    for (idx, line) in content.lines().enumerate() {
+        let line_num = idx + 1; // 1-indexed
+        if !verus_lines.contains(&line_num) {
+            let trimmed = line.trim();
+            // Skip blank lines and comment-only lines
+            if !trimmed.is_empty() && !trimmed.starts_with("//") && !trimmed.starts_with("/*") && !trimmed.starts_with("*") {
+                counts.rust += 1;
             }
         }
     }
@@ -264,44 +291,51 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
     let mut total_spec = 0;
     let mut total_proof = 0;
     let mut total_exec = 0;
+    let mut total_rust = 0;
     let mut total_lines = 0;
     
-    println!("Verus LOC (Spec/Proof/Exec)");
-    println!();
+    println!("{:>8}/{:>8}/{:>8}/{:>8} File", "Spec", "Proof", "Exec", "Rust");
+    println!("{}", "-".repeat(44));
     
     for file in &rust_files {
         if let Ok(counts) = count_verus_lines_in_file(file) {
             if let Ok(rel_path) = file.strip_prefix(base_dir) {
-                println!("{:>8}/{:>8}/{:>8} {}", 
+                println!("{:>8}/{:>8}/{:>8}/{:>8} {}", 
                     format_number(counts.spec),
                     format_number(counts.proof), 
                     format_number(counts.exec),
+                    format_number(counts.rust),
                     rel_path.display()
                 );
             } else {
-                println!("{:>8}/{:>8}/{:>8} {}", 
+                println!("{:>8}/{:>8}/{:>8}/{:>8} {}", 
                     format_number(counts.spec),
                     format_number(counts.proof),
                     format_number(counts.exec),
+                    format_number(counts.rust),
                     file.display()
                 );
             }
             total_spec += counts.spec;
             total_proof += counts.proof;
             total_exec += counts.exec;
+            total_rust += counts.rust;
             total_lines += counts.total;
         }
     }
     
-    println!();
-    println!("{:>8}/{:>8}/{:>8} total", 
+    println!("{}", "-".repeat(44));
+    println!("{:>8}/{:>8}/{:>8}/{:>8} Total", 
         format_number(total_spec),
         format_number(total_proof),
-        format_number(total_exec)
+        format_number(total_exec),
+        format_number(total_rust)
     );
-    println!("{:>8} total lines", format_number(total_lines));
-    println!();
-    println!("{} files analyzed in {}ms", rust_files.len(), start.elapsed().as_millis());
+    println!("{:>8} total lines, {} files analyzed in {}ms", 
+        format_number(total_lines), 
+        rust_files.len(), 
+        start.elapsed().as_millis()
+    );
     
     Ok(())
 }
@@ -378,6 +412,7 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
             let mut spec = 0;
             let mut proof = 0;
             let mut exec = 0;
+            let mut rust = 0;
             let mut total = 0;
             
             for file in &rust_files {
@@ -385,20 +420,22 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
                     spec += counts.spec;
                     proof += counts.proof;
                     exec += counts.exec;
+                    rust += counts.rust;
                     total += counts.total;
                 }
             }
             
-            println!("  Verus LOC: {:>8} spec / {:>8} proof / {:>8} exec",
+            println!("  Verus LOC: {:>8} spec / {:>8} proof / {:>8} exec / {:>8} rust",
                 format_number(spec),
                 format_number(proof),
-                format_number(exec)
+                format_number(exec),
+                format_number(rust)
             );
             println!("  Total lines: {:>8}", format_number(total));
             println!("  Files: {}", rust_files.len());
             println!();
             
-            all_results.push((project_name.to_string(), spec, proof, exec, total, rust_files.len()));
+            all_results.push((project_name.to_string(), spec, proof, exec, rust, total, rust_files.len()));
         } else {
             // Count regular Rust LOC for this project
             let rust_files = find_rust_files(&search_dirs);
@@ -414,7 +451,7 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
             println!("  Files: {}", rust_files.len());
             println!();
             
-            all_results.push((project_name.to_string(), 0, 0, 0, loc, rust_files.len()));
+            all_results.push((project_name.to_string(), 0, 0, 0, 0, loc, rust_files.len()));
         }
     }
     
@@ -422,26 +459,28 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
     if is_verus {
         // Separate into Verus projects (have spec/proof/exec) and non-Verus projects
         let verus_projects: Vec<_> = all_results.iter()
-            .filter(|(_, s, p, e, _, _)| *s > 0 || *p > 0 || *e > 0)
+            .filter(|(_, s, p, e, _, _, _)| *s > 0 || *p > 0 || *e > 0)
             .collect();
         let non_verus_projects: Vec<_> = all_results.iter()
-            .filter(|(_, s, p, e, _, _)| *s == 0 && *p == 0 && *e == 0)
+            .filter(|(_, s, p, e, _, _, _)| *s == 0 && *p == 0 && *e == 0)
             .collect();
         
         if !verus_projects.is_empty() {
             println!("=== VERUS PROJECTS ({} projects) ===", verus_projects.len());
             println!();
             
-            let total_spec: usize = verus_projects.iter().map(|(_, s, _, _, _, _)| *s).sum();
-            let total_proof: usize = verus_projects.iter().map(|(_, _, p, _, _, _)| *p).sum();
-            let total_exec: usize = verus_projects.iter().map(|(_, _, _, e, _, _)| *e).sum();
-            let total_lines: usize = verus_projects.iter().map(|(_, _, _, _, t, _)| *t).sum();
-            let total_files: usize = verus_projects.iter().map(|(_, _, _, _, _, f)| *f).sum();
+            let total_spec: usize = verus_projects.iter().map(|(_, s, _, _, _, _, _)| *s).sum();
+            let total_proof: usize = verus_projects.iter().map(|(_, _, p, _, _, _, _)| *p).sum();
+            let total_exec: usize = verus_projects.iter().map(|(_, _, _, e, _, _, _)| *e).sum();
+            let total_rust: usize = verus_projects.iter().map(|(_, _, _, _, r, _, _)| *r).sum();
+            let total_lines: usize = verus_projects.iter().map(|(_, _, _, _, _, t, _)| *t).sum();
+            let total_files: usize = verus_projects.iter().map(|(_, _, _, _, _, _, f)| *f).sum();
             
-            println!("  {:>8} spec / {:>8} proof / {:>8} exec",
+            println!("  {:>8} spec / {:>8} proof / {:>8} exec / {:>8} rust",
                 format_number(total_spec),
                 format_number(total_proof),
-                format_number(total_exec)
+                format_number(total_exec),
+                format_number(total_rust)
             );
             println!("  {:>8} total lines", format_number(total_lines));
             println!("  {} files in {} projects", total_files, verus_projects.len());
@@ -452,10 +491,12 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
             println!("=== NON-VERUS PROJECTS ({} projects) ===", non_verus_projects.len());
             println!();
             
-            let total_lines: usize = non_verus_projects.iter().map(|(_, _, _, _, t, _)| *t).sum();
-            let total_files: usize = non_verus_projects.iter().map(|(_, _, _, _, _, f)| *f).sum();
+            let total_rust: usize = non_verus_projects.iter().map(|(_, _, _, _, r, _, _)| *r).sum();
+            let total_lines: usize = non_verus_projects.iter().map(|(_, _, _, _, _, t, _)| *t).sum();
+            let total_files: usize = non_verus_projects.iter().map(|(_, _, _, _, _, _, f)| *f).sum();
             
-            println!("  {:>8} total lines (plain Rust)", format_number(total_lines));
+            println!("  {:>8} rust (plain Rust code)", format_number(total_rust));
+            println!("  {:>8} total lines", format_number(total_lines));
             println!("  {} files in {} projects", total_files, non_verus_projects.len());
             println!();
         }
@@ -468,16 +509,18 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
         );
         println!();
         
-        let grand_total_spec: usize = all_results.iter().map(|(_, s, _, _, _, _)| s).sum();
-        let grand_total_proof: usize = all_results.iter().map(|(_, _, p, _, _, _)| p).sum();
-        let grand_total_exec: usize = all_results.iter().map(|(_, _, _, e, _, _)| e).sum();
-        let grand_total_lines: usize = all_results.iter().map(|(_, _, _, _, t, _)| t).sum();
-        let grand_total_files: usize = all_results.iter().map(|(_, _, _, _, _, f)| f).sum();
+        let grand_total_spec: usize = all_results.iter().map(|(_, s, _, _, _, _, _)| s).sum();
+        let grand_total_proof: usize = all_results.iter().map(|(_, _, p, _, _, _, _)| p).sum();
+        let grand_total_exec: usize = all_results.iter().map(|(_, _, _, e, _, _, _)| e).sum();
+        let grand_total_rust: usize = all_results.iter().map(|(_, _, _, _, r, _, _)| r).sum();
+        let grand_total_lines: usize = all_results.iter().map(|(_, _, _, _, _, t, _)| t).sum();
+        let grand_total_files: usize = all_results.iter().map(|(_, _, _, _, _, _, f)| f).sum();
         
-        println!("  {:>8} spec / {:>8} proof / {:>8} exec (Verus)",
+        println!("  {:>8} spec / {:>8} proof / {:>8} exec / {:>8} rust",
             format_number(grand_total_spec),
             format_number(grand_total_proof),
-            format_number(grand_total_exec)
+            format_number(grand_total_exec),
+            format_number(grand_total_rust)
         );
         println!("  {:>8} total lines", format_number(grand_total_lines));
         println!("  {} files in {} projects", grand_total_files, projects.len());
@@ -485,8 +528,8 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
         println!("=== GRAND TOTAL ({} projects) ===", projects.len());
         println!();
         
-        let total_loc: usize = all_results.iter().map(|(_, _, _, _, t, _)| t).sum();
-        let total_files: usize = all_results.iter().map(|(_, _, _, _, _, f)| f).sum();
+        let total_loc: usize = all_results.iter().map(|(_, _, _, _, _, t, _)| t).sum();
+        let total_files: usize = all_results.iter().map(|(_, _, _, _, _, _, f)| f).sum();
         
         println!("  {:>8} total lines", format_number(total_loc));
         println!("  {} files in {} projects", total_files, projects.len());

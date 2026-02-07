@@ -4,69 +4,126 @@
 
 Since Verus is a superset of Rust, Veracity also includes general Rust analysis tools (ported from [Rusticate](https://github.com/briangmilnes/rusticate)).
 
-## 📊 Featured: Rust Stdlib Gap Analysis
+## Featured: veracity-review-verus-style
 
-**What Rust stdlib does vstd actually cover? What's missing?**
+**Automated style enforcement and code organization for Verus projects.**
 
-We analyzed **3,336 real Rust crates** (from top 1,036 crates.io projects) to find out.
+Checks 19 rules covering file structure, imports, traits, impls, iterators, naming, and definition
+order — then can automatically reorder your code and insert a Table of Contents.
 
-### Key Findings
-
-| Metric | Current | Needed for 70% | Needed for 100% |
-|--------|---------|----------------|-----------------|
-| **Modules** | 35 touched | 40 | 84 |
-| **Types** | 29 wrapped | 9 | 48 |
-| **Methods** | 195 specified | 301 | 552 |
-
-**Greedy coverage summary** (minimum items to fully support N% of crates):
-
-```
-Coverage   Modules   Types   Traits   Methods
----------  -------   -----   ------   -------
- 70%          40        9       15       301
- 80%          45       14       20       510
- 90%          59       19       32       552
-100%          84       48       79       552
-```
-
-### Proposed New Wrappings (PART IV)
-
-Filtering out system/IO types (ffi, fs, io, net, process, thread, sync, env, path):
-
-- **358 actionable methods** from 479 total unwrapped
-- **259 methods on already-wrapped types** across 10 types
-- **+938 crate coverage impact**
-
-Actionable types: Vec, Option, Result, Box, Arc, HashMap, HashSet, Rc, String, str
-
-### Two Approaches in vstd
-
-1. **Direct wrappers** (`assume_specification`): Option, Result, Vec, HashMap, HashSet, slice, array
-2. **Replacement modules** (use vstd types): vstd::thread, vstd::cell, vstd::rwlock, vstd::raw_ptr
-
-### Run the Analysis
+### Quick Start
 
 ```bash
-# Parse vstd to inventory what's wrapped (uses Verus AST parser)
-veracity-analyze-libs
-# Output: analyses/vstd_inventory.json
+# Review style (basic checks: rules 1-5, 11-19)
+veracity-review-verus-style src/
 
-# Compare against real Rust usage (from rusticate MIR analysis)
-veracity-analyze-rust-wrapping-needs \
-  -i analyses/vstd_inventory.json \
-  -j ~/projects/rusticate/analyses/rusticate-analyze-modules-mir.json
-# Output: analyses/analyze_rust_wrapping_needs.log
+# Review with all checks including advanced (rules 6-10)
+veracity-review-verus-style -av src/
+
+# Auto-reorder verus!{} blocks to match Rule 18 and insert a Table of Contents
+veracity-review-verus-style -r src/
+
+# Dry run — see what would change without writing files
+veracity-review-verus-style -n src/
+
+# Codebase-relative path (defaults to src/ under the codebase root)
+veracity-review-verus-style -c ~/projects/my-verus-project
 ```
 
-📄 **Full report**: [`analyses/analyze_rust_wrapping_needs.log`](analyses/analyze_rust_wrapping_needs.log)
+Output is in **emacs compile-mode format** (`file:line: warning: [N] message`) so it
+integrates directly with editor jump-to-error workflows.
+
+### What It Checks
+
+| Rules | Category | Description |
+|-------|----------|-------------|
+| 1-3 | **File structure** | `mod` declarations, `use vstd::prelude::*` before `verus!`, `verus!` macro present |
+| 4-8 | **Import grouping** | `std`, `vstd`, `crate`, `crate::*` glob, and `*Lit` imports properly grouped and separated |
+| 9-10 | **Broadcast use** | `broadcast use` block present; type imports have corresponding broadcast groups |
+| 11 | **Broadcast groups** | `Set`/`Seq`/comparison usage has required broadcast groups |
+| 12 | **Trait specs** | Every `fn` in a trait has `requires`/`ensures` specifications |
+| 13-15 | **Impl placement** | Trait impls inside `verus!`; `Debug`/`Display` outside; `PartialEq`/`Eq`/`Clone`/`Hash` inside |
+| 16 | **Macro placement** | `macro_rules! *Lit` definitions at end of file, outside `verus!` |
+| 17 | **Iterators** | Collection types have `Iterator`/`IntoIterator` impls inside `verus!` |
+| 18 | **Definition order** | Items inside `verus!{}` follow the canonical section order (auto-fixable with `-r`) |
+| 19 | **Return names** | Verus return value names are meaningful (not `r`, `result`, `ret`, `res`) |
+
+### Auto-Reorder and Table of Contents (`-r`)
+
+The `-r` flag rewrites files to enforce Rule 18 ordering and inserts a Table of Contents
+at the top of each file. Reordering is AST-based (using `verus_syn`), preserving comments,
+attributes, and original formatting within each item.
+
+A reordered file looks like:
+
+```rust
+// Copyright (C) 2025 ...
+
+//! Module documentation
+
+//  Table of Contents
+//	1. module
+//	2. imports
+//	3. broadcast use
+//	4. type definitions
+//	5. view impls
+//	6. spec fns
+//	7. proof fns/broadcast groups
+//	8. traits
+//	9. impls
+//	10. iterators
+//	11. derive impls in verus!
+//	12. macros
+//	13. derive impls outside verus!
+
+//		1. module
+
+pub mod MyModule {
+    use vstd::prelude::*;
+
+    verus! {
+
+        //		2. imports
+        use std::hash::Hash;
+        ...
+
+        //		3. broadcast use
+        broadcast use { ... }
+
+        //		4. type definitions
+        pub struct MyType { ... }
+
+        //		9. impls
+        impl MyTrait for MyType { ... }
+
+        //		11. derive impls in verus!
+        impl PartialEq for MyType { ... }
+        impl Clone for MyType { ... }
+
+    } // verus!
+
+    //		12. macros
+    #[macro_export]
+    macro_rules! MyTypeLit { ... }
+
+    //		13. derive impls outside verus!
+    impl Debug for MyType { ... }
+    impl Display for MyType { ... }
+}
+```
+
+**Safety**: By default, `-r` refuses to modify files with uncommitted git changes. Use
+`--allow-dirty` to override.
+
+Full style guide: [`docs/VerusStyleGuide.md`](docs/VerusStyleGuide.md)
 
 ---
 
 ## Other Tools
 
-> 📖 Each tool name links to **full documentation** with complete pattern references and examples.
+> Each tool name links to **full documentation** with complete pattern references and examples.
 
-### 🔍 [veracity-search](docs/veracity-search.md) — *[full docs](docs/veracity-search.md)*
+### [veracity-search](docs/veracity-search.md) — Semantic Search
 
 Type-based semantic search for Verus code. Find functions, traits, impls by pattern.
 
@@ -80,11 +137,11 @@ veracity-search -C ~/myproject 'holes'       # search codebase (vstd searched by
 veracity-search --no-vstd -C ~/myproject 'holes'  # search codebase only
 ```
 
-**⚡ Fast**: Searches 6,366 files (57,853 items) across 15 Verus projects in **0.6 seconds**.
+Searches 6,366 files (57,853 items) across 15 Verus projects in **0.6 seconds**.
 
-**🕳️ Proof Holes**: The `holes` pattern finds unsafe fn/impl, unsafe blocks, assume(), and Tracked::assume_new()—comprehensive verification gap detection.
+The `holes` pattern finds unsafe fn/impl, unsafe blocks, assume(), and Tracked::assume_new() for comprehensive verification gap detection.
 
-### 📉 [veracity-minimize-lib](docs/veracity-minimize-lib.md) — *[full docs](docs/veracity-minimize-lib.md)*
+### [veracity-minimize-lib](docs/veracity-minimize-lib.md) — Dependency Minimization
 
 Automatically minimize vstd library dependencies. 12 phases test lemmas, asserts, and proof blocks.
 
@@ -99,7 +156,7 @@ veracity-minimize-lib -c ./myproject -l ./myproject/src/vstdplus \
 
 **Single-file mode** (`-F`): Skips phases 2-8 (library analysis) and directly tests asserts (`-a`) and proof blocks (`-p`) in one file. ~10s baseline + ~15s per test.
 
-### 🕳️ [veracity-review-proof-holes](docs/veracity-proof-holes.md) — *[full docs](docs/veracity-proof-holes.md)*
+### [veracity-review-proof-holes](docs/veracity-proof-holes.md) — Proof Hole Detection
 
 Detect incomplete proofs: `admit()`, `assume(false)`, `#[verifier::external_body]`, axioms with holes.
 
@@ -107,7 +164,7 @@ Detect incomplete proofs: `admit()`, `assume(false)`, `#[verifier::external_body
 veracity-review-proof-holes -d src/
 ```
 
-### 📊 veracity-count-loc
+### veracity-count-loc — Lines of Code
 
 Count lines of code with Verus breakdown.
 
@@ -120,6 +177,27 @@ $ veracity-count-loc -d src/
    ─────────────────────
      253/     277/     743 total (Spec/Proof/Exec)
 ```
+
+### veracity-analyze-vstd-coverage — Stdlib Gap Analysis
+
+Analyze what Rust stdlib `vstd` actually covers. Compared against **3,336 real Rust crates**
+(from top 1,036 crates.io projects).
+
+```bash
+# Parse vstd to inventory what's wrapped (uses Verus AST parser)
+veracity-analyze-libs
+# Output: analyses/vstd_inventory.json
+
+# Compare against real Rust usage (from rusticate MIR analysis)
+veracity-analyze-rust-wrapping-needs \
+  -i analyses/vstd_inventory.json \
+  -j ~/projects/rusticate/analyses/rusticate-analyze-modules-mir.json
+# Output: analyses/analyze_rust_wrapping_needs.log
+```
+
+Full report: [`analyses/analyze_rust_wrapping_needs.log`](analyses/analyze_rust_wrapping_needs.log)
+
+---
 
 ## Installation
 
@@ -136,6 +214,7 @@ export PATH="$PATH:$(pwd)/target/release"
 
 | Category | Tools |
 |----------|-------|
+| **Style** | review-verus-style |
 | **Verification** | proof-holes, axiom-purity, proof-structure, proof-coverage |
 | **Specification** | requires-ensures, invariants, spec-exec-ratio, termination, triggers |
 | **Data Types** | datatype-invariants, view-functions |
@@ -161,7 +240,7 @@ veracity-review proof-holes -d src/  # Specific tool
 
 ## Design Principles
 
-1. **AST-Only**: No string hacking. Uses `ra_ap_syntax` for proper parsing.
+1. **AST-Only**: No string hacking. Uses `ra_ap_syntax` and `verus_syn` for proper parsing.
 2. **Verus-Aware**: Understands `verus!` macros, mode modifiers, Verus attributes.
 3. **Verification-Focused**: Tracks proof completeness, axiom trust, spec coverage.
 

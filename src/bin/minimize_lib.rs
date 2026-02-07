@@ -84,6 +84,7 @@ struct MinimizeArgs {
     max_asserts: Option<usize>,
     max_admits: Option<usize>,
     max_proof_blocks: Option<usize>,
+    max_types: Option<usize>,
     exclude_dirs: Vec<String>,
     danger_mode: bool,
     fail_fast: bool,
@@ -92,6 +93,8 @@ struct MinimizeArgs {
     assert_minimization: bool,
     admit_minimization: bool,
     proof_block_minimization: bool,
+    type_minimization: bool,
+    types_file: Option<PathBuf>,
     single_file: Option<PathBuf>,
 }
 
@@ -233,6 +236,7 @@ impl MinimizeArgs {
         let mut max_asserts: Option<usize> = None;
         let mut max_admits: Option<usize> = None;
         let mut max_proof_blocks: Option<usize> = None;
+        let mut max_types: Option<usize> = None;
         let mut exclude_dirs: Vec<String> = Vec::new();
         let mut update_broadcasts = false;
         let mut apply_lib_broadcasts = false;
@@ -241,6 +245,8 @@ impl MinimizeArgs {
         let mut assert_minimization = false;
         let mut admit_minimization = false;
         let mut proof_block_minimization = false;
+        let mut type_minimization = false;
+        let mut types_file: Option<PathBuf> = None;
         let mut single_file: Option<PathBuf> = None;
         
         let mut i = 1;
@@ -374,6 +380,33 @@ impl MinimizeArgs {
                     single_file = Some(path);
                     i += 1;
                 }
+                "--types" | "-t" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-t/--types requires a file path"));
+                    }
+                    let path = PathBuf::from(&args[i]);
+                    if !path.exists() {
+                        return Err(anyhow::anyhow!("File not found: {}", path.display()));
+                    }
+                    if !path.is_file() {
+                        return Err(anyhow::anyhow!("Not a file: {}", path.display()));
+                    }
+                    types_file = Some(path);
+                    type_minimization = true;
+                    i += 1;
+                }
+                "--max-types" | "-T" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("-T/--max-types requires a number"));
+                    }
+                    let n: usize = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid number: {}", args[i]))?;
+                    max_types = Some(n);
+                    type_minimization = true; // -T implies type minimization
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -395,6 +428,7 @@ impl MinimizeArgs {
             max_asserts, 
             max_admits,
             max_proof_blocks,
+            max_types,
             exclude_dirs, 
             update_broadcasts, 
             apply_lib_broadcasts, 
@@ -403,6 +437,8 @@ impl MinimizeArgs {
             assert_minimization,
             admit_minimization,
             proof_block_minimization,
+            type_minimization,
+            types_file,
             single_file,
         })
     }
@@ -428,6 +464,8 @@ impl MinimizeArgs {
         log!("  -M, --max-admits N          Limit to testing N admits (implies -m)");
         log!("  -p, --proof-block-minimization  Test if proof {{}} blocks are necessary");
         log!("  -P, --max-proof-blocks N    Limit to testing N proof blocks (implies -p)");
+        log!("  -t, --types FILE            Test if types in FILE are used (structs, enums, type aliases)");
+        log!("  -T, --max-types N           Limit to testing N types (implies -t)");
         log!("  -e, --exclude DIR           Exclude directory from analysis (can use multiple times)");
         log!("  -b, --update-broadcasts     Apply broadcast groups to codebase (revert on Z3 errors)");
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
@@ -457,6 +495,9 @@ impl MinimizeArgs {
         log!();
         log!("  # Quick test: 5 proof blocks in a single file:");
         log!("  {} -c ./my-project -l ./my-project/src/lib -F ./my-project/src/main.rs -P 5", name);
+        log!();
+        log!("  # Test if types in a file are used:");
+        log!("  {} -c ./my-project -l ./my-project/src/lib -t ./my-project/src/lib/types.rs", name);
     }
 }
 
@@ -3080,6 +3121,189 @@ fn test_proof_block(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Type detection and testing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A type definition (struct, enum, type alias, trait) found in a file
+#[derive(Debug, Clone)]
+struct TypeInfo {
+    file: PathBuf,
+    name: String,
+    kind: String,        // "struct", "enum", "type", "trait"
+    start_line: usize,
+    end_line: usize,
+    is_pub: bool,
+}
+
+/// Find all type definitions in a file using ra_ap_syntax AST parsing
+fn find_types_in_file(file: &Path) -> Result<Vec<TypeInfo>> {
+    let content = std::fs::read_to_string(file)?;
+    let mut types = Vec::new();
+    
+    // Parse with ra_ap_syntax for AST analysis
+    let parse = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+    let syntax = parse.tree();
+    
+    // Helper to get line number from offset
+    let line_from_offset = |offset: usize| -> usize {
+        content[..offset.min(content.len())].lines().count()
+    };
+    
+    // Find structs
+    for node in syntax.syntax().descendants() {
+        if let Some(struct_def) = ast::Struct::cast(node.clone()) {
+            if let Some(name) = struct_def.name() {
+                let range = struct_def.syntax().text_range();
+                let start_offset: usize = range.start().into();
+                let end_offset: usize = range.end().into();
+                let start_line = line_from_offset(start_offset);
+                let end_line = line_from_offset(end_offset);
+                
+                let is_pub = struct_def.syntax().to_string().trim_start().starts_with("pub");
+                
+                types.push(TypeInfo {
+                    file: file.to_path_buf(),
+                    name: name.text().to_string(),
+                    kind: "struct".to_string(),
+                    start_line,
+                    end_line,
+                    is_pub,
+                });
+            }
+        }
+        
+        // Find enums
+        if let Some(enum_def) = ast::Enum::cast(node.clone()) {
+            if let Some(name) = enum_def.name() {
+                let range = enum_def.syntax().text_range();
+                let start_offset: usize = range.start().into();
+                let end_offset: usize = range.end().into();
+                let start_line = line_from_offset(start_offset);
+                let end_line = line_from_offset(end_offset);
+                
+                let is_pub = enum_def.syntax().to_string().trim_start().starts_with("pub");
+                
+                types.push(TypeInfo {
+                    file: file.to_path_buf(),
+                    name: name.text().to_string(),
+                    kind: "enum".to_string(),
+                    start_line,
+                    end_line,
+                    is_pub,
+                });
+            }
+        }
+        
+        // Find type aliases
+        if let Some(type_alias) = ast::TypeAlias::cast(node.clone()) {
+            if let Some(name) = type_alias.name() {
+                let range = type_alias.syntax().text_range();
+                let start_offset: usize = range.start().into();
+                let end_offset: usize = range.end().into();
+                let start_line = line_from_offset(start_offset);
+                let end_line = line_from_offset(end_offset);
+                
+                let is_pub = type_alias.syntax().to_string().trim_start().starts_with("pub");
+                
+                types.push(TypeInfo {
+                    file: file.to_path_buf(),
+                    name: name.text().to_string(),
+                    kind: "type".to_string(),
+                    start_line,
+                    end_line,
+                    is_pub,
+                });
+            }
+        }
+        
+        // Find traits
+        if let Some(trait_def) = ast::Trait::cast(node.clone()) {
+            if let Some(name) = trait_def.name() {
+                let range = trait_def.syntax().text_range();
+                let start_offset: usize = range.start().into();
+                let end_offset: usize = range.end().into();
+                let start_line = line_from_offset(start_offset);
+                let end_line = line_from_offset(end_offset);
+                
+                let is_pub = trait_def.syntax().to_string().trim_start().starts_with("pub");
+                
+                types.push(TypeInfo {
+                    file: file.to_path_buf(),
+                    name: name.text().to_string(),
+                    kind: "trait".to_string(),
+                    start_line,
+                    end_line,
+                    is_pub,
+                });
+            }
+        }
+    }
+    
+    // Sort by start line
+    types.sort_by_key(|t| t.start_line);
+    
+    Ok(types)
+}
+
+/// Test if a type is used by commenting it out and running verification
+/// Returns (used, verify_time)
+fn test_type(
+    type_info: &TypeInfo,
+    codebase: &Path,
+) -> Result<(bool, Duration)> {
+    // Comment out the type definition
+    let original = comment_out_lines(&type_info.file, type_info.start_line, type_info.end_line, "TESTING type")?;
+    
+    // Run verification with timing
+    let start = Instant::now();
+    let (success, _stderr) = run_verus(codebase)?;
+    let verify_time = start.elapsed();
+    
+    if success {
+        // Verification passed without this type - it's unused
+        // Update the marker to permanent
+        restore_lines(&type_info.file, type_info.start_line, &original)?;
+        comment_out_lines(&type_info.file, type_info.start_line, type_info.end_line, "TYPE UNUSED")?;
+        
+        Ok((false, verify_time)) // false = not used
+    } else {
+        // Verification failed - type is used
+        restore_lines(&type_info.file, type_info.start_line, &original)?;
+        
+        // Add a marker indicating it's used (on the line before the type)
+        mark_type_used(type_info)?;
+        
+        Ok((true, verify_time)) // true = used
+    }
+}
+
+/// Add a "TYPE USED" marker comment before a type definition
+fn mark_type_used(type_info: &TypeInfo) -> Result<()> {
+    let content = std::fs::read_to_string(&type_info.file)?;
+    let lines: Vec<&str> = content.lines().collect();
+    let mut new_lines: Vec<String> = Vec::new();
+    
+    for (i, line) in lines.iter().enumerate() {
+        let line_num = i + 1;
+        if line_num == type_info.start_line {
+            // Check if previous line already has a marker
+            let prev_line = if i > 0 { lines[i - 1].trim() } else { "" };
+            if !prev_line.contains("// Veracity: TYPE USED") {
+                // Add the marker on the same line as a trailing comment won't work for multi-line types
+                // Instead, add it as a prefix to the first line
+                let trimmed = line.trim_start();
+                let indent = &line[..line.len() - trimmed.len()];
+                new_lines.push(format!("{}// Veracity: TYPE USED", indent));
+            }
+        }
+        new_lines.push(line.to_string());
+    }
+    
+    std::fs::write(&type_info.file, new_lines.join("\n") + "\n")?;
+    Ok(())
+}
+
 /// Run single-file mode: just test asserts and proof blocks in one file
 /// Skips all library analysis (phases 2-8)
 fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
@@ -3376,7 +3600,8 @@ fn main() -> Result<()> {
     log!("  Phase 10: Test codebase asserts (can we remove any?)");
     log!("  Phase 11: Test admits (can we remove any? -m flag)");
     log!("  Phase 12: Test proof {{}} blocks (-p flag)");
-    log!("  Phase 13: Analyze and verify final codebase");
+    log!("  Phase 13: Test types (are they used? -t flag)");
+    log!("  Phase 14: Analyze and verify final codebase");
     log!();
     log!("Comment markers inserted:");
     log!("  // Veracity: added broadcast group  - Phase 5/6: Inserted broadcast use block");
@@ -3387,6 +3612,8 @@ fn main() -> Result<()> {
     log!("  // Veracity: UNNEEDED assert        - Phase 9/10: Assert not needed, left commented");
     log!("  // Veracity: UNNEEDED admit         - Phase 11: Admit not needed, left commented");
     log!("  // Veracity: UNNEEDED proof block   - Phase 12: Proof block not needed, left commented");
+    log!("  // Veracity: TYPE USED              - Phase 13: Type is used (verified by removal test)");
+    log!("  // Veracity: TYPE UNUSED            - Phase 13: Type not used, left commented out");
     log!("  // Veracity: UNNEEDED               - Phase 8: Call site not needed, left commented");
     log!();
     log!("═══════════════════════════════════════════════════════════════════════════════");
@@ -4502,6 +4729,100 @@ fn main() -> Result<()> {
         log!("Phase 12: Skipped (use -p flag to enable proof block minimization)");
     }
     
+    // Phase 13: Test types (if enabled)
+    if args.type_minimization {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 13: Testing types");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        
+        // Determine which file to scan
+        let file = if let Some(ref types_file) = args.types_file {
+            types_file.clone()
+        } else {
+            log!("  ERROR: -t/--types requires a file path");
+            return Err(anyhow::anyhow!("-t/--types requires a file path"));
+        };
+        
+        let rel_path = file.strip_prefix(&args.codebase).unwrap_or(&file);
+        log!("  Scanning {} for type definitions...", rel_path.display());
+        
+        // Find all types in the file
+        let all_types = find_types_in_file(&file)?;
+        
+        log!("  Found {} type definitions", all_types.len());
+        
+        // List the types found
+        if !all_types.is_empty() {
+            for type_info in &all_types {
+                let pub_str = if type_info.is_pub { "pub " } else { "" };
+                log!("    L{}-{}: {}{} {}", 
+                    type_info.start_line, type_info.end_line,
+                    pub_str, type_info.kind, type_info.name);
+            }
+        }
+        
+        if all_types.is_empty() {
+            log!("  No types to test.");
+        } else {
+            // Apply limit if specified
+            let test_count = match args.max_types {
+                Some(n) => all_types.len().min(n),
+                None => all_types.len(),
+            };
+            
+            log!();
+            log!("  Testing {} types{}...", 
+                test_count,
+                if test_count < all_types.len() { 
+                    format!(" (limited from {})", all_types.len()) 
+                } else { 
+                    String::new() 
+                });
+            log!();
+            
+            let mut types_tested = 0;
+            let mut types_unused = 0;
+            let mut types_used = 0;
+            
+            for (i, type_info) in all_types.iter().take(test_count).enumerate() {
+                let pub_str = if type_info.is_pub { "pub " } else { "" };
+                log_no_newline!("  [{}/{}] Testing {}{} {}... ",
+                    i + 1, test_count,
+                    pub_str, type_info.kind, type_info.name);
+                
+                if args.dry_run {
+                    log!("(dry-run, skipped)");
+                    continue;
+                }
+                
+                let (used, verify_time) = test_type(type_info, &args.codebase)?;
+                types_tested += 1;
+                
+                if used {
+                    types_used += 1;
+                    log!("TYPE USED [{}]", format_duration(verify_time));
+                } else {
+                    types_unused += 1;
+                    log!("TYPE UNUSED (commented) [{}]", format_duration(verify_time));
+                }
+                
+                if args.fail_fast && !used {
+                    log!("  (fail-fast: stopping after first unused type)");
+                    break;
+                }
+            }
+            
+            log!();
+            log!("Phase 13 Summary: {} tested, {} used, {} unused (commented)", 
+                types_tested, types_used, types_unused);
+        }
+    } else {
+        log!();
+        log!("Phase 13: Skipped (use -t flag to enable type minimization)");
+    }
+    
     // Update stats
     stats.total_time = total_start.elapsed();
     
@@ -4512,10 +4833,10 @@ fn main() -> Result<()> {
         }
     }
     
-    // Phase 13: Final verification and LOC count
+    // Phase 14: Final verification and LOC count
     log!();
     log!("═══════════════════════════════════════════════════════════════");
-    log!("Phase 13: Analyzing and verifying final codebase");
+    log!("Phase 14: Analyzing and verifying final codebase");
     log!("═══════════════════════════════════════════════════════════════");
     log!();
     
