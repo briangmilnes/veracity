@@ -8,13 +8,13 @@ Since Verus is a superset of Rust, Veracity also includes general Rust analysis 
 
 **Automated style enforcement and code organization for Verus projects.**
 
-Checks 20 rules covering file structure, imports, traits, impls, iterators, naming, and definition
+Checks 21 rules covering file structure, imports, traits, impls, iterators, naming, and definition
 order — then can automatically reorder your code and insert a Table of Contents.
 
 ### Quick Start
 
 ```bash
-# Review style (basic checks: rules 1-5, 11-20)
+# Review style (basic checks: rules 1-5, 11-21)
 veracity-review-verus-style src/
 
 # Review with all checks including advanced (rules 6-10)
@@ -48,6 +48,7 @@ integrates directly with editor jump-to-error workflows.
 | 18 | **Definition order** | Items inside `verus!{}` follow the canonical section order (auto-fixable with `-r`) |
 | 19 | **Return names** | Verus return value names are meaningful (not `r`, `result`, `ret`, `res`) |
 | 20 | **Trait impls** | Every trait defined in a file must have at least one `impl` |
+| 21 | **Broadcast order** | `vstd::` entries before `crate::` entries in `broadcast use` |
 
 ### Auto-Reorder and Table of Contents (`-r`)
 

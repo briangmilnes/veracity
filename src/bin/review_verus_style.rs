@@ -252,6 +252,7 @@ impl StyleArgs {
         eprintln!("  18. Definition order inside verus!");
         eprintln!("  19. Return value names should be meaningful (not 'r' or 'result')");
         eprintln!("  20. Every trait defined in file must have at least one impl");
+        eprintln!("  21. broadcast use: vstd:: entries before crate:: entries");
         eprintln!();
         eprintln!("Checks performed (-av flag):");
         eprintln!("  6. use crate::...::* grouped, ends with blank line");
@@ -284,7 +285,8 @@ struct FileStructure {
     
     // Broadcast use
     broadcast_use_lines: Vec<usize>,
-    broadcast_groups: Vec<String>,          // Groups in broadcast use
+    broadcast_groups: Vec<String>,          // Full paths in broadcast use
+    broadcast_use_entries: Vec<(usize, String)>, // (line, full_path) in order of appearance
     
     // Traits and impls
     trait_defs: Vec<TraitInfo>,
@@ -1004,25 +1006,46 @@ fn analyze_file_structure(content: &str) -> FileStructure {
         let offset: usize = token.text_range().start().into();
         let line = line_from_offset(offset);
         
-        // Detect "broadcast use"
+        // Detect "broadcast use" (use may be USE_KW; skip whitespace between)
         if token.kind() == SyntaxKind::IDENT && token.text() == "broadcast" {
-            if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::IDENT 
-                && tokens[i + 1].text() == "use" 
-            {
+            // Find next non-whitespace token
+            let mut next_idx = i + 1;
+            while next_idx < tokens.len() && tokens[next_idx].kind() == SyntaxKind::WHITESPACE {
+                next_idx += 1;
+            }
+            if next_idx < tokens.len() && tokens[next_idx].text() == "use" {
                 structure.broadcast_use_lines.push(line);
-                // Extract groups from following tokens
+                // Extract groups from following tokens — build complete paths
                 let mut in_brace = false;
-                for j in (i + 2)..tokens.len() {
+                let mut current_path = String::new();
+                let mut current_line = line;
+                for j in (next_idx + 1)..tokens.len() {
+                    let entry_offset: usize = tokens[j].text_range().start().into();
+                    let entry_line = line_from_offset(entry_offset);
                     match tokens[j].kind() {
                         SyntaxKind::L_CURLY => in_brace = true,
-                        SyntaxKind::R_CURLY => break,
+                        SyntaxKind::R_CURLY => {
+                            if !current_path.is_empty() {
+                                structure.broadcast_groups.push(current_path.clone());
+                                structure.broadcast_use_entries.push((current_line, current_path.clone()));
+                                current_path.clear();
+                            }
+                            break;
+                        }
                         SyntaxKind::IDENT if in_brace => {
-                            structure.broadcast_groups.push(tokens[j].text().to_string());
+                            if current_path.is_empty() {
+                                current_line = entry_line;
+                            }
+                            current_path.push_str(tokens[j].text());
                         }
                         SyntaxKind::COLON2 if in_brace => {
-                            // Part of a path, combine with previous
-                            if let Some(last) = structure.broadcast_groups.last_mut() {
-                                *last = format!("{}::", last);
+                            current_path.push_str("::");
+                        }
+                        SyntaxKind::COMMA if in_brace => {
+                            if !current_path.is_empty() {
+                                structure.broadcast_groups.push(current_path.clone());
+                                structure.broadcast_use_entries.push((current_line, current_path.clone()));
+                                current_path.clear();
                             }
                         }
                         _ => {}
@@ -2115,6 +2138,32 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
             result.pass(20, "no traits defined");
         } else {
             result.pass(20, "all traits have impls");
+        }
+    }
+    
+    // Check 21: broadcast use entries: vstd:: before crate::
+    let mut check21_failed = false;
+    let mut seen_crate = false;
+    let mut first_crate_line = 0usize;
+    for (entry_line, path) in &structure.broadcast_use_entries {
+        if path.starts_with("crate::") {
+            if !seen_crate {
+                seen_crate = true;
+                first_crate_line = *entry_line;
+            }
+        } else if path.starts_with("vstd::") && seen_crate {
+            result.fail(21, *entry_line, format!(
+                "vstd broadcast {} should come before crate:: entries (first crate:: at line {})",
+                path, first_crate_line
+            ));
+            check21_failed = true;
+        }
+    }
+    if !check21_failed {
+        if structure.broadcast_use_entries.is_empty() {
+            result.pass(21, "no broadcast use entries");
+        } else {
+            result.pass(21, "broadcast use: vstd:: before crate::");
         }
     }
     

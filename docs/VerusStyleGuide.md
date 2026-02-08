@@ -226,6 +226,25 @@ pub trait FooTrait { fn bar(&self); }
 impl FooTrait for Foo { fn bar(&self) { ... } }
 ```
 
+### Rule 21: Broadcast Use Ordering
+
+Within a `broadcast use { ... }` block, `vstd::` entries must come before `crate::` entries.
+
+```rust
+// RIGHT
+broadcast use {
+    vstd::std_specs::vec::group_vec_axioms,
+    vstd::seq::group_seq_axioms,
+    crate::vstdplus::feq::feq::group_feq_axioms,
+}
+
+// WRONG — crate:: before vstd::
+broadcast use {
+    crate::vstdplus::feq::feq::group_feq_axioms,
+    vstd::seq::group_seq_axioms,
+}
+```
+
 ## File Structure Template
 
 ```rust
