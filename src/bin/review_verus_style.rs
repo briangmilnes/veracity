@@ -251,6 +251,7 @@ impl StyleArgs {
         eprintln!("  17. Iterator/IntoIterator impls inside verus!");
         eprintln!("  18. Definition order inside verus!");
         eprintln!("  19. Return value names should be meaningful (not 'r' or 'result')");
+        eprintln!("  20. Every trait defined in file must have at least one impl");
         eprintln!();
         eprintln!("Checks performed (-av flag):");
         eprintln!("  6. use crate::...::* grouped, ends with blank line");
@@ -2093,6 +2094,27 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
             result.fail(19, *line, format!(
                 "{} return name '{}' could be more descriptive", fn_name, ret_name
             ));
+        }
+    }
+    
+    // Check 20: Every trait defined in the file must have at least one impl
+    let mut check20_failed = false;
+    for trait_info in &structure.trait_defs {
+        let has_impl = structure.impl_blocks.iter().any(|imp| {
+            imp.trait_name.as_deref() == Some(&trait_info.name)
+        });
+        if !has_impl {
+            result.fail(20, trait_info.line, format!(
+                "trait {} is defined but has no impl", trait_info.name
+            ));
+            check20_failed = true;
+        }
+    }
+    if !check20_failed {
+        if structure.trait_defs.is_empty() {
+            result.pass(20, "no traits defined");
+        } else {
+            result.pass(20, "all traits have impls");
         }
     }
     

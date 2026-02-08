@@ -210,6 +210,22 @@ Verus allows naming the return value in function signatures with `-> (name: Type
 The name should be meaningful and descriptive, not generic placeholders like `r` or
 `result`.
 
+### Rule 20: Every Trait Must Have an Impl
+
+If a trait is defined in a file, there must be at least one `impl Trait for Type` in
+the same file. A trait with no impl is likely a bug — the methods were placed in an
+inherent `impl Type` block instead of implementing the trait.
+
+```rust
+// WRONG — trait exists but Type never implements it
+pub trait FooTrait { fn bar(&self); }
+impl Foo { fn bar(&self) { ... } }
+
+// RIGHT — trait is implemented
+pub trait FooTrait { fn bar(&self); }
+impl FooTrait for Foo { fn bar(&self) { ... } }
+```
+
 ## File Structure Template
 
 ```rust
