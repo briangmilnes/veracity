@@ -54,10 +54,6 @@ name = "veracity-find-verus-files"
 path = "src/bin/find_verus_files.rs"
 
 [[bin]]
-name = "veracity-review"
-path = "src/bin/review.rs"
-
-[[bin]]
 name = "veracity-review-generic-equality"
 path = "src/bin/review_generic_equality.rs"
 

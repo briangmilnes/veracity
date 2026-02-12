@@ -315,10 +315,17 @@ fn parse_line_range(s: &str) -> Option<(usize, usize)> {
 
 // ── Patch command ───────────────────────────────────────────────────────
 
+/// Lightweight struct for classification input — only id and spec_strength required.
+#[derive(Debug, Deserialize)]
+struct ClassificationEntry {
+    id: usize,
+    spec_strength: String,
+}
+
 fn cmd_patch(md_path: &Path, json_path: &Path) -> Result<()> {
     let md_content = fs::read_to_string(md_path)?;
     let json_content = fs::read_to_string(json_path)?;
-    let classifications: Vec<SpecEntry> = serde_json::from_str(&json_content)?;
+    let classifications: Vec<ClassificationEntry> = serde_json::from_str(&json_content)?;
 
     // Build a map from id → new spec_strength.
     let mut patches: HashMap<usize, String> = HashMap::new();
@@ -529,47 +536,104 @@ fn find_spec_line_range(
     let start_line = byte_offset_to_line(line_offsets, start_offset);
 
     // Walk forward from fn to find body-opening { or ; (end of spec).
-    // Track paren nesting so braces inside spec expressions like
-    // `ensures ({...})` are not mistaken for the body opener.
+    // Track paren nesting for `ensures ({...})` and brace nesting for
+    // spec expressions like `ensures match x { ... }` or `if c { a } else { b }`.
     let mut end_line = start_line;
     let mut paren_nesting: i32 = 0;
+    let mut spec_brace_nesting: i32 = 0;
+    // Set when we see `match`/`if`/`unsafe` at top level — the next { is a
+    // spec-expression brace, not the body opener.
+    let mut pending_expr_brace = false;
+    // Set when spec_brace_nesting drops to 0 — the next `else` re-opens a brace.
+    let mut just_closed_spec_brace = false;
     let mut k = fn_idx + 1;
     while k < tokens.len() {
-        match tokens[k].kind() {
+        let kind = tokens[k].kind();
+        match kind {
             SyntaxKind::L_PAREN => paren_nesting += 1,
             SyntaxKind::R_PAREN => {
                 if paren_nesting > 0 {
                     paren_nesting -= 1;
                 }
             }
-            SyntaxKind::L_CURLY if paren_nesting == 0 => {
-                // Body opens here. Spec ends on the line of the last
-                // non-whitespace token before this brace.
-                let brace_offset: usize = tokens[k].text_range().start().into();
-                let brace_line = byte_offset_to_line(line_offsets, brace_offset);
-                if k > 0 {
-                    let mut p = k - 1;
-                    while p > fn_idx
-                        && matches!(
-                            tokens[p].kind(),
-                            SyntaxKind::WHITESPACE | SyntaxKind::COMMENT
-                        )
-                    {
-                        p -= 1;
-                    }
-                    let pre_offset: usize = tokens[p].text_range().end().into();
-                    end_line = byte_offset_to_line(line_offsets, pre_offset);
+            SyntaxKind::L_CURLY => {
+                if paren_nesting > 0 || spec_brace_nesting > 0 || pending_expr_brace {
+                    // Brace inside parens, inside an existing spec brace expr,
+                    // or opening a spec expr (match/if/unsafe).
+                    spec_brace_nesting += 1;
+                    pending_expr_brace = false;
+                    just_closed_spec_brace = false;
                 } else {
-                    end_line = brace_line;
+                    // Body opener at paren=0, spec_brace=0, no pending expr.
+                    let brace_offset: usize = tokens[k].text_range().start().into();
+                    let brace_line = byte_offset_to_line(line_offsets, brace_offset);
+                    if k > 0 {
+                        let mut p = k - 1;
+                        while p > fn_idx
+                            && matches!(
+                                tokens[p].kind(),
+                                SyntaxKind::WHITESPACE | SyntaxKind::COMMENT
+                            )
+                        {
+                            p -= 1;
+                        }
+                        let pre_offset: usize = tokens[p].text_range().end().into();
+                        end_line = byte_offset_to_line(line_offsets, pre_offset);
+                    } else {
+                        end_line = brace_line;
+                    }
+                    break;
                 }
-                break;
             }
-            SyntaxKind::SEMICOLON if paren_nesting == 0 => {
+            SyntaxKind::R_CURLY => {
+                if spec_brace_nesting > 0 {
+                    spec_brace_nesting -= 1;
+                    if spec_brace_nesting == 0 && paren_nesting == 0 {
+                        just_closed_spec_brace = true;
+                    }
+                }
+            }
+            SyntaxKind::SEMICOLON if paren_nesting == 0 && spec_brace_nesting == 0 => {
                 let semi_offset: usize = tokens[k].text_range().start().into();
                 end_line = byte_offset_to_line(line_offsets, semi_offset);
                 break;
             }
-            _ => {}
+            SyntaxKind::IDENT if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                match tokens[k].text() {
+                    "match" | "if" | "unsafe" => {
+                        pending_expr_brace = true;
+                        just_closed_spec_brace = false;
+                    }
+                    "else" if just_closed_spec_brace => {
+                        pending_expr_brace = true;
+                        just_closed_spec_brace = false;
+                    }
+                    _ => {
+                        just_closed_spec_brace = false;
+                    }
+                }
+            }
+            SyntaxKind::MATCH_KW if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            SyntaxKind::IF_KW if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            SyntaxKind::UNSAFE_KW if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            SyntaxKind::ELSE_KW if just_closed_spec_brace && paren_nesting == 0 && spec_brace_nesting == 0 => {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            _ => {
+                if kind != SyntaxKind::WHITESPACE && kind != SyntaxKind::COMMENT {
+                    just_closed_spec_brace = false;
+                }
+            }
         }
         k += 1;
     }
@@ -844,21 +908,73 @@ fn detect_requires_ensures(tokens: &[SyntaxToken], fn_idx: usize) -> (bool, bool
 }
 
 fn detect_hole_in_body(tokens: &[SyntaxToken], fn_idx: usize) -> bool {
-    // Find the body-opening brace. Track paren nesting so braces inside
-    // spec expressions like `ensures ({...})` are skipped.
+    // Find the body-opening brace. Track paren and spec-brace nesting so
+    // braces inside spec expressions (`ensures ({...})`, `ensures match x { ... }`)
+    // are skipped.
     let mut paren_nesting: i32 = 0;
+    let mut spec_brace_nesting: i32 = 0;
+    let mut pending_expr_brace = false;
+    let mut just_closed_spec_brace = false;
     let mut i = fn_idx + 1;
     while i < tokens.len() {
-        match tokens[i].kind() {
+        let kind = tokens[i].kind();
+        match kind {
             SyntaxKind::L_PAREN => paren_nesting += 1,
             SyntaxKind::R_PAREN => {
                 if paren_nesting > 0 {
                     paren_nesting -= 1;
                 }
             }
-            SyntaxKind::L_CURLY if paren_nesting == 0 => break,
-            SyntaxKind::SEMICOLON if paren_nesting == 0 => return false, // bodyless declaration
-            _ => {}
+            SyntaxKind::L_CURLY => {
+                if paren_nesting > 0 || spec_brace_nesting > 0 || pending_expr_brace {
+                    spec_brace_nesting += 1;
+                    pending_expr_brace = false;
+                    just_closed_spec_brace = false;
+                } else {
+                    break; // body opener
+                }
+            }
+            SyntaxKind::R_CURLY => {
+                if spec_brace_nesting > 0 {
+                    spec_brace_nesting -= 1;
+                    if spec_brace_nesting == 0 && paren_nesting == 0 {
+                        just_closed_spec_brace = true;
+                    }
+                }
+            }
+            SyntaxKind::SEMICOLON if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                return false; // bodyless declaration
+            }
+            SyntaxKind::IDENT if paren_nesting == 0 && spec_brace_nesting == 0 => {
+                match tokens[i].text() {
+                    "match" | "if" | "unsafe" => {
+                        pending_expr_brace = true;
+                        just_closed_spec_brace = false;
+                    }
+                    "else" if just_closed_spec_brace => {
+                        pending_expr_brace = true;
+                        just_closed_spec_brace = false;
+                    }
+                    _ => { just_closed_spec_brace = false; }
+                }
+            }
+            SyntaxKind::MATCH_KW | SyntaxKind::IF_KW | SyntaxKind::UNSAFE_KW
+                if paren_nesting == 0 && spec_brace_nesting == 0 =>
+            {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            SyntaxKind::ELSE_KW
+                if just_closed_spec_brace && paren_nesting == 0 && spec_brace_nesting == 0 =>
+            {
+                pending_expr_brace = true;
+                just_closed_spec_brace = false;
+            }
+            _ => {
+                if kind != SyntaxKind::WHITESPACE && kind != SyntaxKind::COMMENT {
+                    just_closed_spec_brace = false;
+                }
+            }
         }
         i += 1;
     }

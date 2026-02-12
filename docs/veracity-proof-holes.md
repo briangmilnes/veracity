@@ -7,9 +7,6 @@ Detect incomplete proofs and unverified assumptions in Verus code.
 ```bash
 # Analyze a single directory
 veracity-review-proof-holes -d src/
-
-# Analyze with dispatcher
-veracity-review proof-holes -d src/
 ```
 
 ## What It Detects
