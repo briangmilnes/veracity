@@ -192,7 +192,7 @@ present sections should follow this order.
 8. `proof fn`s and `broadcast group`s (lemmas about views/types, used by impls and exec fns)
 9. Traits (with specs)
 10. Trait impls: `impl Trait for Type`, inherent impls
-11. Iterator impls: `Iterator`, `IntoIterator`, `ForLoopGhostIterator`, `ForLoopGhostIteratorNew`
+11. Iterators (all boilerplate): `*Iter` structs, their `View` impls, `iter_*` spec fns, `Iterator`, `IntoIterator`, `ForLoopGhostIterator`, `ForLoopGhostIteratorNew` impls
 12. Top-level `fn`s (exec)
 13. Derive impls in `verus!` (`Eq`, `PartialEq`, `Hash`, `Clone`, `PartialOrd`, `Ord`)
 

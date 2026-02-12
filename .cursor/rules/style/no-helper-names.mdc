@@ -1,0 +1,30 @@
+---
+description: Do not name functions helper, inner, do_it, or similar meaningless names
+globs: "**/*.rs"
+alwaysApply: false
+---
+
+# No "helper" Function Names
+
+Do not name functions `helper`, `helper1`, `helper2`, `do_it`, `inner`, or use suffixes like `_impl`, or similar meaningless names.
+
+## Bad Examples
+
+```rust
+fn helper<V>(arcs: Vec<Edge<V>>, v: V) -> SetStEph<V> { ... }
+fn do_work(x: i32) -> i32 { ... }
+fn inner(s: &str) -> bool { ... }
+fn flatten_impl(ss: &Seq<Seq<T>>) -> Seq<T> { ... }  // all functions "implement" something
+```
+
+## Good Examples
+
+```rust
+fn filter_arcs_by_source<V>(arcs: Vec<Edge<V>>, v: V) -> SetStEph<V> { ... }
+fn compute_checksum(x: i32) -> i32 { ... }
+fn is_valid_identifier(s: &str) -> bool { ... }
+```
+
+## Rule
+
+A function's name should describe what it does. Generic names like "helper" provide no information about purpose or behavior.

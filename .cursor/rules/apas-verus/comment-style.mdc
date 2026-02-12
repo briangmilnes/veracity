@@ -1,0 +1,52 @@
+---
+description: No decorative separator lines or box-drawing characters in code comments
+globs: "**/*.rs"
+alwaysApply: false
+---
+
+# Comment Style
+
+Do not use decorative separator lines or box-drawing characters in code comments.
+Comments must be full sentences.
+
+**Bad:**
+```rust
+// ============================================================
+// Section Name
+// ============================================================
+```
+
+**Bad:**
+```rust
+// --------------------------------------------------------
+// Another section
+// --------------------------------------------------------
+```
+
+**Bad:**
+```rust
+// ── Anvil-style vec_filter: multiset equality postcondition ──────────
+```
+
+**Good:**
+```rust
+// Section Name
+```
+
+**Good:**
+```rust
+/// Section documentation
+```
+
+**Good:**
+```rust
+// Anvil-style vec_filter using a multiset equality postcondition.
+```
+
+Decorative separators and box-drawing characters (─, ═, etc.) are acceptable in:
+- Log output
+- Terminal output
+- Markdown documentation
+- README files
+
+But not in source code comments.

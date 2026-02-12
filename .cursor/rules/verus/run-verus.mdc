@@ -1,0 +1,32 @@
+---
+description: Default command to run Verus verification
+globs: 
+alwaysApply: true
+---
+
+# Running Verus
+
+The default way to run Verus verification on this project:
+
+```bash
+cd ~/projects/APAS-VERUS && ~/projects/verus/source/target-verus/release/verus --crate-type=lib src/lib.rs --multiple-errors 20 --expand-errors
+```
+
+Use this command when:
+- Checking if code verifies
+- After making changes to proofs or implementations
+- Before committing changes
+
+## Important
+
+- **Always call `verus` directly** — never use `cargo verus`, `cargo build`, or any cargo-based compilation for verification.
+- Verus includes its own vstd automatically — do not pass `-L dependency`, `--extern vstd`, or any library paths.
+- There is no need for `target/debug/` or `target/release/` directories for verification. Verus manages its own dependencies.
+
+## Output Display
+
+Always show the full output from verus verification:
+- Use `head -100` to limit to 100 lines if needed
+- Never use `grep` to filter verus output
+- Show complete verification results including all errors and warnings
+- **Always echo the output into your response text as a markdown code block** - do not rely on the terminal widget which collapses output

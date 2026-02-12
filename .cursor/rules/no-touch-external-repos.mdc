@@ -22,7 +22,14 @@ This includes but is not limited to:
 ## The fixture
 
 - The ONLY copy of APAS-VERUS you may modify is the fixture at `tests/fixtures/APAS-VERUS/`.
-- After any modification to the fixture, you MUST `git checkout -- .` to restore it before ending your task.
+- The fixture is listed in `.gitignore` — it is NOT tracked by the veracity repo. `git checkout -- .` does nothing to it.
+- To refresh the fixture to a clean state, you MUST delete and re-clone:
+  ```bash
+  cd /home/milnes/projects/veracity/tests/fixtures
+  rm -rf APAS-VERUS
+  git clone https://github.com/briangmilnes/APAS-VERUS.git APAS-VERUS
+  ```
+- NEVER use `git checkout`, `git restore`, or `cp` from the local working copy to "refresh" the fixture. These do not produce a clean state.
 - NEVER commit changes to the fixture's git repository.
 
 ## Why

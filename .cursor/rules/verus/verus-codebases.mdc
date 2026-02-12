@@ -1,0 +1,15 @@
+---
+description: Collection of Verus codebases at ~/projects/VerusCodebases/
+globs: 
+alwaysApply: true
+---
+
+# Verus Codebases
+
+A collection of Verus codebases is located at:
+
+```
+~/projects/VerusCodebases/
+```
+
+Search here for examples of how others have solved Verus verification problems.

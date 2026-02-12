@@ -134,3 +134,11 @@ path = "src/bin/fix_comment_formatting.rs"
 [[bin]]
 name = "veracity-review-verus-style"
 path = "src/bin/review_verus_style.rs"
+
+[[bin]]
+name = "veracity-fix-auto-triggers"
+path = "src/bin/fix_auto_triggers.rs"
+
+[[bin]]
+name = "veracity-review-module-fn-impls"
+path = "src/bin/review_module_fn_impls.rs"

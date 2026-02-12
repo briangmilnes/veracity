@@ -1,0 +1,35 @@
+---
+description: No string hacking — use AST-based analysis, and run the detector
+globs: ["**/*.rs"]
+alwaysApply: true
+---
+
+# No String Hacking
+
+**Design Principle #1: AST-Only.** Never use string manipulation to analyze Rust/Verus source code. Use `ra_ap_syntax` or `verus_syn` for proper AST traversal.
+
+## Red Flags
+
+| Pattern | Why It's Wrong | Use Instead |
+|---------|---------------|-------------|
+| `.find("fn ")`, `.contains("ensures")` | Fragile text matching | AST node types (`SyntaxKind::FN`, etc.) |
+| `.split("::")` on paths | Breaks on nested/aliased paths | `ast::Path` segments |
+| `.replace()` on source strings | Corrupts formatting and comments | AST node replacement |
+| `let mut depth = 0` (manual brace counting) | Off-by-one, misses string literals | AST tree descent |
+| `Regex::new(...)` on source code | Regex can't parse languages | AST visitor pattern |
+
+## Run the Detector
+
+After writing or modifying any `src/bin/*.rs` tool, run:
+
+```bash
+~/projects/veracity/target/release/veracity-review-string-hacking -f src/bin/<tool>.rs
+```
+
+Or scan everything:
+
+```bash
+~/projects/veracity/target/release/veracity-review-string-hacking src/
+```
+
+Fix all violations before considering the work complete.

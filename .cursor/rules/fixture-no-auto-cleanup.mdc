@@ -6,6 +6,16 @@ alwaysApply: true
 
 # Fixture Cleanup Policy
 
-**NEVER run `git checkout`, `git restore`, or any cleanup on `tests/fixtures/APAS-VERUS` unless the user explicitly asks.**
+**NEVER clean up or restore `tests/fixtures/APAS-VERUS` unless the user explicitly asks.**
 
 After reordering or modifying the fixture, leave it in its modified state. The user may want to inspect the results.
+
+When the user does ask to refresh the fixture, the correct procedure is:
+
+```bash
+cd /home/milnes/projects/veracity/tests/fixtures
+rm -rf APAS-VERUS
+git clone https://github.com/briangmilnes/APAS-VERUS.git APAS-VERUS
+```
+
+The fixture is in `.gitignore` — `git checkout` and `git restore` have no effect on it.

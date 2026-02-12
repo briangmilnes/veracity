@@ -2289,7 +2289,10 @@ fn collect_reorder_items(inner: &str, line_offset: usize, structure: &FileStruct
             }
             verus_syn::Item::Struct(s) => {
                 let line = s.ident.span().start().line;
-                (SECTION_TYPE_DEF, format!("struct {}", s.ident), line)
+                let name = s.ident.to_string();
+                let is_iter_struct = name.contains("Iter");
+                let section = if is_iter_struct { SECTION_ITER_IMPL } else { SECTION_TYPE_DEF };
+                (section, format!("struct {}", s.ident), line)
             }
             verus_syn::Item::Enum(e) => {
                 let line = e.ident.span().start().line;
@@ -2305,7 +2308,12 @@ fn collect_reorder_items(inner: &str, line_offset: usize, structure: &FileStruct
             }
             verus_syn::Item::Fn(f) => {
                 let line = f.sig.ident.span().start().line;
-                let section = fn_section(&f.sig.mode);
+                let fn_name = f.sig.ident.to_string();
+                let section = if fn_name.starts_with("iter_") {
+                    SECTION_ITER_IMPL
+                } else {
+                    fn_section(&f.sig.mode)
+                };
                 let mode = fn_mode_str(&f.sig.mode);
                 (section, format!("{} {}", mode, f.sig.ident), line)
             }
@@ -2322,7 +2330,9 @@ fn collect_reorder_items(inner: &str, line_offset: usize, structure: &FileStruct
                         .map(|s| s.ident.to_string())
                         .unwrap_or_default();
                     if trait_name == "View" {
-                        (SECTION_VIEW_IMPL, format!("impl View for {}", type_str), line)
+                        let is_iter_type = type_str.contains("Iter");
+                        let sect = if is_iter_type { SECTION_ITER_IMPL } else { SECTION_VIEW_IMPL };
+                        (sect, format!("impl View for {}", type_str), line)
                     } else {
                         let is_derive = matches!(trait_name.as_str(),
                             "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord");

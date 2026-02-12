@@ -1,0 +1,16 @@
+---
+description: Show AI reasoning in response text
+globs: 
+alwaysApply: true
+---
+
+# Show Thinking
+
+Always include your reasoning and analysis directly in your response text, not just in the collapsed thinking bubble.
+
+Before taking action, explain:
+- What you understand the task to be
+- Your approach/strategy
+- Key decisions and why
+
+Format as a brief "**Reasoning:**" section at the start of responses when making non-trivial decisions.
