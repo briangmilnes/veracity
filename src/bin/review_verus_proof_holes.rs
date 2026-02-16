@@ -307,6 +307,11 @@ fn main() -> Result<()> {
     // Initialize logging to the codebase's analyses directory
     let log_path = init_logging(&args.standard.base_dir());
     
+    // Record the command line at the top of the log for reproducibility.
+    let cmdline = std::env::args().collect::<Vec<_>>().join(" ");
+    write_to_log(&format!("$ {}", cmdline));
+    write_to_log("");
+    
     if args.emacs_mode {
         // Emacs mode - quiet output, just file:line: messages
         run_emacs_mode(&args.standard, &args.exclude_dirs)?;
