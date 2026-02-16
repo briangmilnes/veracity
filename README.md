@@ -44,7 +44,7 @@ Full documentation: [`docs/veracity-review-module-fn-impls.md`](docs/veracity-re
 | | **Review** | |
 | 1 | [veracity-review-module-fn-impls](docs/veracity-review-module-fn-impls.md) | This tool reviews every function in a Verus codebase and generates a markdown report with per-module summaries, proof holes, spec line ranges, and a JSON extract for AI-driven spec strength classification. |
 | 2 | veracity-review-verus-style | This tool enforces 21 style rules covering file structure, imports, traits, impls, iterators, naming, and definition order, and can automatically reorder code and insert a Table of Contents. ([style guide](docs/VerusStyleGuide.md)) |
-| 3 | [veracity-review-proof-holes](docs/veracity-proof-holes.md) | This tool detects incomplete proofs including `admit()`, `assume(false)`, `#[verifier::external_body]`, and axiom functions with holes. |
+| 3 | [veracity-review-proof-holes](docs/veracity-proof-holes.md) | This tool detects incomplete proofs including `admit()`, `assume(false)`, `#[verifier::external_body]`, and axiom functions with holes. Shows rich context: stacked attributes through to the annotated declaration, and enclosing `fn` signature with surrounding lines for assume/admit holes. Emacs compilation-buffer compatible. |
 | 4 | veracity-review-proof-state | This tool counts proof holes, external bodies, trivial spec bodies, and exec/proof functions missing `requires`/`ensures` clauses. |
 | 5 | veracity-review-axiom-purity | This tool checks that axiom functions are pure and do not contain proof holes in their bodies. |
 | 6 | veracity-review-proof-structure | This tool analyzes the structure of proof functions and reports on their organization and completeness. |

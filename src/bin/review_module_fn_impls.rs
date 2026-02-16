@@ -10,6 +10,7 @@
 //! Usage:
 //!   veracity-review-module-fn-impls -d src/Chap18           # generate .md
 //!   veracity-review-module-fn-impls -f src/Chap18/ArraySeq.rs
+//!   veracity-review-module-fn-impls -i eq -i hash           # ignore specific functions
 //!   veracity-review-module-fn-impls --extract PATH.md       # extract specs → .json
 //!   veracity-review-module-fn-impls --patch PATH.md PATH.json  # patch SpecStr from .json
 //!
@@ -21,7 +22,7 @@ use ra_ap_syntax::{
     SyntaxKind, SyntaxNode, SyntaxToken,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use veracity::{find_rust_files, StandardArgs};
@@ -93,6 +94,10 @@ struct SpecEntry {
     snippet: String,
 }
 
+// ── Default ignored functions ────────────────────────────────────────────
+
+const DEFAULT_IGNORE_FNS: &[&str] = &["clone", "into_iter", "fmt"];
+
 // ── Main ────────────────────────────────────────────────────────────────
 
 fn main() -> Result<()> {
@@ -109,11 +114,58 @@ fn main() -> Result<()> {
         return cmd_patch(&md_path, &json_path);
     }
 
+    // Parse -i/--ignore-fn before StandardArgs.
+    let mut ignore_fns: HashSet<String> = HashSet::new();
+    let mut has_explicit_ignore = false;
+    let mut i = 1;
+    while i < raw_args.len() {
+        match raw_args[i].as_str() {
+            "-i" | "--ignore-fn" => {
+                has_explicit_ignore = true;
+                if i + 1 < raw_args.len() {
+                    ignore_fns.insert(raw_args[i + 1].clone());
+                    i += 2;
+                } else {
+                    anyhow::bail!("{} requires a function name argument", raw_args[i]);
+                }
+            }
+            _ => {
+                i += 1;
+            }
+        }
+    }
+
+    // Apply defaults if no explicit -i was given.
+    if !has_explicit_ignore {
+        for name in DEFAULT_IGNORE_FNS {
+            ignore_fns.insert(name.to_string());
+        }
+    }
+
+    let filter = FnFilter { ignore_fns };
+
+    // Print active filter.
+    if !filter.ignore_fns.is_empty() {
+        let mut names: Vec<&str> = filter.ignore_fns.iter().map(|s| s.as_str()).collect();
+        names.sort();
+        eprintln!("Ignoring functions: {}", names.join(", "));
+    }
+
     // Default: generate mode.
-    cmd_generate()
+    cmd_generate(filter)
 }
 
-fn cmd_generate() -> Result<()> {
+struct FnFilter {
+    ignore_fns: HashSet<String>,
+}
+
+impl FnFilter {
+    fn keep(&self, name: &str) -> bool {
+        !self.ignore_fns.contains(name)
+    }
+}
+
+fn cmd_generate(filter: FnFilter) -> Result<()> {
     let args = StandardArgs::parse()?;
     let paths = args.get_search_dirs();
     let all_files = find_rust_files(&paths);
@@ -134,7 +186,8 @@ fn cmd_generate() -> Result<()> {
             total_source_bytes += meta.len() as usize;
         }
         match analyze_file(file) {
-            Ok(analysis) => {
+            Ok(mut analysis) => {
+                analysis.functions.retain(|f| filter.keep(&f.name));
                 if !analysis.functions.is_empty() {
                     analyses.push(analysis);
                 }

@@ -239,6 +239,10 @@ pub struct StandardArgs {
                         // Tool-specific flag, ignore here (handled by individual tools)
                         i += 1;
                     }
+                    "-i" | "--ignore-fn" => {
+                        // Tool-specific flag with one argument, skip both
+                        i += 2;
+                    }
                     other => {
                         return Err(anyhow::anyhow!("Unknown option: {other}"));
                     }

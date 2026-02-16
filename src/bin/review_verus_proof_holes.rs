@@ -405,11 +405,19 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 println!("{}", msg);
                 write_to_log(&msg);
                 
+                // Read file content for context display
+                let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
+                
                 // Print each hole in Emacs format (no indent - Emacs needs col 0)
                 for hole in &stats.holes.holes {
                     let msg = format!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
                     println!("{}", msg);
                     write_to_log(&msg);
+                    // Context lines (indented so emacs won't parse them as error locations)
+                    for ctx in build_context_lines(&file_content, hole) {
+                        println!("{}", ctx);
+                        write_to_log(&ctx);
+                    }
                 }
                 
                 // Print hole counts
@@ -530,6 +538,7 @@ fn print_hole_counts_with_log(holes: &ProofHoleStats, prefix: &str) {
 }
 
 /// Print hole counts with a given prefix (no log)
+#[allow(dead_code)]
 fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     if holes.assume_false_count > 0 {
         println!("{}{} × assume(false)", prefix, holes.assume_false_count);
@@ -791,6 +800,85 @@ fn get_context(content: &str, offset: usize) -> String {
         format!("{}...", &trimmed[..77])
     } else {
         trimmed.to_string()
+    }
+}
+
+/// Search backwards from `from_line` to find the enclosing `fn` signature line.
+/// Matches lines whose trimmed content contains ` fn ` or starts with `fn `.
+fn find_enclosing_fn_line(content: &str, from_line: usize) -> Option<usize> {
+    let lines: Vec<&str> = content.lines().collect();
+    let start = from_line.saturating_sub(1); // 0-indexed
+    for idx in (0..start).rev() {
+        let trimmed = lines[idx].trim();
+        if trimmed.contains(" fn ") || trimmed.starts_with("fn ") {
+            return Some(idx + 1); // back to 1-indexed
+        }
+    }
+    None
+}
+
+/// Get a specific 1-indexed line from content, trimmed.
+fn get_line(content: &str, line_num: usize) -> Option<String> {
+    content.lines().nth(line_num.saturating_sub(1)).map(|l| l.to_string())
+}
+
+/// Build context lines to display after the main hole line.
+/// For attribute holes: show all subsequent attributes plus the declaration they annotate.
+/// For assume/admit holes: show 2 lines before and 2 lines after.
+fn build_context_lines(content: &str, hole: &DetectedHole) -> Vec<String> {
+    let total_lines = content.lines().count();
+    let is_attribute_hole = hole.hole_type.starts_with("external")
+        || hole.hole_type == "opaque"
+        || hole.hole_type == "unsafe fn"
+        || hole.hole_type == "unsafe impl";
+
+    if is_attribute_hole {
+        // Walk forward past any further #[...] attribute lines to reach the declaration.
+        let mut lines = Vec::new();
+        let mut n = hole.line + 1;
+        while n <= total_lines {
+            if let Some(line) = get_line(content, n) {
+                let trimmed = line.trim();
+                lines.push(format!("     {:>5} | {}", n, line.trim_end()));
+                // Stop once we hit a non-attribute, non-blank line (the declaration).
+                if !trimmed.is_empty() && !trimmed.starts_with("#[") && !trimmed.starts_with("///") {
+                    break;
+                }
+                n += 1;
+            } else {
+                break;
+            }
+        }
+        lines
+    } else {
+        // assume/admit/unsafe block: find enclosing fn, then show 2 before, 2 after.
+        let mut lines = Vec::new();
+
+        // Search backwards for the enclosing fn signature.
+        let fn_line = find_enclosing_fn_line(content, hole.line);
+        let context_from = hole.line.saturating_sub(2).max(1);
+
+        if let Some(fl) = fn_line {
+            if fl < context_from {
+                // fn signature is above the context window — show it with "..."
+                if let Some(line) = get_line(content, fl) {
+                    lines.push(format!("     {:>5} | {}", fl, line.trim_end()));
+                    lines.push("            ...".to_string());
+                }
+            }
+            // If fn_line is inside the context window it will appear naturally below.
+        }
+
+        let to = (hole.line + 2).min(total_lines);
+        for n in context_from..=to {
+            if n == hole.line {
+                continue; // already shown on the main line
+            }
+            if let Some(line) = get_line(content, n) {
+                lines.push(format!("     {:>5} | {}", n, line.trim_end()));
+            }
+        }
+        lines
     }
 }
 
