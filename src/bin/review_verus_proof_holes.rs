@@ -453,7 +453,13 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 if has_warnings {
-                    let msg = format!("   Errors: {} bare impl(s) in file with trait definition", stats.warnings.len());
+                    let bare = stats.warnings.iter().filter(|w| w.hole_type == "bare_impl").count();
+                    let outside = stats.warnings.iter().filter(|w| w.hole_type.starts_with("struct_") || w.hole_type.starts_with("enum_")).count();
+                    let msg = if outside > 0 {
+                        format!("   Errors: {} total ({} bare impl(s), {} struct/enum outside verus!)", stats.warnings.len(), bare, outside)
+                    } else {
+                        format!("   Errors: {} bare impl(s) in file with trait definition", bare)
+                    };
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -885,6 +891,17 @@ fn build_context_lines(content: &str, hole: &DetectedHole) -> Vec<String> {
         || hole.hole_type == "unsafe fn"
         || hole.hole_type == "unsafe impl";
 
+    if hole.hole_type == "struct_outside_verus" || hole.hole_type == "enum_outside_verus" {
+        let mut lines = Vec::new();
+        let to = (hole.line + 2).min(total_lines);
+        for n in hole.line..=to {
+            if let Some(line) = get_line(content, n) {
+                lines.push(format!("     {:>5} | {}", n, line.trim_end()));
+            }
+        }
+        return lines;
+    }
+
     if hole.hole_type == "bare_impl" {
         // Show the impl line and 2 lines after it for context
         let mut lines = Vec::new();
@@ -965,6 +982,12 @@ fn should_ignore_bare_impl_ast(impl_block: &ast::Impl, content: &str, base_name:
         return true;
     }
 
+    // Text-based fallback: fn iter_mut, fn iter, fn iter_*, fn into_iter
+    let impl_text = impl_block.syntax().text().to_string();
+    if impl_text.contains("fn iter_mut") || impl_text.contains("fn iter_") || impl_text.contains("fn iter(") || impl_text.contains("fn into_iter") {
+        return true;
+    }
+
     // #[verifier::external] on impl — check preceding lines
     let offset: usize = impl_block.syntax().text_range().start().into();
     let line = line_from_offset(content, offset);
@@ -982,7 +1005,7 @@ fn should_ignore_bare_impl_ast(impl_block: &ast::Impl, content: &str, base_name:
     }
 
     let mut has_any_fn = false;
-    let mut all_proof_fn = true;
+    let mut all_proof_or_spec_fn = true;
     let mut has_iter_method = false;
 
     if let Some(item_list) = impl_block.assoc_item_list() {
@@ -996,9 +1019,14 @@ fn should_ignore_bare_impl_ast(impl_block: &ast::Impl, content: &str, base_name:
                     }
                 }
                 let fn_text = fn_def.syntax().text().to_string();
-                let is_proof = fn_text.contains(" proof fn ") || fn_text.starts_with("proof fn ");
-                if !is_proof {
-                    all_proof_fn = false;
+                let is_proof_or_spec = fn_text.contains(" proof fn ")
+                    || fn_text.starts_with("proof fn ")
+                    || fn_text.contains(" spec fn ")
+                    || fn_text.starts_with("spec fn ")
+                    || fn_text.contains(" open spec fn ")
+                    || fn_text.contains(" closed spec fn ");
+                if !is_proof_or_spec {
+                    all_proof_or_spec_fn = false;
                 }
             }
         }
@@ -1007,10 +1035,42 @@ fn should_ignore_bare_impl_ast(impl_block: &ast::Impl, content: &str, base_name:
     if has_iter_method {
         return true;
     }
-    if has_any_fn && all_proof_fn {
+    if has_any_fn && all_proof_or_spec_fn {
         return true;
     }
     false
+}
+
+/// Find structs and enums defined outside verus! (only meaningful when file has verus!).
+fn detect_structs_outside_verus(root: &SyntaxNode, content: &str) -> Vec<DetectedHole> {
+    let mut out = Vec::new();
+    for node in root.descendants() {
+        if node.kind() == SyntaxKind::STRUCT {
+            if let Some(struct_def) = ast::Struct::cast(node.clone()) {
+                let name = struct_def.name().map(|n| n.text().to_string()).unwrap_or_else(|| "?".to_string());
+                let offset: usize = struct_def.syntax().text_range().start().into();
+                let line = line_from_offset(content, offset);
+                out.push(DetectedHole {
+                    line,
+                    hole_type: "struct_outside_verus".to_string(),
+                    context: format!("struct {} — should be inside verus!", name),
+                });
+            }
+        }
+        if node.kind() == SyntaxKind::ENUM {
+            if let Some(enum_def) = ast::Enum::cast(node.clone()) {
+                let name = enum_def.name().map(|n| n.text().to_string()).unwrap_or_else(|| "?".to_string());
+                let offset: usize = enum_def.syntax().text_range().start().into();
+                let line = line_from_offset(content, offset);
+                out.push(DetectedHole {
+                    line,
+                    hole_type: "enum_outside_verus".to_string(),
+                    context: format!("enum {} — should be inside verus!", name),
+                });
+            }
+        }
+    }
+    out
 }
 
 fn detect_bare_impl_warnings(root: &SyntaxNode, content: &str) -> Vec<DetectedHole> {
@@ -1127,7 +1187,7 @@ fn should_ignore_bare_impl(
     let mut j = body_start + 1;
     let mut inner_brace: i32 = 1;
     let mut has_any_fn = false;
-    let mut all_proof_fn = true;
+    let mut all_proof_or_spec_fn = true;
     let mut has_iter_method = false;
 
     while j < tokens.len() && inner_brace > 0 {
@@ -1149,17 +1209,19 @@ fn should_ignore_bare_impl(
                     }
                 }
 
-                // Only `proof fn` should be ignored — spec fns belong in traits
-                let mut is_proof_fn = false;
-                let lookback = j.saturating_sub(10);
+                // proof fn or spec fn (open/closed spec fn) — OK in bare impl
+                let mut is_proof_or_spec_fn = false;
+                let lookback = j.saturating_sub(15);
                 for p in lookback..j {
-                    if tokens[p].kind() == SyntaxKind::IDENT && tokens[p].text() == "proof" {
-                        is_proof_fn = true;
-                        break;
+                    if tokens[p].kind() == SyntaxKind::IDENT {
+                        match tokens[p].text() {
+                            "proof" | "spec" => { is_proof_or_spec_fn = true; break; }
+                            _ => {}
+                        }
                     }
                 }
-                if !is_proof_fn {
-                    all_proof_fn = false;
+                if !is_proof_or_spec_fn {
+                    all_proof_or_spec_fn = false;
                 }
             }
             _ => {}
@@ -1172,8 +1234,8 @@ fn should_ignore_bare_impl(
         return true;
     }
 
-    // Rule: all functions are proof/spec fn (and there is at least one)
-    if has_any_fn && all_proof_fn {
+    // Rule: all functions are proof fn or spec fn (and there is at least one)
+    if has_any_fn && all_proof_or_spec_fn {
         return true;
     }
 
@@ -1288,6 +1350,10 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     analyze_unsafe_patterns(&root, &content, &mut stats);
 
     stats.warnings = detect_bare_impl_warnings(&root, &content);
+
+    if found_verus_macro {
+        stats.warnings.extend(detect_structs_outside_verus(&root, &content));
+    }
     
     Ok(stats)
 }
@@ -2029,7 +2095,7 @@ fn print_summary(summary: &SummaryStats) {
     
     if summary.total_warnings > 0 {
         log!("");
-        log!("Errors: {} bare impl(s) in files with trait definitions", summary.total_warnings);
+        log!("Errors: {} (bare impl(s), struct/enum outside verus!)", summary.total_warnings);
     }
 
     if summary.total_infos > 0 {
