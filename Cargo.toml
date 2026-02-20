@@ -138,3 +138,7 @@ path = "src/bin/fix_auto_triggers.rs"
 [[bin]]
 name = "veracity-review-module-fn-impls"
 path = "src/bin/review_module_fn_impls.rs"
+
+[[bin]]
+name = "veracity-verusification"
+path = "src/bin/verusification.rs"

@@ -1,0 +1,11 @@
+# Don't Clean Up Tool Outputs
+
+**NEVER delete or clean up files that are the final product of running a veracity tool** (e.g., `.md` reports, `.json` extracts, `.log` files in `analyses/` directories) unless the user explicitly asks.
+
+After running a tool, leave its output in place. The user may want to inspect it.
+
+This includes:
+- `analyses/veracity-*.md`
+- `analyses/veracity-*.json`
+- `analyses/veracity-*.log`
+- Any other file written by a veracity tool as its primary output

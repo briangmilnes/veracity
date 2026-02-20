@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ra_ap_syntax::{ast::{self, AstNode}, SyntaxKind, SyntaxNode};
+use ra_ap_syntax::{ast::{self, AstNode, HasName}, SyntaxKind, SyntaxNode};
 use veracity::{StandardArgs, find_rust_files};
 use std::{cell::RefCell, collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, time::Instant};
 use walkdir::WalkDir;
@@ -113,6 +113,8 @@ struct FileStats {
     proof_functions: usize,
     clean_proof_functions: usize,
     holed_proof_functions: usize,
+    warnings: Vec<DetectedHole>,
+    infos: Vec<DetectedHole>,
 }
 
 #[derive(Debug, Default)]
@@ -125,6 +127,8 @@ struct SummaryStats {
     holed_proof_functions: usize,
     holes: ProofHoleStats,
     axioms: AxiomStats,
+    total_warnings: usize,
+    total_infos: usize,
 }
 
 #[derive(Debug)]
@@ -404,32 +408,61 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
             
             let has_holes = stats.holes.total_holes > 0;
             
-            if has_holes {
-                // Print file header with ❌
-                let msg = format!("❌ {}", path_str);
+            let has_warnings = !stats.warnings.is_empty();
+            let has_infos = !stats.infos.is_empty();
+
+            if has_holes || has_warnings {
+                let icon = "❌";
+                let msg = format!("{} {}", icon, path_str);
                 println!("{}", msg);
                 write_to_log(&msg);
                 
-                // Read file content for context display
                 let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
                 
-                // Print each hole in Emacs format (no indent - Emacs needs col 0)
                 for hole in &stats.holes.holes {
                     let msg = format!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
                     println!("{}", msg);
                     write_to_log(&msg);
-                    // Context lines (indented so emacs won't parse them as error locations)
                     for ctx in build_context_lines(&file_content, hole) {
                         println!("{}", ctx);
                         write_to_log(&ctx);
                     }
                 }
+
+                for warning in &stats.warnings {
+                    let msg = format!("{}:{}: error: {} - {}", abs_path.display(), warning.line, warning.hole_type, warning.context);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                    for ctx in build_context_lines(&file_content, warning) {
+                        println!("{}", ctx);
+                        write_to_log(&ctx);
+                    }
+                }
+
+                for info in &stats.infos {
+                    let msg = format!("{}:{}: info: {} - {}", abs_path.display(), info.line, info.hole_type, info.context);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
                 
-                // Print hole counts
-                let msg = format!("   Holes: {} total", stats.holes.total_holes);
-                println!("{}", msg);
-                write_to_log(&msg);
-                print_hole_counts_with_log(&stats.holes, "      ");
+                if has_holes {
+                    let msg = format!("   Holes: {} total", stats.holes.total_holes);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                    print_hole_counts_with_log(&stats.holes, "      ");
+                }
+
+                if has_warnings {
+                    let msg = format!("   Errors: {} bare impl(s) in file with trait definition", stats.warnings.len());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
+                if has_infos {
+                    let msg = format!("   Info: {} assume(false); diverge() idiom(s)", stats.infos.len());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
                 
                 if stats.proof_functions > 0 {
                     let msg = format!("   Proof functions: {} total ({} clean, {} holed)", 
@@ -440,9 +473,24 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     write_to_log(&msg);
                 }
             } else {
-                let msg = format!("✓ {}", path_str);
+                let icon = if has_infos { "ℹ" } else { "✓" };
+                let msg = format!("{} {}", icon, path_str);
                 println!("{}", msg);
                 write_to_log(&msg);
+
+                if has_infos {
+                    let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
+                    for info in &stats.infos {
+                        let msg = format!("{}:{}: info: {} - {}", abs_path.display(), info.line, info.hole_type, info.context);
+                        println!("{}", msg);
+                        write_to_log(&msg);
+                    }
+                    let _ = &file_content; // suppress unused warning
+                    let msg = format!("   Info: {} assume(false); diverge() idiom(s)", stats.infos.len());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
                 if stats.proof_functions > 0 {
                     let msg = format!("   {} clean proof function{}", 
                              stats.proof_functions,
@@ -837,6 +885,18 @@ fn build_context_lines(content: &str, hole: &DetectedHole) -> Vec<String> {
         || hole.hole_type == "unsafe fn"
         || hole.hole_type == "unsafe impl";
 
+    if hole.hole_type == "bare_impl" {
+        // Show the impl line and 2 lines after it for context
+        let mut lines = Vec::new();
+        let to = (hole.line + 2).min(total_lines);
+        for n in (hole.line + 1)..=to {
+            if let Some(line) = get_line(content, n) {
+                lines.push(format!("     {:>5} | {}", n, line.trim_end()));
+            }
+        }
+        return lines;
+    }
+
     if is_attribute_hole {
         // Walk forward past any further #[...] attribute lines to reach the declaration.
         let mut lines = Vec::new();
@@ -887,6 +947,308 @@ fn build_context_lines(content: &str, hole: &DetectedHole) -> Vec<String> {
     }
 }
 
+const STANDARD_TRAITS: &[&str] = &[
+    "Clone", "Copy", "Debug", "Display", "Default",
+    "PartialEq", "Eq", "PartialOrd", "Ord", "Hash",
+    "Iterator", "IntoIterator", "Send", "Sync",
+    "View", "DeepView", "ForLoopGhostIteratorNew", "ForLoopGhostIterator",
+    "PartialEqSpecImpl", "Sized", "Drop",
+    "Add", "Sub", "Mul", "Div", "Rem", "Neg",
+    "From", "Into", "TryFrom", "TryInto",
+    "AsRef", "AsMut", "Deref", "DerefMut",
+    "Fn", "FnMut", "FnOnce",
+];
+
+/// Check if an AST bare impl should be ignored (iter_mut, iter_*, only proof fns, etc.)
+fn should_ignore_bare_impl_ast(impl_block: &ast::Impl, content: &str, base_name: &str) -> bool {
+    if base_name.contains("Iter") {
+        return true;
+    }
+
+    // #[verifier::external] on impl — check preceding lines
+    let offset: usize = impl_block.syntax().text_range().start().into();
+    let line = line_from_offset(content, offset);
+    let lines: Vec<&str> = content.lines().collect();
+    for i in (0..line.saturating_sub(1)).rev().take(5) {
+        if i < lines.len() {
+            let l = lines[i];
+            if l.contains("verifier") && l.contains("external") {
+                return true;
+            }
+            if !l.trim().starts_with("#[") && !l.trim().is_empty() {
+                break;
+            }
+        }
+    }
+
+    let mut has_any_fn = false;
+    let mut all_proof_fn = true;
+    let mut has_iter_method = false;
+
+    if let Some(item_list) = impl_block.assoc_item_list() {
+        for assoc in item_list.assoc_items() {
+            if let ast::AssocItem::Fn(fn_def) = assoc {
+                has_any_fn = true;
+                if let Some(name) = fn_def.name() {
+                    let fn_name = name.text();
+                    if fn_name.starts_with("iter") || fn_name == "into_iter" {
+                        has_iter_method = true;
+                    }
+                }
+                let fn_text = fn_def.syntax().text().to_string();
+                let is_proof = fn_text.contains(" proof fn ") || fn_text.starts_with("proof fn ");
+                if !is_proof {
+                    all_proof_fn = false;
+                }
+            }
+        }
+    }
+
+    if has_iter_method {
+        return true;
+    }
+    if has_any_fn && all_proof_fn {
+        return true;
+    }
+    false
+}
+
+fn detect_bare_impl_warnings(root: &SyntaxNode, content: &str) -> Vec<DetectedHole> {
+    let mut user_traits: Vec<String> = Vec::new();
+    let mut bare_impls: Vec<(String, usize, usize)> = Vec::new(); // (type_name, line, offset)
+
+    // AST pass for code outside verus! macros
+    for node in root.descendants() {
+        if node.kind() == SyntaxKind::TRAIT {
+            if let Some(trait_def) = ast::Trait::cast(node.clone()) {
+                if let Some(name) = trait_def.name() {
+                    let name_str = name.text().to_string();
+                    if !STANDARD_TRAITS.contains(&name_str.as_str()) {
+                        user_traits.push(name_str);
+                    }
+                }
+            }
+        }
+        if node.kind() == SyntaxKind::IMPL {
+            if let Some(impl_block) = ast::Impl::cast(node.clone()) {
+                if impl_block.trait_().is_none() {
+                    if let Some(self_ty) = impl_block.self_ty() {
+                        let type_str = self_ty.to_string();
+                        let base_name = type_str.split('<').next()
+                            .unwrap_or(&type_str).trim().to_string();
+                        let offset: usize = node.text_range().start().into();
+                        let line = line_from_offset(content, offset);
+                        if !should_ignore_bare_impl_ast(&impl_block, content, &base_name) {
+                            bare_impls.push((base_name, line, offset));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Token pass inside verus! / verus_! macros
+    for node in root.descendants() {
+        if node.kind() == SyntaxKind::MACRO_CALL {
+            if let Some(macro_call) = ast::MacroCall::cast(node) {
+                if let Some(macro_path) = macro_call.path() {
+                    let path_str = macro_path.to_string();
+                    if path_str == "verus" || path_str == "verus_" {
+                        if let Some(token_tree) = macro_call.token_tree() {
+                            detect_traits_and_bare_impls_in_tokens(
+                                token_tree.syntax(), content,
+                                &mut user_traits, &mut bare_impls,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if user_traits.is_empty() {
+        return Vec::new();
+    }
+
+    bare_impls.iter().map(|(bare_type, line, offset)| {
+        let context_line = get_context(content, *offset);
+        DetectedHole {
+            line: *line,
+            hole_type: "bare_impl".to_string(),
+            context: format!("{} — `impl {}` without trait; file defines [{}]",
+                context_line, bare_type, user_traits.join(", ")),
+        }
+    }).collect()
+}
+
+/// Check if a bare impl should be ignored based on its contents.
+/// Returns true if the impl contains only proof fns, or has iter/into_iter methods,
+/// or the type is an iterator type, or the impl has #[verifier::external].
+fn should_ignore_bare_impl(
+    tokens: &[ra_ap_syntax::SyntaxToken],
+    impl_idx: usize,
+    body_start: usize,
+    type_name: &str,
+) -> bool {
+    // Rule: iterator types (name contains "Iter")
+    if type_name.contains("Iter") {
+        return true;
+    }
+
+    // Rule: #[verifier::external] on the impl — scan backwards for it
+    {
+        let mut k = impl_idx.saturating_sub(1);
+        // skip whitespace/comments backwards
+        while k > 0 && matches!(tokens[k].kind(),
+            SyntaxKind::WHITESPACE | SyntaxKind::COMMENT) {
+            k -= 1;
+        }
+        // Check for ] which would close an attribute
+        if k > 0 && tokens[k].kind() == SyntaxKind::R_BRACK {
+            // Walk back to find the attribute contents
+            let mut depth = 1;
+            let mut kk = k - 1;
+            while kk > 0 && depth > 0 {
+                if tokens[kk].kind() == SyntaxKind::R_BRACK { depth += 1; }
+                if tokens[kk].kind() == SyntaxKind::L_BRACK { depth -= 1; }
+                if depth > 0 { kk -= 1; }
+            }
+            // Collect text between [ and ] to check for verifier::external
+            let attr_text: String = tokens[kk..=k].iter()
+                .map(|t| t.text().to_string()).collect();
+            if attr_text.contains("verifier") && attr_text.contains("external") {
+                return true;
+            }
+        }
+    }
+
+    // Scan the impl body to classify its functions
+    // body_start points to L_CURLY of the impl body
+    let mut j = body_start + 1;
+    let mut inner_brace: i32 = 1;
+    let mut has_any_fn = false;
+    let mut all_proof_fn = true;
+    let mut has_iter_method = false;
+
+    while j < tokens.len() && inner_brace > 0 {
+        match tokens[j].kind() {
+            SyntaxKind::L_CURLY => inner_brace += 1,
+            SyntaxKind::R_CURLY => inner_brace -= 1,
+            SyntaxKind::FN_KW if inner_brace == 1 => {
+                has_any_fn = true;
+
+                // Check function name
+                let mut n = j + 1;
+                while n < tokens.len() && tokens[n].kind() == SyntaxKind::WHITESPACE {
+                    n += 1;
+                }
+                if n < tokens.len() && tokens[n].kind() == SyntaxKind::IDENT {
+                    let fn_name = tokens[n].text();
+                    if fn_name.starts_with("iter") || fn_name == "into_iter" {
+                        has_iter_method = true;
+                    }
+                }
+
+                // Only `proof fn` should be ignored — spec fns belong in traits
+                let mut is_proof_fn = false;
+                let lookback = j.saturating_sub(10);
+                for p in lookback..j {
+                    if tokens[p].kind() == SyntaxKind::IDENT && tokens[p].text() == "proof" {
+                        is_proof_fn = true;
+                        break;
+                    }
+                }
+                if !is_proof_fn {
+                    all_proof_fn = false;
+                }
+            }
+            _ => {}
+        }
+        j += 1;
+    }
+
+    // Rule: contains iter/into_iter method
+    if has_iter_method {
+        return true;
+    }
+
+    // Rule: all functions are proof/spec fn (and there is at least one)
+    if has_any_fn && all_proof_fn {
+        return true;
+    }
+
+    false
+}
+
+fn detect_traits_and_bare_impls_in_tokens(
+    tree: &SyntaxNode,
+    content: &str,
+    user_traits: &mut Vec<String>,
+    bare_impls: &mut Vec<(String, usize, usize)>,
+) {
+    let tokens: Vec<_> = tree.descendants_with_tokens()
+        .filter_map(|n| n.into_token())
+        .collect();
+
+    let mut brace_depth: i32 = 0;
+    let mut i = 0;
+
+    while i < tokens.len() {
+        match tokens[i].kind() {
+            SyntaxKind::L_CURLY => brace_depth += 1,
+            SyntaxKind::R_CURLY => brace_depth -= 1,
+            SyntaxKind::TRAIT_KW if brace_depth == 1 => {
+                let mut j = i + 1;
+                while j < tokens.len() && tokens[j].kind() == SyntaxKind::WHITESPACE {
+                    j += 1;
+                }
+                if j < tokens.len() && tokens[j].kind() == SyntaxKind::IDENT {
+                    let name = tokens[j].text().to_string();
+                    if !STANDARD_TRAITS.contains(&name.as_str()) {
+                        user_traits.push(name);
+                    }
+                }
+            }
+            SyntaxKind::IMPL_KW if brace_depth == 1 => {
+                let impl_offset: usize = tokens[i].text_range().start().into();
+                let impl_line = line_from_offset(content, impl_offset);
+
+                let mut j = i + 1;
+                let mut angle_depth: i32 = 0;
+                let mut found_for = false;
+                let mut type_name = String::new();
+
+                while j < tokens.len() {
+                    let kind = tokens[j].kind();
+                    match kind {
+                        SyntaxKind::L_ANGLE => angle_depth += 1,
+                        SyntaxKind::R_ANGLE => angle_depth = (angle_depth - 1).max(0),
+                        SyntaxKind::L_CURLY if angle_depth == 0 => break,
+                        SyntaxKind::FOR_KW if angle_depth == 0 => {
+                            found_for = true;
+                            break;
+                        }
+                        SyntaxKind::IDENT if angle_depth == 0 && type_name.is_empty() => {
+                            type_name = tokens[j].text().to_string();
+                        }
+                        _ => {}
+                    }
+                    j += 1;
+                }
+
+                if !found_for && !type_name.is_empty() {
+                    // j points to L_CURLY (body start)
+                    if !should_ignore_bare_impl(&tokens, i, j, &type_name) {
+                        bare_impls.push((type_name, impl_line, impl_offset));
+                    }
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+}
+
 fn analyze_file(path: &Path) -> Result<FileStats> {
     let content = fs::read_to_string(path)?;
     
@@ -924,6 +1286,8 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     
     // Always scan the entire file for unsafe patterns (they can appear outside verus! blocks)
     analyze_unsafe_patterns(&root, &content, &mut stats);
+
+    stats.warnings = detect_bare_impl_warnings(&root, &content);
     
     Ok(stats)
 }
@@ -1077,6 +1441,28 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
     }
 }
 
+/// Check whether `diverge()` follows after the `false` token in `assume(false); diverge()`.
+/// `start` should point to the token after `false` (i.e., the `)` of `assume(false)`).
+fn has_diverge_after(tokens: &[ra_ap_syntax::SyntaxToken], start: usize) -> bool {
+    let mut j = start;
+    while j < tokens.len() {
+        match tokens[j].kind() {
+            SyntaxKind::R_PAREN | SyntaxKind::SEMICOLON | SyntaxKind::WHITESPACE => j += 1,
+            _ => break,
+        }
+    }
+    if j < tokens.len() && tokens[j].kind() == SyntaxKind::IDENT && tokens[j].text() == "diverge" {
+        j += 1;
+        while j < tokens.len() && tokens[j].kind() == SyntaxKind::WHITESPACE {
+            j += 1;
+        }
+        if j < tokens.len() && tokens[j].kind() == SyntaxKind::L_PAREN {
+            return true;
+        }
+    }
+    false
+}
+
 fn analyze_verus_macro(tree: &SyntaxNode, content: &str, stats: &mut FileStats) {
     // Walk the token tree looking for:
     // 1. Functions with proof modifier
@@ -1150,23 +1536,34 @@ fn analyze_verus_macro(tree: &SyntaxNode, content: &str, stats: &mut FileStats) 
                     let context = get_context(content, offset);
                     
                     if text == "assume" {
-                        // Check if it's assume(false)
                         if i + 2 < tokens.len() && tokens[i + 2].text() == "false" {
-                            stats.holes.assume_false_count += 1;
-                            stats.holes.holes.push(DetectedHole {
-                                line,
-                                hole_type: "assume(false)".to_string(),
-                                context,
-                            });
+                            // assume(false) — check for diverge() after it
+                            if has_diverge_after(&tokens, i + 3) {
+                                // Valid non-termination idiom: assume(false); diverge()
+                                stats.infos.push(DetectedHole {
+                                    line,
+                                    hole_type: "assume(false); diverge()".to_string(),
+                                    context: format!("{} — valid non-termination idiom", context),
+                                });
+                            } else {
+                                // assume(false) without diverge() — still a hole
+                                stats.holes.assume_false_count += 1;
+                                stats.holes.total_holes += 1;
+                                stats.holes.holes.push(DetectedHole {
+                                    line,
+                                    hole_type: "assume(false)".to_string(),
+                                    context: format!("{} — needs diverge(); use `assume(false); diverge()`", context),
+                                });
+                            }
                         } else {
                             stats.holes.assume_count += 1;
+                            stats.holes.total_holes += 1;
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "assume()".to_string(),
                                 context,
                             });
                         }
-                        stats.holes.total_holes += 1;
                     } else if text == "admit" {
                         stats.holes.admit_count += 1;
                         stats.holes.total_holes += 1;
@@ -1559,6 +1956,9 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
         summary.axioms.axiom_fn_count += stats.axioms.axiom_fn_count;
         summary.axioms.broadcast_use_axiom_count += stats.axioms.broadcast_use_axiom_count;
         summary.axioms.total_axioms += stats.axioms.total_axioms;
+
+        summary.total_warnings += stats.warnings.len();
+        summary.total_infos += stats.infos.len();
     }
     
     summary
@@ -1627,7 +2027,20 @@ fn print_summary(summary: &SummaryStats) {
         log!("   {} × opaque", summary.holes.opaque_count);
     }
     
-    if summary.holes.total_holes == 0 {
+    if summary.total_warnings > 0 {
+        log!("");
+        log!("Errors: {} bare impl(s) in files with trait definitions", summary.total_warnings);
+    }
+
+    if summary.total_infos > 0 {
+        log!("");
+        log!("Info: {} assume(false); diverge() idiom(s) (valid non-termination)", summary.total_infos);
+    }
+
+    if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
+        log!("");
+        log!("🎉 No proof holes or warnings found! All proofs are complete.");
+    } else if summary.holes.total_holes == 0 {
         log!("");
         log!("🎉 No proof holes found! All proofs are complete.");
     }

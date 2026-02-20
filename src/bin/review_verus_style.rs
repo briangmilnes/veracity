@@ -2122,9 +2122,13 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
     
     // Check 20: Every trait defined in the file must have at least one impl
     let mut check20_failed = false;
+    fn trait_name_base(s: &str) -> String {
+        s.split('<').next().unwrap_or(s).trim().to_string()
+    }
     for trait_info in &structure.trait_defs {
+        let trait_base = trait_name_base(&trait_info.name);
         let has_impl = structure.impl_blocks.iter().any(|imp| {
-            imp.trait_name.as_deref() == Some(&trait_info.name)
+            imp.trait_name.as_ref().map(|t| trait_name_base(t)) == Some(trait_base.clone())
         });
         if !has_impl {
             result.fail(20, trait_info.line, format!(
