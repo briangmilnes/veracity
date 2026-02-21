@@ -881,6 +881,27 @@ fn line_from_offset(content: &str, offset: usize) -> usize {
         .count() + 1
 }
 
+/// Check if lines around attr_line contain "accept hole" (flexible on whitespace/punctuation).
+fn has_accept_hole_comment(content: &str, attr_line: usize) -> bool {
+    let lines: Vec<&str> = content.lines().collect();
+    let start = attr_line.saturating_sub(1);
+    let end = (attr_line + 2).min(lines.len());
+    for line in lines.get(start..end).unwrap_or(&[]) {
+        let s = line.to_lowercase();
+        let normalized: String = s
+            .chars()
+            .map(|c| if c.is_ascii_punctuation() { ' ' } else { c })
+            .collect::<String>()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join("");
+        if normalized.contains("accepthole") {
+            return true;
+        }
+    }
+    false
+}
+
 /// Get a trimmed context snippet from around a byte offset
 fn get_context(content: &str, offset: usize) -> String {
     // Find the start and end of the line containing the offset
@@ -1556,13 +1577,21 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                 
                 match attr {
                     VerifierAttribute::ExternalBody => {
-                        stats.holes.external_body_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_body".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_body_accept_hole".to_string(),
+                                context: "external_body with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_body_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_body".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalFnSpec => {
                         stats.holes.external_fn_spec_count += 1;
@@ -1876,6 +1905,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         hole_type: "assume_new()".to_string(),
                         context: self.context_at(line),
                     });
+                } else if name == "accept" {
+                    // All accept() treated uniformly; no special case for accept(true)
+                    let line = self.file_line(seg.ident.span());
+                    self.stats.infos.push(DetectedHole {
+                        line,
+                        hole_type: "accept()".to_string(),
+                        context: "accept hole".to_string(),
+                    });
                 }
             }
         }
@@ -1927,6 +1964,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                             line,
                             hole_type: "verus_rwlock_external_body".to_string(),
                             context: "Verus RwLock new requires an external body at this point.".to_string(),
+                        });
+                    } else if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_body_accept_hole".to_string(),
+                            context: "external_body with accept hole comment".to_string(),
                         });
                     } else {
                         self.stats.holes.external_body_count += 1;
@@ -2179,6 +2222,13 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             hole_type: "admit()".to_string(),
                             context,
                         });
+                    } else if text == "accept" {
+                        // All accept() treated uniformly; no special case for accept(true)
+                        stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "accept()".to_string(),
+                            context: "accept hole".to_string(),
+                        });
                     } else if text == "assume_new" {
                         // Tracked::assume_new() - a sneaky assume!
                         stats.holes.assume_new_count += 1;
@@ -2229,13 +2279,21 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                 
                 match attr {
                     VerifierAttribute::ExternalBody => {
-                        stats.holes.external_body_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_body".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_body_accept_hole".to_string(),
+                                context: "external_body with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_body_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_body".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalFnSpec => {
                         stats.holes.external_fn_spec_count += 1;
@@ -2456,13 +2514,13 @@ fn count_holes_in_function(tokens: &[ra_ap_syntax::SyntaxToken], fn_idx: usize) 
     
     let end = i;
     
-    // Count holes in this range
+    // Count holes in this range (accept() is intentional, not a hole)
     let mut holes = 0;
     for j in start..end {
         if tokens[j].kind() == SyntaxKind::IDENT {
             let text = tokens[j].text();
-            if (text == "assume" || text == "admit") 
-                && j + 1 < end 
+            if (text == "assume" || text == "admit")
+                && j + 1 < end
                 && tokens[j + 1].kind() == SyntaxKind::L_PAREN {
                 holes += 1;
             }
