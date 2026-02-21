@@ -42,6 +42,10 @@ name = "veracity-count-loc"
 path = "src/bin/count_loc.rs"
 
 [[bin]]
+name = "veracity-run-experiments"
+path = "src/bin/run_experiments.rs"
+
+[[bin]]
 name = "veracity-review-proof-holes"
 path = "src/bin/review_verus_proof_holes.rs"
 
