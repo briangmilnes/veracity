@@ -325,17 +325,16 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
     }
     
     println!("{}", "-".repeat(44));
+    println!("{:>8} {:>8} {:>8} {:>8}", "spec", "proof", "exec", "rust");
     println!("{:>8}/{:>8}/{:>8}/{:>8} Total", 
         format_number(total_spec),
         format_number(total_proof),
         format_number(total_exec),
         format_number(total_rust)
     );
-    println!("{:>8} total lines, {} files analyzed in {}ms", 
-        format_number(total_lines), 
-        rust_files.len(), 
-        start.elapsed().as_millis()
-    );
+    println!("{:>8} total lines", format_number(total_lines));
+    println!("{} files analyzed", format_number(rust_files.len()));
+    println!("{}ms", start.elapsed().as_millis());
     
     Ok(())
 }
@@ -759,8 +758,13 @@ fn main() -> Result<()> {
     }
     summary_parts.push(format!("total {} files {} LOC", format_number(total_files), format_number(total_loc)));
     
-    if print_line(&format!("Summary: {}", summary_parts.join(", "))).is_err() { 
-        return Ok(()); 
+    if print_line("Summary:").is_err() {
+        return Ok(());
+    }
+    for part in &summary_parts {
+        if print_line(&format!("  {}", part)).is_err() {
+            return Ok(());
+        }
     }
     
     let elapsed = start.elapsed().as_millis();

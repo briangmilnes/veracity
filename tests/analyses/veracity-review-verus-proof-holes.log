@@ -1,0 +1,2 @@
+$ ./target/release/veracity-review-proof-holes tests/test_debug_clone.rs
+

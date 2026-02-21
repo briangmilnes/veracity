@@ -1,0 +1,57 @@
+---
+description: Commands for building and running Proof Time Tests (PTTs)
+globs: 
+alwaysApply: true
+---
+
+# PTT Commands
+
+Full documentation: `docs/ProofTimeTest.md`
+
+## When to write PTTs
+
+Only create PTTs for two cases:
+
+1. **Iterator verification** — confirm that a module's iterators prove correctly
+   (loop-match, for-iter, for-consuming, etc.).
+2. **Complicated callability** — when a function's `requires` clause is complex
+   and you're not confident callers can satisfy it, write a PTT exercising the call.
+
+Do not create PTTs speculatively or for simple functions with straightforward specs.
+
+## compile_ptt — compile library for PTTs
+
+Before running PTTs, compile the library with exported specs. **Both -o and --export are required.**
+
+```bash
+cd ~/projects/APAS-VERUS && ~/projects/verus/source/target-verus/release/verus \
+  --compile --crate-type=lib --crate-name apas_verus src/lib.rs \
+  -o target/verus/libapas_verus.rlib \
+  --export /home/milnes/projects/APAS-VERUS/target/verus/apas_verus.vir
+```
+
+Or: `scripts/ptt.sh` (compiles then runs PTTs)
+
+**Critical:** The `--export` path must be **absolute**. Without `--export`,
+the `.vir` file is NOT generated and PTTs will use stale specs.
+
+## ptt — compile + run proof time tests
+
+```bash
+scripts/ptt.sh
+```
+
+Or manually:
+
+1. Run `compile_ptt` (above)
+2. `cd ~/projects/APAS-VERUS/rust_verify_test && cargo nextest run --no-fail-fast`
+
+Always compile first. Stale `.rlib` or `.vir` causes mysterious failures.
+
+## rtt — run time tests
+
+```bash
+cd ~/projects/APAS-VERUS && timeout 120 cargo nextest run --no-fail-fast
+```
+
+Or: `scripts/rtt.sh`

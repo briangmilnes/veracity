@@ -1,0 +1,27 @@
+$ ./target/release/veracity-review-proof-holes -d tests/fixtures/accept_external_test.rs
+
+ℹ accept_external_test.rs
+/home/milnes/projects/veracity/tests/fixtures/accept_external_test.rs:3: info: external_type_specification_accept_hole - external_type_specification with accept hole comment
+/home/milnes/projects/veracity/tests/fixtures/accept_external_test.rs:6: info: external_body_accept_hole - external_body with accept hole comment
+   Info: 2 assume(false); diverge() idiom(s)
+   1 clean proof function
+
+═══════════════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Modules:
+   1 clean (no holes)
+   0 holed (contains holes)
+   1 total
+
+Proof Functions:
+   1 clean
+   0 holed
+   1 total
+
+Holes Found: 0 total
+
+Info: 2 assume(false); diverge() idiom(s) (valid non-termination)
+
+🎉 No proof holes or warnings found! All proofs are complete.

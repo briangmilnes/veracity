@@ -99,6 +99,67 @@ Axiom functions (`axiom fn`) are expected to have unverified bodies - they defin
 3. **Code review**: Identify modules requiring proof work
 4. **Trust assessment**: Understand what is assumed vs proven
 
+## Interactive Fix Mode (`-i`)
+
+With `-i` or `--interactive`, the tool prompts for each fixable hole:
+
+- **y** — Apply the fix
+- **n** — Skip this hole
+- **s** — Skip the rest of this file
+- **d** — Skip the rest of this directory
+- **q** — Quit
+
+### Fixable Holes
+
+| Hole Type | Fix |
+|-----------|-----|
+| `assume()` / `assume(false)` | Replace with `proof { accept(...); }`, add import inside `verus!` |
+| `#[verifier::external_*]` | Append `// accept hole` to the attribute line |
+
+### The `accept` Proof Function
+
+Use `accept` instead of `assume` for intentional, accepted holes. Veracity treats `accept()` as **info** rather than error or warning.
+
+Add this to your crate (e.g. in `vstdplus`):
+
+```rust
+//! Intentional proof holes — per veracity/docs/Accepted.md
+//!
+//! Veracity will info this as a proof hole but not error or warn.
+
+use vstd::prelude::*;
+
+verus! {
+
+/// Intentional proof hole. Use instead of `assume()` for accepted workarounds.
+/// Veracity: info, not error or warning.
+pub proof fn accept(b: bool)
+    ensures b,
+{
+    admit();
+}
+
+} // verus!
+
+// Re-export for cargo/runtime builds where proof fn may not be available.
+#[cfg(not(verus_keep_ghost))]
+pub use cargo_accept::accept;
+
+#[cfg(not(verus_keep_ghost))]
+mod cargo_accept {
+    /// Stub for cargo/runtime builds. Verus uses the proof fn above.
+    pub fn accept(_b: bool) {}
+}
+```
+
+### Custom Accept Import (`-a` / `--accept`)
+
+By default, the interactive fix adds `use crate::vstdplus::accept::accept;` inside the `verus!` block. Override with `-a`:
+
+```bash
+veracity-review-proof-holes -i -d src/ -a 'use my_crate::proof::accept::accept;'
+```
+
 ## Design Notes
 
 - Uses AST parsing (no string hacking)
@@ -108,6 +169,7 @@ Axiom functions (`axiom fn`) are expected to have unverified bodies - they defin
 
 ## See Also
 
+- [Accepted.md](Accepted.md) — `accept` and accepted holes
 - [veracity-minimize-lib.md](veracity-minimize-lib.md) - Minimize library dependencies
 - [veracity-search.md](veracity-search.md) - Search for lemmas by pattern
 

@@ -5,6 +5,7 @@ use ra_ap_syntax::{ast::{self, AstNode, HasName}, SyntaxKind, SyntaxNode};
 use verus_syn::spanned::Spanned;
 use veracity::{StandardArgs, find_rust_files};
 use verus_syn::visit::{self, Visit};
+use std::io::{self, BufRead, Write};
 use std::{cell::RefCell, collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, time::Instant};
 use walkdir::WalkDir;
 
@@ -162,24 +163,30 @@ struct ProofHolesArgs {
     standard: StandardArgs,
     /// Emacs-compatible diagnostics output (file:line: message)
     emacs_mode: bool,
+    /// Interactive mode: prompt y/n to fix assume->accept, external->add accept hole
+    interactive: bool,
     /// Directories to exclude from analysis
     exclude_dirs: Vec<PathBuf>,
+    /// Import for accept (e.g. "use crate::vstdplus::accept::accept;"). Used in -i mode.
+    accept_import: String,
 }
 
 impl ProofHolesArgs {
     fn parse() -> Result<Self> {
         let args: Vec<String> = std::env::args().collect();
         
-        let (standard, exclude_dirs) = Self::parse_args(&args)?;
+        let (standard, exclude_dirs, accept_import) = Self::parse_args(&args)?;
         
         Ok(ProofHolesArgs {
             standard,
-            emacs_mode: true,  // Always use emacs-compatible output
+            emacs_mode: !args.iter().any(|a| a == "-i" || a == "--interactive"),
+            interactive: args.iter().any(|a| a == "-i" || a == "--interactive"),
             exclude_dirs,
+            accept_import,
         })
     }
     
-    fn parse_args(args: &[String]) -> Result<(StandardArgs, Vec<PathBuf>)> {
+    fn parse_args(args: &[String]) -> Result<(StandardArgs, Vec<PathBuf>, String)> {
         if args.len() == 1 {
             let current_dir = std::env::current_dir()?;
             return Ok((StandardArgs { 
@@ -192,13 +199,14 @@ impl ProofHolesArgs {
                 src_dirs: vec!["src".to_string(), "source".to_string()],
                 test_dirs: vec!["tests".to_string(), "test".to_string()],
                 bench_dirs: vec!["benches".to_string()],
-            }, Vec::new()));
+            }, Vec::new(), "use crate::vstdplus::accept::accept;".to_string()));
         }
         
         let mut i = 1;
         let mut paths = Vec::new();
         let mut multi_codebase = None;
         let mut exclude_dirs = Vec::new();
+        let mut accept_import = "use crate::vstdplus::accept::accept;".to_string();
         
         while i < args.len() {
             match args[i].as_str() {
@@ -247,6 +255,18 @@ impl ProofHolesArgs {
                     multi_codebase = Some(multi_path);
                     i += 1;
                 }
+                "-i" | "--interactive" => {
+                    // Handled in parse() for interactive flag
+                    i += 1;
+                }
+                "-a" | "--accept" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--accept requires an import string (e.g. 'use crate::vstdplus::accept::accept;')"));
+                    }
+                    accept_import = args[i].clone();
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     println!("Usage: veracity-review-proof-holes [OPTIONS] [PATH...]");
                     println!();
@@ -254,8 +274,10 @@ impl ProofHolesArgs {
                     println!("Output format: file:line: type - context");
                     println!();
                     println!("Options:");
+                    println!("  -a, --accept IMPORT        Import for accept (default: use crate::vstdplus::accept::accept;)");
                     println!("  -d, --dir DIR [DIR...]     Analyze specific directories");
                     println!("  -e, --exclude DIR          Exclude directory (can be repeated)");
+                    println!("  -i, --interactive          Prompt y/n to fix assume->accept, external->add accept hole");
                     println!("  -M, --multi-codebase DIR   Scan multiple independent projects");
                     println!("  -h, --help                 Show this help message");
                     println!();
@@ -302,7 +324,7 @@ impl ProofHolesArgs {
             src_dirs: vec!["src".to_string(), "source".to_string()],
             test_dirs: vec!["tests".to_string(), "test".to_string()],
             bench_dirs: vec!["benches".to_string()],
-        }, exclude_dirs))
+        }, exclude_dirs, accept_import))
     }
 }
 
@@ -319,6 +341,10 @@ fn main() -> Result<()> {
     write_to_log(&format!("$ {}", cmdline));
     write_to_log("");
     
+    if args.interactive {
+        run_interactive_mode(&args.standard, &args.exclude_dirs, &args.accept_import)?;
+        return Ok(());
+    }
     if args.emacs_mode {
         // Emacs mode - quiet output, just file:line: messages
         run_emacs_mode(&args.standard, &args.exclude_dirs)?;
@@ -353,6 +379,259 @@ fn main() -> Result<()> {
     log!("");
     log!("Completed in {}ms", elapsed.as_millis());
     
+    Ok(())
+}
+
+/// Fixable hole types for interactive mode
+fn is_fixable_hole(hole_type: &str) -> bool {
+    matches!(
+        hole_type,
+        "assume()" | "assume(false)"
+            | "external_body"
+            | "external_fn_specification"
+            | "external_trait_specification"
+            | "external_type_specification"
+            | "external_trait_extension"
+            | "external"
+    )
+}
+
+/// Replace assume(...) with proof { accept(...); }, handling nested parens.
+fn replace_assume_with_proof_accept(line: &str) -> Option<String> {
+    let start = line.find("assume(").or_else(|| line.find("assume ("))?;
+    let open_paren = start + line[start..].find('(')?;
+    let mut depth = 1u32;
+    let mut end = open_paren;
+    for (i, c) in line[open_paren + 1..].chars().enumerate() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = open_paren + 1 + i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    let arg = &line[open_paren + 1..end];
+    let replacement = format!("proof {{ accept({}); }}", arg);
+    let mut result = line.to_string();
+    result.replace_range(start..=end, &replacement);
+    Some(result)
+}
+
+/// Return (proposed new line, needs_import) for display, or None if no change.
+fn proposed_fix_with_import(path: &Path, hole: &DetectedHole, accept_import: &str) -> Option<(String, bool)> {
+    let content = fs::read_to_string(path).ok()?;
+    let lines: Vec<&str> = content.lines().collect();
+    let line_idx = hole.line.saturating_sub(1);
+    let line = lines.get(line_idx)?;
+
+    if hole.hole_type == "assume()" || hole.hole_type == "assume(false)" {
+        if let Some(n) = replace_assume_with_proof_accept(line) {
+            Some((n, !has_accept_import(&content, accept_import)))
+        } else {
+            None
+        }
+    } else if hole.hole_type.starts_with("external") || hole.hole_type == "external" {
+        if has_accept_hole_comment(&content, hole.line) {
+            None
+        } else {
+            Some((format!("{} // accept hole", line.trim_end()), false))
+        }
+    } else {
+        None
+    }
+}
+
+/// Check if content already has the accept import (by path substring).
+fn has_accept_import(content: &str, accept_import: &str) -> bool {
+    let path = accept_import
+        .trim()
+        .strip_prefix("use ")
+        .and_then(|s| s.strip_suffix(';'))
+        .map(|s| s.trim())
+        .unwrap_or(accept_import);
+    content.contains(path)
+}
+
+/// Insert accept import inside the verus! block, after the last use there.
+/// Returns true if a line was inserted (caller must add 1 to line_idx if it was before the hole).
+/// No-op if the import already exists (avoids duplicate).
+fn add_accept_import(lines: &mut Vec<String>, accept_import: &str) -> bool {
+    if lines.iter().any(|l| l.trim() == accept_import.trim()) {
+        return false;
+    }
+    let verus_start = lines.iter().position(|l| l.contains("verus!"));
+    let Some(vs) = verus_start else {
+        return false;
+    };
+    let mut last_use_idx = None;
+    for (i, line) in lines.iter().enumerate().skip(vs + 1) {
+        let t = line.trim_start();
+        if t.starts_with("use ") {
+            last_use_idx = Some(i);
+        } else if !t.is_empty() && !t.starts_with("//") && !t.starts_with("#[") && !t.starts_with("#!") {
+            break;
+        }
+    }
+    if let Some(idx) = last_use_idx {
+        lines.insert(idx + 1, accept_import.to_string());
+    } else {
+        lines.insert(vs + 1, accept_import.to_string());
+    }
+    true
+}
+
+/// Apply fix: assume->accept or external->add // accept hole
+fn apply_fix(path: &Path, hole: &DetectedHole, accept_import: &str) -> Result<bool> {
+    let content = fs::read_to_string(path)?;
+    let mut lines: Vec<String> = content.lines().map(String::from).collect();
+    let line_idx = hole.line.saturating_sub(1);
+    let Some(line) = lines.get(line_idx) else {
+        return Ok(false);
+    };
+
+    let (new_line, changed, line_idx_offset) = if hole.hole_type == "assume()" || hole.hole_type == "assume(false)" {
+        // assume -> proof { accept(...); }; must add accept import
+        let new_line = replace_assume_with_proof_accept(line).unwrap_or_else(|| line.clone());
+        let changed = new_line != line.as_str();
+        let offset = if changed && !has_accept_import(&content, accept_import) {
+            if add_accept_import(&mut lines, accept_import) { 1 } else { 0 }
+        } else {
+            0
+        };
+        (new_line, changed, offset)
+    } else if hole.hole_type.starts_with("external") || hole.hole_type == "external" {
+        // Add // accept hole if not already present
+        if has_accept_hole_comment(&content, hole.line) {
+            (line.to_string(), false, 0)
+        } else {
+            let trimmed = line.trim_end();
+            (format!("{} // accept hole", trimmed), true, 0)
+        }
+    } else {
+        return Ok(false);
+    };
+
+    if !changed {
+        return Ok(false);
+    }
+
+    let mut new_lines = lines;
+    let idx = line_idx + line_idx_offset;
+    new_lines[idx] = new_line;
+    fs::write(path, new_lines.join("\n"))?;
+    Ok(true)
+}
+
+/// Run interactive mode: loop over fixable holes, prompt y/n, apply fixes
+fn run_interactive_mode(args: &StandardArgs, exclude_dirs: &[PathBuf], accept_import: &str) -> Result<()> {
+
+    let mut all_files: Vec<PathBuf> = Vec::new();
+    let base_dir = args.base_dir();
+
+    for path in &args.paths {
+        if path.is_file() && path.extension().map_or(false, |e| e == "rs") {
+            if !should_exclude(path, exclude_dirs) {
+                all_files.push(path.clone());
+            }
+        } else if path.is_dir() {
+            let files = find_rust_files(&[path.clone()]);
+            for file in files {
+                if !should_exclude(&file, exclude_dirs) {
+                    all_files.push(file);
+                }
+            }
+        }
+    }
+
+    let mut fixable: Vec<(PathBuf, DetectedHole)> = Vec::new();
+    for file in &all_files {
+        let abs_path = file.canonicalize().unwrap_or_else(|_| file.clone());
+        if let Ok(stats) = analyze_file(file) {
+            for hole in &stats.holes.holes {
+                if is_fixable_hole(&hole.hole_type) {
+                    fixable.push((abs_path.clone(), hole.clone()));
+                }
+            }
+        }
+    }
+
+    if fixable.is_empty() {
+        println!("No fixable holes found.");
+        return Ok(());
+    }
+
+    println!("Found {} fixable hole(s). (y=fix, n=skip, s=skip file, d=skip dir, q=quit)\n", fixable.len());
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock();
+    let mut stdout = io::stdout();
+
+    let mut i = 0;
+    while i < fixable.len() {
+        let (path, hole) = &fixable[i];
+        let path_str = path
+            .strip_prefix(&base_dir)
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| path.display().to_string());
+        println!("{}:{}: {} - {}", path_str, hole.line, hole.hole_type, hole.context);
+        if let Ok(content) = fs::read_to_string(path) {
+            for ctx in context_lines_around(&content, hole.line, 3, 5) {
+                println!("{}", ctx);
+            }
+        }
+        if let Some((proposed, needs_import)) = proposed_fix_with_import(path, hole, accept_import) {
+            if needs_import {
+                println!("  + {}", accept_import);
+            }
+            println!("  → {}", proposed.trim_end());
+        }
+        print!("  Fix? [y/n/s/d/q/?]: ");
+        stdout.flush()?;
+        let mut buf = String::new();
+        stdin.read_line(&mut buf)?;
+        let c = buf.trim().to_lowercase();
+        if c == "?" || c == "help" {
+            println!("    y = fix this hole");
+            println!("    n = skip this hole");
+            println!("    s = skip rest of this file");
+            println!("    d = skip rest of this directory");
+            println!("    q = quit");
+            continue;
+        }
+        if c == "q" || c == "quit" {
+            break;
+        }
+        if c == "s" || c == "skip" || c == "skip file" {
+            while i + 1 < fixable.len() && fixable[i + 1].0 == *path {
+                i += 1;
+            }
+        } else if c == "d" || c == "dir" || c == "skip dir" || c == "skip directory" {
+            let dir = path.parent().unwrap_or(path.as_path());
+            while i + 1 < fixable.len() {
+                let next_path = fixable[i + 1].0.parent().unwrap_or(fixable[i + 1].0.as_path());
+                if next_path == dir {
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+        } else if c == "y" || c == "yes" {
+            if let Ok(true) = apply_fix(path, hole, accept_import) {
+                println!("  ✓ Fixed");
+            } else {
+                println!("  (no change)");
+            }
+        }
+        i += 1;
+    }
+
     Ok(())
 }
 
@@ -941,6 +1220,22 @@ fn find_enclosing_fn_line(content: &str, from_line: usize) -> Option<usize> {
 /// Get a specific 1-indexed line from content, trimmed.
 fn get_line(content: &str, line_num: usize) -> Option<String> {
     content.lines().nth(line_num.saturating_sub(1)).map(|l| l.to_string())
+}
+
+/// Lines around a hole for interactive display: `before` lines before, `after` lines after.
+fn context_lines_around(content: &str, line: usize, before: usize, after: usize) -> Vec<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let total = lines.len();
+    let from = line.saturating_sub(before).saturating_sub(1).max(0);
+    let to = (line + after).min(total);
+    let mut out = Vec::new();
+    for n in from..to {
+        let line_num = n + 1;
+        let marker = if line_num == line { ">" } else { " " };
+        let text = lines.get(n).map(|s| *s).unwrap_or("").trim_end();
+        out.push(format!("  {} {:>5} | {}", marker, line_num, text));
+    }
+    out
 }
 
 /// Build context lines to display after the main hole line.

@@ -1,0 +1,226 @@
+# Merge Worktree
+
+## When to use
+
+When merging agent worktree branches into main. Execute phases 0–5 in strict order.
+Do NOT skip phases. Do NOT reorder phases.
+
+## Agent worktree layout
+
+| Worktree | Directory | Branch |
+|---|---|---|
+| main | `~/projects/APAS-VERUS` | `main` |
+| agent1 | `~/projects/APAS-VERUS-agent1` | `agent1/ready` |
+| agent2 | `~/projects/APAS-VERUS-agent2` | `agent2/ready` |
+| agent3 | `~/projects/APAS-VERUS-agent3` | `agent3/ready` |
+
+## Phase 0: Ensure all worktrees are committed and pushed
+
+All branches must be clean and pushed before merging. Do not proceed if any
+worktree has uncommitted changes or unpushed commits.
+
+```bash
+set -e
+# 1. Check main
+cd ~/projects/APAS-VERUS && git status
+cd ~/projects/APAS-VERUS && git log origin/main..HEAD --oneline
+
+# 2. Check agent1
+cd ~/projects/APAS-VERUS-agent1 && git status
+cd ~/projects/APAS-VERUS-agent1 && git log origin/agent1/ready..HEAD --oneline
+
+# 3. Check agent2
+cd ~/projects/APAS-VERUS-agent2 && git status
+cd ~/projects/APAS-VERUS-agent2 && git log origin/agent2/ready..HEAD --oneline
+
+# 4. Check agent3
+cd ~/projects/APAS-VERUS-agent3 && git status
+cd ~/projects/APAS-VERUS-agent3 && git log origin/agent3/ready..HEAD --oneline
+```
+
+- `git status` must show "nothing to commit, working tree clean" in each worktree.
+- `git log origin/<branch>..HEAD --oneline` must show no output (no unpushed commits).
+
+STOP. Do not proceed to Phase 1 until all four worktrees are committed and pushed.
+
+## Phase 1: Merge agent1/ready into main
+
+All commands run in `~/projects/APAS-VERUS`.
+
+```bash
+set -e
+# 1. Merge
+cd ~/projects/APAS-VERUS && git merge agent1/ready
+
+# 2. If conflicts: fix them, then
+cd ~/projects/APAS-VERUS && git add -A && GIT_EDITOR=true git merge --continue
+
+# 3. Verify: validate (full)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh
+
+# 4. Verify: validate (dev_only)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh dev_only
+
+# 5. Verify: RTTs
+cd ~/projects/APAS-VERUS && ./scripts/rtt.sh
+
+# 6. Verify: PTTs (compile lib + run proof time tests)
+cd ~/projects/APAS-VERUS && ./scripts/ptt.sh
+
+# 7. Push main
+cd ~/projects/APAS-VERUS && git push
+```
+
+STOP. Do not proceed to Phase 2 until Phase 1 step 7 succeeds.
+
+## Phase 2: Rebase agent2 onto post-agent1 main
+
+Main now contains agent1's changes. Agent2 must rebase onto this main
+BEFORE being merged. This ensures agent2's branch includes agent1's changes
+so the Phase 3 merge is clean.
+
+No verification needed — main was just verified in Phase 1.
+
+```bash
+set -e
+# 9. Rebase agent2 (picks up agent1's changes)
+cd ~/projects/APAS-VERUS-agent2 && git fetch origin && git rebase origin/main
+
+# 10. Force-push agent2
+cd ~/projects/APAS-VERUS-agent2 && git push origin agent2/ready --force
+```
+
+STOP. Do not proceed to Phase 3 until agent2 is rebased and force-pushed.
+
+## Phase 3: Merge agent2/ready into main
+
+Agent2 now sits on top of the post-agent1 main, so this merge only brings in
+agent2's own changes. All commands run in `~/projects/APAS-VERUS`.
+
+```bash
+set -e
+# 11. Merge
+cd ~/projects/APAS-VERUS && git merge agent2/ready
+
+# 12. If conflicts: fix them, then
+cd ~/projects/APAS-VERUS && git add -A && GIT_EDITOR=true git merge --continue
+
+# 13. Verify: validate (full)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh
+
+# 14. Verify: validate (dev_only)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh dev_only
+
+# 15. Verify: RTTs
+cd ~/projects/APAS-VERUS && ./scripts/rtt.sh
+
+# 16. Verify: PTTs (compile lib + run proof time tests)
+cd ~/projects/APAS-VERUS && ./scripts/ptt.sh
+
+# 17. Push main
+cd ~/projects/APAS-VERUS && git push
+```
+
+STOP. Do not proceed to Phase 2.5 until Phase 3 step 17 succeeds.
+
+## Phase 2.5: Rebase agent3 onto post-agent2 main
+
+Agent3 must rebase onto main (which now contains agent1 and agent2) before merge.
+
+```bash
+set -e
+# 18. Rebase agent3
+cd ~/projects/APAS-VERUS-agent3 && git fetch origin && git rebase origin/main
+
+# 19. Force-push agent3
+cd ~/projects/APAS-VERUS-agent3 && git push origin agent3/ready --force
+```
+
+STOP. Do not proceed to Phase 3.5 until Phase 2.5 succeeds.
+
+## Phase 3.5: Merge agent3/ready into main
+
+```bash
+set -e
+# 20. Merge
+cd ~/projects/APAS-VERUS && git merge agent3/ready
+
+# 21. If conflicts: fix them, then
+cd ~/projects/APAS-VERUS && git add -A && GIT_EDITOR=true git merge --continue
+
+# 22. Verify: validate (full)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh
+
+# 23. Verify: validate (dev_only)
+cd ~/projects/APAS-VERUS && ./scripts/validate.sh dev_only
+
+# 24. Verify: RTTs
+cd ~/projects/APAS-VERUS && ./scripts/rtt.sh
+
+# 25. Verify: PTTs
+cd ~/projects/APAS-VERUS && ./scripts/ptt.sh
+
+# 26. Push main
+cd ~/projects/APAS-VERUS && git push
+```
+
+STOP. Do not proceed to Phase 4 until Phase 3.5 step 26 succeeds.
+
+## Phase 4: Rebase all agents onto final main
+
+All agents must end on the same commit as main.
+
+```bash
+set -e
+# 27. Rebase agent1
+cd ~/projects/APAS-VERUS-agent1 && git fetch origin && git rebase origin/main
+
+# 28. Force-push agent1
+cd ~/projects/APAS-VERUS-agent1 && git push origin agent1/ready --force
+
+# 29. Rebase agent2
+cd ~/projects/APAS-VERUS-agent2 && git fetch origin && git rebase origin/main
+
+# 30. Force-push agent2
+cd ~/projects/APAS-VERUS-agent2 && git push origin agent2/ready --force
+
+# 31. Rebase agent3
+cd ~/projects/APAS-VERUS-agent3 && git fetch origin && git rebase origin/main
+
+# 32. Force-push agent3
+cd ~/projects/APAS-VERUS-agent3 && git push origin agent3/ready --force
+```
+
+STOP. Do not proceed to Phase 5 until Phase 4 step 32 succeeds.
+
+## Phase 5: Verify completion
+
+All four must show the same commit hash:
+
+```bash
+set -e
+# 33. main
+cd ~/projects/APAS-VERUS && echo "main: $(git log --oneline -1)"
+
+# 34. agent1
+cd ~/projects/APAS-VERUS-agent1 && echo "agent1/ready: $(git log --oneline -1)"
+
+# 35. agent2
+cd ~/projects/APAS-VERUS-agent2 && echo "agent2/ready: $(git log --oneline -1)"
+
+# 36. agent3
+cd ~/projects/APAS-VERUS-agent3 && echo "agent3/ready: $(git log --oneline -1)"
+```
+
+## Notes
+
+- Execute phases 0, 1, 2, 2.5, 3, 3.5, 4, 5 in strict order. Never skip a phase.
+- Each phase uses `set -e`: stop immediately if any command fails. Fix the failure before proceeding.
+- Phase 2 is critical: agent2 must rebase onto post-agent1 main BEFORE Phase 3.
+- Phase 2.5 is critical: agent3 must rebase onto post-agent2 main BEFORE Phase 3.5.
+- All verification uses project scripts: `validate.sh`, `rtt.sh`, `ptt.sh`. These get paths and flags right.
+- Order: validate (full), validate (dev_only), RTTs, PTTs. The `ptt.sh` script compiles the PTT lib then runs proof time tests.
+- Agent worktrees are only used for rebase + force-push. No verification there.
+- Use `GIT_EDITOR=true` for merge/rebase --continue to avoid the "dumb terminal" error.
+- Fix conflicts before verifying.
+- If a rebase has conflicts: fix, then `git add -A && GIT_EDITOR=true git rebase --continue`.

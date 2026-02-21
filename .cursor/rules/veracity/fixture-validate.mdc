@@ -1,0 +1,37 @@
+---
+description: How to run validate, RTT, and PTT on the APAS-VERUS fixture
+globs:
+alwaysApply: true
+---
+
+# Fixture Validation
+
+When validating, running runtime tests, or proof time tests **on the fixture** (the copy of APAS-VERUS used by veracity), run the scripts **from the fixture directory**.
+
+## Fixture Path
+
+```
+/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS
+```
+
+## Commands (from veracity root)
+
+| # | Command | Purpose |
+|---|---------|---------|
+| 1 | `cd tests/fixtures/APAS-VERUS && scripts/validate.sh [full\|dev_only\|exp] [--time]` | Verus verification |
+| 2 | `cd tests/fixtures/APAS-VERUS && scripts/rtt.sh [filter]` | Runtime tests |
+| 3 | `cd tests/fixtures/APAS-VERUS && scripts/ptt.sh [filter]` | Proof time tests |
+| 4 | `cd tests/fixtures/APAS-VERUS && scripts/validate-check-rtt-ptt.sh [full\|dev_only\|exp] [--time] [filter]` | Full pipeline |
+
+## Validate Modes
+
+| Mode | Description |
+|------|-------------|
+| `full` (default) | All modules including `#[cfg(feature = "full_verify")]` |
+| `dev_only` | Skip cfg-gated modules (faster) |
+| `exp` | Experiments only |
+
+## Do NOT use
+
+- `cargo verus verify` — APAS-VERUS uses the Verus binary directly via `scripts/validate.sh`
+- Scripts from `~/projects/APAS-VERUS/` — that is the live repo; when working on veracity, use the fixture scripts
