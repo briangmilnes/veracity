@@ -1594,49 +1594,89 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         }
                     }
                     VerifierAttribute::ExternalFnSpec => {
-                        stats.holes.external_fn_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_fn_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_fn_specification_accept_hole".to_string(),
+                                context: "external_fn_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_fn_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_fn_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTraitSpec => {
-                        stats.holes.external_trait_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_trait_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_specification_accept_hole".to_string(),
+                                context: "external_trait_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_trait_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTypeSpec => {
-                        stats.holes.external_type_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_type_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_type_specification_accept_hole".to_string(),
+                                context: "external_type_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_type_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_type_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTraitExt => {
-                        stats.holes.external_trait_ext_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_trait_extension".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_extension_accept_hole".to_string(),
+                                context: "external_trait_extension with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_trait_ext_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_extension".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::External => {
-                        stats.holes.external_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_accept_hole".to_string(),
+                                context: "external with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::Opaque => {
                         stats.holes.opaque_count += 1;
@@ -1978,29 +2018,69 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     }
                 }
                 VerifierAttribute::ExternalFnSpec => {
-                    self.stats.holes.external_fn_spec_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_fn_specification".to_string(), context });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_fn_specification_accept_hole".to_string(),
+                            context: "external_fn_specification with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.external_fn_spec_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_fn_specification".to_string(), context });
+                    }
                 }
                 VerifierAttribute::ExternalTraitSpec => {
-                    self.stats.holes.external_trait_spec_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_specification".to_string(), context });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_specification_accept_hole".to_string(),
+                            context: "external_trait_specification with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.external_trait_spec_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_specification".to_string(), context });
+                    }
                 }
                 VerifierAttribute::ExternalTypeSpec => {
-                    self.stats.holes.external_type_spec_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_type_specification".to_string(), context });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_type_specification_accept_hole".to_string(),
+                            context: "external_type_specification with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.external_type_spec_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_type_specification".to_string(), context });
+                    }
                 }
                 VerifierAttribute::ExternalTraitExt => {
-                    self.stats.holes.external_trait_ext_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_extension".to_string(), context });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_extension_accept_hole".to_string(),
+                            context: "external_trait_extension with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.external_trait_ext_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_extension".to_string(), context });
+                    }
                 }
                 VerifierAttribute::External => {
-                    self.stats.holes.external_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "external".to_string(), context });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_accept_hole".to_string(),
+                            context: "external with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.external_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external".to_string(), context });
+                    }
                 }
                 VerifierAttribute::Opaque => {
                     self.stats.holes.opaque_count += 1;
@@ -2296,49 +2376,89 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         }
                     }
                     VerifierAttribute::ExternalFnSpec => {
-                        stats.holes.external_fn_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_fn_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_fn_specification_accept_hole".to_string(),
+                                context: "external_fn_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_fn_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_fn_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTraitSpec => {
-                        stats.holes.external_trait_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_trait_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_specification_accept_hole".to_string(),
+                                context: "external_trait_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_trait_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTypeSpec => {
-                        stats.holes.external_type_spec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_type_specification".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_type_specification_accept_hole".to_string(),
+                                context: "external_type_specification with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_type_spec_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_type_specification".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::ExternalTraitExt => {
-                        stats.holes.external_trait_ext_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external_trait_extension".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_extension_accept_hole".to_string(),
+                                context: "external_trait_extension with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_trait_ext_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external_trait_extension".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::External => {
-                        stats.holes.external_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "external".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "external_accept_hole".to_string(),
+                                context: "external with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.external_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "external".to_string(),
+                                context,
+                            });
+                        }
                     }
                     VerifierAttribute::Opaque => {
                         stats.holes.opaque_count += 1;
