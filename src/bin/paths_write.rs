@@ -143,12 +143,15 @@ fn paint_onto_base(base_lines: &[String], spans: &[PathSpan], line_offset: usize
 fn find_verus_block(content: &str) -> Option<(usize, usize)> {
     let mut pos = 0;
     let chars: Vec<char> = content.chars().collect();
+    let byte_offset = |char_idx: usize| -> usize {
+        chars.iter().take(char_idx).map(|c| c.len_utf8()).sum()
+    };
     while pos < chars.len() {
         let rest: String = chars[pos..].iter().collect();
         if rest.starts_with("verus!") || rest.starts_with("verus_!") {
             let brace = rest.find('{')?;
             pos += brace + 1;
-            let inner_start = pos;
+            let inner_start_char = pos;
             let mut depth = 1;
             while pos < chars.len() && depth > 0 {
                 match chars[pos] {
@@ -158,7 +161,8 @@ fn find_verus_block(content: &str) -> Option<(usize, usize)> {
                 }
                 pos += 1;
             }
-            return Some((inner_start, pos - 1));
+            let inner_end_char = pos - 1;
+            return Some((byte_offset(inner_start_char), byte_offset(inner_end_char + 1) - 1));
         }
         pos += 1;
     }
