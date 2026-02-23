@@ -128,6 +128,10 @@ path = "src/bin/review_string_hacking.rs"
 # - fix_add_ensures.rs - Auto-generate ensures (stub)
 
 [[bin]]
+name = "veracity-add-broadcast-groups"
+path = "src/bin/add_broadcast_groups.rs"
+
+[[bin]]
 name = "veracity-fix-comment-formatting"
 path = "src/bin/fix_comment_formatting.rs"
 
@@ -142,6 +146,14 @@ path = "src/bin/fix_auto_triggers.rs"
 [[bin]]
 name = "veracity-review-module-fn-impls"
 path = "src/bin/review_module_fn_impls.rs"
+
+[[bin]]
+name = "veracity-paths-read"
+path = "src/bin/paths_read.rs"
+
+[[bin]]
+name = "veracity-paths-write"
+path = "src/bin/paths_write.rs"
 
 [[bin]]
 name = "veracity-verusification"

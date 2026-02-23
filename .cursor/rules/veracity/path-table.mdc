@@ -1,0 +1,21 @@
+---
+description: Path table — ratios and timing for veracity-read-paths
+globs:
+alwaysApply: true
+---
+
+# Path Table
+
+The **path table** is the combined ratios and timing for a run of `veracity-read-paths`:
+
+| Metric | Description |
+|--------|-------------|
+| Paths | Number of paths emitted |
+| Output chars | Total character count of path output |
+| Source lines | Lines in source file(s) |
+| Source chars | Character count of source |
+| Paths / source line | Ratio of paths to source lines |
+| Output chars / source chars | Expansion ratio |
+| Time | Wall-clock time to emit paths |
+
+When reporting or comparing `veracity-read-paths` runs, use the path table metrics.
