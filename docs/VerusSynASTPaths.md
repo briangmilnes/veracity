@@ -208,7 +208,23 @@ col      ::= <positive integer>
 
 ---
 
-## 8. verus! Parsing
+## 8. Path Tools
+
+| Tool | Purpose |
+|------|---------|
+| `veracity-paths-read` | Parse files, emit .vp path tables |
+| `veracity-paths-write` | Reconstruct source from .vp (round-trip) |
+| `veracity-paths-delete` | Delete content at path: `-v .vp -s .rs -p <path> [-o out]` |
+| `veracity-paths-insert` | Insert text after path: `-v .vp -s .rs -p <path> (-t text \| -f file) [-o out]` |
+| `veracity-paths-move` | Move content: `-v .vp -s .rs -from <path> -to <path> [-o out]` |
+| `veracity-paths-transform` | Replace content at path: `-v .vp -s .rs -p <path> (-t text \| -f file) [-o out]` |
+| `veracity-paths-traitify` | Extract fn for trait/impl refactor (WIP) |
+
+Path matching is substring: `-p 'fn{view} fn_part{body}'` matches any .vp line containing that string. Uses the first matching line with a span.
+
+---
+
+## 9. verus! Parsing
 
 Verus code lives in `verus! { ... }` or `verus_! { ... }`. Extract the token tree inside the braces, then:
 

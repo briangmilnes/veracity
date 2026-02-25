@@ -156,5 +156,29 @@ name = "veracity-paths-write"
 path = "src/bin/paths_write.rs"
 
 [[bin]]
+name = "veracity-paths-delete"
+path = "src/bin/paths_delete.rs"
+
+[[bin]]
+name = "veracity-paths-move"
+path = "src/bin/paths_move.rs"
+
+[[bin]]
+name = "veracity-paths-insert"
+path = "src/bin/paths_insert.rs"
+
+[[bin]]
+name = "veracity-paths-transform"
+path = "src/bin/paths_transform.rs"
+
+[[bin]]
+name = "veracity-paths-edit"
+path = "src/bin/paths_edit.rs"
+
+[[bin]]
+name = "veracity-paths-traitify"
+path = "src/bin/paths_traitify.rs"
+
+[[bin]]
 name = "veracity-verusification"
 path = "src/bin/verusification.rs"

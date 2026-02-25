@@ -1,0 +1,14 @@
+---
+description: Use release builds for veracity binaries, not debug
+globs:
+alwaysApply: true
+---
+
+# No Debug Build
+
+**Always use release builds for veracity binaries.**
+
+- **DO**: `cargo build --release` or `cargo build --release --bin <name>`
+- **DO NOT**: `cargo build` (debug) or `./target/debug/veracity-*`
+
+Release binaries live in `target/release/`. Use them for running veracity tools.

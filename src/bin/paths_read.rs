@@ -14,7 +14,6 @@
 //! Writes paths to analyses/<path>.vp (one .vp file per source file).
 
 use anyhow::Result;
-use quote::ToTokens;
 use ra_ap_syntax::ast::{AstNode, HasName};
 use ra_ap_syntax::ast;
 use syn::spanned::Spanned;
@@ -153,7 +152,7 @@ fn collect_target_files(paths: &[PathBuf], ignore_dirs: &[String]) -> Vec<PathBu
         if path.is_file() {
             if path.extension().map_or(false, |e| e == "rs") {
                 let s = path.to_string_lossy();
-                if !ignore_dirs.iter().any(|ex| s.contains(ex)) {
+                if !s.ends_with("_path.rs") && !ignore_dirs.iter().any(|ex| s.contains(ex)) {
                     files.push(path.clone());
                 }
             }
@@ -162,7 +161,9 @@ fn collect_target_files(paths: &[PathBuf], ignore_dirs: &[String]) -> Vec<PathBu
                 let p = entry.path();
                 if p.is_file() && p.extension().map_or(false, |e| e == "rs") {
                     let s = p.to_string_lossy();
-                    if !s.contains("/target/") && !s.contains("/attic/") {
+                    if !s.contains("/target/") && !s.contains("/attic/")
+                        && !s.ends_with("_path.rs")
+                    {
                         if !ignore_dirs.iter().any(|ex| s.contains(ex)) {
                             files.push(p.to_path_buf());
                         }
@@ -218,6 +219,40 @@ fn format_span(span: &impl quote::spanned::Spanned, line_offset: usize) -> Strin
     format!("{line_s}:{col_s}-{line_e}:{col_e}")
 }
 
+/// Extract actual source text at span from inner content.
+/// Span line/column are 1-based relative to inner (proc_macro2 convention).
+fn span_to_source(inner: &str, span: &impl quote::spanned::Spanned) -> String {
+    let s = span.span();
+    let start = s.start();
+    let end = s.end();
+    let line_s = start.line;
+    let col_s = start.column;
+    let line_e = end.line;
+    let col_e = end.column;
+    let line_col_to_byte = |content: &str, line: usize, col: usize| -> usize {
+        let mut byte = 0;
+        for (i, l) in content.lines().enumerate() {
+            if i + 1 >= line {
+                let col_byte: usize = l
+                    .char_indices()
+                    .take(col.saturating_sub(1))
+                    .map(|(_, c)| c.len_utf8())
+                    .sum();
+                return byte + col_byte;
+            }
+            byte += l.len() + 1;
+        }
+        byte
+    };
+    let byte_start = line_col_to_byte(inner, line_s, col_s);
+    // proc_macro2 end is inclusive (last char); we need byte after it for slice
+    let byte_end = line_col_to_byte(inner, line_e, col_e.saturating_add(1));
+    if byte_start >= inner.len() || byte_end > inner.len() || byte_start >= byte_end {
+        return String::new();
+    }
+    inner[byte_start..byte_end].to_string()
+}
+
 fn emit_paths(
     file_path: &str, // full filesystem path
     modules: &[String],
@@ -251,80 +286,74 @@ fn emit_paths(
         match item {
             verus_syn::Item::Use(u) => {
                 let segs = prefix(&[]);
-                emit_use_tree_paths(&u.tree, &segs, line_offset, paths);
+                emit_use_tree_paths(&u.tree, &segs, inner, line_offset, paths);
             }
             verus_syn::Item::BroadcastUse(bu) => {
                 let base = prefix(&[]);
                 paths.push(format!("{} broadcast_use", base));
                 for path_expr in &bu.paths {
-                    let path_str = path_expr
-                        .path
-                        .to_token_stream()
-                        .to_string()
-                        .replace(" :: ", "::");
+                    let path_str = escape_value(&span_to_source(inner, path_expr));
                     let span_str = format_span(path_expr, line_offset);
                     paths.push(format!("{} broadcast_use broadcast_group{{{}}} {}", base, path_str, span_str));
                 }
             }
             verus_syn::Item::Struct(s) => {
-                let ident_str = s.ident.to_string();
-                let struct_base = prefix(&[format!("struct_ident{{{}}}", escape_value(&ident_str))]);
-                emit_attrs(&s.attrs, &struct_base, line_offset, paths, "struct_attrs");
-                let vis_str = s.vis.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
+                let ident_str = escape_value(&span_to_source(inner, &s.ident));
+                let struct_base = prefix(&[format!("struct_ident{{{}}}", ident_str)]);
+                emit_attrs(&s.attrs, &struct_base, inner, line_offset, paths, "struct_attrs");
                 paths.push(format!(
                     "{} struct_vis{{{}}} {}",
                     struct_base,
-                    escape_value(&vis_str),
+                    escape_value(&span_to_source(inner, &s.vis)),
                     format_span(&s.vis, line_offset)
                 ));
-                let generics_str = s.generics.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
-                if !generics_str.is_empty() {
+                if !s.generics.params.is_empty() {
                     paths.push(format!(
                         "{} struct_generics{{{}}} {}",
                         struct_base,
-                        escape_value(&generics_str),
+                        escape_value(&span_to_source(inner, &s.generics)),
                         format_span(&s.generics, line_offset)
                     ));
                 }
                 paths.push(format!("{} {}", struct_base, format_span(s, line_offset)));
-                emit_struct_fields(s, &struct_base, line_offset, paths);
+                emit_struct_fields(s, &struct_base, inner, line_offset, paths);
             }
             verus_syn::Item::Enum(e) => {
-                let enum_value = enum_header(e);
+                let enum_value = escape_value(&span_to_source(inner, e));
                 let enum_base = prefix(&[format!("enum{{{}}}", enum_value)]);
                 paths.push(format!("{} {}", enum_base, format_span(e, line_offset)));
-                emit_enum_variants(e, &enum_base, line_offset, paths);
+                emit_enum_variants(e, &enum_base, inner, line_offset, paths);
             }
             verus_syn::Item::Type(t) => {
-                let name = t.ident.to_string();
+                let name = escape_value(&span_to_source(inner, t));
                 let segs = prefix(&[format!("type{{{}}}", name)]);
                 paths.push(format!("{} {}", segs, format_span(t, line_offset)));
             }
             verus_syn::Item::Const(c) => {
-                let name = c.ident.to_string();
+                let name = escape_value(&span_to_source(inner, c));
                 let segs = prefix(&[format!("const{{{}}}", name)]);
                 paths.push(format!("{} {}", segs, format_span(c, line_offset)));
             }
             verus_syn::Item::Trait(t) => {
-                let trait_value = trait_header(t);
+                let trait_value = escape_value(&span_to_source(inner, t));
                 let base = prefix(&[format!("trait{{{}}}", trait_value)]);
                 paths.push(format!("{} {}", base, format_span(t, line_offset)));
 
                 for ti in &t.items {
                     if let verus_syn::TraitItem::Fn(f) = ti {
-                        emit_fn_paths(&f.sig, f.default.as_ref(), &base, line_offset, paths);
+                        emit_fn_paths(&f.sig, f.default.as_ref(), &base, inner, line_offset, paths);
                     }
                 }
             }
             verus_syn::Item::Impl(i) => {
-                emit_impl_paths(i, &prefix, line_offset, paths);
+                emit_impl_paths(i, &prefix, inner, line_offset, paths);
             }
             verus_syn::Item::Fn(f) => {
                 let base = prefix(&[]);
-                emit_fn_paths(&f.sig, Some(&f.block), &base, line_offset, paths);
+                emit_fn_paths(&f.sig, Some(&f.block), &base, inner, line_offset, paths);
             }
             verus_syn::Item::BroadcastGroup(bg) => {
-                let name = bg.ident.to_string();
+                let name = escape_value(&span_to_source(inner, bg));
                 let segs = prefix(&[format!("broadcast_group{{{}}}", name)]);
                 paths.push(format!("{} {}", segs, format_span(bg, line_offset)));
             }
@@ -338,67 +367,37 @@ fn escape_value(s: &str) -> String {
     s.replace('}', r"\}")
 }
 
-/// Extract enum header (vis, mode, enum, ident, generics) before variants.
-fn enum_header(e: &verus_syn::ItemEnum) -> String {
-    let full = e.to_token_stream().to_string().replace(" :: ", "::");
-    let header = full
-        .find(" {")
-        .map(|i| full[..i].trim())
-        .unwrap_or(full.trim());
-    escape_value(header)
-}
-
-/// Extract trait header (vis, trait, ident, generics) before items.
-fn trait_header(t: &verus_syn::ItemTrait) -> String {
-    let full = t.to_token_stream().to_string().replace(" :: ", "::");
-    let header = full
-        .find(" {")
-        .map(|i| full[..i].trim())
-        .unwrap_or(full.trim());
-    escape_value(header)
-}
-
-fn variant_to_string(v: &verus_syn::Variant) -> String {
-    let raw = v
-        .to_token_stream()
-        .to_string()
-        .replace(" :: ", "::")
-        .replace("  ", " ");
-    escape_value(raw.trim())
-}
-
 fn emit_struct_fields(
     s: &verus_syn::ItemStruct,
     struct_base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
     match &s.fields {
         verus_syn::Fields::Named(fields) => {
             for f in fields.named.iter() {
-                let name = f.ident.as_ref().map(|i| i.to_string()).unwrap_or_default();
-                let field_base = format!("{} struct_field{{{}}}", struct_base, escape_value(&name));
-                emit_attrs(&f.attrs, &field_base, line_offset, paths, "struct_field_attrs");
-                let vis_str = f.vis.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
+                let name = f.ident.as_ref().map(|i| escape_value(&span_to_source(inner, i))).unwrap_or_default();
+                let field_base = format!("{} struct_field{{{}}}", struct_base, name);
+                emit_attrs(&f.attrs, &field_base, inner, line_offset, paths, "struct_field_attrs");
                 paths.push(format!(
                     "{} struct_field_vis{{{}}} {}",
                     field_base,
-                    escape_value(&vis_str),
+                    escape_value(&span_to_source(inner, &f.vis)),
                     format_span(&f.vis, line_offset)
                 ));
                 if let Some(ref ident) = f.ident {
                     paths.push(format!(
                         "{} struct_field_name{{{}}} {}",
                         field_base,
-                        escape_value(&ident.to_string()),
+                        escape_value(&span_to_source(inner, ident)),
                         format_span(ident, line_offset)
                     ));
                 }
-                let ty_str = f.ty.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
                 paths.push(format!(
                     "{} struct_field_type{{{}}} {}",
                     field_base,
-                    escape_value(&ty_str),
+                    escape_value(&span_to_source(inner, &f.ty)),
                     format_span(&f.ty, line_offset)
                 ));
                 paths.push(format!("{} {}", field_base, format_span(f, line_offset)));
@@ -407,12 +406,11 @@ fn emit_struct_fields(
         verus_syn::Fields::Unnamed(fields) => {
             for (i, f) in fields.unnamed.iter().enumerate() {
                 let field_base = format!("{} struct_field{{{}}}", struct_base, i);
-                emit_attrs(&f.attrs, &field_base, line_offset, paths, "struct_field_attrs");
-                let vis_str = f.vis.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
+                emit_attrs(&f.attrs, &field_base, inner, line_offset, paths, "struct_field_attrs");
                 paths.push(format!(
                     "{} struct_field_vis{{{}}} {}",
                     field_base,
-                    escape_value(&vis_str),
+                    escape_value(&span_to_source(inner, &f.vis)),
                     format_span(&f.vis, line_offset)
                 ));
                 paths.push(format!(
@@ -421,11 +419,10 @@ fn emit_struct_fields(
                     i,
                     format_span(&f.ty, line_offset)
                 ));
-                let ty_str = f.ty.to_token_stream().to_string().replace(" :: ", "::").trim().to_string();
                 paths.push(format!(
                     "{} struct_field_type{{{}}} {}",
                     field_base,
-                    escape_value(&ty_str),
+                    escape_value(&span_to_source(inner, &f.ty)),
                     format_span(&f.ty, line_offset)
                 ));
                 paths.push(format!("{} {}", field_base, format_span(f, line_offset)));
@@ -438,11 +435,12 @@ fn emit_struct_fields(
 fn emit_enum_variants(
     e: &verus_syn::ItemEnum,
     enum_base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
     for v in &e.variants {
-        let variant_value = variant_to_string(v);
+        let variant_value = escape_value(&span_to_source(inner, v));
         let variant_base = format!("{} enum_variant{{{}}}", enum_base, variant_value);
         paths.push(format!("{} {}", variant_base, format_span(v, line_offset)));
     }
@@ -478,22 +476,19 @@ fn item_attrs(item: &verus_syn::Item) -> Option<&[verus_syn::Attribute]> {
 fn emit_attrs(
     attrs: &[verus_syn::Attribute],
     base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
     tag_prefix: &str,
 ) {
     for (idx, attr) in attrs.iter().enumerate() {
-        let attr_raw = attr
-            .to_token_stream()
-            .to_string()
-            .replace(" :: ", "::")
-            .replace("  ", " ");
+        let attr_raw = escape_value(&span_to_source(inner, attr));
         paths.push(format!(
             "{} {}_{}{{{}}} {}",
             base,
             tag_prefix,
             idx,
-            escape_value(attr_raw.trim()),
+            attr_raw,
             format_span(attr, line_offset)
         ));
     }
@@ -502,79 +497,53 @@ fn emit_attrs(
 fn emit_stmt_parts(
     stmt: &verus_syn::Stmt,
     stmt_base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
     match stmt {
         verus_syn::Stmt::Local(local) => {
-            emit_attrs(&local.attrs, stmt_base, line_offset, paths, "body_stmt_attrs");
-            let pat_raw = local
-                .pat
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
+            emit_attrs(&local.attrs, stmt_base, inner, line_offset, paths, "body_stmt_attrs");
             paths.push(format!(
                 "{} body_stmt_local_pat{{{}}} {}",
                 stmt_base,
-                escape_value(pat_raw.trim()),
+                escape_value(&span_to_source(inner, &local.pat)),
                 format_span(&local.pat, line_offset)
             ));
             if let Some(ref init) = local.init {
-                let init_raw = init
-                    .expr
-                    .to_token_stream()
-                    .to_string()
-                    .replace(" :: ", "::")
-                    .replace("  ", " ");
                 paths.push(format!(
                     "{} body_stmt_local_init{{{}}} {}",
                     stmt_base,
-                    escape_value(init_raw.trim()),
+                    escape_value(&span_to_source(inner, init.expr.as_ref())),
                     format_span(init.expr.as_ref(), line_offset)
                 ));
             }
         }
         verus_syn::Stmt::Expr(expr, _) => {
-            let expr_raw = expr
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
             paths.push(format!(
                 "{} body_stmt_expr{{{}}} {}",
                 stmt_base,
-                escape_value(expr_raw.trim()),
+                escape_value(&span_to_source(inner, expr)),
                 format_span(expr, line_offset)
             ));
         }
         verus_syn::Stmt::Item(item) => {
             if let Some(attrs) = item_attrs(item) {
-                emit_attrs(attrs, stmt_base, line_offset, paths, "body_stmt_attrs");
+                emit_attrs(attrs, stmt_base, inner, line_offset, paths, "body_stmt_attrs");
             }
-            let item_raw = item
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
             paths.push(format!(
                 "{} body_stmt_item{{{}}} {}",
                 stmt_base,
-                escape_value(item_raw.trim()),
+                escape_value(&span_to_source(inner, item)),
                 format_span(item, line_offset)
             ));
         }
         verus_syn::Stmt::Macro(m) => {
-            emit_attrs(&m.attrs, stmt_base, line_offset, paths, "body_stmt_attrs");
-            let m_raw = m
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
+            emit_attrs(&m.attrs, stmt_base, inner, line_offset, paths, "body_stmt_attrs");
             paths.push(format!(
                 "{} body_stmt_macro{{{}}} {}",
                 stmt_base,
-                escape_value(m_raw.trim()),
+                escape_value(&span_to_source(inner, m)),
                 format_span(m, line_offset)
             ));
         }
@@ -584,36 +553,20 @@ fn emit_stmt_parts(
 fn emit_use_tree_paths(
     tree: &verus_syn::UseTree,
     base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
     match tree {
         verus_syn::UseTree::Group(g) => {
             for item in &g.items {
-                emit_use_tree_paths(item, base, line_offset, paths);
+                emit_use_tree_paths(item, base, inner, line_offset, paths);
             }
         }
         _ => {
-            let use_str = path_to_string(tree);
+            let use_str = escape_value(&span_to_source(inner, tree));
             let span_str = format_span(tree, line_offset);
             paths.push(format!("{} use{{{}}} {}", base, use_str, span_str));
-        }
-    }
-}
-
-fn path_to_string(tree: &verus_syn::UseTree) -> String {
-    match tree {
-        verus_syn::UseTree::Path(p) => {
-            let mut s = p.ident.to_string();
-            s.push_str("::");
-            s.push_str(&path_to_string(&p.tree));
-            s
-        }
-        verus_syn::UseTree::Name(n) => n.ident.to_string(),
-        verus_syn::UseTree::Rename(r) => format!("{} as {}", r.ident, r.rename),
-        verus_syn::UseTree::Glob(_) => "*".to_string(),
-        verus_syn::UseTree::Group(g) => {
-            g.items.iter().map(path_to_string).collect::<Vec<_>>().join(", ")
         }
     }
 }
@@ -626,36 +579,22 @@ fn fn_mode_str(mode: &verus_syn::FnMode) -> &'static str {
     }
 }
 
-fn impl_type_value(ty: &verus_syn::Type) -> String {
-    ty.to_token_stream()
-        .to_string()
-        .replace(" :: ", "::")
-        .trim()
-        .to_string()
-}
-
 fn emit_impl_paths(
     i: &verus_syn::ItemImpl,
     prefix: &dyn Fn(&[String]) -> String,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
-    let impl_type_str = impl_type_value(&i.self_ty);
     let mut impl_segments = vec!["impl{}".to_string()];
 
     match &i.trait_ {
         Some((_, path, _)) => {
-            let trait_str = path
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .trim()
-                .to_string();
-            impl_segments.push(format!("impl_trait{{{}}}", escape_value(&trait_str)));
-            impl_segments.push(format!("impl_type{{{}}}", escape_value(&impl_type_str)));
+            impl_segments.push(format!("impl_trait{{{}}}", escape_value(&span_to_source(inner, path))));
+            impl_segments.push(format!("impl_type{{{}}}", escape_value(&span_to_source(inner, &i.self_ty))));
         }
         None => {
-            impl_segments.push(format!("impl_type{{{}}}", escape_value(&impl_type_str)));
+            impl_segments.push(format!("impl_type{{{}}}", escape_value(&span_to_source(inner, &i.self_ty))));
         }
     }
 
@@ -664,7 +603,7 @@ fn emit_impl_paths(
 
     for ii in &i.items {
         if let verus_syn::ImplItem::Fn(f) = ii {
-            emit_fn_paths(&f.sig, Some(&f.block), &base, line_offset, paths);
+            emit_fn_paths(&f.sig, Some(&f.block), &base, inner, line_offset, paths);
         }
     }
 }
@@ -673,72 +612,52 @@ fn emit_fn_paths(
     sig: &verus_syn::Signature,
     block: Option<&verus_syn::Block>,
     base: &str,
+    inner: &str,
     line_offset: usize,
     paths: &mut Vec<String>,
 ) {
     let mode_str = fn_mode_str(&sig.mode);
-    let fn_name = sig.ident.to_string();
+    let fn_name = escape_value(&span_to_source(inner, &sig.ident));
     let fn_value = format!("{} {}", mode_str, fn_name);
     let fn_base = format!("{} fn{{{}}}", base, fn_value);
 
     paths.push(format!("{} {}", fn_base, format_span(&sig.ident, line_offset)));
 
     if !sig.generics.params.is_empty() {
-        let span_str = format_span(&sig.generics, line_offset);
-        let raw = sig
-            .generics
-            .to_token_stream()
-            .to_string()
-            .replace(" :: ", "::");
         paths.push(format!(
             "{} fn_part{{generics {}}} {}",
             fn_base,
-            escape_value(raw.trim()),
-            span_str
+            escape_value(&span_to_source(inner, &sig.generics)),
+            format_span(&sig.generics, line_offset)
         ));
     }
     for (idx, arg) in sig.inputs.iter().enumerate() {
         let arg_base = format!("{} fn_part{{input_arg_{}}}", fn_base, idx);
         match &arg.kind {
             verus_syn::FnArgKind::Receiver(r) => {
-                let name_str = "self";
                 paths.push(format!(
-                    "{} input_arg_name{{{}}} {}",
+                    "{} input_arg_name{{self}} {}",
                     arg_base,
-                    name_str,
                     format_span(&r.self_token, line_offset)
                 ));
-                let ty_raw = r.ty.to_token_stream().to_string().replace(" :: ", "::");
                 paths.push(format!(
                     "{} input_arg_type{{{}}} {}",
                     arg_base,
-                    escape_value(ty_raw.trim()),
+                    escape_value(&span_to_source(inner, r.ty.as_ref())),
                     format_span(r.ty.as_ref(), line_offset)
                 ));
             }
             verus_syn::FnArgKind::Typed(pt) => {
-                let name_raw = pt
-                    .pat
-                    .to_token_stream()
-                    .to_string()
-                    .replace(" :: ", "::")
-                    .replace("  ", " ");
                 paths.push(format!(
                     "{} input_arg_name{{{}}} {}",
                     arg_base,
-                    escape_value(name_raw.trim()),
+                    escape_value(&span_to_source(inner, pt.pat.as_ref())),
                     format_span(pt.pat.as_ref(), line_offset)
                 ));
-                let ty_raw = pt
-                    .ty
-                    .to_token_stream()
-                    .to_string()
-                    .replace(" :: ", "::")
-                    .replace("  ", " ");
                 paths.push(format!(
                     "{} input_arg_type{{{}}} {}",
                     arg_base,
-                    escape_value(ty_raw.trim()),
+                    escape_value(&span_to_source(inner, pt.ty.as_ref())),
                     format_span(pt.ty.as_ref(), line_offset)
                 ));
             }
@@ -746,17 +665,11 @@ fn emit_fn_paths(
     }
     match &sig.output {
         verus_syn::ReturnType::Type(_, _, _, ty) => {
-            let raw = ty
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
-            let span_str = format_span(ty, line_offset);
             paths.push(format!(
                 "{} fn_part{{output {}}} {}",
                 fn_base,
-                escape_value(raw.trim()),
-                span_str
+                escape_value(&span_to_source(inner, ty)),
+                format_span(ty, line_offset)
             ));
         }
         verus_syn::ReturnType::Default => {}
@@ -765,103 +678,66 @@ fn emit_fn_paths(
     let spec = &sig.spec;
     if let Some(ref r) = spec.requires {
         for (idx, expr) in r.exprs.exprs.iter().enumerate() {
-            let cond_str = expr
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ")
-                .trim()
-                .to_string();
-            let span_str = format_span(expr, line_offset);
             paths.push(format!(
                 "{} fn_part{{requires_{} {}}} {}",
                 fn_base,
                 idx,
-                escape_value(&cond_str),
-                span_str
+                escape_value(&span_to_source(inner, expr)),
+                format_span(expr, line_offset)
             ));
         }
     }
     if let Some(ref r) = spec.recommends {
         for (idx, expr) in r.exprs.exprs.iter().enumerate() {
-            let cond_str = expr
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ")
-                .trim()
-                .to_string();
-            let span_str = format_span(expr, line_offset);
             paths.push(format!(
                 "{} fn_part{{recommends_{} {}}} {}",
                 fn_base,
                 idx,
-                escape_value(&cond_str),
-                span_str
+                escape_value(&span_to_source(inner, expr)),
+                format_span(expr, line_offset)
             ));
         }
     }
     if let Some(ref e) = spec.ensures {
         for (idx, expr) in e.exprs.exprs.iter().enumerate() {
-            let cond_str = expr
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ")
-                .trim()
-                .to_string();
-            let span_str = format_span(expr, line_offset);
             paths.push(format!(
                 "{} fn_part{{ensures_{} {}}} {}",
                 fn_base,
                 idx,
-                escape_value(&cond_str),
-                span_str
+                escape_value(&span_to_source(inner, expr)),
+                format_span(expr, line_offset)
             ));
         }
     }
     if let Some(ref e) = spec.default_ensures {
-        let span_str = format_span(e, line_offset);
-        paths.push(format!("{} fn_part{{default_ensures}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{default_ensures}} {}", fn_base, format_span(e, line_offset)));
     }
     if let Some(ref r) = spec.returns {
-        let span_str = format_span(r, line_offset);
-        paths.push(format!("{} fn_part{{returns}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{returns}} {}", fn_base, format_span(r, line_offset)));
     }
     if let Some(ref d) = spec.decreases {
-        let span_str = format_span(d, line_offset);
-        paths.push(format!("{} fn_part{{decreases}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{decreases}} {}", fn_base, format_span(d, line_offset)));
     }
     if let Some(ref inv) = spec.invariants {
-        let span_str = format_span(inv, line_offset);
-        paths.push(format!("{} fn_part{{invariants}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{invariants}} {}", fn_base, format_span(inv, line_offset)));
     }
     if let Some(ref u) = spec.unwind {
-        let span_str = format_span(u, line_offset);
-        paths.push(format!("{} fn_part{{unwind}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{unwind}} {}", fn_base, format_span(u, line_offset)));
     }
     if let Some(ref w) = spec.with {
-        let span_str = format_span(&w.with, line_offset);
-        paths.push(format!("{} fn_part{{with}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{with}} {}", fn_base, format_span(&w.with, line_offset)));
     }
     if let Some(b) = block {
-        let span_str = format_span(b, line_offset);
-        paths.push(format!("{} fn_part{{body}} {}", fn_base, span_str));
+        paths.push(format!("{} fn_part{{body}} {}", fn_base, format_span(b, line_offset)));
         for (idx, stmt) in b.stmts.iter().enumerate() {
             let stmt_base = format!("{} fn_part{{body_stmt_{}}}", fn_base, idx);
-            let stmt_span = format_span(stmt, line_offset);
-            let raw = stmt
-                .to_token_stream()
-                .to_string()
-                .replace(" :: ", "::")
-                .replace("  ", " ");
             paths.push(format!(
                 "{} body_stmt{{{}}} {}",
                 stmt_base,
-                escape_value(raw.trim()),
-                stmt_span
+                escape_value(&span_to_source(inner, stmt)),
+                format_span(stmt, line_offset)
             ));
-            emit_stmt_parts(stmt, &stmt_base, line_offset, paths);
+            emit_stmt_parts(stmt, &stmt_base, inner, line_offset, paths);
         }
     }
 }

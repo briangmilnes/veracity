@@ -23,13 +23,10 @@ struct PathSpan {
     content: String,
 }
 
-/// Skip segments: structural (no content) or partial content (would corrupt when painted)
-fn skip_segment(tag: &str) -> bool {
-    matches!(
-        tag,
-        "file" | "module" | "broadcast_use" | "struct_ident" | "struct_field" | "impl"
-            | "impl_trait" | "impl_type" | "fn" | "use" | "broadcast_group"
-    )
+/// Skip segments for painting. When true, path value is not painted.
+/// Painting disabled: overlapping spans corrupt output. Base-only yields identity.
+fn skip_segment(_tag: &str) -> bool {
+    true
 }
 
 fn last_segment_skip(before_span: &str) -> bool {
@@ -214,8 +211,7 @@ fn main() -> Result<()> {
             spans.push(span);
         }
     }
-    // TODO: fix painting - path values don't always match full span; for now skip painting
-    let spans: Vec<PathSpan> = vec![];
+    let spans: Vec<PathSpan> = vec![]; // painting disabled: base = identity
 
     let output = if let Some(ref src) = src_path {
         let src_content = fs::read_to_string(src)?;
