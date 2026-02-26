@@ -1452,22 +1452,29 @@ fn struct_keyword_offset(node: &SyntaxNode) -> usize {
     node.text_range().start().into()
 }
 
-fn detect_structs_outside_verus(root: &SyntaxNode, content: &str) -> Vec<DetectedHole> {
-    let mut out = Vec::new();
+fn detect_structs_outside_verus(root: &SyntaxNode, content: &str, stats: &mut FileStats) {
     for node in root.descendants() {
         if node.kind() == SyntaxKind::STRUCT {
             if let Some(struct_def) = ast::Struct::cast(node.clone()) {
                 let name = struct_def.name().map(|n| n.text().to_string()).unwrap_or_else(|| "?".to_string());
                 let offset: usize = struct_keyword_offset(struct_def.syntax());
                 let line = line_from_offset(content, offset);
-                out.push(DetectedHole {
-                    line,
-                    hole_type: "struct_outside_verus".to_string(),
-                    context: format!("struct {} — should be inside verus!", name),
-                });
+                if has_accept_hole_comment(content, line) {
+                    stats.infos.push(DetectedHole {
+                        line,
+                        hole_type: "struct_outside_verus_accept_hole".to_string(),
+                        context: format!("struct {} — outside verus! with accept hole comment", name),
+                    });
+                } else {
+                    stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "struct_outside_verus".to_string(),
+                        context: format!("struct {} — should be inside verus!", name),
+                    });
+                }
                 let derives = get_derives_before_offset(content, offset);
-                if derives.iter().any(|d| d == "Clone") {
-                    out.push(DetectedHole {
+                if derives.iter().any(|d| d == "Clone") && !has_accept_hole_comment(content, line) {
+                    stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "clone_derived_outside".to_string(),
                         context: format!("struct {} — Clone should be implemented inside verus!, not derived outside", name),
@@ -1480,14 +1487,22 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str) -> Vec<Detecte
                 let name = enum_def.name().map(|n| n.text().to_string()).unwrap_or_else(|| "?".to_string());
                 let offset: usize = struct_keyword_offset(enum_def.syntax());
                 let line = line_from_offset(content, offset);
-                out.push(DetectedHole {
-                    line,
-                    hole_type: "enum_outside_verus".to_string(),
-                    context: format!("enum {} — should be inside verus!", name),
-                });
+                if has_accept_hole_comment(content, line) {
+                    stats.infos.push(DetectedHole {
+                        line,
+                        hole_type: "enum_outside_verus_accept_hole".to_string(),
+                        context: format!("enum {} — outside verus! with accept hole comment", name),
+                    });
+                } else {
+                    stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "enum_outside_verus".to_string(),
+                        context: format!("enum {} — should be inside verus!", name),
+                    });
+                }
                 let derives = get_derives_before_offset(content, offset);
-                if derives.iter().any(|d| d == "Clone") {
-                    out.push(DetectedHole {
+                if derives.iter().any(|d| d == "Clone") && !has_accept_hole_comment(content, line) {
+                    stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "clone_derived_outside".to_string(),
                         context: format!("enum {} — Clone should be implemented inside verus!, not derived outside", name),
@@ -1496,7 +1511,6 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str) -> Vec<Detecte
             }
         }
     }
-    out
 }
 
 fn detect_bare_impl_warnings(root: &SyntaxNode, content: &str) -> Vec<DetectedHole> {
@@ -1782,7 +1796,7 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     stats.warnings.extend(detect_bare_impl_warnings(&root, &content));
 
     if found_verus_macro {
-        stats.warnings.extend(detect_structs_outside_verus(&root, &content));
+        detect_structs_outside_verus(&root, &content, &mut stats);
     }
 
     detect_rust_rwlock(&content, &mut stats);
