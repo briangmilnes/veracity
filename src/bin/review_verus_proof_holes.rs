@@ -133,6 +133,10 @@ struct SummaryStats {
     axioms: AxiomStats,
     total_warnings: usize,
     total_infos: usize,
+    /// Count per hole_type for accurate summary message
+    warning_type_counts: HashMap<String, usize>,
+    /// All infos with path:line for summary listing
+    all_infos: Vec<(String, usize, String, String)>,
 }
 
 #[derive(Debug)]
@@ -712,10 +716,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for warning in &stats.warnings {
-                    let level = if matches!(
-                        warning.hole_type.as_str(),
-                        "assume_eq_clone_workaround" | "verus_rwlock_external_body"
-                    ) {
+                    let level = if warning.hole_type == "assume_eq_clone_workaround" {
                         "warning"
                     } else {
                         "error"
@@ -748,7 +749,6 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     let clone_derived = stats.warnings.iter().filter(|w| w.hole_type == "clone_derived_outside").count();
                     let debug_display = stats.warnings.iter().filter(|w| w.hole_type == "debug_display_inside_verus").count();
                     let eq_clone_workaround = stats.warnings.iter().filter(|w| w.hole_type == "assume_eq_clone_workaround").count();
-                    let verus_rwlock = stats.warnings.iter().filter(|w| w.hole_type == "verus_rwlock_external_body").count();
                     let rust_rwlock = stats.warnings.iter().filter(|w| w.hole_type == "rust_rwlock").count();
                     let dummy_predicate = stats.warnings.iter().filter(|w| w.hole_type == "dummy_rwlock_predicate").count();
                     let not_verusified = stats.warnings.iter().filter(|w| w.hole_type == "not_verusified").count();
@@ -759,7 +759,6 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                         (clone_derived > 0).then(|| format!("{} Clone derived outside", clone_derived)),
                         (debug_display > 0).then(|| format!("{} Debug/Display inside verus!", debug_display)),
                         (eq_clone_workaround > 0).then(|| format!("{} assume in eq/clone (Verus workaround)", eq_clone_workaround)),
-                        (verus_rwlock > 0).then(|| format!("{} Verus RwLock external_body", verus_rwlock)),
                         (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock", rust_rwlock)),
                         (dummy_predicate > 0).then(|| format!("{} dummy RwLockPredicate", dummy_predicate)),
                     ]
@@ -776,7 +775,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 if has_infos {
-                    let msg = format!("   Info: {} assume(false); diverge() idiom(s)", stats.infos.len());
+                    let msg = format!("   Info: {} total", stats.infos.len());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -803,7 +802,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                         write_to_log(&msg);
                     }
                     let _ = &file_content; // suppress unused warning
-                    let msg = format!("   Info: {} assume(false); diverge() idiom(s)", stats.infos.len());
+                    let msg = format!("   Info: {} total", stats.infos.len());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -1162,9 +1161,15 @@ fn line_from_offset(content: &str, offset: usize) -> usize {
 
 /// Check if lines around attr_line contain "accept hole" (flexible on whitespace/punctuation).
 fn has_accept_hole_comment(content: &str, attr_line: usize) -> bool {
+    has_accept_hole_comment_in_range(content, attr_line, 1, 2)
+}
+
+/// Check if "accept hole" appears in a line range [attr_line - before, attr_line + after).
+/// Used for unsafe blocks which may span multiple lines.
+fn has_accept_hole_comment_in_range(content: &str, attr_line: usize, before: usize, after: usize) -> bool {
     let lines: Vec<&str> = content.lines().collect();
-    let start = attr_line.saturating_sub(1);
-    let end = (attr_line + 2).min(lines.len());
+    let start = attr_line.saturating_sub(before);
+    let end = (attr_line + after).min(lines.len());
     for line in lines.get(start..end).unwrap_or(&[]) {
         let s = line.to_lowercase();
         let normalized: String = s
@@ -1180,6 +1185,7 @@ fn has_accept_hole_comment(content: &str, attr_line: usize) -> bool {
     }
     false
 }
+
 
 /// Get a trimmed context snippet from around a byte offset
 fn get_context(content: &str, offset: usize) -> String {
@@ -1821,31 +1827,56 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
             if j < tokens.len() {
                 match tokens[j].kind() {
                     SyntaxKind::FN_KW => {
-                        stats.holes.unsafe_fn_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "unsafe fn".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe_fn_accept_hole".to_string(),
+                                context: "unsafe fn with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.unsafe_fn_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe fn".to_string(),
+                                context,
+                            });
+                        }
                     }
                     SyntaxKind::IMPL_KW => {
-                        stats.holes.unsafe_impl_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "unsafe impl".to_string(),
-                            context,
-                        });
+                        if has_accept_hole_comment(content, line) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe_impl_accept_hole".to_string(),
+                                context: "unsafe impl with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.unsafe_impl_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe impl".to_string(),
+                                context,
+                            });
+                        }
                     }
                     SyntaxKind::L_CURLY => {
-                        stats.holes.unsafe_block_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
-                            line,
-                            hole_type: "unsafe {}".to_string(),
-                            context,
-                        });
+                        // Unsafe blocks may span multiple lines; check wider range for // accept hole
+                        if has_accept_hole_comment_in_range(content, line, 1, 6) {
+                            stats.infos.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe_block_accept_hole".to_string(),
+                                context: "unsafe {{}} with accept hole comment".to_string(),
+                            });
+                        } else {
+                            stats.holes.unsafe_block_count += 1;
+                            stats.holes.total_holes += 1;
+                            stats.holes.holes.push(DetectedHole {
+                                line,
+                                hole_type: "unsafe {}".to_string(),
+                                context,
+                            });
+                        }
                     }
                     _ => {}
                 }
@@ -2295,7 +2326,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             match attr {
                 VerifierAttribute::ExternalBody => {
                     if self.suppress_external_body_hole {
-                        self.stats.warnings.push(DetectedHole {
+                        self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "verus_rwlock_external_body".to_string(),
                             context: "Verus RwLock new requires an external body at this point.".to_string(),
@@ -3024,7 +3055,7 @@ fn print_file_report(path: &str, stats: &FileStats) {
 fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats {
     let mut summary = SummaryStats::default();
     
-    for stats in file_stats_map.values() {
+    for (path_str, stats) in file_stats_map {
         summary.total_files += 1;
         
         if stats.holes.total_holes > 0 {
@@ -3060,6 +3091,17 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
 
         summary.total_warnings += stats.warnings.len();
         summary.total_infos += stats.infos.len();
+        for w in &stats.warnings {
+            *summary.warning_type_counts.entry(w.hole_type.clone()).or_insert(0) += 1;
+        }
+        for info in &stats.infos {
+            summary.all_infos.push((
+                path_str.clone(),
+                info.line,
+                info.hole_type.clone(),
+                info.context.clone(),
+            ));
+        }
     }
     
     summary
@@ -3130,12 +3172,56 @@ fn print_summary(summary: &SummaryStats) {
     
     if summary.total_warnings > 0 {
         log!("");
-        log!("Errors: {} (bare impl(s), struct/enum outside verus!)", summary.total_warnings);
+        let bare = summary.warning_type_counts.get("bare_impl").copied().unwrap_or(0);
+        let outside = summary.warning_type_counts.keys()
+            .filter(|k| k.starts_with("struct_") || k.starts_with("enum_"))
+            .map(|k| summary.warning_type_counts.get(k).copied().unwrap_or(0))
+            .sum::<usize>();
+        let clone_derived = summary.warning_type_counts.get("clone_derived_outside").copied().unwrap_or(0);
+        let debug_display = summary.warning_type_counts.get("debug_display_inside_verus").copied().unwrap_or(0);
+        let eq_clone = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0);
+        let rust_rwlock = summary.warning_type_counts.get("rust_rwlock").copied().unwrap_or(0);
+        let dummy_pred = summary.warning_type_counts.get("dummy_rwlock_predicate").copied().unwrap_or(0);
+        let not_verusified = summary.warning_type_counts.get("not_verusified").copied().unwrap_or(0);
+        let known_types: HashSet<&str> = [
+            "bare_impl", "clone_derived_outside", "debug_display_inside_verus",
+            "assume_eq_clone_workaround", "rust_rwlock",
+            "dummy_rwlock_predicate", "not_verusified",
+        ].into_iter().collect();
+        let mut parts: Vec<String> = [
+            (not_verusified > 0).then(|| format!("{} not verusified", not_verusified)),
+            (bare > 0).then(|| format!("{} bare impl(s)", bare)),
+            (outside > 0).then(|| format!("{} struct/enum outside verus!", outside)),
+            (clone_derived > 0).then(|| format!("{} Clone derived outside", clone_derived)),
+            (debug_display > 0).then(|| format!("{} Debug/Display inside verus!", debug_display)),
+            (eq_clone > 0).then(|| format!("{} assume in eq/clone (Verus workaround)", eq_clone)),
+            (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock", rust_rwlock)),
+            (dummy_pred > 0).then(|| format!("{} dummy RwLockPredicate", dummy_pred)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let other: usize = summary.warning_type_counts.iter()
+            .filter(|(k, _)| !k.starts_with("struct_") && !k.starts_with("enum_") && !known_types.contains(k.as_str()))
+            .map(|(_, v)| v)
+            .sum();
+        if other > 0 {
+            parts.push(format!("{} other", other));
+        }
+        let msg = if parts.is_empty() {
+            format!("Errors: {} total", summary.total_warnings)
+        } else {
+            format!("Errors: {} total ({})", summary.total_warnings, parts.join(", "))
+        };
+        log!("{}", msg);
     }
 
     if summary.total_infos > 0 {
         log!("");
-        log!("Info: {} assume(false); diverge() idiom(s) (valid non-termination)", summary.total_infos);
+        log!("Info: {} total", summary.total_infos);
+        for (path, line, hole_type, context) in &summary.all_infos {
+            log!("   {}:{}: info: {} - {}", path, line, hole_type, context);
+        }
     }
 
     if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
