@@ -2797,32 +2797,32 @@ fn main() -> Result<()> {
         
         let result = check_file(file, &content, &args);
         let file_str = file.display().to_string();
-        
+
         // Always print file header
-        println!("{}:", file_str);
-        
+        log!("{}:", file_str);
+
         // Print passed checks
         let mut passed_sorted = result.passed.clone();
         passed_sorted.sort_by_key(|(rule, _)| *rule);
         for (rule, desc) in &passed_sorted {
-            println!("{}:1: info: [{}] {}", file_str, rule, desc);
+            log!("{}:1: info: [{}] {}", file_str, rule, desc);
         }
         total_passed += passed_sorted.len();
-        
+
         // Print failed checks
         let mut failed_sorted = result.failed.clone();
         failed_sorted.sort_by_key(|(rule, line, _)| (*rule, *line));
         for (rule, line, msg) in &failed_sorted {
-            println!("{}:{}: warning: [{}] {}", file_str, line, rule, msg);
+            log!("{}:{}: warning: [{}] {}", file_str, line, rule, msg);
         }
-        
+
         if !result.failed.is_empty() {
             files_with_issues += 1;
             total_issues += result.failed.len();
         }
-        
+
         // Blank line after each file
-        println!();
+        log!();
     }
     
     log!("════════════════════════════════════════════════════════════════");
@@ -2832,40 +2832,40 @@ fn main() -> Result<()> {
     
     // Reorder pass (--dry-run implies --reorder)
     if args.reorder || args.dry_run {
-        println!();
+        log!();
         if args.dry_run {
-            println!("Dry run: showing what reorder would do...");
+            log!("Dry run: showing what reorder would do...");
         } else {
-            println!("Reordering files with Rule 18 violations...");
+            log!("Reordering files with Rule 18 violations...");
         }
-        println!();
-        
+        log!();
+
         let mut reordered_count = 0;
         let mut skipped_dirty = 0;
-        
+
         for file in &files {
             let content = match std::fs::read_to_string(file) {
                 Ok(c) => c,
                 Err(_) => continue,
             };
-            
+
             let structure = analyze_file_structure(&content);
             let (open, close) = match (structure.verus_brace_open_offset, structure.verus_brace_close_offset) {
                 (Some(o), Some(c)) => (o, c),
                 _ => continue,
             };
-            
+
             let inner = &content[open + 1..close];
             let brace_line = content[..=open].lines().count();
             let line_offset = brace_line - 1;
-            
+
             let items = match collect_reorder_items(inner, line_offset, &structure) {
                 Some(items) => items,
                 None => continue,
             };
-            
+
             if items.is_empty() { continue; }
-            
+
             // Check if already in order
             let mut already_ordered = true;
             let mut max_section = 0u32;
@@ -2879,79 +2879,79 @@ fn main() -> Result<()> {
                 }
             }
             if already_ordered { continue; }
-            
+
             reordered_count += 1;
-            
+
             if args.dry_run {
                 // Print file header
                 let file_str = file.display().to_string();
-                println!("{}:", file_str);
-                
+                log!("{}:", file_str);
+
                 // Group items by section (preserving order within section)
                 let mut merged: std::collections::BTreeMap<u32, Vec<&ReorderItem>> = std::collections::BTreeMap::new();
                 for item in &items {
                     merged.entry(item.section).or_default().push(item);
                 }
-                
+
                 // Print ToC
                 let present_sections: Vec<u32> = merged.keys().copied().collect();
                 let has_macros_dry = !structure.lit_macro_defs.is_empty();
                 let has_outside_derive_dry = structure.impl_blocks.iter()
                     .any(|imp| !imp.in_verus && imp.is_derive_trait);
-                println!("  ToC:");
-                println!("    //\t1. module");
+                log!("  ToC:");
+                log!("    //\t1. module");
                 for &section in &present_sections {
-                    println!("    //\t{}. {}", display_section_num(section), section_name(section));
+                    log!("    //\t{}. {}", display_section_num(section), section_name(section));
                 }
                 if has_macros_dry {
-                    println!("    //\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS));
+                    log!("    //\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS));
                 }
                 if has_outside_derive_dry {
-                    println!("    //\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE));
+                    log!("    //\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE));
                 }
-                println!();
-                
+                log!();
+
                 // Print items by section
                 for &section in &present_sections {
                     if let Some(section_items) = merged.get(&section) {
-                        println!("  {}. {}:", display_section_num(section), section_name(section));
+                        log!("  {}. {}:", display_section_num(section), section_name(section));
                         for item in section_items {
-                            println!("    {}", item.description);
+                            log!("    {}", item.description);
                         }
                     }
                 }
-                println!();
+                log!();
             } else {
                 // Actual reorder
                 if let Some(new_content) = reorder_verus_block(&content, &structure) {
                     // Git clean check
                     if !args.allow_dirty && file_is_git_dirty(file) {
-                        println!("{}:1: error: file has uncommitted changes, skipping (use --allow-dirty to override)", file.display());
+                        log!("{}:1: error: file has uncommitted changes, skipping (use --allow-dirty to override)", file.display());
                         skipped_dirty += 1;
                         continue;
                     }
-                    
+
                     // Write the reordered file
                     match std::fs::write(file, &new_content) {
                         Ok(_) => {
-                            println!("{}:1: info: reordered", file.display());
+                            log!("{}:1: info: reordered", file.display());
                         }
                         Err(e) => {
-                            println!("{}:1: error: failed to write: {}", file.display(), e);
+                            log!("{}:1: error: failed to write: {}", file.display(), e);
                         }
                     }
                 }
             }
         }
-        
-        println!();
+
+        log!();
         if args.dry_run {
-            println!("Dry run complete: {} files would be reordered", reordered_count);
+            log!("Dry run complete: {} files would be reordered", reordered_count);
         } else {
-            println!("Reorder complete: {} files reordered", reordered_count);
+            log!("Reorder complete: {} files reordered", reordered_count);
         }
         if skipped_dirty > 0 {
-            println!("  {} files skipped (uncommitted changes)", skipped_dirty);
+            log!("  {} files skipped (uncommitted changes)", skipped_dirty);
         }
     }
     
