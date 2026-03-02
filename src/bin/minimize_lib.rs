@@ -2777,12 +2777,16 @@ fn test_assert(
     let content = std::fs::read_to_string(&assert_info.file)?;
     let lines: Vec<&str> = content.lines().collect();
     
-    // Find the full extent of the assert (may span multiple lines with parentheses)
+    // Find the full extent of the assert (may span multiple lines).
+    // First track parentheses for assert(...), then if followed by `by {`
+    // continue tracking braces to include the whole `by { ... };` block.
     let start_line = assert_info.line;
-    let mut end_line = start_line;
+    let mut end_line;
     let mut paren_depth = 0;
     let mut found_open_paren = false;
-    
+
+    // Phase 1: find the end of the assert(...) parenthesized expression
+    let mut parens_end_idx = start_line - 1;
     for i in (start_line - 1)..lines.len() {
         let line = lines[i];
         for ch in line.chars() {
@@ -2793,9 +2797,53 @@ fn test_assert(
                 paren_depth -= 1;
             }
         }
-        end_line = i + 1;
+        parens_end_idx = i;
         if found_open_paren && paren_depth == 0 {
             break;
+        }
+    }
+    end_line = parens_end_idx + 1;
+
+    // Phase 2: check if the assert is followed by `by {` — if so, track braces
+    // to include the entire `assert(...) by { ... };` block.
+    // Collect the remaining text on the parens-closing line after the last `)`.
+    let mut remainder = String::new();
+    if let Some(line) = lines.get(parens_end_idx) {
+        if let Some(last_close) = line.rfind(')') {
+            remainder = line[last_close + 1..].to_string();
+        }
+    }
+    // Also look at subsequent lines if remainder is only whitespace
+    let mut check_idx = parens_end_idx;
+    if remainder.trim().is_empty() && check_idx + 1 < lines.len() {
+        check_idx += 1;
+        remainder = lines[check_idx].to_string();
+    }
+
+    if remainder.contains("by") && remainder.contains('{') {
+        // Count braces from the parens_end_idx line onward
+        let mut brace_depth = 0;
+        let mut found_open_brace = false;
+        for i in parens_end_idx..lines.len() {
+            let line = lines[i];
+            // On the first line, only scan from after the closing paren
+            let scan_from = if i == parens_end_idx {
+                line.rfind(')').map_or(0, |p| p + 1)
+            } else {
+                0
+            };
+            for ch in line[scan_from..].chars() {
+                if ch == '{' {
+                    brace_depth += 1;
+                    found_open_brace = true;
+                } else if ch == '}' {
+                    brace_depth -= 1;
+                }
+            }
+            end_line = i + 1;
+            if found_open_brace && brace_depth == 0 {
+                break;
+            }
         }
     }
     
