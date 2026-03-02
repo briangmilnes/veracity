@@ -2206,11 +2206,23 @@ fn strip_veracity_markers_from_file(file: &Path) -> Result<usize> {
                 continue; // Skip this line
             }
             
-            // Broadcast group marker - delete this and following broadcast use block
-            if marker_content.starts_with("added broadcast group") {
+            // Broadcast group marker (singular) - delete marker + following broadcast use block
+            // This is a standalone block that Phase 5/6 inserted:
+            //   // Veracity: added broadcast group
+            //   broadcast use { ... };
+            if marker_content.trim() == "added broadcast group" {
                 markers_removed += 1;
                 skip_broadcast_block = true;
                 broadcast_brace_depth = 0;
+                continue;
+            }
+
+            // Broadcast group marker (plural) - merged into existing block
+            // Only the comment line and the added entries should be removed.
+            // The added entries are valid broadcast groups that won't break
+            // compilation, so just remove the comment line itself.
+            if marker_content.trim() == "added broadcast groups" {
+                markers_removed += 1;
                 continue;
             }
             
