@@ -15,8 +15,17 @@ way to parameterize over the weight type and get both verified.
 
 ## What vstd Provides
 
-Nothing. vstd has no float types, no float axioms, no float specs. f64 and f32 are
-opaque Rust primitives that Verus can pass around but cannot reason about.
+vstd's `float.rs` provides the `FloatBitsProperties` trait with spec-level access to
+the IEEE 754 bit representation for f32 and f64:
+
+- **`to_bits_spec()`**: Spec-level bit representation (u32 for f32, u64 for f64).
+- **`is_finite_spec()`**: True for zero, subnormal, and normal values.
+- **`is_infinite_spec()`**: True for positive and negative infinity.
+- **`is_nan_spec()`**: True for NaN values.
+- **`is_sign_negative_spec()`**: True when the sign bit is set.
+- **Clone specs**: `clone` on f32/f64 preserves equality.
+
+This gives you classification and bit-level reasoning, but no ordering or arithmetic.
 
 ## What APAS-VERUS vstdplus/float.rs Provides
 
