@@ -13,22 +13,26 @@ a generic algorithm over "any numeric type" without trait gymnastics. Each numer
 why APAS-VERUS has parallel I64 and F64 files for the graph algorithms: there is no
 way to parameterize over the weight type and get both verified.
 
-## Our Approach: vstdplus/float.rs
+## What vstd Provides
 
-We provide a `FloatTotalOrder` trait that axiomatizes a total order on **finite** floats
-(excluding NaN and infinity). All axioms are guarded by `float_wf(x)` which requires
-`is_finite_spec()`.
+Nothing. vstd has no float types, no float axioms, no float specs. f64 and f32 are
+opaque Rust primitives that Verus can pass around but cannot reason about.
 
-### What We Have
+## What APAS-VERUS vstdplus/float.rs Provides
 
-- **Total order on finite values**: reflexive, antisymmetric, transitive, totality.
+We wrote `vstdplus/float.rs` to fill the gap. It axiomatizes a total order on **finite**
+floats (excluding NaN and infinity). All axioms are guarded by `float_wf(x)` which
+requires `is_finite_spec()`.
+
+- **`FloatTotalOrder` trait**: Total order on finite values — reflexive, antisymmetric,
+  transitive, totality. Implementations for both f64 and f32.
 - **`WrappedF64` struct**: Newtype wrapper with `View` impl for use in Verus containers.
 - **Exec comparison**: `float_cmp` returning `core::cmp::Ordering`.
 - **Distance helpers**: `unreachable_dist()` (infinity sentinel), `zero_dist()`, `finite_dist(v)`.
 - **Broadcast groups**: `group_float_finite_total_order`, `group_float_arithmetic`.
 - **Uninterpreted spec fns**: `f64_add_spec`, `f64_sub_spec`, `f64_approx_eq_spec`.
 
-### What We Do NOT Have
+### What vstdplus/float.rs Does NOT Provide
 
 - **Arithmetic axioms**: No `a + b` reasoning. No addition monotonicity (`a <= b ==> a + c <= b + c`).
   No identity (`a + 0.0 = a`). No finite + finite = finite (when no overflow).
