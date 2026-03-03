@@ -410,124 +410,95 @@ fn type_holds_collection(ty: &verus_syn::Type, crate_type_names: &HashSet<String
     false
 }
 
-/// Fallback: scan raw verus! block text for type aliases, traits, and impls
-/// when verus_syn::parse_file fails (e.g., due to commented-out assert forall blocks).
+/// Fallback: parse verus! block content with ra_ap_syntax when verus_syn fails.
+/// Uses the same AST-based extraction as the outside-verus path (extract_impl_info, etc.)
+/// instead of manual string scanning with depth counting.
 fn parse_verus_block_fallback(inner: &str, line_offset: usize, structure: &mut FileStructure) {
-    // Regex-free line scanning for common patterns
-    for (i, line) in inner.lines().enumerate() {
-        let trimmed = line.trim();
-        let file_line = i + 1 + line_offset;
-        
-        // Type aliases: pub type Foo<...> = Bar<...>;
-        if trimmed.starts_with("pub type ") || trimmed.starts_with("type ") {
-            let rest = if trimmed.starts_with("pub type ") {
-                &trimmed[9..]
-            } else {
-                &trimmed[5..]
-            };
-            // Extract alias name (up to < or =)
-            let alias_name: String = rest.chars()
-                .take_while(|c| c.is_alphanumeric() || *c == '_')
-                .collect();
-            // Extract RHS after '='
-            if let Some(eq_pos) = rest.find('=') {
-                let rhs = &rest[eq_pos + 1..];
-                // Check if RHS contains a crate type name
-                let aliases_crate_type = rhs
-                    .split(|c: char| !c.is_alphanumeric() && c != '_')
-                    .any(|token| {
-                        token.chars().next().map_or(false, |c| c.is_uppercase())
-                            && structure.crate_type_names.contains(token)
+    let parse = ra_ap_syntax::SourceFile::parse(inner, ra_ap_syntax::Edition::Edition2021);
+    let tree = parse.tree();
+
+    let line_from_offset = |offset: usize| -> usize {
+        inner[..offset.min(inner.len())].lines().count() + line_offset
+    };
+
+    for node in tree.syntax().children() {
+        let offset: usize = node.text_range().start().into();
+        let end_offset: usize = node.text_range().end().into();
+        let file_line = line_from_offset(offset);
+
+        match node.kind() {
+            SyntaxKind::TYPE_ALIAS => {
+                if let Some(type_alias) = ast::TypeAlias::cast(node.clone()) {
+                    if let Some(name) = type_alias.name() {
+                        let alias_name = name.text().to_string();
+                        // Check if RHS contains a crate type name
+                        let aliases_crate_type = type_alias.ty().map_or(false, |ty| {
+                            ty.syntax().descendants()
+                                .filter_map(|n| ast::NameRef::cast(n))
+                                .any(|nr| {
+                                    let t = nr.text().to_string();
+                                    t.chars().next().map_or(false, |c| c.is_uppercase())
+                                        && structure.crate_type_names.contains(&t)
+                                })
+                        });
+                        if aliases_crate_type && !alias_name.is_empty() {
+                            if !structure.collection_structs.iter().any(|(_, n)| *n == alias_name) {
+                                structure.collection_structs.push((file_line, alias_name));
+                            }
+                        }
+                    }
+                }
+            }
+
+            SyntaxKind::TRAIT => {
+                if let Some(trait_def) = ast::Trait::cast(node.clone()) {
+                    if let Some(name) = trait_def.name() {
+                        let name_str = name.text().to_string();
+                        if !name_str.is_empty() && !structure.trait_defs.iter().any(|t| t.name == name_str) {
+                            structure.trait_defs.push(TraitInfo {
+                                name: name_str,
+                                line: file_line,
+                                end_line: line_from_offset(end_offset),
+                                in_verus: true,
+                                fn_count: 0,
+                                fn_with_spec_count: 0,
+                                fns_without_specs: Vec::new(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            SyntaxKind::IMPL => {
+                if let Some(impl_def) = ast::Impl::cast(node.clone()) {
+                    let (trait_name, for_type) = extract_impl_info(&impl_def);
+
+                    let is_derive_trait = trait_name.as_ref().map_or(false, |t| {
+                        matches!(t.as_str(), "PartialEq" | "Eq" | "Clone" | "Debug" | "Display" | "Hash" | "PartialOrd" | "Ord")
                     });
-                if aliases_crate_type && !alias_name.is_empty() {
-                    if !structure.collection_structs.iter().any(|(_, n)| *n == alias_name) {
-                        structure.collection_structs.push((file_line, alias_name));
+
+                    if let Some(ref tn) = trait_name {
+                        if tn == "Iterator" {
+                            structure.iterator_impls.push((for_type.clone(), true));
+                        } else if tn == "IntoIterator" {
+                            structure.into_iterator_impls.push((for_type.clone(), true));
+                        }
+                    }
+
+                    if !structure.impl_blocks.iter().any(|existing| existing.line == file_line) {
+                        structure.impl_blocks.push(ImplInfo {
+                            trait_name,
+                            for_type,
+                            line: file_line,
+                            end_line: line_from_offset(end_offset),
+                            in_verus: true,
+                            is_derive_trait,
+                        });
                     }
                 }
             }
-        }
-        
-        // Trait definitions: pub trait FooTrait<...>
-        if trimmed.starts_with("pub trait ") || trimmed.starts_with("trait ") {
-            let rest = if trimmed.starts_with("pub trait ") {
-                &trimmed[10..]
-            } else {
-                &trimmed[6..]
-            };
-            let name: String = rest.chars()
-                .take_while(|c| c.is_alphanumeric() || *c == '_')
-                .collect();
-            if !name.is_empty() && !structure.trait_defs.iter().any(|t| t.name == name) {
-                structure.trait_defs.push(TraitInfo {
-                    name,
-                    line: file_line,
-                    end_line: file_line,
-                    in_verus: true,
-                    fn_count: 0,
-                    fn_with_spec_count: 0,
-                    fns_without_specs: Vec::new(),
-                });
-            }
-        }
-        
-        // Impl blocks: impl<...> Trait for Type / impl<...> Type
-        if trimmed.starts_with("impl") && (trimmed.len() > 4 && !trimmed.as_bytes()[4].is_ascii_alphanumeric()) {
-            // Extract trait name and for_type from "impl<...> Trait for Type" or "impl<...> Type {"
-            let rest = &trimmed[4..];
-            // Skip generic params
-            let rest = if rest.trim_start().starts_with('<') {
-                // Find matching >
-                let mut depth = 0;
-                let mut end = 0;
-                for (j, ch) in rest.char_indices() {
-                    match ch {
-                        '<' => depth += 1,
-                        '>' => { depth -= 1; if depth == 0 { end = j + 1; break; } }
-                        _ => {}
-                    }
-                }
-                rest[end..].trim_start()
-            } else {
-                rest.trim_start()
-            };
-            
-            let tokens: Vec<&str> = rest.split_whitespace().collect();
-            let (trait_name, for_type_str) = if let Some(for_pos) = tokens.iter().position(|t| *t == "for") {
-                let tn = tokens[..for_pos].join(" ");
-                let ft = tokens[for_pos + 1..].join(" ");
-                // Extract just the trait name (last segment before 'for')
-                let tn_clean = tn.split("::").last().unwrap_or(&tn).trim();
-                (Some(tn_clean.to_string()), ft)
-            } else {
-                (None, tokens.join(" "))
-            };
-            
-            // Clean the for_type
-            let for_type_clean = for_type_str.trim_end_matches('{').trim().to_string();
-            
-            let is_derive_trait = trait_name.as_ref().map_or(false, |t| {
-                matches!(t.as_str(), "PartialEq" | "Eq" | "Clone" | "Debug" | "Display" | "Hash" | "PartialOrd" | "Ord")
-            });
-            
-            // Track Iterator/IntoIterator
-            if let Some(ref tn) = trait_name {
-                if tn == "Iterator" {
-                    structure.iterator_impls.push((for_type_clean.clone(), true));
-                } else if tn == "IntoIterator" {
-                    structure.into_iterator_impls.push((for_type_clean.clone(), true));
-                }
-            }
-            
-            if !structure.impl_blocks.iter().any(|existing| existing.line == file_line) {
-                structure.impl_blocks.push(ImplInfo {
-                    trait_name,
-                    for_type: for_type_clean,
-                    line: file_line,
-                    end_line: file_line,
-                    in_verus: true,
-                    is_derive_trait,
-                });
-            }
+
+            _ => {}
         }
     }
 }
@@ -589,7 +560,8 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
             verus_syn::Item::Struct(s) => {
                 let name = s.ident.to_string();
                 let line = s.ident.span().start().line + line_offset;
-                
+                structure.struct_defs.push((line, name.clone()));
+
                 // Check if this struct holds a collection type
                 let is_collection = match &s.fields {
                     verus_syn::Fields::Named(fields) => {
@@ -627,11 +599,16 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                     }
                 }
             }
+            verus_syn::Item::Enum(e) => {
+                let name = e.ident.to_string();
+                let line = e.ident.span().start().line + line_offset;
+                structure.struct_defs.push((line, name));
+            }
             verus_syn::Item::Type(t) => {
                 use quote::ToTokens;
                 let name = t.ident.to_string();
                 let line = t.ident.span().start().line + line_offset;
-                
+
                 // Type alias to a crate-imported type is a collection
                 // e.g. pub type WeightedDirGraphStEphI32<V> = LabDirGraphStEph<V, i32>;
                 let ty_str = t.ty.to_token_stream().to_string();
@@ -815,6 +792,34 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
     }
 }
 
+/// Find the matching closing brace in a token stream starting from `start_idx`.
+/// Returns (open_offset, close_offset, end_offset) where open is the `{` start,
+/// close is the `}` start, and end is the `}` end.
+fn find_matching_brace(tokens: &[SyntaxToken], start_idx: usize) -> Option<(usize, usize, usize)> {
+    let mut depth: i32 = 0;
+    let mut open_offset = None;
+    for j in start_idx..tokens.len() {
+        match tokens[j].kind() {
+            SyntaxKind::L_CURLY => {
+                if open_offset.is_none() {
+                    open_offset = Some(tokens[j].text_range().start().into());
+                }
+                depth += 1;
+            }
+            SyntaxKind::R_CURLY => {
+                depth -= 1;
+                if open_offset.is_some() && depth == 0 {
+                    let close: usize = tokens[j].text_range().start().into();
+                    let end: usize = tokens[j].text_range().end().into();
+                    return Some((open_offset.unwrap(), close, end));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Analyze a single file's structure using AST parsing
 fn analyze_file_structure(content: &str) -> FileStructure {
     let mut structure = FileStructure::default();
@@ -845,32 +850,12 @@ fn analyze_file_structure(content: &str) -> FileStructure {
                 verus_start_offset = Some(start);
                 structure.verus_macro_start = Some(line_from_offset(start));
                 
-                // Find the matching closing brace by tracking depth
-                let mut depth = 0;
-                let mut found_open = false;
-                for j in (i + 2)..tokens.len() {
-                    match tokens[j].kind() {
-                        SyntaxKind::L_CURLY => {
-                            depth += 1;
-                            if !found_open {
-                                found_open = true;
-                                let open: usize = tokens[j].text_range().start().into();
-                                structure.verus_brace_open_offset = Some(open);
-                            }
-                        }
-                        SyntaxKind::R_CURLY => {
-                            depth -= 1;
-                            if found_open && depth == 0 {
-                                let end: usize = tokens[j].text_range().end().into();
-                                let close: usize = tokens[j].text_range().start().into();
-                                verus_end_offset = Some(end);
-                                structure.verus_macro_end = Some(line_from_offset(end));
-                                structure.verus_brace_close_offset = Some(close);
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
+                // Find the matching closing brace using token-level brace matching
+                if let Some((open, close, end)) = find_matching_brace(&tokens, i + 2) {
+                    structure.verus_brace_open_offset = Some(open);
+                    structure.verus_brace_close_offset = Some(close);
+                    verus_end_offset = Some(end);
+                    structure.verus_macro_end = Some(line_from_offset(end));
                 }
                 break;
             }
@@ -1701,10 +1686,17 @@ impl CheckResult {
 /// Run style checks on a file
 fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult {
     let mut result = CheckResult::default();
-    let file_str = file_path.display().to_string();
+    let _file_str = file_path.display().to_string();
+
+    // STYLE ACCEPTED: if the file contains this comment, skip all checks.
+    if content.lines().any(|line| line.trim() == "// STYLE ACCEPTED") {
+        result.pass(0, "the user has reviewed this file and accepted its styling as is");
+        return result;
+    }
+
     let structure = analyze_file_structure(content);
     let lines: Vec<&str> = content.lines().collect();
-    
+
     // Check 1: File has mod declarations
     if !structure.mod_lines.is_empty() {
         result.pass(1, "has mod declarations");
@@ -1905,11 +1897,14 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
         }
     }
     
-    // Check 14: Debug/Display must be OUTSIDE verus!
+    // Check 14: Debug/Display must be OUTSIDE verus!, and every struct should have both.
     let outside_traits: HashSet<&str> = ["Debug", "Display"].into_iter().collect();
-    
+
     let mut check14_failed = false;
     let mut outside_trait_names: Vec<String> = Vec::new();
+    // Collect which types have Debug/Display impls outside verus!
+    let mut types_with_debug: HashSet<String> = HashSet::new();
+    let mut types_with_display: HashSet<String> = HashSet::new();
     for impl_info in &structure.impl_blocks {
         if let Some(ref trait_name) = impl_info.trait_name {
             if outside_traits.contains(trait_name.as_str()) {
@@ -1920,6 +1915,11 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
                     if !outside_trait_names.contains(trait_name) {
                         outside_trait_names.push(trait_name.clone());
                     }
+                    if trait_name == "Debug" {
+                        types_with_debug.insert(impl_info.for_type.clone());
+                    } else if trait_name == "Display" {
+                        types_with_display.insert(impl_info.for_type.clone());
+                    }
                 }
             }
         }
@@ -1929,6 +1929,15 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
             result.pass(14, "no Debug/Display impls (ok)");
         } else {
             result.pass(14, &format!("{} outside verus!", outside_trait_names.join(", ")));
+        }
+    }
+    // Warn for structs/enums missing Debug or Display outside verus!
+    for (line, name) in &structure.struct_defs {
+        if !types_with_debug.contains(name) {
+            result.fail(14, *line, format!("struct {} should have impl Debug outside verus!", name));
+        }
+        if !types_with_display.contains(name) {
+            result.fail(14, *line, format!("struct {} should have impl Display outside verus!", name));
         }
     }
     
