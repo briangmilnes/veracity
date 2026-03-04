@@ -182,3 +182,7 @@ path = "src/bin/paths_traitify.rs"
 [[bin]]
 name = "veracity-verusification"
 path = "src/bin/verusification.rs"
+
+[[bin]]
+name = "veracity-update-to-style"
+path = "src/bin/update_to_style.rs"
