@@ -635,6 +635,39 @@ struct SpecMigration {
     impl_already_has: bool,
 }
 
+/// A free spec fn that can be migrated into a trait/impl pair
+#[derive(Debug)]
+struct FreeSpecMigration {
+    trait_name: String,
+    fn_name: String,
+    start_line: usize,
+    end_line: usize,
+    /// Full text lines to insert in the impl (with body)
+    full_lines: Vec<String>,
+    /// Abstract signature to insert in the trait (no body)
+    abstract_lines: Vec<String>,
+    /// Whether the impl already has this spec fn
+    impl_already_has: bool,
+    /// Line of the trait's closing brace (insert abstract sig before it)
+    trait_end_line: usize,
+}
+
+/// Extract generic type parameter names from verus_syn Generics.
+fn extract_generic_names(
+    generics: &verus_syn::Generics,
+) -> Vec<String> {
+    generics
+        .params
+        .iter()
+        .filter_map(|p| match p {
+            verus_syn::GenericParam::Type(t) => {
+                Some(t.ident.to_string())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 /// Look backwards from `ident_line` (1-indexed) for doc comments and attributes.
 /// Returns the first line (1-indexed) of the fn including its doc block.
 fn find_fn_start(lines: &[&str], ident_line: usize) -> usize {
@@ -773,8 +806,18 @@ fn update_specs(
 
     // Trait spec fns with bodies
     let mut trait_spec_fns: Vec<(String, String, usize)> = Vec::new(); // (trait_name, fn_name, ident_line)
-    // Free spec fns
-    let mut free_spec_fns: Vec<(usize, String)> = Vec::new(); // (line, name)
+
+    // Free spec fns: (line, name, generic_param_names)
+    let mut free_spec_fns: Vec<(usize, String, Vec<String>)> =
+        Vec::new();
+
+    // Trait info: (name, generic_param_names, start_line, end_line)
+    struct TraitBlockInfo {
+        name: String,
+        generic_names: Vec<String>,
+        start_line: usize,
+    }
+    let mut trait_blocks: Vec<TraitBlockInfo> = Vec::new();
 
     // Impl block info
     struct ImplBlockInfo {
@@ -789,6 +832,15 @@ fn update_specs(
         match item {
             verus_syn::Item::Trait(t) => {
                 let trait_name = t.ident.to_string();
+                let generic_names =
+                    extract_generic_names(&t.generics);
+                let start_line =
+                    t.ident.span().start().line + line_offset;
+                trait_blocks.push(TraitBlockInfo {
+                    name: trait_name.clone(),
+                    generic_names,
+                    start_line,
+                });
                 for ti in &t.items {
                     if let verus_syn::TraitItem::Fn(f) = ti {
                         let is_spec = matches!(
@@ -817,8 +869,13 @@ fn update_specs(
                 if is_spec {
                     let line =
                         f.sig.ident.span().start().line + line_offset;
-                    free_spec_fns
-                        .push((line, f.sig.ident.to_string()));
+                    let fn_generics =
+                        extract_generic_names(&f.sig.generics);
+                    free_spec_fns.push((
+                        line,
+                        f.sig.ident.to_string(),
+                        fn_generics,
+                    ));
                 }
             }
             verus_syn::Item::Impl(i) => {
@@ -864,18 +921,107 @@ fn update_specs(
         }
     }
 
-    // Report free specs (not auto-migrated)
-    for (line, name) in &free_spec_fns {
-        log!(
-            "{}:{}: warning: [S] free spec fn {} needs manual migration to trait",
-            file_str, line, name
-        );
+    // Classify free spec fns as migratable or non-migratable.
+    // Migratable: fn's generic param names are a subset of some trait's generic param names.
+    // Non-migratable: fn has generics not present in any trait (standalone predicate).
+    let mut free_migrations: Vec<FreeSpecMigration> = Vec::new();
+
+    for (line, name, fn_generics) in &free_spec_fns {
+        // Find a trait whose generics are a superset of this fn's generics
+        let target_trait = trait_blocks.iter().find(|tb| {
+            fn_generics.iter().all(|g| tb.generic_names.contains(g))
+        });
+
+        match target_trait {
+            Some(tb) => {
+                let fn_start = find_fn_start(&lines, *line);
+                let fn_end = match find_brace_end(&lines, *line) {
+                    Some(e) => e,
+                    None => {
+                        log!(
+                            "{}:{}: warning: [S] could not find end of free spec fn {}",
+                            file_str, line, name
+                        );
+                        continue;
+                    }
+                };
+
+                let full_lines: Vec<String> = (fn_start..=fn_end)
+                    .map(|i| lines[i - 1].to_string())
+                    .collect();
+                let abstract_lines =
+                    make_abstract_signature(&full_lines);
+
+                let impl_info = impl_blocks
+                    .iter()
+                    .find(|i| i.trait_name == tb.name);
+                let impl_already_has = impl_info
+                    .map(|i| i.existing_spec_fns.contains(name))
+                    .unwrap_or(false);
+
+                if impl_info.is_none() {
+                    log!(
+                        "{}:{}: warning: [S] no impl for trait {}, cannot migrate free spec fn {}",
+                        file_str, line, tb.name, name
+                    );
+                    continue;
+                }
+
+                // Find trait end line (closing brace)
+                let trait_end =
+                    match find_brace_end(&lines, tb.start_line) {
+                        Some(e) => e,
+                        None => {
+                            log!(
+                                "{}:{}: warning: [S] could not find end of trait {}",
+                                file_str, tb.start_line, tb.name
+                            );
+                            continue;
+                        }
+                    };
+
+                log!(
+                    "{}:{}: info: [S] migrate free spec fn {} into trait/impl {}{}",
+                    file_str,
+                    line,
+                    name,
+                    tb.name,
+                    if impl_already_has {
+                        " (already in impl)"
+                    } else {
+                        ""
+                    }
+                );
+
+                free_migrations.push(FreeSpecMigration {
+                    trait_name: tb.name.clone(),
+                    fn_name: name.clone(),
+                    start_line: fn_start,
+                    end_line: fn_end,
+                    full_lines,
+                    abstract_lines,
+                    impl_already_has,
+                    trait_end_line: trait_end,
+                });
+            }
+            None => {
+                log!(
+                    "{}:{}: info: [S] free spec fn {} has generics {:?} not matching any trait — skipping",
+                    file_str, line, name, fn_generics
+                );
+            }
+        }
     }
 
-    if trait_spec_fns.is_empty() {
+    if trait_spec_fns.is_empty() && free_migrations.is_empty() {
         if free_spec_fns.is_empty() {
             log!(
                 "{}:1: info: [S] no spec migration needed",
+                file_str
+            );
+        } else {
+            log!(
+                "{}:1: info: [S] no spec migration needed (free spec fns have non-matching generics)",
                 file_str
             );
         }
@@ -941,19 +1087,26 @@ fn update_specs(
         });
     }
 
-    if migrations.is_empty() {
+    if migrations.is_empty() && free_migrations.is_empty() {
         return None;
     }
 
     if dry_run {
         log!();
-        log!(
-            "Dry run: {} spec fn(s) would be migrated",
-            migrations.len()
-        );
+        let total = migrations.len() + free_migrations.len();
+        log!("Dry run: {} spec fn(s) would be migrated", total);
         for m in &migrations {
             log!(
-                "  {} in trait {} (lines {}-{})",
+                "  trait body: {} in trait {} (lines {}-{})",
+                m.fn_name,
+                m.trait_name,
+                m.start_line,
+                m.end_line
+            );
+        }
+        for m in &free_migrations {
+            log!(
+                "  free spec: {} -> trait/impl {} (lines {}-{})",
                 m.fn_name,
                 m.trait_name,
                 m.start_line,
@@ -963,84 +1116,186 @@ fn update_specs(
         return None;
     }
 
-    // Phase 3: Apply transformations
-    // Strategy: collect all edits, apply from bottom to top.
-    // Edits: (1) replace spec fn in trait with abstract sig
-    //        (2) insert spec fn body in impl (if not already there)
+    // Phase 3: Apply transformations using a unified edit list.
+    // Each edit is (line, priority, operation) applied bottom-to-top.
     //
-    // Since traits appear before impls in canonical ordering,
-    // we first do impl insertions (higher line numbers), then
-    // trait replacements (lower line numbers) — all bottom-to-top.
+    // Edit types:
+    //   Replace(start, end, replacement_lines) — remove lines [start..=end], insert replacement
+    //   InsertBefore(line, lines_to_insert)     — insert lines before the given line
+    //   Remove(start, end)                      — remove lines [start..=end]
+
+    enum Edit {
+        Replace {
+            start: usize,
+            end: usize,
+            replacement: Vec<String>,
+        },
+        InsertBefore {
+            line: usize,
+            content: Vec<String>,
+        },
+        Remove {
+            start: usize,
+            end: usize,
+        },
+    }
+
+    impl Edit {
+        fn sort_key(&self) -> usize {
+            match self {
+                Edit::Replace { start, .. } => *start,
+                Edit::InsertBefore { line, .. } => *line,
+                Edit::Remove { start, .. } => *start,
+            }
+        }
+    }
+
+    let mut edits: Vec<Edit> = Vec::new();
+
+    // Helper: compute impl insertion point and indentation
+    let impl_insert_info =
+        |trait_name: &str,
+         source_start: usize|
+         -> Option<(usize, String, String)> {
+            let imp = impl_blocks
+                .iter()
+                .find(|i| i.trait_name == trait_name)?;
+            let impl_end =
+                find_brace_end(&lines, imp.start_line)?;
+            let insert_before =
+                imp.first_non_spec_line.unwrap_or(impl_end);
+            let target_indent =
+                if let Some(fnl) = imp.first_non_spec_line {
+                    get_indent(&lines, fnl)
+                } else {
+                    format!(
+                        "{}    ",
+                        get_indent(&lines, imp.start_line)
+                    )
+                };
+            let source_indent = get_indent(&lines, source_start);
+            Some((insert_before, target_indent, source_indent))
+        };
+
+    // Trait-body migrations: replace in trait + insert in impl
+    for m in &migrations {
+        // Replace spec fn body in trait with abstract signature
+        edits.push(Edit::Replace {
+            start: m.start_line,
+            end: m.end_line,
+            replacement: m.abstract_lines.clone(),
+        });
+
+        // Insert body in impl (if not already there)
+        if !m.impl_already_has {
+            if let Some((insert_before, target_indent, source_indent)) =
+                impl_insert_info(&m.trait_name, m.start_line)
+            {
+                let impl_fn_lines: Vec<String> = m
+                    .full_lines
+                    .iter()
+                    .filter(|l| !l.trim().starts_with("///"))
+                    .cloned()
+                    .collect();
+                let mut reindented = reindent_lines(
+                    &impl_fn_lines,
+                    &source_indent,
+                    &target_indent,
+                );
+                reindented.push(String::new());
+                edits.push(Edit::InsertBefore {
+                    line: insert_before,
+                    content: reindented,
+                });
+            }
+        }
+    }
+
+    // Free spec fn migrations: remove from module + insert abstract in trait + insert body in impl
+    for m in &free_migrations {
+        // Remove free spec fn from module level
+        edits.push(Edit::Remove {
+            start: m.start_line,
+            end: m.end_line,
+        });
+
+        // Insert abstract signature into trait (before trait's closing brace)
+        let trait_indent = format!(
+            "{}    ",
+            get_indent(&lines, m.trait_end_line)
+        );
+        let source_indent = get_indent(&lines, m.start_line);
+        let reindented_abstract = reindent_lines(
+            &m.abstract_lines,
+            &source_indent,
+            &trait_indent,
+        );
+        let mut trait_insert = vec![String::new()];
+        trait_insert.extend(reindented_abstract);
+        edits.push(Edit::InsertBefore {
+            line: m.trait_end_line,
+            content: trait_insert,
+        });
+
+        // Insert body in impl (if not already there)
+        if !m.impl_already_has {
+            if let Some((
+                insert_before,
+                target_indent,
+                _source_indent,
+            )) = impl_insert_info(&m.trait_name, m.start_line)
+            {
+                let impl_fn_lines: Vec<String> = m
+                    .full_lines
+                    .iter()
+                    .filter(|l| !l.trim().starts_with("///"))
+                    .cloned()
+                    .collect();
+                let mut reindented = reindent_lines(
+                    &impl_fn_lines,
+                    &source_indent,
+                    &target_indent,
+                );
+                reindented.push(String::new());
+                edits.push(Edit::InsertBefore {
+                    line: insert_before,
+                    content: reindented,
+                });
+            }
+        }
+    }
+
+    // Apply edits bottom-to-top
+    edits.sort_by(|a, b| b.sort_key().cmp(&a.sort_key()));
 
     let mut new_lines: Vec<String> =
         lines.iter().map(|l| l.to_string()).collect();
 
-    // Sort migrations by start_line descending
-    let mut sorted = migrations;
-    sorted.sort_by(|a, b| b.start_line.cmp(&a.start_line));
-
-    // Step 1: Impl insertions (bottom to top, so line numbers stay valid)
-    // Group insertions by impl block
-    for m in sorted.iter().rev() {
-        // Process in forward order within each impl, but insert bottom-to-top across impls
-        if m.impl_already_has {
-            continue;
-        }
-        let impl_info = impl_blocks
-            .iter()
-            .find(|i| i.trait_name == m.trait_name)
-            .unwrap();
-
-        let impl_end =
-            find_brace_end(&lines, impl_info.start_line).unwrap();
-        let insert_before =
-            impl_info.first_non_spec_line.unwrap_or(impl_end);
-
-        // Determine indentation
-        let target_indent =
-            if let Some(fnl) = impl_info.first_non_spec_line {
-                get_indent(&lines, fnl)
-            } else {
-                format!(
-                    "{}    ",
-                    get_indent(&lines, impl_info.start_line)
-                )
-            };
-        let source_indent = get_indent(&lines, m.start_line);
-
-        // Strip doc comments for impl version (they stay in the trait)
-        let impl_fn_lines: Vec<String> = m
-            .full_lines
-            .iter()
-            .filter(|l| !l.trim().starts_with("///"))
-            .cloned()
-            .collect();
-
-        let reindented =
-            reindent_lines(&impl_fn_lines, &source_indent, &target_indent);
-
-        // Insert before the target line (0-indexed)
-        let idx = insert_before - 1;
-        // Add a blank line after the inserted fn
-        let mut to_insert = reindented;
-        to_insert.push(String::new());
-        for (j, line) in to_insert.into_iter().enumerate() {
-            new_lines.insert(idx + j, line);
-        }
-    }
-
-    // Step 2: Trait replacements (bottom to top using ORIGINAL line numbers,
-    // which are valid because all insertions were at higher line numbers)
-    for m in &sorted {
-        let start_idx = m.start_line - 1;
-        let end_idx = m.end_line - 1;
-
-        // Remove old lines
-        new_lines.drain(start_idx..=end_idx);
-
-        // Insert abstract signature
-        for (j, line) in m.abstract_lines.iter().enumerate() {
-            new_lines.insert(start_idx + j, line.clone());
+    for edit in &edits {
+        match edit {
+            Edit::Replace {
+                start,
+                end,
+                replacement,
+            } => {
+                let start_idx = start - 1;
+                let end_idx = end - 1;
+                new_lines.drain(start_idx..=end_idx);
+                for (j, line) in replacement.iter().enumerate() {
+                    new_lines.insert(start_idx + j, line.clone());
+                }
+            }
+            Edit::InsertBefore { line, content } => {
+                let idx = line - 1;
+                for (j, l) in content.iter().enumerate() {
+                    new_lines.insert(idx + j, l.clone());
+                }
+            }
+            Edit::Remove { start, end } => {
+                let start_idx = start - 1;
+                let end_idx = end - 1;
+                new_lines.drain(start_idx..=end_idx);
+            }
         }
     }
 
