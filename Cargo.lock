@@ -1673,7 +1673,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "verus_syn"
-version = "0.0.0-2025-11-16-0050"
+version = "0.0.0-2026-02-24-1505"
 dependencies = [
  "proc-macro2",
  "quote",

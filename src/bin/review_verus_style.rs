@@ -324,6 +324,18 @@ struct FileStructure {
     
     // Generic return value names (Rule 19): (line, fn_name, return_name)
     generic_return_names: Vec<(usize, String, String)>,
+
+    // Free spec fns (Rule 22): spec fns at module level, not in any trait or impl
+    free_spec_fns: Vec<(usize, String)>,  // (line, fn_name)
+
+    // Spec fns with bodies in trait declarations (Rule 22): should be abstract (no body)
+    trait_spec_fns_with_body: Vec<(usize, String, String)>,  // (line, trait_name, fn_name)
+
+    // Trait generic bounds (Rule 23): (trait_name, [(param_name, bounds_string)])
+    trait_generic_bounds: Vec<(String, Vec<(String, String)>)>,
+
+    // Free fn generic bounds (Rule 23): (line, fn_name, [(param_name, bounds_string)])
+    free_fn_generic_bounds: Vec<(usize, String, Vec<(String, String)>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -647,6 +659,15 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                             // Spec fns are always OK, count them as having specs
                             fn_count += 1;
                             fn_with_spec_count += 1;
+                            // Track spec fns with bodies in trait declarations (Rule 22)
+                            if fn_item.default.is_some() {
+                                let fn_line = fn_item.sig.ident.span().start().line + line_offset;
+                                structure.trait_spec_fns_with_body.push((
+                                    fn_line,
+                                    name.clone(),
+                                    fn_item.sig.ident.to_string(),
+                                ));
+                            }
                         } else {
                             fn_count += 1;
                             if fn_item.sig.spec.requires.is_some() 
@@ -662,6 +683,24 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                     }
                 }
                 
+                // Extract trait generic bounds (Rule 23)
+                {
+                    use quote::ToTokens;
+                    let bounds: Vec<(String, String)> = t.generics.params.iter()
+                        .filter_map(|p| match p {
+                            verus_syn::GenericParam::Type(tp) => {
+                                let pname = tp.ident.to_string();
+                                let bstr = tp.bounds.to_token_stream().to_string();
+                                Some((pname, bstr))
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    if !bounds.is_empty() {
+                        structure.trait_generic_bounds.push((name.clone(), bounds));
+                    }
+                }
+
                 // Update existing trait or add new one
                 if let Some(existing) = structure.trait_defs.iter_mut().find(|td| td.name == name) {
                     existing.fn_with_spec_count = fn_with_spec_count;
@@ -736,6 +775,34 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
             verus_syn::Item::Fn(f) => {
                 // Check for generic return names (Rule 19)
                 check_generic_return_name(&f.sig, line_offset, &mut structure.generic_return_names);
+
+                // Track free spec fns (Rule 22)
+                let is_spec = matches!(f.sig.mode,
+                    verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_));
+                if is_spec {
+                    let line = f.sig.ident.span().start().line + line_offset;
+                    structure.free_spec_fns.push((line, f.sig.ident.to_string()));
+                }
+
+                // Track free fn generic bounds (Rule 23) — both spec and exec
+                {
+                    use quote::ToTokens;
+                    let line = f.sig.ident.span().start().line + line_offset;
+                    let fn_name = f.sig.ident.to_string();
+                    let bounds: Vec<(String, String)> = f.sig.generics.params.iter()
+                        .filter_map(|p| match p {
+                            verus_syn::GenericParam::Type(tp) => {
+                                let pname = tp.ident.to_string();
+                                let bstr = tp.bounds.to_token_stream().to_string();
+                                Some((pname, bstr))
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    if !bounds.is_empty() {
+                        structure.free_fn_generic_bounds.push((line, fn_name, bounds));
+                    }
+                }
             }
             _ => {}
         }
@@ -1418,7 +1485,8 @@ const SECTION_TRAIT: u32 = 7;
 const SECTION_IMPL: u32 = 8;           // trait impls, inherent impls, exec fns
 const SECTION_EXEC_FN: u32 = 8;       // exec fns grouped with impls
 const SECTION_ITER_IMPL: u32 = 9;     // Iterator, IntoIterator, ForLoopGhostIterator, ForLoopGhostIteratorNew
-const SECTION_DERIVE_IMPL: u32 = 10;  // Eq, PartialEq, Hash, Clone, PartialOrd, Ord in verus!
+const SECTION_TOP_LEVEL_COARSE_LOCKING: u32 = 10;  // Inv, RwLockPredicate, Locked, type_invariant (Mt modules only)
+const SECTION_DERIVE_IMPL: u32 = 11;  // Eq, PartialEq, Hash, Clone, PartialOrd, Ord in verus!
 
 fn section_name(section: u32) -> &'static str {
     match section {
@@ -1431,19 +1499,20 @@ fn section_name(section: u32) -> &'static str {
         7 => "traits",
         8 => "impls",
         9 => "iterators",
-        10 => "derive impls in verus!",
+        10 => "top level coarse locking",
+        11 => "derive impls in verus!",
         _ => "unknown",
     }
 }
 
 // Display-only section names for items outside verus!{} (not reordered, just in ToC)
-const DISPLAY_SECTION_MACROS: u32 = 12;       // macro_rules! *Lit
-const DISPLAY_SECTION_DERIVE_OUTSIDE: u32 = 13; // Debug, Display outside verus!
+const DISPLAY_SECTION_MACROS: u32 = 13;       // macro_rules! *Lit
+const DISPLAY_SECTION_DERIVE_OUTSIDE: u32 = 14; // Debug, Display outside verus!
 
 fn outside_section_name(section: u32) -> &'static str {
     match section {
-        12 => "macros",
-        13 => "derive impls outside verus!",
+        13 => "macros",
+        14 => "derive impls outside verus!",
         _ => "unknown",
     }
 }
@@ -1600,7 +1669,9 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                             "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord");
                         let is_iter = matches!(trait_name.as_str(),
                             "Iterator" | "IntoIterator" | "ForLoopGhostIterator" | "ForLoopGhostIteratorNew");
-                        let sect = if is_derive {
+                        let sect = if trait_name == "RwLockPredicate" {
+                            SECTION_TOP_LEVEL_COARSE_LOCKING
+                        } else if is_derive {
                             SECTION_DERIVE_IMPL
                         } else if is_iter {
                             SECTION_ITER_IMPL
@@ -1686,7 +1757,7 @@ impl CheckResult {
 /// Run style checks on a file
 fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult {
     let mut result = CheckResult::default();
-    let _file_str = file_path.display().to_string();
+    let file_str = file_path.display().to_string();
 
     // STYLE ACCEPTED: if the file contains this comment, skip all checks.
     if content.lines().any(|line| line.trim() == "// STYLE ACCEPTED") {
@@ -2179,7 +2250,88 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
             result.pass(21, "broadcast use: vstd:: before crate::");
         }
     }
-    
+
+    // Check 22: Spec fns should have abstract signatures in traits, not be free or have bodies in traits
+    let mut check22_failed = false;
+    for (line, fn_name) in &structure.free_spec_fns {
+        result.fail(22, *line, format!(
+            "free spec fn {} should be an abstract signature in a trait with body in the impl",
+            fn_name
+        ));
+        check22_failed = true;
+    }
+    for (line, trait_name, fn_name) in &structure.trait_spec_fns_with_body {
+        result.fail(22, *line, format!(
+            "spec fn {} in trait {} has a body; should be abstract (no body) with concrete spec in the impl",
+            fn_name, trait_name
+        ));
+        check22_failed = true;
+    }
+    if !check22_failed {
+        if structure.free_spec_fns.is_empty() && structure.trait_spec_fns_with_body.is_empty() {
+            result.pass(22, "spec fns: all in traits as abstract signatures");
+        }
+    }
+
+    // Check 23: Free fn type param bounds must match trait type param bounds.
+    // Skip vstdplus and experiments directories.
+    let is_infra_file = file_str.contains("/vstdplus/") || file_str.contains("/experiments/");
+    let mut check23_failed = false;
+    if !is_infra_file && !structure.trait_generic_bounds.is_empty() {
+        // Use the first trait as the primary trait.
+        let (trait_name, trait_bounds) = &structure.trait_generic_bounds[0];
+
+        for (line, fn_name, fn_bounds) in &structure.free_fn_generic_bounds {
+            for (fp_name, fp_bounds) in fn_bounds {
+                if let Some((_, tp_bounds)) = trait_bounds.iter().find(|(tn, _)| tn == fp_name) {
+                    if fp_bounds != tp_bounds {
+                        let fp_display = if fp_bounds.is_empty() { "(none)".to_string() } else { fp_bounds.clone() };
+                        let tp_display = if tp_bounds.is_empty() { "(none)".to_string() } else { tp_bounds.clone() };
+                        result.fail(23, *line, format!(
+                            "free fn {} param {} has bounds `{}` but trait {} has `{}`",
+                            fn_name, fp_name, fp_display, trait_name, tp_display
+                        ));
+                        check23_failed = true;
+                    }
+                }
+            }
+        }
+    }
+    if !check23_failed {
+        if structure.free_fn_generic_bounds.is_empty() || is_infra_file {
+            result.pass(23, "free fn type bounds: N/A");
+        } else {
+            result.pass(23, "free fn type bounds match trait");
+        }
+    }
+
+    // Check 24: Copyright line at top of file.
+    let expected_copyright = "//! Copyright (C) 2025 Acar, Blelloch and Milnes from 'Algorithms Parallel and Sequential'.";
+    let copyright_text = "Copyright (C) 2025 Acar, Blelloch and Milnes from 'Algorithms Parallel and Sequential'.";
+    if let Some(first_line) = lines.first() {
+        let trimmed = first_line.trim();
+        if trimmed == expected_copyright {
+            result.pass(24, "copyright line present");
+        } else {
+            // Check for common variants: //! Copyright, //  Copyright (extra space)
+            let after_comment = trimmed
+                .strip_prefix("//!")
+                .or_else(|| trimmed.strip_prefix("//"))
+                .map(|s| s.trim());
+            if after_comment == Some(copyright_text) {
+                result.fail(24, 1, format!(
+                    "copyright text present but wrong format; got `{}`", trimmed
+                ));
+            } else {
+                result.fail(24, 1, format!(
+                    "missing or incorrect copyright line; expected: {}", expected_copyright
+                ));
+            }
+        }
+    } else {
+        result.fail(24, 1, "file is empty; missing copyright line".to_string());
+    }
+
     result
 }
 
@@ -2351,7 +2503,9 @@ fn collect_reorder_items(inner: &str, line_offset: usize, structure: &FileStruct
                             "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord");
                         let is_iter = matches!(trait_name.as_str(),
                             "Iterator" | "IntoIterator" | "ForLoopGhostIterator" | "ForLoopGhostIteratorNew");
-                        let sect = if is_derive {
+                        let sect = if trait_name == "RwLockPredicate" {
+                            SECTION_TOP_LEVEL_COARSE_LOCKING
+                        } else if is_derive {
                             SECTION_DERIVE_IMPL
                         } else if is_iter {
                             SECTION_ITER_IMPL
@@ -2508,15 +2662,15 @@ fn reorder_verus_block(content: &str, structure: &FileStructure) -> Option<Strin
     // ── Build the ToC (goes at the top of the file, before pub mod) ──
     let mut toc_lines: Vec<String> = Vec::new();
     toc_lines.push("//  Table of Contents".to_string());
-    toc_lines.push("//\t1. module".to_string());
+    toc_lines.push("//\t\t1. module".to_string());
     for &section in &present_sections {
-        toc_lines.push(format!("//\t{}. {}", display_section_num(section), section_name(section)));
+        toc_lines.push(format!("//\t\t{}. {}", display_section_num(section), section_name(section)));
     }
     if has_macros {
-        toc_lines.push(format!("//\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS)));
+        toc_lines.push(format!("//\t\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS)));
     }
     if has_outside_derive {
-        toc_lines.push(format!("//\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE)));
+        toc_lines.push(format!("//\t\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE)));
     }
     
     // ── Find insertion point for ToC: after doc comments, before pub mod ──
@@ -2695,8 +2849,9 @@ fn reorder_verus_block(content: &str, structure: &FileStructure) -> Option<Strin
     for i in close_brace_file_line..file_lines.len() {
         let trimmed = file_lines[i].trim();
         
-        // Strip old section headers from previous runs (//\t\tN. ...)
+        // Strip old section headers from previous runs (//\tN. or //\t\tN. ...)
         if (trimmed.starts_with("//\t\t") && trimmed.len() > 4 && trimmed.as_bytes()[4].is_ascii_digit())
+            || (trimmed.starts_with("//\t") && trimmed.len() > 3 && trimmed.as_bytes()[3].is_ascii_digit())
             || (trimmed.starts_with("//      ") && trimmed.len() > 8 && trimmed.as_bytes()[8].is_ascii_digit())
         {
             continue;
@@ -2908,15 +3063,15 @@ fn main() -> Result<()> {
                 let has_outside_derive_dry = structure.impl_blocks.iter()
                     .any(|imp| !imp.in_verus && imp.is_derive_trait);
                 log!("  ToC:");
-                log!("    //\t1. module");
+                log!("    //\t\t1. module");
                 for &section in &present_sections {
-                    log!("    //\t{}. {}", display_section_num(section), section_name(section));
+                    log!("    //\t\t{}. {}", display_section_num(section), section_name(section));
                 }
                 if has_macros_dry {
-                    log!("    //\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS));
+                    log!("    //\t\t{}. {}", DISPLAY_SECTION_MACROS, outside_section_name(DISPLAY_SECTION_MACROS));
                 }
                 if has_outside_derive_dry {
-                    log!("    //\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE));
+                    log!("    //\t\t{}. {}", DISPLAY_SECTION_DERIVE_OUTSIDE, outside_section_name(DISPLAY_SECTION_DERIVE_OUTSIDE));
                 }
                 log!();
 

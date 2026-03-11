@@ -20,7 +20,7 @@ regex = "1.10"
 walkdir = "2.5"
 rayon = "1.10"
 syn = { version = "2.0", features = ["full", "visit", "extra-traits"] }
-verus_syn = { path = "../verus-lang/dependencies/syn", features = ["full", "visit", "extra-traits"] }
+verus_syn = { path = "../verus/dependencies/syn", features = ["full", "visit", "extra-traits"] }
 jsonschema = "0.37"
 quote = "1.0"
 proc-macro2 = "1.0"
