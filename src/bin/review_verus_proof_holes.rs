@@ -110,10 +110,20 @@ struct AxiomStats {
     axiom_names: Vec<String>,  // Track axiom names for de-duplication
 }
 
+#[derive(Debug, Default, Clone)]
+struct FnSpecStats {
+    total_fns: usize,
+    exec_fns_complete: usize,
+    exec_fns_missing_spec: usize,
+    proof_spec_fns_clean: usize,
+    proof_spec_fns_with_holes: usize,
+}
+
 #[derive(Debug, Default)]
 struct FileStats {
     holes: ProofHoleStats,
     axioms: AxiomStats,
+    fn_spec: FnSpecStats,
     proof_functions: usize,
     clean_proof_functions: usize,
     holed_proof_functions: usize,
@@ -131,12 +141,17 @@ struct SummaryStats {
     holed_proof_functions: usize,
     holes: ProofHoleStats,
     axioms: AxiomStats,
+    fn_spec: FnSpecStats,
     total_warnings: usize,
     total_infos: usize,
     /// Count per hole_type for accurate summary message
     warning_type_counts: HashMap<String, usize>,
     /// All infos with path:line for summary listing
     all_infos: Vec<(String, usize, String, String)>,
+    /// All errors (path, line, hole_type) for single-line summary
+    all_errors: Vec<(String, usize, String)>,
+    /// All warnings (path, line, hole_type) for single-line summary
+    all_warnings: Vec<(String, usize, String)>,
 }
 
 #[derive(Debug)]
@@ -716,7 +731,9 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for warning in &stats.warnings {
-                    let level = if warning.hole_type == "assume_eq_clone_workaround" {
+                    let level = if warning.hole_type == "assume_eq_clone_workaround"
+                        || warning.hole_type == "trivial_spec_wf"
+                    {
                         "warning"
                     } else {
                         "error"
@@ -731,7 +748,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for info in &stats.infos {
-                    let msg = format!("{}:{}: info: {} - {}", abs_path.display(), info.line, info.hole_type, info.context);
+                    let msg = format!("{}:{}: info: {}", abs_path.display(), info.line, info.hole_type);
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -749,6 +766,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     let clone_derived = stats.warnings.iter().filter(|w| w.hole_type == "clone_derived_outside").count();
                     let debug_display = stats.warnings.iter().filter(|w| w.hole_type == "debug_display_inside_verus").count();
                     let eq_clone_workaround = stats.warnings.iter().filter(|w| w.hole_type == "assume_eq_clone_workaround").count();
+                    let trivial_spec_wf = stats.warnings.iter().filter(|w| w.hole_type == "trivial_spec_wf").count();
                     let rust_rwlock = stats.warnings.iter().filter(|w| w.hole_type == "rust_rwlock").count();
                     let dummy_predicate = stats.warnings.iter().filter(|w| w.hole_type == "dummy_rwlock_predicate").count();
                     let not_verusified = stats.warnings.iter().filter(|w| w.hole_type == "not_verusified").count();
@@ -759,6 +777,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                         (clone_derived > 0).then(|| format!("{} Clone derived outside", clone_derived)),
                         (debug_display > 0).then(|| format!("{} Debug/Display inside verus!", debug_display)),
                         (eq_clone_workaround > 0).then(|| format!("{} assume in eq/clone (Verus workaround)", eq_clone_workaround)),
+                        (trivial_spec_wf > 0).then(|| format!("{} trivial spec*wf {{ true }}", trivial_spec_wf)),
                         (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock", rust_rwlock)),
                         (dummy_predicate > 0).then(|| format!("{} dummy RwLockPredicate", dummy_predicate)),
                     ]
@@ -797,7 +816,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 if has_infos {
                     let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
                     for info in &stats.infos {
-                        let msg = format!("{}:{}: info: {} - {}", abs_path.display(), info.line, info.hole_type, info.context);
+                        let msg = format!("{}:{}: info: {}", abs_path.display(), info.line, info.hole_type);
                         println!("{}", msg);
                         write_to_log(&msg);
                     }
@@ -821,7 +840,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
     }
     
     // Print summary (uses log! macro which writes to both stdout and log file)
-    let summary = compute_summary(&file_stats_map);
+    let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
     
     Ok(())
@@ -994,7 +1013,7 @@ fn run_single_project_analysis(args: &StandardArgs, exclude_dirs: &[PathBuf]) ->
     }
     
     // Print summary
-    let summary = compute_summary(&file_stats_map);
+    let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
     
     Ok(())
@@ -1045,7 +1064,7 @@ fn run_multi_codebase_analysis(base_dir: &Path, exclude_dirs: &[PathBuf]) -> Res
             }
         }
         
-        let summary = compute_summary(&file_stats_map);
+        let summary = compute_summary(&file_stats_map, base_dir);
         print_project_summary(&project_name, &summary);
         
         project_stats_vec.push(ProjectStats {
@@ -2125,6 +2144,15 @@ impl<'a> ProofHoleVisitor<'a> {
         ty_str.contains("RwLock") && !ty_str.contains("std::sync::RwLock")
     }
 
+    fn return_type_is_bool(output: &verus_syn::ReturnType) -> bool {
+        use verus_syn::ReturnType;
+        let ty_str = match output {
+            ReturnType::Default => return false,
+            ReturnType::Type(_, _, _, ty) => ty.to_token_stream().to_string(),
+        };
+        ty_str.trim() == "bool"
+    }
+
     fn is_in_eq_or_clone_context(&self) -> bool {
         let fn_ok = self
             .current_fn_name
@@ -2159,7 +2187,7 @@ impl<'a> ProofHoleVisitor<'a> {
 impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
     fn visit_item_fn(&mut self, i: &'a verus_syn::ItemFn) {
         use verus_syn::FnMode;
-        let _line = self.file_line(i.sig.ident.span());
+        let line = self.file_line(i.sig.ident.span());
         let name = i.sig.ident.to_string();
         let prev_fn = self.current_fn_name.replace(name.clone());
 
@@ -2170,17 +2198,81 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             self.suppress_external_body_hole = true;
         }
 
+        let has_accept_hole = has_accept_hole_comment(self.content, line);
+
         match &i.sig.mode {
+            FnMode::Exec(_) | FnMode::Default => {
+                self.stats.fn_spec.total_fns += 1;
+                let has_requires = i.sig.spec.requires.is_some();
+                let has_ensures = i.sig.spec.ensures.is_some()
+                    || i.sig.spec.default_ensures.is_some();
+                if has_requires && has_ensures {
+                    self.stats.fn_spec.exec_fns_complete += 1;
+                } else {
+                    self.stats.fn_spec.exec_fns_missing_spec += 1;
+                    if !has_requires && !has_ensures {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_requires_ensures".to_string(),
+                            context: format!("fn {} — exec fn should have requires and ensures", name),
+                        });
+                    } else if !has_requires {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_requires".to_string(),
+                            context: format!("fn {} — exec fn should have requires", name),
+                        });
+                    } else {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_ensures".to_string(),
+                            context: format!("fn {} — exec fn should have ensures", name),
+                        });
+                    }
+                }
+            }
+            FnMode::Spec(_) | FnMode::SpecChecked(_) => {
+                self.stats.fn_spec.total_fns += 1;
+                let holes = count_holes_in_verus_block(&i.block);
+                if holes > 0 && !has_accept_hole {
+                    self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "spec_fn_with_holes".to_string(),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                    });
+                } else {
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
+                }
+                if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && block_returns_only_true(&i.block) {
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "trivial_spec_wf".to_string(),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
+                    });
+                }
+            }
             FnMode::Proof(_) => {
                 self.stats.proof_functions += 1;
+                self.stats.fn_spec.total_fns += 1;
                 let holes = count_holes_in_verus_block(&i.block);
                 if holes > 0 {
                     self.stats.holed_proof_functions += 1;
+                    if !self.is_in_eq_or_clone_context() && !has_accept_hole {
+                        self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "proof_fn_with_holes".to_string(),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                        });
+                    }
                 } else {
                     self.stats.clean_proof_functions += 1;
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
                 }
             }
             FnMode::ProofAxiom(_) => {
+                self.stats.fn_spec.total_fns += 1;
                 let holes = count_holes_in_verus_block(&i.block);
                 if holes > 0 {
                     self.stats.axioms.axiom_names.push(name);
@@ -2188,7 +2280,6 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.axioms.total_axioms += 1;
                 }
             }
-            _ => {}
         }
         visit::visit_item_fn(self, i);
         self.suppress_external_body_hole = false;
@@ -2196,8 +2287,10 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
     }
 
     fn visit_impl_item_fn(&mut self, i: &'a verus_syn::ImplItemFn) {
+        use verus_syn::FnMode;
+        let line = self.file_line(i.sig.ident.span());
         let name = i.sig.ident.to_string();
-        let prev_fn = self.current_fn_name.replace(name);
+        let prev_fn = self.current_fn_name.replace(name.clone());
 
         let has_external_body = i.attrs.iter().any(|a| {
             detect_verifier_attr_verus_syn(a) == Some(VerifierAttribute::ExternalBody)
@@ -2206,8 +2299,192 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             self.suppress_external_body_hole = true;
         }
 
+        let has_accept_hole = has_accept_hole_comment(self.content, line);
+
+        match &i.sig.mode {
+            FnMode::Exec(_) | FnMode::Default => {
+                self.stats.fn_spec.total_fns += 1;
+                // Trait impl methods inherit requires/ensures from the trait — no need to repeat
+                let in_trait_impl = self.current_impl_trait.is_some();
+                if in_trait_impl {
+                    self.stats.fn_spec.exec_fns_complete += 1;
+                } else {
+                    let has_requires = i.sig.spec.requires.is_some();
+                    let has_ensures = i.sig.spec.ensures.is_some()
+                        || i.sig.spec.default_ensures.is_some();
+                    if has_requires && has_ensures {
+                        self.stats.fn_spec.exec_fns_complete += 1;
+                    } else {
+                        self.stats.fn_spec.exec_fns_missing_spec += 1;
+                        if !has_requires && !has_ensures {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have requires and ensures", name),
+                            });
+                        } else if !has_requires {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires".to_string(),
+                                context: format!("fn {} — exec fn should have requires", name),
+                            });
+                        } else {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have ensures", name),
+                            });
+                        }
+                    }
+                }
+            }
+            FnMode::Spec(_) | FnMode::SpecChecked(_) => {
+                self.stats.fn_spec.total_fns += 1;
+                let holes = count_holes_in_verus_block(&i.block);
+                if holes > 0 && !has_accept_hole {
+                    self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "spec_fn_with_holes".to_string(),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                    });
+                } else {
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
+                }
+                if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && block_returns_only_true(&i.block) {
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "trivial_spec_wf".to_string(),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
+                    });
+                }
+            }
+            FnMode::Proof(_) => {
+                self.stats.proof_functions += 1;
+                self.stats.fn_spec.total_fns += 1;
+                let holes = count_holes_in_verus_block(&i.block);
+                if holes > 0 {
+                    self.stats.holed_proof_functions += 1;
+                    if !self.is_in_eq_or_clone_context() && !has_accept_hole {
+                        self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "proof_fn_with_holes".to_string(),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                        });
+                    }
+                } else {
+                    self.stats.clean_proof_functions += 1;
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
+                }
+            }
+            FnMode::ProofAxiom(_) => {
+                self.stats.fn_spec.total_fns += 1;
+                let holes = count_holes_in_verus_block(&i.block);
+                if holes > 0 {
+                    self.stats.axioms.axiom_names.push(name);
+                    self.stats.axioms.axiom_fn_count += 1;
+                    self.stats.axioms.total_axioms += 1;
+                }
+            }
+        }
+
         visit::visit_impl_item_fn(self, i);
         self.suppress_external_body_hole = false;
+        self.current_fn_name = prev_fn;
+    }
+
+    fn visit_trait_item_fn(&mut self, i: &'a verus_syn::TraitItemFn) {
+        use verus_syn::FnMode;
+        let line = self.file_line(i.sig.ident.span());
+        let name = i.sig.ident.to_string();
+        let prev_fn = self.current_fn_name.replace(name.clone());
+
+        let has_accept_hole = has_accept_hole_comment(self.content, line);
+
+        match &i.sig.mode {
+            FnMode::Exec(_) | FnMode::Default => {
+                self.stats.fn_spec.total_fns += 1;
+                let has_requires = i.sig.spec.requires.is_some();
+                let has_ensures = i.sig.spec.ensures.is_some()
+                    || i.sig.spec.default_ensures.is_some();
+                if has_requires && has_ensures {
+                    self.stats.fn_spec.exec_fns_complete += 1;
+                } else {
+                    self.stats.fn_spec.exec_fns_missing_spec += 1;
+                    if !has_requires && !has_ensures {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_requires_ensures".to_string(),
+                            context: format!("fn {} — exec fn should have requires and ensures", name),
+                        });
+                    } else if !has_requires {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_requires".to_string(),
+                            context: format!("fn {} — exec fn should have requires", name),
+                        });
+                    } else {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_ensures".to_string(),
+                            context: format!("fn {} — exec fn should have ensures", name),
+                        });
+                    }
+                }
+            }
+            FnMode::Spec(_) | FnMode::SpecChecked(_) => {
+                self.stats.fn_spec.total_fns += 1;
+                let holes = i.default.as_ref().map_or(0, |b| count_holes_in_verus_block(b));
+                if holes > 0 && !has_accept_hole {
+                    self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "spec_fn_with_holes".to_string(),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                    });
+                } else {
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
+                }
+                if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && i.default.as_ref().map_or(false, block_returns_only_true) {
+                    self.stats.warnings.push(DetectedHole {
+                        line,
+                        hole_type: "trivial_spec_wf".to_string(),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
+                    });
+                }
+            }
+            FnMode::Proof(_) => {
+                self.stats.proof_functions += 1;
+                self.stats.fn_spec.total_fns += 1;
+                let holes = i.default.as_ref().map_or(0, |b| count_holes_in_verus_block(b));
+                if holes > 0 {
+                    self.stats.holed_proof_functions += 1;
+                    if !self.is_in_eq_or_clone_context() && !has_accept_hole {
+                        self.stats.fn_spec.proof_spec_fns_with_holes += 1;
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "proof_fn_with_holes".to_string(),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                        });
+                    }
+                } else {
+                    self.stats.clean_proof_functions += 1;
+                    self.stats.fn_spec.proof_spec_fns_clean += 1;
+                }
+            }
+            FnMode::ProofAxiom(_) => {
+                self.stats.fn_spec.total_fns += 1;
+                let holes = i.default.as_ref().map_or(0, |b| count_holes_in_verus_block(b));
+                if holes > 0 {
+                    self.stats.axioms.axiom_names.push(name);
+                    self.stats.axioms.axiom_fn_count += 1;
+                    self.stats.axioms.total_axioms += 1;
+                }
+            }
+        }
+
+        visit::visit_trait_item_fn(self, i);
         self.current_fn_name = prev_fn;
     }
 
@@ -3066,10 +3343,14 @@ fn print_file_report(path: &str, stats: &FileStats) {
     }
 }
 
-fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats {
+fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path) -> SummaryStats {
     let mut summary = SummaryStats::default();
     
     for (path_str, stats) in file_stats_map {
+        let full_path = base_dir.join(path_str).canonicalize()
+            .unwrap_or_else(|_| base_dir.join(path_str))
+            .display()
+            .to_string();
         summary.total_files += 1;
         
         if stats.holes.total_holes > 0 {
@@ -3103,14 +3384,27 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
         summary.axioms.broadcast_use_axiom_count += stats.axioms.broadcast_use_axiom_count;
         summary.axioms.total_axioms += stats.axioms.total_axioms;
 
+        summary.fn_spec.total_fns += stats.fn_spec.total_fns;
+        summary.fn_spec.exec_fns_complete += stats.fn_spec.exec_fns_complete;
+        summary.fn_spec.exec_fns_missing_spec += stats.fn_spec.exec_fns_missing_spec;
+        summary.fn_spec.proof_spec_fns_clean += stats.fn_spec.proof_spec_fns_clean;
+        summary.fn_spec.proof_spec_fns_with_holes += stats.fn_spec.proof_spec_fns_with_holes;
+
         summary.total_warnings += stats.warnings.len();
         summary.total_infos += stats.infos.len();
+        let is_warning_level = |t: &str| t == "assume_eq_clone_workaround" || t == "trivial_spec_wf";
         for w in &stats.warnings {
             *summary.warning_type_counts.entry(w.hole_type.clone()).or_insert(0) += 1;
+            let entry = (full_path.clone(), w.line, w.hole_type.clone());
+            if is_warning_level(&w.hole_type) {
+                summary.all_warnings.push(entry);
+            } else {
+                summary.all_errors.push(entry);
+            }
         }
         for info in &stats.infos {
             summary.all_infos.push((
-                path_str.clone(),
+                full_path.clone(),
                 info.line,
                 info.hole_type.clone(),
                 info.context.clone(),
@@ -3122,66 +3416,100 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>) -> SummaryStats 
 }
 
 fn print_summary(summary: &SummaryStats) {
+    let warn_count = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0)
+        + summary.warning_type_counts.get("trivial_spec_wf").copied().unwrap_or(0);
+    let error_count = summary.total_warnings.saturating_sub(warn_count);
+
+    let total_issues = error_count + warn_count + summary.total_infos;
+    fn pct(n: usize, total: usize) -> usize {
+        if total > 0 { (n * 100) / total } else { 0 }
+    }
+    log!("");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Error/Warn/Info");
+    log!("═══════════════════════════════════════════════════════════════");
+    log!("Errors: {} ({}%)", error_count, pct(error_count, total_issues));
+    for (path, line, hole_type) in &summary.all_errors {
+        log!("{}:{}: error: {}", path, line, hole_type);
+    }
+    log!("Warnings: {} ({}%)", warn_count, pct(warn_count, total_issues));
+    for (path, line, hole_type) in &summary.all_warnings {
+        log!("{}:{}: warning: {}", path, line, hole_type);
+    }
+    log!("Info: {} ({}%)", summary.total_infos, pct(summary.total_infos, total_issues));
+    for (path, line, hole_type, _) in &summary.all_infos {
+        log!("{}:{}: info: {}", path, line, hole_type);
+    }
     log!("");
     log!("═══════════════════════════════════════════════════════════════");
     log!("SUMMARY");
     log!("═══════════════════════════════════════════════════════════════");
     log!("");
     log!("Modules:");
-    log!("   {} clean (no holes)", summary.clean_modules);
-    log!("   {} holed (contains holes)", summary.holed_modules);
+    log!("   {} clean (no holes, {}%)", summary.clean_modules, pct(summary.clean_modules, summary.total_files));
+    log!("   {} holed (contains holes, {}%)", summary.holed_modules, pct(summary.holed_modules, summary.total_files));
     log!("   {} total", summary.total_files);
     log!("");
     log!("Proof Functions:");
-    log!("   {} clean", summary.clean_proof_functions);
-    log!("   {} holed", summary.holed_proof_functions);
+    log!("   {} clean ({}%)", summary.clean_proof_functions, pct(summary.clean_proof_functions, summary.total_proof_functions));
+    log!("   {} holed ({}%)", summary.holed_proof_functions, pct(summary.holed_proof_functions, summary.total_proof_functions));
     log!("   {} total", summary.total_proof_functions);
     log!("");
-    log!("Holes Found: {} total", summary.holes.total_holes);
+    if summary.fn_spec.total_fns > 0 {
+        log!("Function Specs:");
+        log!("   {} exec fns with complete spec (requires+ensures) ({}%)", summary.fn_spec.exec_fns_complete, pct(summary.fn_spec.exec_fns_complete, summary.fn_spec.total_fns));
+        log!("   {} exec fns missing spec ({}%)", summary.fn_spec.exec_fns_missing_spec, pct(summary.fn_spec.exec_fns_missing_spec, summary.fn_spec.total_fns));
+        log!("   {} proof/spec fns clean ({}%)", summary.fn_spec.proof_spec_fns_clean, pct(summary.fn_spec.proof_spec_fns_clean, summary.fn_spec.total_fns));
+        log!("   {} proof/spec fns with holes ({}%)", summary.fn_spec.proof_spec_fns_with_holes, pct(summary.fn_spec.proof_spec_fns_with_holes, summary.fn_spec.total_fns));
+        log!("   {} total fns", summary.fn_spec.total_fns);
+        log!("");
+    }
+    let total_holes = summary.holes.total_holes;
+    log!("Holes Found: {} total", total_holes);
     if summary.holes.assume_false_count > 0 {
-        log!("   {} × assume(false)", summary.holes.assume_false_count);
+        log!("   {} × assume(false) ({}%)", summary.holes.assume_false_count, pct(summary.holes.assume_false_count, total_holes));
     }
     if summary.holes.assume_count > 0 {
-        log!("   {} × assume()", summary.holes.assume_count);
+        log!("   {} × assume() ({}%)", summary.holes.assume_count, pct(summary.holes.assume_count, total_holes));
     }
     if summary.holes.assume_new_count > 0 {
-        log!("   {} × Tracked::assume_new()", summary.holes.assume_new_count);
+        log!("   {} × Tracked::assume_new() ({}%)", summary.holes.assume_new_count, pct(summary.holes.assume_new_count, total_holes));
     }
     if summary.holes.assume_specification_count > 0 {
-        log!("   {} × assume_specification", summary.holes.assume_specification_count);
+        log!("   {} × assume_specification ({}%)", summary.holes.assume_specification_count, pct(summary.holes.assume_specification_count, total_holes));
     }
     if summary.holes.admit_count > 0 {
-        log!("   {} × admit()", summary.holes.admit_count);
+        log!("   {} × admit() ({}%)", summary.holes.admit_count, pct(summary.holes.admit_count, total_holes));
     }
     if summary.holes.unsafe_fn_count > 0 {
-        log!("   {} × unsafe fn", summary.holes.unsafe_fn_count);
+        log!("   {} × unsafe fn ({}%)", summary.holes.unsafe_fn_count, pct(summary.holes.unsafe_fn_count, total_holes));
     }
     if summary.holes.unsafe_impl_count > 0 {
-        log!("   {} × unsafe impl", summary.holes.unsafe_impl_count);
+        log!("   {} × unsafe impl ({}%)", summary.holes.unsafe_impl_count, pct(summary.holes.unsafe_impl_count, total_holes));
     }
     if summary.holes.unsafe_block_count > 0 {
-        log!("   {} × unsafe {{}}", summary.holes.unsafe_block_count);
+        log!("   {} × unsafe {{}} ({}%)", summary.holes.unsafe_block_count, pct(summary.holes.unsafe_block_count, total_holes));
     }
     if summary.holes.external_body_count > 0 {
-        log!("   {} × external_body", summary.holes.external_body_count);
+        log!("   {} × external_body ({}%)", summary.holes.external_body_count, pct(summary.holes.external_body_count, total_holes));
     }
     if summary.holes.external_fn_spec_count > 0 {
-        log!("   {} × external_fn_specification", summary.holes.external_fn_spec_count);
+        log!("   {} × external_fn_specification ({}%)", summary.holes.external_fn_spec_count, pct(summary.holes.external_fn_spec_count, total_holes));
     }
     if summary.holes.external_trait_spec_count > 0 {
-        log!("   {} × external_trait_specification", summary.holes.external_trait_spec_count);
+        log!("   {} × external_trait_specification ({}%)", summary.holes.external_trait_spec_count, pct(summary.holes.external_trait_spec_count, total_holes));
     }
     if summary.holes.external_type_spec_count > 0 {
-        log!("   {} × external_type_specification", summary.holes.external_type_spec_count);
+        log!("   {} × external_type_specification ({}%)", summary.holes.external_type_spec_count, pct(summary.holes.external_type_spec_count, total_holes));
     }
     if summary.holes.external_trait_ext_count > 0 {
-        log!("   {} × external_trait_extension", summary.holes.external_trait_ext_count);
+        log!("   {} × external_trait_extension ({}%)", summary.holes.external_trait_ext_count, pct(summary.holes.external_trait_ext_count, total_holes));
     }
     if summary.holes.external_count > 0 {
-        log!("   {} × external", summary.holes.external_count);
+        log!("   {} × external ({}%)", summary.holes.external_count, pct(summary.holes.external_count, total_holes));
     }
     if summary.holes.opaque_count > 0 {
-        log!("   {} × opaque", summary.holes.opaque_count);
+        log!("   {} × opaque ({}%)", summary.holes.opaque_count, pct(summary.holes.opaque_count, total_holes));
     }
     
     if summary.total_warnings > 0 {
@@ -3202,15 +3530,16 @@ fn print_summary(summary: &SummaryStats) {
             "assume_eq_clone_workaround", "rust_rwlock",
             "dummy_rwlock_predicate", "not_verusified",
         ].into_iter().collect();
+        let total_w = summary.total_warnings;
         let mut parts: Vec<String> = [
-            (not_verusified > 0).then(|| format!("{} not verusified", not_verusified)),
-            (bare > 0).then(|| format!("{} bare impl(s)", bare)),
-            (outside > 0).then(|| format!("{} struct/enum outside verus!", outside)),
-            (clone_derived > 0).then(|| format!("{} Clone derived outside", clone_derived)),
-            (debug_display > 0).then(|| format!("{} Debug/Display inside verus!", debug_display)),
-            (eq_clone > 0).then(|| format!("{} assume in eq/clone (Verus workaround)", eq_clone)),
-            (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock", rust_rwlock)),
-            (dummy_pred > 0).then(|| format!("{} dummy RwLockPredicate", dummy_pred)),
+            (not_verusified > 0).then(|| format!("{} not verusified ({}%)", not_verusified, pct(not_verusified, total_w))),
+            (bare > 0).then(|| format!("{} bare impl(s) ({}%)", bare, pct(bare, total_w))),
+            (outside > 0).then(|| format!("{} struct/enum outside verus! ({}%)", outside, pct(outside, total_w))),
+            (clone_derived > 0).then(|| format!("{} Clone derived outside ({}%)", clone_derived, pct(clone_derived, total_w))),
+            (debug_display > 0).then(|| format!("{} Debug/Display inside verus! ({}%)", debug_display, pct(debug_display, total_w))),
+            (eq_clone > 0).then(|| format!("{} assume in eq/clone (Verus workaround) ({}%)", eq_clone, pct(eq_clone, total_w))),
+            (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock ({}%)", rust_rwlock, pct(rust_rwlock, total_w))),
+            (dummy_pred > 0).then(|| format!("{} dummy RwLockPredicate ({}%)", dummy_pred, pct(dummy_pred, total_w))),
         ]
         .into_iter()
         .flatten()
@@ -3220,7 +3549,7 @@ fn print_summary(summary: &SummaryStats) {
             .map(|(_, v)| v)
             .sum();
         if other > 0 {
-            parts.push(format!("{} other", other));
+            parts.push(format!("{} other ({}%)", other, pct(other, total_w)));
         }
         let msg = if parts.is_empty() {
             format!("Errors: {} total", summary.total_warnings)
@@ -3228,14 +3557,6 @@ fn print_summary(summary: &SummaryStats) {
             format!("Errors: {} total ({})", summary.total_warnings, parts.join(", "))
         };
         log!("{}", msg);
-    }
-
-    if summary.total_infos > 0 {
-        log!("");
-        log!("Info: {} total", summary.total_infos);
-        for (path, line, hole_type, context) in &summary.all_infos {
-            log!("   {}:{}: info: {} - {}", path, line, hole_type, context);
-        }
     }
 
     if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
