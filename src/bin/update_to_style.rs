@@ -84,6 +84,7 @@ struct Args {
     codebase: Option<PathBuf>,
     path: PathBuf,
     specs: bool,
+    types: bool,
     collection_detection: bool,
     dry_run: bool,
     exclude_dirs: Vec<String>,
@@ -101,6 +102,7 @@ impl Args {
         let mut codebase: Option<PathBuf> = None;
         let mut path: Option<PathBuf> = None;
         let mut specs = false;
+        let mut types = false;
         let mut collection_detection = false;
         let mut dry_run = false;
         let mut exclude_dirs: Vec<String> = Vec::new();
@@ -110,6 +112,10 @@ impl Args {
             match args[i].as_str() {
                 "-s" | "--specs" => {
                     specs = true;
+                    i += 1;
+                }
+                "-t" | "--types" => {
+                    types = true;
                     i += 1;
                 }
                 "-C" | "--collection-detection" => {
@@ -172,9 +178,9 @@ impl Args {
             ));
         }
 
-        if !specs && !collection_detection {
+        if !specs && !types && !collection_detection {
             return Err(anyhow::anyhow!(
-                "At least one mode flag required: -C (collection detection) or -s (specs)"
+                "At least one mode flag required: -s (specs), -t (types), or -C (collection detection)"
             ));
         }
 
@@ -182,6 +188,7 @@ impl Args {
             codebase,
             path,
             specs,
+            types,
             collection_detection,
             dry_run,
             exclude_dirs,
@@ -193,7 +200,8 @@ impl Args {
         eprintln!();
         eprintln!("Flags:");
         eprintln!("  -c, --codebase <dir>         Project root (for crate type resolution)");
-        eprintln!("  -s, --specs                  Reorder specs to abstract-in-trait pattern (not yet implemented)");
+        eprintln!("  -s, --specs                  Migrate spec fn bodies to abstract-in-trait pattern");
+        eprintln!("  -t, --types                  Fix free fn type param bounds to match trait");
         eprintln!("  -C, --collection-detection   Detect which modules are collections");
         eprintln!("  -e, --exclude <dir>          Exclude directories containing <dir> (repeatable)");
         eprintln!("  -n, --dry-run                Show what would be done, don't write files");
@@ -723,6 +731,9 @@ fn make_abstract_signature(fn_lines: &[String]) -> Vec<String> {
             let before = line[..brace_pos].trim_end();
             if !before.is_empty() {
                 let cleaned = before
+                    .replace("pub open spec fn", "spec fn")
+                    .replace("pub closed spec fn", "spec fn")
+                    .replace("pub spec fn", "spec fn")
                     .replace("open spec fn", "spec fn")
                     .replace("closed spec fn", "spec fn");
                 result.push(format!("{};", cleaned));
@@ -735,7 +746,10 @@ fn make_abstract_signature(fn_lines: &[String]) -> Vec<String> {
 
         let mut l = line.clone();
         if l.contains("spec fn") {
-            l = l.replace("open spec fn", "spec fn")
+            l = l.replace("pub open spec fn", "spec fn")
+                .replace("pub closed spec fn", "spec fn")
+                .replace("pub spec fn", "spec fn")
+                .replace("open spec fn", "spec fn")
                 .replace("closed spec fn", "spec fn");
         }
         result.push(l);
@@ -769,6 +783,362 @@ fn reindent_lines(
             }
         })
         .collect()
+}
+
+/// Replace bare calls to `name` followed by `suffix` with `Self::name` + suffix.
+/// Only replaces when `name` is not preceded by `::` or a word character.
+fn replace_bare_call(line: &str, name: &str, suffix: &str) -> String {
+    let pattern = format!("{}{}", name, suffix);
+    let replacement = format!("Self::{}{}", name, suffix);
+    let mut result = String::new();
+    let mut remaining = line;
+
+    while let Some(pos) = remaining.find(&pattern) {
+        // Check character before the match — skip if it's a word char or `:`
+        if pos > 0 {
+            let prev = remaining.as_bytes()[pos - 1];
+            if prev == b':' || prev == b'_' || prev.is_ascii_alphanumeric() {
+                result.push_str(&remaining[..pos + pattern.len()]);
+                remaining = &remaining[pos + pattern.len()..];
+                continue;
+            }
+        }
+        result.push_str(&remaining[..pos]);
+        result.push_str(&replacement);
+        remaining = &remaining[pos + pattern.len()..];
+    }
+    result.push_str(remaining);
+    result
+}
+
+/// Strip `pub` from spec fn signature lines for insertion into trait/impl blocks.
+/// Trait items inherit trait visibility; `pub` on them is illegal.
+fn strip_pub_from_fn_lines(lines: &[String]) -> Vec<String> {
+    lines
+        .iter()
+        .map(|l| {
+            if l.contains("pub open spec fn") {
+                l.replace("pub open spec fn", "open spec fn")
+            } else if l.contains("pub closed spec fn") {
+                l.replace("pub closed spec fn", "closed spec fn")
+            } else if l.contains("pub spec fn") {
+                l.replace("pub spec fn", "spec fn")
+            } else {
+                l.clone()
+            }
+        })
+        .collect()
+}
+
+/// Fix free fn type param bounds to match the primary trait's bounds.
+/// Returns Some(new_content) if changes were made.
+fn update_types(
+    content: &str,
+    file_path: &Path,
+    dry_run: bool,
+) -> Option<String> {
+    use quote::ToTokens;
+
+    let file_str = file_path.display().to_string();
+
+    // Skip vstdplus and experiments
+    if file_str.contains("/vstdplus/") || file_str.contains("/experiments/") {
+        return None;
+    }
+
+    let (inner, open, _close, _end) = match find_verus_block(content) {
+        Some(v) => v,
+        None => return None,
+    };
+
+    let brace_line = content[..=open].lines().count();
+    let line_offset = brace_line - 1;
+
+    let file = match verus_syn::parse_file(&inner) {
+        Ok(f) => f,
+        Err(e) => {
+            log!(
+                "{}:1: warning: [T] verus_syn parse error: {}",
+                file_str, e
+            );
+            return None;
+        }
+    };
+
+    // Phase 1: Extract trait generic bounds.
+    // Map: param_name → bounds_token_string
+    let mut trait_bounds: Vec<(String, String)> = Vec::new();
+    let mut trait_name = String::new();
+
+    for item in &file.items {
+        if let verus_syn::Item::Trait(t) = item {
+            if !trait_bounds.is_empty() {
+                break; // Use first trait only.
+            }
+            trait_name = t.ident.to_string();
+            for p in &t.generics.params {
+                if let verus_syn::GenericParam::Type(tp) = p {
+                    let pname = tp.ident.to_string();
+                    let bstr = tp.bounds.to_token_stream().to_string();
+                    trait_bounds.push((pname, bstr));
+                }
+            }
+        }
+    }
+
+    if trait_bounds.is_empty() {
+        return None;
+    }
+
+    // Phase 2: Find free fns with mismatching bounds.
+    struct BoundFix {
+        fn_name: String,
+        line: usize,
+        // (param_name, current_bounds, target_bounds)
+        fixes: Vec<(String, String, String)>,
+    }
+
+    let mut bound_fixes: Vec<BoundFix> = Vec::new();
+
+    for item in &file.items {
+        if let verus_syn::Item::Fn(f) = item {
+            let fn_name = f.sig.ident.to_string();
+            let fn_line =
+                f.sig.ident.span().start().line + line_offset;
+
+            let mut fixes = Vec::new();
+            for p in &f.sig.generics.params {
+                if let verus_syn::GenericParam::Type(tp) = p {
+                    let pname = tp.ident.to_string();
+                    let bstr =
+                        tp.bounds.to_token_stream().to_string();
+                    // Skip params with no bounds — they're
+                    // intentionally unconstrained (used with
+                    // view types at the spec level).
+                    if bstr.is_empty() {
+                        continue;
+                    }
+                    if let Some((_, target)) = trait_bounds
+                        .iter()
+                        .find(|(tn, _)| *tn == pname)
+                    {
+                        if bstr != *target {
+                            fixes.push((
+                                pname,
+                                bstr,
+                                target.clone(),
+                            ));
+                        }
+                    }
+                }
+            }
+
+            if !fixes.is_empty() {
+                for (pname, current, target) in &fixes {
+                    let cur_display = if current.is_empty() {
+                        "(none)".to_string()
+                    } else {
+                        current.clone()
+                    };
+                    log!(
+                        "{}:{}: info: [T] fix free fn {} param {}: `{}` -> `{}`",
+                        file_str, fn_line, fn_name, pname,
+                        cur_display, target
+                    );
+                }
+                bound_fixes.push(BoundFix {
+                    fn_name,
+                    line: fn_line,
+                    fixes,
+                });
+            }
+        }
+    }
+
+    if bound_fixes.is_empty() {
+        log!(
+            "{}:1: info: [T] no type bound fixes needed",
+            file_str
+        );
+        return None;
+    }
+
+    if dry_run {
+        log!();
+        log!(
+            "Dry run: {} free fn(s) would have bounds fixed",
+            bound_fixes.len()
+        );
+        return None;
+    }
+
+    // Phase 3: Apply text fixes.
+    // For each free fn, find the generic param section in the source
+    // and replace matching param bounds.
+    let lines: Vec<&str> = content.lines().collect();
+    let mut new_lines: Vec<String> =
+        lines.iter().map(|l| l.to_string()).collect();
+
+    for fix in &bound_fixes {
+        // Find the line containing the fn signature.
+        // The generic params might be on the same line as `fn name<...>`
+        // or split across lines. Handle the common single-line case.
+        let fn_line_idx = fix.line - 1;
+        if fn_line_idx >= new_lines.len() {
+            continue;
+        }
+
+        // Scan for the `<...>` section starting from fn_line_idx.
+        // It could span multiple lines. Collect lines until we find
+        // the matching `>`.
+        let mut generic_start_line = None;
+        let mut generic_start_col = None;
+        let mut generic_end_line = None;
+        let mut generic_end_col = None;
+
+        let mut depth = 0i32;
+        'outer: for li in fn_line_idx..new_lines.len().min(fn_line_idx + 5) {
+            for (ci, ch) in new_lines[li].char_indices() {
+                if ch == '<' {
+                    if depth == 0 {
+                        generic_start_line = Some(li);
+                        generic_start_col = Some(ci);
+                    }
+                    depth += 1;
+                } else if ch == '>' {
+                    depth -= 1;
+                    if depth == 0 {
+                        generic_end_line = Some(li);
+                        generic_end_col = Some(ci);
+                        break 'outer;
+                    }
+                } else if ch == '(' && depth == 0 {
+                    // Hit the param list before finding generics — no generics
+                    break 'outer;
+                }
+            }
+        }
+
+        let (gs_line, gs_col) = match (generic_start_line, generic_start_col) {
+            (Some(l), Some(c)) => (l, c),
+            _ => continue,
+        };
+        let (ge_line, ge_col) = match (generic_end_line, generic_end_col) {
+            (Some(l), Some(c)) => (l, c),
+            _ => continue,
+        };
+
+        // Extract the generic section text (between < and > inclusive)
+        let generic_text = if gs_line == ge_line {
+            new_lines[gs_line][gs_col + 1..ge_col].to_string()
+        } else {
+            let mut text = new_lines[gs_line][gs_col + 1..].to_string();
+            for li in (gs_line + 1)..ge_line {
+                text.push('\n');
+                text.push_str(&new_lines[li]);
+            }
+            text.push('\n');
+            text.push_str(&new_lines[ge_line][..ge_col]);
+            text
+        };
+
+        // Parse the generic params: split on commas at depth 0
+        // Handle nested <> in bounds like `Pair<X, Y>`
+        let params = split_generic_params(&generic_text);
+
+        // Rebuild each param with fixed bounds
+        let mut new_params: Vec<String> = Vec::new();
+        for param_text in &params {
+            let param_trimmed = param_text.trim();
+            // Extract name and bounds: "T: View + Clone + Eq" → ("T", "View + Clone + Eq")
+            // or "'a" → lifetime, keep as-is
+            if param_trimmed.starts_with('\'') {
+                // Lifetime param — keep as-is
+                new_params.push(param_trimmed.to_string());
+                continue;
+            }
+            let (pname, _current_bounds) = if let Some(colon_pos) = param_trimmed.find(':') {
+                let name = param_trimmed[..colon_pos].trim();
+                let bounds = param_trimmed[colon_pos + 1..].trim();
+                (name, bounds)
+            } else {
+                (param_trimmed, "")
+            };
+
+            // Check if this param has a fix
+            if let Some((_, _, target)) = fix.fixes.iter().find(|(n, _, _)| n == pname) {
+                if target.is_empty() {
+                    new_params.push(pname.to_string());
+                } else {
+                    new_params.push(format!("{}: {}", pname, target));
+                }
+            } else {
+                // Keep original
+                new_params.push(param_trimmed.to_string());
+            }
+        }
+
+        let new_generic = new_params.join(", ");
+
+        // Replace the generic section in the source lines
+        if gs_line == ge_line {
+            let line = &new_lines[gs_line];
+            let new_line = format!(
+                "{}<{}>{}",
+                &line[..gs_col],
+                new_generic,
+                &line[ge_col + 1..]
+            );
+            new_lines[gs_line] = new_line;
+        } else {
+            // Multi-line generic: replace start line from `<`, remove middle lines,
+            // replace end line up to `>`
+            let start_prefix = &new_lines[gs_line][..gs_col];
+            let end_suffix = &new_lines[ge_line][ge_col + 1..];
+            let combined = format!(
+                "{}<{}>{}",
+                start_prefix, new_generic, end_suffix
+            );
+            // Remove lines gs_line..=ge_line and insert combined
+            new_lines.drain(gs_line..=ge_line);
+            new_lines.insert(gs_line, combined);
+        }
+    }
+
+    // Reassemble
+    let mut result = new_lines.join("\n");
+    if content.ends_with('\n') {
+        result.push('\n');
+    }
+
+    log!("{}:1: info: [T] file updated", file_str);
+    Some(result)
+}
+
+/// Split generic params text by commas at depth 0 (respecting nested `<>`).
+fn split_generic_params(text: &str) -> Vec<String> {
+    let mut params = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0i32;
+
+    for ch in text.chars() {
+        if ch == '<' {
+            depth += 1;
+            current.push(ch);
+        } else if ch == '>' {
+            depth -= 1;
+            current.push(ch);
+        } else if ch == ',' && depth == 0 {
+            params.push(current.clone());
+            current.clear();
+        } else {
+            current.push(ch);
+        }
+    }
+    if !current.trim().is_empty() {
+        params.push(current);
+    }
+    params
 }
 
 /// Main spec migration: analyze and transform one file.
@@ -922,14 +1292,19 @@ fn update_specs(
     }
 
     // Classify free spec fns as migratable or non-migratable.
-    // Migratable: fn's generic param names are a subset of some trait's generic param names.
-    // Non-migratable: fn has generics not present in any trait (standalone predicate).
+    // Migratable: fn has no generics, or its generics don't overlap with any trait's generics.
+    // Non-migratable: fn's generics share names with the trait's generics (would cause
+    // E0403 shadowing errors) or fn has generics not matching any trait.
     let mut free_migrations: Vec<FreeSpecMigration> = Vec::new();
 
     for (line, name, fn_generics) in &free_spec_fns {
-        // Find a trait whose generics are a superset of this fn's generics
+        // Find a trait whose generics don't conflict with this fn's generics.
+        // The fn's generics must either be empty or completely disjoint from the trait's.
         let target_trait = trait_blocks.iter().find(|tb| {
-            fn_generics.iter().all(|g| tb.generic_names.contains(g))
+            fn_generics.is_empty()
+                || fn_generics
+                    .iter()
+                    .all(|g| !tb.generic_names.contains(g))
         });
 
         match target_trait {
@@ -1005,10 +1380,17 @@ fn update_specs(
                 });
             }
             None => {
-                log!(
-                    "{}:{}: info: [S] free spec fn {} has generics {:?} not matching any trait — skipping",
-                    file_str, line, name, fn_generics
-                );
+                if fn_generics.is_empty() {
+                    log!(
+                        "{}:{}: info: [S] free spec fn {} has no target trait — skipping",
+                        file_str, line, name
+                    );
+                } else {
+                    log!(
+                        "{}:{}: info: [S] free spec fn {} has generics {:?} overlapping trait generics — skipping (rename generics to migrate)",
+                        file_str, line, name, fn_generics
+                    );
+                }
             }
         }
     }
@@ -1197,6 +1579,8 @@ fn update_specs(
                     .filter(|l| !l.trim().starts_with("///"))
                     .cloned()
                     .collect();
+                let impl_fn_lines =
+                    strip_pub_from_fn_lines(&impl_fn_lines);
                 let mut reindented = reindent_lines(
                     &impl_fn_lines,
                     &source_indent,
@@ -1251,6 +1635,8 @@ fn update_specs(
                     .filter(|l| !l.trim().starts_with("///"))
                     .cloned()
                     .collect();
+                let impl_fn_lines =
+                    strip_pub_from_fn_lines(&impl_fn_lines);
                 let mut reindented = reindent_lines(
                     &impl_fn_lines,
                     &source_indent,
@@ -1295,6 +1681,43 @@ fn update_specs(
                 let start_idx = start - 1;
                 let end_idx = end - 1;
                 new_lines.drain(start_idx..=end_idx);
+            }
+        }
+    }
+
+    // Phase 4: Update bare-name call sites of migrated free spec fns to Self::fn_name.
+    // After migration, free spec fns become trait associated fns and need qualified calls.
+    if !free_migrations.is_empty() {
+        let migrated_names: Vec<&str> = free_migrations
+            .iter()
+            .map(|m| m.fn_name.as_str())
+            .collect();
+
+        for line in new_lines.iter_mut() {
+            // Skip comment lines
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") {
+                continue;
+            }
+            for name in &migrated_names {
+                // Skip definition lines
+                if line.contains(&format!("fn {}", name)) {
+                    continue;
+                }
+                // Skip if already qualified
+                if line.contains(&format!("Self::{}", name)) {
+                    continue;
+                }
+                // Replace bare call: fn_name( → Self::fn_name(
+                let call_pat = format!("{}(", name);
+                if line.contains(&call_pat) {
+                    *line = replace_bare_call(line, name, "(");
+                }
+                // Replace bare turbofish: fn_name::< → Self::fn_name::<
+                let turbo_pat = format!("{}", name);
+                if line.contains(&turbo_pat) {
+                    *line = replace_bare_call(line, name, "::<");
+                }
             }
         }
     }
@@ -1363,6 +1786,9 @@ fn main() -> Result<()> {
     if args.specs {
         log!("Mode: specs (-s)");
     }
+    if args.types {
+        log!("Mode: types (-t)");
+    }
     if !args.exclude_dirs.is_empty() {
         log!("Excluding: {:?}", args.exclude_dirs);
     }
@@ -1429,6 +1855,65 @@ fn main() -> Result<()> {
         log!(
             "Summary: {} files migrated, {} skipped (checked {} files)",
             migrated,
+            skipped,
+            files.len()
+        );
+        log!("════════════════════════════════════════════════════════════════");
+    }
+
+    // Type bound fixes (-t)
+    if args.types {
+        let files = if args.path.is_file() {
+            vec![args.path.clone()]
+        } else {
+            find_rust_files(&args.path, &args.exclude_dirs)
+        };
+
+        log!(
+            "Checking {} files for type bound fixes...",
+            files.len()
+        );
+        log!();
+
+        let mut fixed = 0;
+        let mut skipped = 0;
+
+        for file in &files {
+            let content = match std::fs::read_to_string(file) {
+                Ok(c) => c,
+                Err(e) => {
+                    log!("Error reading {}: {}", file.display(), e);
+                    continue;
+                }
+            };
+
+            match update_types(&content, file, args.dry_run) {
+                Some(new_content) => {
+                    if !args.dry_run {
+                        if let Err(e) =
+                            std::fs::write(file, &new_content)
+                        {
+                            log!(
+                                "Error writing {}: {}",
+                                file.display(),
+                                e
+                            );
+                            continue;
+                        }
+                    }
+                    fixed += 1;
+                }
+                None => {
+                    skipped += 1;
+                }
+            }
+            log!();
+        }
+
+        log!("════════════════════════════════════════════════════════════════");
+        log!(
+            "Summary: {} files fixed, {} skipped (checked {} files)",
+            fixed,
             skipped,
             files.len()
         );
