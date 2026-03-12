@@ -7,6 +7,7 @@ use veracity::{StandardArgs, find_rust_files};
 use verus_syn::visit::{self, Visit};
 use std::io::{self, BufRead, Write};
 use std::{cell::RefCell, collections::{HashMap, HashSet}, fs, path::{Path, PathBuf}, time::Instant};
+use chrono::Local;
 use walkdir::WalkDir;
 
 thread_local! {
@@ -97,6 +98,8 @@ struct ProofHoleStats {
     external_trait_ext_count: usize,
     external_count: usize,
     opaque_count: usize,
+    trivial_spec_wf_count: usize,
+    axiom_count: usize,
     total_holes: usize,
     /// Detailed list of holes for Emacs-compatible output
     holes: Vec<DetectedHole>,
@@ -129,6 +132,8 @@ struct FileStats {
     holed_proof_functions: usize,
     warnings: Vec<DetectedHole>,
     infos: Vec<DetectedHole>,
+    /// Crate module paths this file depends on (from use crate::...), excluding accept
+    crate_deps: HashSet<String>,
 }
 
 #[derive(Debug, Default)]
@@ -152,6 +157,18 @@ struct SummaryStats {
     all_errors: Vec<(String, usize, String)>,
     /// All warnings (path, line, hole_type) for single-line summary
     all_warnings: Vec<(String, usize, String)>,
+    /// Per root (src, path, tests): top-level dirs -> (errors, holes, file_count) for Proof Targets
+    by_root_top: HashMap<String, HashMap<String, (usize, usize, usize)>>,
+    /// True if any path has subdirs (e.g. Chap05/SetStEph.rs)
+    has_subdir_paths: bool,
+    /// Next Target Files: src files that depend only on clean modules, (path, holes, errors)
+    next_target_files: Vec<(String, usize, usize)>,
+    /// Next Target Directories: src dirs where all files depend only on clean, (dir, holes, errors, file_count)
+    next_target_dirs: Vec<(String, usize, usize, usize)>,
+    /// Not verusified: src files with no verus! block
+    not_verusified_files: Vec<String>,
+    /// Not verusified with clean deps: not_verusified files that depend only on clean modules
+    not_verusified_clean_deps: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -349,6 +366,7 @@ impl ProofHolesArgs {
 
 fn main() -> Result<()> {
     let start_time = Instant::now();
+    let start_date = Local::now().format("%Y-%m-%d %H:%M:%S %Z").to_string();
     
     let args = ProofHolesArgs::parse()?;
     
@@ -357,47 +375,67 @@ fn main() -> Result<()> {
     
     // Record the command line at the top of the log for reproducibility.
     let cmdline = std::env::args().collect::<Vec<_>>().join(" ");
-    write_to_log(&format!("$ {}", cmdline));
-    write_to_log("");
+    log!("$ {}", cmdline);
+    log!("Full output: {}", log_path.display());
+    log!("");
+    log!("Table of Contents:");
+    log!("  1. File Holes");
+    log!("  2. Depends Upon");
+    log!("     2.1. By Module");
+    log!("     2.2. By File");
+    log!("  3. Error/Warn/Info");
+    log!("  4. Summary of Holes");
+    log!("  5. Proof Targets");
+    log!("     5.1. Worst src/* Directories (all dirs, by holes)");
+    log!("     5.2. Next Target Files (clean deps only, by holes)");
+    log!("     5.3. Next Target Directories");
+    log!("     5.4. Not Verusified");
+    log!("     5.5. Not Verusified (clean deps only)");
+    log!("  6. Started/Ended/Duration");
+    log!("");
     
     if args.interactive {
         run_interactive_mode(&args.standard, &args.exclude_dirs, &args.accept_import)?;
         return Ok(());
     }
+    
     if args.emacs_mode {
-        // Emacs mode - quiet output, just file:line: messages
+        // Emacs mode - interleaved file summaries and file:line: messages
         run_emacs_mode(&args.standard, &args.exclude_dirs)?;
-        return Ok(());
-    }
-    
-    log!("Verus Proof Hole Detection");
-    log!("Logging to: {}", log_path.display());
-    log!("");
-    log!("Looking for:");
-    log!("  - assume(false), assume(), Tracked::assume_new(), admit()");
-    log!("  - unsafe fn, unsafe impl, unsafe {{}} blocks");
-    log!("  - axiom fn with holes in body (admit/assume/external_body)");
-    log!("  - external_body, external_fn_specification, external_trait_specification");
-    log!("  - external_type_specification, external_trait_extension, external");
-    log!("  - opaque");
-    log!("");
-    log!("Note: Only counting axiom fn declarations that have holes in their bodies.");
-    log!("      broadcast use statements are not counted (they just import axioms).");
-    log!("");
-    
-    // Check for multi-codebase mode
-    if let Some(multi_base) = &args.standard.multi_codebase {
-        // Multi-codebase scanning mode
-        run_multi_codebase_analysis(multi_base, &args.exclude_dirs)?;
     } else {
-        // Single project mode
-        run_single_project_analysis(&args.standard, &args.exclude_dirs)?;
+        log!("Verus Proof Hole Detection");
+        log!("Logging to: {}", log_path.display());
+        log!("Started: {}", start_date);
+        log!("");
+        log!("Looking for:");
+        log!("  - assume(false), assume(), Tracked::assume_new(), admit()");
+        log!("  - unsafe fn, unsafe impl, unsafe {{}} blocks");
+        log!("  - axiom fn (axioms are holes)");
+        log!("  - external_body, external_fn_specification, external_trait_specification");
+        log!("  - external_type_specification, external_trait_extension, external");
+        log!("  - opaque");
+        log!("");
+        
+        if let Some(multi_base) = &args.standard.multi_codebase {
+            run_multi_codebase_analysis(multi_base, &args.exclude_dirs)?;
+        } else {
+            run_single_project_analysis(&args.standard, &args.exclude_dirs)?;
+        }
     }
     
     let elapsed = start_time.elapsed();
+    let end_date = Local::now().format("%Y-%m-%d %H:%M:%S %Z").to_string();
     log!("");
-    log!("Completed in {}ms", elapsed.as_millis());
-    
+    log!("=================================================================");
+    log!("6. Started/Ended/Duration");
+    log!("=================================================================");
+    log!("");
+    log!("Started:   {}", start_date);
+    log!("Ended:     {}", end_date);
+    log!("Duration:  {}ms", elapsed.as_millis());
+    log!("");
+    log!("Full output: {}", log_path.display());
+    let _ = std::io::stdout().flush();
     Ok(())
 }
 
@@ -656,6 +694,16 @@ fn run_interactive_mode(args: &StandardArgs, exclude_dirs: &[PathBuf], accept_im
 
 /// Check if a path should be excluded based on exclude_dirs
 fn should_exclude(path: &Path, exclude_dirs: &[PathBuf]) -> bool {
+    // Always exclude docs, path (legacy), and src/lib.rs (crate root, not verusifiable)
+    if path.file_name().map_or(false, |f| f == "lib.rs") && path.parent().map_or(false, |p| p.ends_with("src")) {
+        return true;
+    }
+    if path.components().any(|c| {
+        let s = c.as_os_str();
+        s == "docs" || s == "path"
+    }) {
+        return true;
+    }
     for exclude in exclude_dirs {
         // Check if the path starts with the exclude directory
         if let Ok(canonical_path) = path.canonicalize() {
@@ -697,6 +745,10 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
     
     let mut file_stats_map: HashMap<String, FileStats> = HashMap::new();
     
+    log!("=================================================================");
+    log!("1. File Holes");
+    log!("=================================================================");
+    log!("");
     // Interleaved output: for each file, show header + holes + counts
     for file in &all_files {
         if let Ok(stats) = analyze_file(file) {
@@ -709,7 +761,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
             
             let has_holes = stats.holes.total_holes > 0;
             
-            let has_warnings = !stats.warnings.is_empty();
+            let has_warnings = !stats.warnings.is_empty() || stats.holes.trivial_spec_wf_count > 0;
             let has_infos = !stats.infos.is_empty();
 
             if has_holes || has_warnings {
@@ -721,7 +773,8 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
                 
                 for hole in &stats.holes.holes {
-                    let msg = format!("{}:{}: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
+                    let prefix = if hole.hole_type == "trivial_spec_wf" { "error: " } else { "" };
+                    let msg = format!("{}:{}: {}{} - {}", abs_path.display(), hole.line, prefix, hole.hole_type, hole.context);
                     println!("{}", msg);
                     write_to_log(&msg);
                     for ctx in build_context_lines(&file_content, hole) {
@@ -731,9 +784,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for warning in &stats.warnings {
-                    let level = if warning.hole_type == "assume_eq_clone_workaround"
-                        || warning.hole_type == "trivial_spec_wf"
-                    {
+                    let level = if warning.hole_type == "assume_eq_clone_workaround" {
                         "warning"
                     } else {
                         "error"
@@ -766,7 +817,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     let clone_derived = stats.warnings.iter().filter(|w| w.hole_type == "clone_derived_outside").count();
                     let debug_display = stats.warnings.iter().filter(|w| w.hole_type == "debug_display_inside_verus").count();
                     let eq_clone_workaround = stats.warnings.iter().filter(|w| w.hole_type == "assume_eq_clone_workaround").count();
-                    let trivial_spec_wf = stats.warnings.iter().filter(|w| w.hole_type == "trivial_spec_wf").count();
+                    let trivial_spec_wf = stats.holes.trivial_spec_wf_count;
                     let rust_rwlock = stats.warnings.iter().filter(|w| w.hole_type == "rust_rwlock").count();
                     let dummy_predicate = stats.warnings.iter().filter(|w| w.hole_type == "dummy_rwlock_predicate").count();
                     let not_verusified = stats.warnings.iter().filter(|w| w.hole_type == "not_verusified").count();
@@ -784,10 +835,11 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     .into_iter()
                     .flatten()
                     .collect();
+                    let error_count = stats.warnings.len() + stats.holes.trivial_spec_wf_count;
                     let msg = if parts.is_empty() {
-                        format!("   Errors: {}", stats.warnings.len())
+                        format!("   Errors: {}", error_count)
                     } else {
-                        format!("   Errors: {} total ({})", stats.warnings.len(), parts.join(", "))
+                        format!("   Errors: {} total ({})", error_count, parts.join(", "))
                     };
                     println!("{}", msg);
                     write_to_log(&msg);
@@ -839,6 +891,9 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
         }
     }
     
+    // Print depends-upon section (before summary)
+    print_depends_upon(&file_stats_map);
+
     // Print summary (uses log! macro which writes to both stdout and log file)
     let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
@@ -923,6 +978,11 @@ fn print_hole_counts_with_log(holes: &ProofHoleStats, prefix: &str) {
         println!("{}", msg);
         write_to_log(&msg);
     }
+    if holes.trivial_spec_wf_count > 0 {
+        let msg = format!("{}{} × trivial spec*wf {{ true }}", prefix, holes.trivial_spec_wf_count);
+        println!("{}", msg);
+        write_to_log(&msg);
+    }
 }
 
 /// Print hole counts with a given prefix (no log)
@@ -973,6 +1033,9 @@ fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     if holes.opaque_count > 0 {
         println!("{}{} × opaque", prefix, holes.opaque_count);
     }
+    if holes.trivial_spec_wf_count > 0 {
+        println!("{}{} × trivial spec*wf {{ true }}", prefix, holes.trivial_spec_wf_count);
+    }
 }
 
 /// Run analysis on a single project (standard mode)
@@ -999,6 +1062,10 @@ fn run_single_project_analysis(args: &StandardArgs, exclude_dirs: &[PathBuf]) ->
     
     let mut file_stats_map: HashMap<String, FileStats> = HashMap::new();
     
+    log!("=================================================================");
+    log!("1. File Holes");
+    log!("=================================================================");
+    log!("");
     for file in &all_files {
         if let Ok(stats) = analyze_file(file) {
             // Use relative path if possible
@@ -1012,6 +1079,9 @@ fn run_single_project_analysis(args: &StandardArgs, exclude_dirs: &[PathBuf]) ->
         }
     }
     
+    // Print depends-upon section (before summary)
+    print_depends_upon(&file_stats_map);
+
     // Print summary
     let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
@@ -1064,6 +1134,7 @@ fn run_multi_codebase_analysis(base_dir: &Path, exclude_dirs: &[PathBuf]) -> Res
             }
         }
         
+        print_depends_upon(&file_stats_map);
         let summary = compute_summary(&file_stats_map, base_dir);
         print_project_summary(&project_name, &summary);
         
@@ -1820,7 +1891,108 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
 
     detect_rust_rwlock(&content, &mut stats);
 
+    extract_crate_deps(&root, &content, &mut stats);
+
     Ok(stats)
+}
+
+/// Extract crate:: module dependencies from use statements (excluding accept).
+fn extract_crate_deps(root: &SyntaxNode, content: &str, stats: &mut FileStats) {
+    for node in root.descendants() {
+        if let Some(use_item) = ast::Use::cast(node.clone()) {
+            extract_crate_paths_from_use_tree(use_item.use_tree(), stats);
+        }
+    }
+    // Also scan verus! macro bodies and broadcast use for crate:: paths
+    for node in root.descendants() {
+        if node.kind() == SyntaxKind::MACRO_CALL {
+            if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
+                if let Some(path) = macro_call.path() {
+                    let name = path.to_string();
+                    if name == "verus" || name == "verus_" {
+                        if let Some(tt) = macro_call.token_tree() {
+                            let range = tt.syntax().text_range();
+                            let start: usize = range.start().into();
+                            let end: usize = range.end().into();
+                            if start + 1 < content.len() && end <= content.len() {
+                                let inner = &content[start + 1..end - 1];
+                                extract_crate_deps_from_text(inner, stats);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn extract_crate_paths_from_use_tree(use_tree: Option<ast::UseTree>, stats: &mut FileStats) {
+    let Some(tree) = use_tree else { return };
+    if let Some(path) = tree.path() {
+        let segments: Vec<String> = path.segments()
+            .filter_map(|s| s.name_ref())
+            .map(|n| n.text().to_string())
+            .collect();
+        if let Some(first) = segments.first() {
+            if first == "crate" && segments.len() >= 2 {
+                let path_str = segments[1..].join("::");
+                if !path_contains_accept(&path_str) {
+                    let module = path_to_module(&segments[1..]);
+                    stats.crate_deps.insert(module);
+                }
+            }
+        }
+    }
+    if let Some(list) = tree.use_tree_list() {
+        for nested in list.use_trees() {
+            extract_crate_paths_from_use_tree(Some(nested), stats);
+        }
+    }
+}
+
+fn path_contains_accept(path: &str) -> bool {
+    path.split("::").any(|s| s == "accept")
+}
+
+/// Convert path segments to the module we depend on.
+/// e.g. ["Chap02","SetStEph","Foo"] -> "Chap02::SetStEph" (module containing Foo)
+/// e.g. ["Chap02","SetStEph"] -> "Chap02::SetStEph" (the module itself)
+fn path_to_module(segments: &[String]) -> String {
+    if segments.len() <= 2 {
+        segments.join("::")
+    } else {
+        segments[..segments.len() - 1].join("::")
+    }
+}
+
+fn extract_crate_deps_from_text(text: &str, stats: &mut FileStats) {
+    // Find crate:: paths in text (e.g. inside verus! or broadcast use)
+    let mut i = 0;
+    while let Some(pos) = text[i..].find("crate::") {
+        let start = i + pos + "crate::".len();
+        let mut end = start;
+        while end < text.len() {
+            let c = text.as_bytes().get(end).copied();
+            match c {
+                Some(b'a'..=b'z') | Some(b'A'..=b'Z') | Some(b'0'..=b'9') | Some(b'_') => end += 1,
+                Some(b':') if end + 1 < text.len() && text.as_bytes()[end + 1] == b':' => end += 2,
+                _ => break,
+            }
+        }
+        if end > start {
+            let path = &text[start..end];
+            if !path_contains_accept(path) {
+                let segs: Vec<&str> = path.split("::").collect();
+                let module = if segs.len() <= 1 {
+                    path.to_string()
+                } else {
+                    segs[..segs.len() - 1].join("::")
+                };
+                stats.crate_deps.insert(module);
+            }
+        }
+        i = end;
+    }
 }
 
 fn detect_rust_rwlock(content: &str, stats: &mut FileStats) {
@@ -2203,32 +2375,37 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         match &i.sig.mode {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
-                let has_requires = i.sig.spec.requires.is_some();
-                let has_ensures = i.sig.spec.ensures.is_some()
-                    || i.sig.spec.default_ensures.is_some();
-                if has_requires && has_ensures {
-                    self.stats.fn_spec.exec_fns_complete += 1;
-                } else {
-                    self.stats.fn_spec.exec_fns_missing_spec += 1;
-                    if !has_requires && !has_ensures {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_requires_ensures".to_string(),
-                            context: format!("fn {} — exec fn should have requires and ensures", name),
-                        });
-                    } else if !has_requires {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_requires".to_string(),
-                            context: format!("fn {} — exec fn should have requires", name),
-                        });
+                // external_body or accept hole — skip fn_missing_requires/ensures
+                if !has_external_body && !has_accept_hole {
+                    let has_requires = i.sig.spec.requires.is_some();
+                    let has_ensures = i.sig.spec.ensures.is_some()
+                        || i.sig.spec.default_ensures.is_some();
+                    if has_requires && has_ensures {
+                        self.stats.fn_spec.exec_fns_complete += 1;
                     } else {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_ensures".to_string(),
-                            context: format!("fn {} — exec fn should have ensures", name),
-                        });
+                        self.stats.fn_spec.exec_fns_missing_spec += 1;
+                        if !has_requires && !has_ensures {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have requires and ensures", name),
+                            });
+                        } else if !has_requires {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires".to_string(),
+                                context: format!("fn {} — exec fn should have requires", name),
+                            });
+                        } else {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have ensures", name),
+                            });
+                        }
                     }
+                } else {
+                    self.stats.fn_spec.exec_fns_complete += 1;
                 }
             }
             FnMode::Spec(_) | FnMode::SpecChecked(_) => {
@@ -2245,11 +2422,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
                 }
                 if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && block_returns_only_true(&i.block) {
-                    self.stats.warnings.push(DetectedHole {
+                    let hole = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
-                    });
+                    };
+                    self.stats.holes.trivial_spec_wf_count += 1;
+                    self.stats.holes.total_holes += 1;
+                    self.stats.holes.holes.push(hole);
                 }
             }
             FnMode::Proof(_) => {
@@ -2273,12 +2453,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             }
             FnMode::ProofAxiom(_) => {
                 self.stats.fn_spec.total_fns += 1;
-                let holes = count_holes_in_verus_block(&i.block);
-                if holes > 0 {
-                    self.stats.axioms.axiom_names.push(name);
-                    self.stats.axioms.axiom_fn_count += 1;
-                    self.stats.axioms.total_axioms += 1;
-                }
+                let hole = DetectedHole {
+                    line,
+                    hole_type: "axiom".to_string(),
+                    context: format!("axiom fn {} — axiom is a hole", name),
+                };
+                self.stats.holes.axiom_count += 1;
+                self.stats.holes.total_holes += 1;
+                self.stats.holes.holes.push(hole);
             }
         }
         visit::visit_item_fn(self, i);
@@ -2305,8 +2487,10 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
                 // Trait impl methods inherit requires/ensures from the trait — no need to repeat
+                // external_body or accept hole — skip fn_missing_requires/ensures
                 let in_trait_impl = self.current_impl_trait.is_some();
-                if in_trait_impl {
+                let iter_spec_exempt = name == "iter" || name == "into_iter";
+                if in_trait_impl || has_external_body || has_accept_hole || iter_spec_exempt {
                     self.stats.fn_spec.exec_fns_complete += 1;
                 } else {
                     let has_requires = i.sig.spec.requires.is_some();
@@ -2352,11 +2536,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
                 }
                 if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && block_returns_only_true(&i.block) {
-                    self.stats.warnings.push(DetectedHole {
+                    let hole = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
-                    });
+                    };
+                    self.stats.holes.trivial_spec_wf_count += 1;
+                    self.stats.holes.total_holes += 1;
+                    self.stats.holes.holes.push(hole);
                 }
             }
             FnMode::Proof(_) => {
@@ -2380,12 +2567,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             }
             FnMode::ProofAxiom(_) => {
                 self.stats.fn_spec.total_fns += 1;
-                let holes = count_holes_in_verus_block(&i.block);
-                if holes > 0 {
-                    self.stats.axioms.axiom_names.push(name);
-                    self.stats.axioms.axiom_fn_count += 1;
-                    self.stats.axioms.total_axioms += 1;
-                }
+                let hole = DetectedHole {
+                    line,
+                    hole_type: "axiom".to_string(),
+                    context: format!("axiom fn {} — axiom is a hole", name),
+                };
+                self.stats.holes.axiom_count += 1;
+                self.stats.holes.total_holes += 1;
+                self.stats.holes.holes.push(hole);
             }
         }
 
@@ -2400,36 +2589,46 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         let name = i.sig.ident.to_string();
         let prev_fn = self.current_fn_name.replace(name.clone());
 
+        let has_external_body = i.attrs.iter().any(|a| {
+            detect_verifier_attr_verus_syn(a) == Some(VerifierAttribute::ExternalBody)
+        });
         let has_accept_hole = has_accept_hole_comment(self.content, line);
 
         match &i.sig.mode {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
-                let has_requires = i.sig.spec.requires.is_some();
-                let has_ensures = i.sig.spec.ensures.is_some()
-                    || i.sig.spec.default_ensures.is_some();
-                if has_requires && has_ensures {
+                // Abstract trait methods (no default body) get spec from impl — skip fn_missing_requires
+                // external_body or accept hole — skip fn_missing_requires/ensures
+                let is_abstract = i.default.is_none();
+                if is_abstract || has_external_body || has_accept_hole {
                     self.stats.fn_spec.exec_fns_complete += 1;
                 } else {
-                    self.stats.fn_spec.exec_fns_missing_spec += 1;
-                    if !has_requires && !has_ensures {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_requires_ensures".to_string(),
-                            context: format!("fn {} — exec fn should have requires and ensures", name),
-                        });
-                    } else if !has_requires {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_requires".to_string(),
-                            context: format!("fn {} — exec fn should have requires", name),
-                        });
+                    let has_requires = i.sig.spec.requires.is_some();
+                    let has_ensures = i.sig.spec.ensures.is_some()
+                        || i.sig.spec.default_ensures.is_some();
+                    if has_requires && has_ensures {
+                        self.stats.fn_spec.exec_fns_complete += 1;
                     } else {
-                        self.stats.warnings.push(DetectedHole {
-                            line,
-                            hole_type: "fn_missing_ensures".to_string(),
-                            context: format!("fn {} — exec fn should have ensures", name),
-                        });
+                        self.stats.fn_spec.exec_fns_missing_spec += 1;
+                        if !has_requires && !has_ensures {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have requires and ensures", name),
+                            });
+                        } else if !has_requires {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_requires".to_string(),
+                                context: format!("fn {} — exec fn should have requires", name),
+                            });
+                        } else {
+                            self.stats.warnings.push(DetectedHole {
+                                line,
+                                hole_type: "fn_missing_ensures".to_string(),
+                                context: format!("fn {} — exec fn should have ensures", name),
+                            });
+                        }
                     }
                 }
             }
@@ -2447,11 +2646,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
                 }
                 if name.contains("wf") && Self::return_type_is_bool(&i.sig.output) && i.default.as_ref().map_or(false, block_returns_only_true) {
-                    self.stats.warnings.push(DetectedHole {
+                    let hole = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, consider real well-formedness spec", name),
-                    });
+                    };
+                    self.stats.holes.trivial_spec_wf_count += 1;
+                    self.stats.holes.total_holes += 1;
+                    self.stats.holes.holes.push(hole);
                 }
             }
             FnMode::Proof(_) => {
@@ -2475,12 +2677,14 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             }
             FnMode::ProofAxiom(_) => {
                 self.stats.fn_spec.total_fns += 1;
-                let holes = i.default.as_ref().map_or(0, |b| count_holes_in_verus_block(b));
-                if holes > 0 {
-                    self.stats.axioms.axiom_names.push(name);
-                    self.stats.axioms.axiom_fn_count += 1;
-                    self.stats.axioms.total_axioms += 1;
-                }
+                let hole = DetectedHole {
+                    line,
+                    hole_type: "axiom".to_string(),
+                    context: format!("axiom fn {} — axiom is a hole", name),
+                };
+                self.stats.holes.axiom_count += 1;
+                self.stats.holes.total_holes += 1;
+                self.stats.holes.holes.push(hole);
             }
         }
 
@@ -2705,8 +2909,9 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.holes.holes.push(DetectedHole { line, hole_type: "opaque".to_string(), context });
                 }
                 VerifierAttribute::Axiom => {
-                    self.stats.axioms.axiom_fn_count += 1;
-                    self.stats.axioms.total_axioms += 1;
+                    self.stats.holes.axiom_count += 1;
+                    self.stats.holes.total_holes += 1;
+                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "axiom".to_string(), context });
                 }
             }
         }
@@ -2820,19 +3025,18 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
         
         // Look for "fn" keyword to find proof functions and axiom functions
         if token.kind() == SyntaxKind::FN_KW {
-            // Check for axiom fn - but ONLY count if it has holes in its body
             let is_axiom = is_axiom_function(&tokens, i);
             if is_axiom {
-                let holes_in_axiom = count_holes_in_function(&tokens, i);
-                if holes_in_axiom > 0 {
-                    // Only count axioms that have holes (admit, assume, etc.)
-                    // Extract the axiom name for de-duplication
-                    if let Some(axiom_name) = get_function_name(&tokens, i) {
-                        stats.axioms.axiom_names.push(axiom_name);
-                    }
-                    stats.axioms.axiom_fn_count += 1;
-                    stats.axioms.total_axioms += 1;
-                }
+                let offset: usize = token.text_range().start().into();
+                let line = line_from_offset(content, offset);
+                let context = get_context(content, offset);
+                stats.holes.axiom_count += 1;
+                stats.holes.total_holes += 1;
+                stats.holes.holes.push(DetectedHole {
+                    line,
+                    hole_type: "axiom".to_string(),
+                    context,
+                });
             }
             
             let is_proof = is_proof_function(&tokens, i);
@@ -3345,6 +3549,8 @@ fn print_file_report(path: &str, stats: &FileStats) {
 
 fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path) -> SummaryStats {
     let mut summary = SummaryStats::default();
+    summary.has_subdir_paths = file_stats_map.keys().any(|p| p.contains('/'));
+    let is_warning_level = |t: &str| t == "assume_eq_clone_workaround";
     
     for (path_str, stats) in file_stats_map {
         let full_path = base_dir.join(path_str).canonicalize()
@@ -3353,7 +3559,9 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
             .to_string();
         summary.total_files += 1;
         
-        if stats.holes.total_holes > 0 {
+        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
+            || stats.holes.trivial_spec_wf_count > 0;
+        if stats.holes.total_holes > 0 || has_errors {
             summary.holed_modules += 1;
         } else {
             summary.clean_modules += 1;
@@ -3378,6 +3586,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.holes.external_trait_ext_count += stats.holes.external_trait_ext_count;
         summary.holes.external_count += stats.holes.external_count;
         summary.holes.opaque_count += stats.holes.opaque_count;
+        summary.holes.trivial_spec_wf_count += stats.holes.trivial_spec_wf_count;
         summary.holes.total_holes += stats.holes.total_holes;
         
         summary.axioms.axiom_fn_count += stats.axioms.axiom_fn_count;
@@ -3390,9 +3599,9 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.fn_spec.proof_spec_fns_clean += stats.fn_spec.proof_spec_fns_clean;
         summary.fn_spec.proof_spec_fns_with_holes += stats.fn_spec.proof_spec_fns_with_holes;
 
-        summary.total_warnings += stats.warnings.len();
+        summary.total_warnings += stats.warnings.len() + stats.holes.trivial_spec_wf_count;
         summary.total_infos += stats.infos.len();
-        let is_warning_level = |t: &str| t == "assume_eq_clone_workaround" || t == "trivial_spec_wf";
+        let is_warning_level = |t: &str| t == "assume_eq_clone_workaround";
         for w in &stats.warnings {
             *summary.warning_type_counts.entry(w.hole_type.clone()).or_insert(0) += 1;
             let entry = (full_path.clone(), w.line, w.hole_type.clone());
@@ -3400,6 +3609,13 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
                 summary.all_warnings.push(entry);
             } else {
                 summary.all_errors.push(entry);
+            }
+        }
+        // trivial_spec_wf is in holes only (not warnings) to avoid double-print; add to all_errors here
+        for h in &stats.holes.holes {
+            if h.hole_type == "trivial_spec_wf" {
+                *summary.warning_type_counts.entry("trivial_spec_wf".to_string()).or_insert(0) += 1;
+                summary.all_errors.push((full_path.clone(), h.line, h.hole_type.clone()));
             }
         }
         for info in &stats.infos {
@@ -3410,14 +3626,221 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
                 info.context.clone(),
             ));
         }
+
+        // Aggregate for Proof Targets (root/* and root/*/*), only for paths with subdirs
+        if path_str.contains('/') {
+            let file_errors = stats.warnings.iter().filter(|w| !is_warning_level(&w.hole_type)).count()
+                + stats.holes.trivial_spec_wf_count;
+            let file_holes = stats.holes.total_holes;
+            let path_no_ext = path_str.strip_suffix(".rs").unwrap_or(path_str);
+            let parts: Vec<&str> = path_no_ext.split('/').collect();
+            let root = parts[0].to_string();
+            let top_level = if parts.len() >= 2 { parts[1].to_string() } else { continue };
+            let e = summary.by_root_top.entry(root.clone()).or_default()
+                .entry(top_level.clone()).or_insert((0, 0, 0));
+            e.0 += file_errors;
+            e.1 += file_holes;
+            e.2 += 1;
+        }
     }
+
+    // Next Target Files and Directories: worst among those that depend only on clean modules
+    let all_modules: HashSet<String> = file_stats_map.keys()
+        .map(|p| path_str_to_module(p))
+        .collect();
+    let mut module_to_holed: HashMap<String, bool> = HashMap::new();
+    for (path_str, stats) in file_stats_map.iter() {
+        let module = path_str_to_module(path_str);
+        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
+            || stats.holes.trivial_spec_wf_count > 0;
+        module_to_holed.insert(module, stats.holes.total_holes > 0 || has_errors);
+    }
+    for (path_str, stats) in file_stats_map.iter() {
+        if !path_str.starts_with("src/") {
+            continue;
+        }
+        let mut has_holed_dep = false;
+        for dep in &stats.crate_deps {
+            for m in &all_modules {
+                if (*m == *dep || m.starts_with(&format!("{}::", dep)))
+                    && *module_to_holed.get(m).unwrap_or(&false)
+                {
+                    has_holed_dep = true;
+                    break;
+                }
+            }
+            if has_holed_dep {
+                break;
+            }
+        }
+        if !has_holed_dep {
+            let file_errors = stats.warnings.iter().filter(|w| !is_warning_level(&w.hole_type)).count()
+                + stats.holes.trivial_spec_wf_count;
+            let file_holes = stats.holes.total_holes;
+            if file_errors > 0 {
+                summary.next_target_files.push((path_str.clone(), file_holes, file_errors));
+            }
+        }
+    }
+    summary.next_target_files.sort_by(|a, b| b.1.cmp(&a.1)); // sort by holes descending
+
+    // Next Target Directories: dirs where ALL files depend only on clean
+    let mut dir_files: HashMap<String, Vec<(usize, usize, bool)>> = HashMap::new();
+    for (path_str, stats) in file_stats_map.iter() {
+        if !path_str.starts_with("src/") {
+            continue;
+        }
+        let dir = path_str.rsplit_once('/').map(|(d, _)| d.to_string()).unwrap_or_else(|| path_str.clone());
+        let mut has_holed_dep = false;
+        for dep in &stats.crate_deps {
+            for m in &all_modules {
+                if (*m == *dep || m.starts_with(&format!("{}::", dep)))
+                    && *module_to_holed.get(m).unwrap_or(&false)
+                {
+                    has_holed_dep = true;
+                    break;
+                }
+            }
+            if has_holed_dep {
+                break;
+            }
+        }
+        let file_errors = stats.warnings.iter().filter(|w| !is_warning_level(&w.hole_type)).count()
+            + stats.holes.trivial_spec_wf_count;
+        let file_holes = stats.holes.total_holes;
+        dir_files.entry(dir).or_default().push((file_holes, file_errors, has_holed_dep));
+    }
+    for (dir, files) in dir_files {
+        if dir == "src" {
+            continue; // skip root; only show subdirs like src/Chap05
+        }
+        if files.iter().any(|(_, _, h)| *h) {
+            continue;
+        }
+        let (holes, errors) = files.iter().fold((0, 0), |(h, e), (fh, fe, _)| (h + fh, e + fe));
+        if errors > 0 {
+            summary.next_target_dirs.push((dir, holes, errors, files.len()));
+        }
+    }
+    summary.next_target_dirs.sort_by(|a, b| b.1.cmp(&a.1)); // sort by holes descending
+
+    // Not verusified: files with no verus! block
+    for (path_str, stats) in file_stats_map.iter() {
+        if !path_str.starts_with("src/") {
+            continue;
+        }
+        let is_not_verusified = stats.warnings.iter().any(|w| w.hole_type == "not_verusified");
+        if is_not_verusified {
+            summary.not_verusified_files.push(path_str.clone());
+        }
+    }
+    summary.not_verusified_files.sort();
+
+    // Not verusified with clean deps: same but only if depends only on clean modules
+    for (path_str, stats) in file_stats_map.iter() {
+        if !path_str.starts_with("src/") {
+            continue;
+        }
+        let is_not_verusified = stats.warnings.iter().any(|w| w.hole_type == "not_verusified");
+        if !is_not_verusified {
+            continue;
+        }
+        let mut has_holed_dep = false;
+        for dep in &stats.crate_deps {
+            for m in &all_modules {
+                if (*m == *dep || m.starts_with(&format!("{}::", dep)))
+                    && *module_to_holed.get(m).unwrap_or(&false)
+                {
+                    has_holed_dep = true;
+                    break;
+                }
+            }
+            if has_holed_dep {
+                break;
+            }
+        }
+        if !has_holed_dep {
+            summary.not_verusified_clean_deps.push(path_str.clone());
+        }
+    }
+    summary.not_verusified_clean_deps.sort();
     
     summary
 }
 
+/// path_str "src/Chap05/SetStEph.rs" -> "Chap05::SetStEph" (strip src/ for crate module path)
+fn path_str_to_module(path_str: &str) -> String {
+    let s = path_str.strip_suffix(".rs").unwrap_or(path_str);
+    let s = s.strip_prefix("src/").unwrap_or(s);
+    s.replace('/', "::")
+}
+
+fn print_depends_upon(file_stats_map: &HashMap<String, FileStats>) {
+    let is_warning_level = |t: &str| t == "assume_eq_clone_workaround";
+    let mut module_to_holed: HashMap<String, bool> = HashMap::new();
+    for (path_str, stats) in file_stats_map {
+        let module = path_str_to_module(path_str);
+        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
+            || stats.holes.trivial_spec_wf_count > 0;
+        let holed = stats.holes.total_holes > 0 || has_errors;
+        module_to_holed.insert(module.clone(), holed);
+    }
+    let all_modules: HashSet<String> = module_to_holed.keys().cloned().collect();
+
+    log!("");
+    log!("=================================================================");
+    log!("2. Depends Upon");
+    log!("=================================================================");
+    log!("");
+
+    // Build (module, path_str, holed_deps) for each file
+    let mut entries: Vec<(String, String, Vec<String>)> = Vec::new();
+    for path_str in file_stats_map.keys() {
+        let stats = file_stats_map.get(path_str).unwrap();
+        let module = path_str_to_module(path_str);
+        let mut holed_deps: Vec<String> = Vec::new();
+        for dep in &stats.crate_deps {
+            for m in &all_modules {
+                if (*m == *dep || m.starts_with(&format!("{}::", dep)))
+                    && *module_to_holed.get(m).unwrap_or(&false)
+                {
+                    holed_deps.push(m.clone());
+                }
+            }
+        }
+        holed_deps.sort();
+        holed_deps.dedup();
+        entries.push((module, path_str.clone(), holed_deps));
+    }
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    log!("=================================================================");
+    log!("2.1. By Module");
+    log!("=================================================================");
+    log!("");
+    for (module, _, holed_deps) in &entries {
+        if holed_deps.is_empty() {
+            log!("{}  depends upon only clean modules", module);
+        } else {
+            log!("{}  depends upon holed modules: {}", module, holed_deps.join(", "));
+        }
+    }
+    log!("");
+    log!("=================================================================");
+    log!("2.2. By File");
+    log!("=================================================================");
+    log!("");
+    for (_, path_str, holed_deps) in &entries {
+        if holed_deps.is_empty() {
+            log!("{}  depends upon only clean modules", path_str);
+        } else {
+            log!("{}  depends upon holed modules: {}", path_str, holed_deps.join(", "));
+        }
+    }
+}
+
 fn print_summary(summary: &SummaryStats) {
-    let warn_count = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0)
-        + summary.warning_type_counts.get("trivial_spec_wf").copied().unwrap_or(0);
+    let warn_count = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0);
     let error_count = summary.total_warnings.saturating_sub(warn_count);
 
     let total_issues = error_count + warn_count + summary.total_infos;
@@ -3425,9 +3848,9 @@ fn print_summary(summary: &SummaryStats) {
         if total > 0 { (n * 100) / total } else { 0 }
     }
     log!("");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("Error/Warn/Info");
-    log!("═══════════════════════════════════════════════════════════════");
+    log!("=================================================================");
+    log!("3. Error/Warn/Info");
+    log!("=================================================================");
     log!("Errors: {} ({}%)", error_count, pct(error_count, total_issues));
     for (path, line, hole_type) in &summary.all_errors {
         log!("{}:{}: error: {}", path, line, hole_type);
@@ -3441,13 +3864,13 @@ fn print_summary(summary: &SummaryStats) {
         log!("{}:{}: info: {}", path, line, hole_type);
     }
     log!("");
-    log!("═══════════════════════════════════════════════════════════════");
-    log!("SUMMARY");
-    log!("═══════════════════════════════════════════════════════════════");
+    log!("=================================================================");
+    log!("4. Summary of Holes");
+    log!("=================================================================");
     log!("");
     log!("Modules:");
-    log!("   {} clean (no holes, {}%)", summary.clean_modules, pct(summary.clean_modules, summary.total_files));
-    log!("   {} holed (contains holes, {}%)", summary.holed_modules, pct(summary.holed_modules, summary.total_files));
+    log!("   {} clean (no holes, no errors; {}%)", summary.clean_modules, pct(summary.clean_modules, summary.total_files));
+    log!("   {} holed (holes or errors, {}%)", summary.holed_modules, pct(summary.holed_modules, summary.total_files));
     log!("   {} total", summary.total_files);
     log!("");
     log!("Proof Functions:");
@@ -3464,7 +3887,57 @@ fn print_summary(summary: &SummaryStats) {
         log!("   {} total fns", summary.fn_spec.total_fns);
         log!("");
     }
+    if summary.total_warnings > 0 {
+        log!("");
+        let bare = summary.warning_type_counts.get("bare_impl").copied().unwrap_or(0);
+        let outside = summary.warning_type_counts.keys()
+            .filter(|k| k.starts_with("struct_") || k.starts_with("enum_"))
+            .map(|k| summary.warning_type_counts.get(k).copied().unwrap_or(0))
+            .sum::<usize>();
+        let clone_derived = summary.warning_type_counts.get("clone_derived_outside").copied().unwrap_or(0);
+        let debug_display = summary.warning_type_counts.get("debug_display_inside_verus").copied().unwrap_or(0);
+        let eq_clone = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0);
+        let rust_rwlock = summary.warning_type_counts.get("rust_rwlock").copied().unwrap_or(0);
+        let dummy_pred = summary.warning_type_counts.get("dummy_rwlock_predicate").copied().unwrap_or(0);
+        let not_verusified = summary.warning_type_counts.get("not_verusified").copied().unwrap_or(0);
+        let trivial_spec_wf = summary.warning_type_counts.get("trivial_spec_wf").copied().unwrap_or(0);
+        let known_types: HashSet<&str> = [
+            "bare_impl", "clone_derived_outside", "debug_display_inside_verus",
+            "assume_eq_clone_workaround", "rust_rwlock",
+            "dummy_rwlock_predicate", "not_verusified", "trivial_spec_wf",
+        ].into_iter().collect();
+        let total_w = summary.total_warnings;
+        let mut parts: Vec<String> = [
+            (not_verusified > 0).then(|| format!("{} not verusified ({}%)", not_verusified, pct(not_verusified, total_w))),
+            (bare > 0).then(|| format!("{} bare impl(s) ({}%)", bare, pct(bare, total_w))),
+            (outside > 0).then(|| format!("{} struct/enum outside verus! ({}%)", outside, pct(outside, total_w))),
+            (clone_derived > 0).then(|| format!("{} Clone derived outside ({}%)", clone_derived, pct(clone_derived, total_w))),
+            (debug_display > 0).then(|| format!("{} Debug/Display inside verus! ({}%)", debug_display, pct(debug_display, total_w))),
+            (eq_clone > 0).then(|| format!("{} assume in eq/clone (Verus workaround) ({}%)", eq_clone, pct(eq_clone, total_w))),
+            (trivial_spec_wf > 0).then(|| format!("{} trivial spec*wf {{ true }} (hole) ({}%)", trivial_spec_wf, pct(trivial_spec_wf, total_w))),
+            (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock ({}%)", rust_rwlock, pct(rust_rwlock, total_w))),
+            (dummy_pred > 0).then(|| format!("{} dummy RwLockPredicate ({}%)", dummy_pred, pct(dummy_pred, total_w))),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let other: usize = summary.warning_type_counts.iter()
+            .filter(|(k, _)| !k.starts_with("struct_") && !k.starts_with("enum_") && !known_types.contains(k.as_str()))
+            .map(|(_, v)| v)
+            .sum();
+        if other > 0 {
+            parts.push(format!("{} other ({}%)", other, pct(other, total_w)));
+        }
+        let msg = if parts.is_empty() {
+            format!("Errors: {} total", summary.total_warnings)
+        } else {
+            format!("Errors: {} total ({})", summary.total_warnings, parts.join(", "))
+        };
+        log!("{}", msg);
+    }
+
     let total_holes = summary.holes.total_holes;
+    log!("");
     log!("Holes Found: {} total", total_holes);
     if summary.holes.assume_false_count > 0 {
         log!("   {} × assume(false) ({}%)", summary.holes.assume_false_count, pct(summary.holes.assume_false_count, total_holes));
@@ -3511,52 +3984,8 @@ fn print_summary(summary: &SummaryStats) {
     if summary.holes.opaque_count > 0 {
         log!("   {} × opaque ({}%)", summary.holes.opaque_count, pct(summary.holes.opaque_count, total_holes));
     }
-    
-    if summary.total_warnings > 0 {
-        log!("");
-        let bare = summary.warning_type_counts.get("bare_impl").copied().unwrap_or(0);
-        let outside = summary.warning_type_counts.keys()
-            .filter(|k| k.starts_with("struct_") || k.starts_with("enum_"))
-            .map(|k| summary.warning_type_counts.get(k).copied().unwrap_or(0))
-            .sum::<usize>();
-        let clone_derived = summary.warning_type_counts.get("clone_derived_outside").copied().unwrap_or(0);
-        let debug_display = summary.warning_type_counts.get("debug_display_inside_verus").copied().unwrap_or(0);
-        let eq_clone = summary.warning_type_counts.get("assume_eq_clone_workaround").copied().unwrap_or(0);
-        let rust_rwlock = summary.warning_type_counts.get("rust_rwlock").copied().unwrap_or(0);
-        let dummy_pred = summary.warning_type_counts.get("dummy_rwlock_predicate").copied().unwrap_or(0);
-        let not_verusified = summary.warning_type_counts.get("not_verusified").copied().unwrap_or(0);
-        let known_types: HashSet<&str> = [
-            "bare_impl", "clone_derived_outside", "debug_display_inside_verus",
-            "assume_eq_clone_workaround", "rust_rwlock",
-            "dummy_rwlock_predicate", "not_verusified",
-        ].into_iter().collect();
-        let total_w = summary.total_warnings;
-        let mut parts: Vec<String> = [
-            (not_verusified > 0).then(|| format!("{} not verusified ({}%)", not_verusified, pct(not_verusified, total_w))),
-            (bare > 0).then(|| format!("{} bare impl(s) ({}%)", bare, pct(bare, total_w))),
-            (outside > 0).then(|| format!("{} struct/enum outside verus! ({}%)", outside, pct(outside, total_w))),
-            (clone_derived > 0).then(|| format!("{} Clone derived outside ({}%)", clone_derived, pct(clone_derived, total_w))),
-            (debug_display > 0).then(|| format!("{} Debug/Display inside verus! ({}%)", debug_display, pct(debug_display, total_w))),
-            (eq_clone > 0).then(|| format!("{} assume in eq/clone (Verus workaround) ({}%)", eq_clone, pct(eq_clone, total_w))),
-            (rust_rwlock > 0).then(|| format!("{} std::sync::RwLock ({}%)", rust_rwlock, pct(rust_rwlock, total_w))),
-            (dummy_pred > 0).then(|| format!("{} dummy RwLockPredicate ({}%)", dummy_pred, pct(dummy_pred, total_w))),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        let other: usize = summary.warning_type_counts.iter()
-            .filter(|(k, _)| !k.starts_with("struct_") && !k.starts_with("enum_") && !known_types.contains(k.as_str()))
-            .map(|(_, v)| v)
-            .sum();
-        if other > 0 {
-            parts.push(format!("{} other ({}%)", other, pct(other, total_w)));
-        }
-        let msg = if parts.is_empty() {
-            format!("Errors: {} total", summary.total_warnings)
-        } else {
-            format!("Errors: {} total ({})", summary.total_warnings, parts.join(", "))
-        };
-        log!("{}", msg);
+    if summary.holes.trivial_spec_wf_count > 0 {
+        log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
     }
 
     if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
@@ -3567,8 +3996,90 @@ fn print_summary(summary: &SummaryStats) {
         log!("🎉 No proof holes found! All proofs are complete.");
     }
     
+    // Proof Targets: src/* and src/*/* with TOC and numbered sections
+    let has_proof_targets = summary.has_subdir_paths
+        && (summary.by_root_top.get("src").map(|m| !m.is_empty()).unwrap_or(false)
+            || !summary.next_target_files.is_empty()
+            || !summary.next_target_dirs.is_empty()
+            || !summary.not_verusified_files.is_empty()
+            || !summary.not_verusified_clean_deps.is_empty());
+    if has_proof_targets {
+        log!("");
+        log!("=================================================================");
+        log!("5. Proof Targets");
+        log!("=================================================================");
+        log!("");
+        log!("   Holes = explicit proof holes (assume, admit, external_body).");
+        log!("   Errors = spec/style issues (fn_missing_requires, fn_missing_ensures, etc.).");
+        log!("   A file can have 0 holes but >0 errors.");
+        log!("");
+        if let Some(top_map) = summary.by_root_top.get("src") {
+            let mut top: Vec<_> = top_map.iter()
+                .map(|(k, (e, h, f))| (k.clone(), *e, *h, *f))
+                .collect();
+            top.sort_by(|a, b| b.2.cmp(&a.2));
+            if !top.is_empty() {
+                log!("=================================================================");
+                log!("5.1. Worst src/* Directories (all dirs, by holes)");
+                log!("=================================================================");
+                log!("");
+                for (i, (name, errs, holes, files)) in top.iter().enumerate() {
+                    log!("   {}  {}  ({} holes, {} errors, {} files)", i + 1, name, holes, errs, files);
+                }
+                log!("");
+            }
+        }
+        if !summary.next_target_files.is_empty() {
+            log!("=================================================================");
+            log!("5.2. Next Target Files (clean deps only, by holes)");
+            log!("=================================================================");
+            log!("");
+            for (i, (path, holes, errs)) in summary.next_target_files.iter().enumerate() {
+                log!("   {}  {}  ({} holes, {} errors)", i + 1, path, holes, errs);
+            }
+            log!("");
+        }
+        if !summary.next_target_dirs.is_empty() {
+            log!("=================================================================");
+            log!("5.3. Next Target Directories");
+            log!("=================================================================");
+            log!("");
+            for (i, (dir, holes, errs, files)) in summary.next_target_dirs.iter().enumerate() {
+                log!("   {}  {}  ({} holes, {} errors, {} files)", i + 1, dir, holes, errs, files);
+            }
+            log!("");
+        }
+        log!("=================================================================");
+        log!("5.4. Not Verusified");
+        log!("=================================================================");
+        log!("");
+        if summary.not_verusified_files.is_empty() {
+            log!("   None");
+        } else {
+            for (i, path) in summary.not_verusified_files.iter().enumerate() {
+                log!("   {}  {}", i + 1, path);
+            }
+        }
+        log!("");
+        log!("=================================================================");
+        log!("5.5. Not Verusified (clean deps only)");
+        log!("=================================================================");
+        log!("");
+        if summary.not_verusified_clean_deps.is_empty() {
+            log!("   None");
+        } else {
+            for (i, path) in summary.not_verusified_clean_deps.iter().enumerate() {
+                log!("   {}  {}", i + 1, path);
+            }
+        }
+    }
+
     // Axioms section (separate from holes)
     if summary.axioms.total_axioms > 0 {
+        log!("");
+        log!("=================================================================");
+        log!("6. Axioms");
+        log!("=================================================================");
         log!("");
         log!("Trusted Axioms (with holes): {} total", summary.axioms.total_axioms);
         if summary.axioms.axiom_fn_count > 0 {
@@ -3657,9 +4168,9 @@ fn print_project_summary(project_name: &str, summary: &SummaryStats) {
 fn print_global_summary(projects: &[ProjectStats]) {
     log!("{}", "=".repeat(80));
     log!("");
-    log!("═══════════════════════════════════════════════════════════════");
+    log!("=================================================================");
     log!("GLOBAL SUMMARY (All Projects)");
-    log!("═══════════════════════════════════════════════════════════════");
+    log!("=================================================================");
     log!("");
     
     let mut global = GlobalSummaryStats::default();
