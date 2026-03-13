@@ -391,6 +391,7 @@ fn main() -> Result<()> {
     log!("     4.3. Next Target Directories");
     log!("     4.4. Not Verusified");
     log!("     4.5. Not Verusified (clean deps only)");
+    log!("     4.6. Chapter by Chapter Proof Targeting");
     log!("  5. Started/Ended/Duration");
     log!("");
     
@@ -865,6 +866,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
     // Print summary (uses log! macro which writes to both stdout and log file)
     let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
+    print_chapter_by_chapter_proof_targeting(&file_stats_map, &summary);
     
     Ok(())
 }
@@ -1053,6 +1055,7 @@ fn run_single_project_analysis(args: &StandardArgs, exclude_dirs: &[PathBuf]) ->
     // Print summary
     let summary = compute_summary(&file_stats_map, &base_dir);
     print_summary(&summary);
+    print_chapter_by_chapter_proof_targeting(&file_stats_map, &summary);
     
     Ok(())
 }
@@ -1105,6 +1108,7 @@ fn run_multi_codebase_analysis(base_dir: &Path, exclude_dirs: &[PathBuf]) -> Res
         print_depends_upon(&file_stats_map);
         let summary = compute_summary(&file_stats_map, base_dir);
         print_project_summary(&project_name, &summary);
+        print_chapter_by_chapter_proof_targeting(&file_stats_map, &summary);
         
         project_stats_vec.push(ProjectStats {
             name: project_name.clone(),
@@ -4077,6 +4081,193 @@ fn print_summary(summary: &SummaryStats) {
         log!("");
         log!("Note: Only axiom fn declarations with holes (admit/assume/etc.) are counted.");
         log!("      broadcast use statements are NOT counted - they just import axioms.");
+    }
+}
+
+/// Extract chapter from path: src/Chap43/File.rs -> Chap43, src/Concurrency.rs -> Concurrency.
+fn path_str_to_chapter(path_str: &str) -> Option<String> {
+    if !path_str.starts_with("src/") {
+        return None;
+    }
+    let s = path_str.strip_suffix(".rs").unwrap_or(path_str);
+    let parts: Vec<&str> = s.split('/').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    Some(parts[1].to_string())
+}
+
+/// Extract chapter from module path: Chap37::AVLTreeSeqStEph -> Chap37.
+fn module_to_chapter(module: &str) -> Option<String> {
+    module.split("::").next().map(|s| s.to_string())
+}
+
+/// Chapter sort: Chap02 < Chap03 < ... < Chap66 < Concurrency < ParaPairs.
+fn chapter_sort_key(ch: &str) -> (bool, u32, &str) {
+    if let Some(num_str) = ch.strip_prefix("Chap") {
+        if let Ok(n) = num_str.parse::<u32>() {
+            return (false, n, "");
+        }
+    }
+    (true, u32::MAX, ch)
+}
+
+/// Print section 4.6: Chapter by Chapter Proof Targeting (same analysis as chapter-cleanliness-status.sh).
+fn print_chapter_by_chapter_proof_targeting(
+    file_stats_map: &HashMap<String, FileStats>,
+    summary: &SummaryStats,
+) {
+    let top_map = match summary.by_root_top.get("src") {
+        Some(m) if !m.is_empty() => m,
+        _ => return,
+    };
+
+    let is_warning_level = |t: &str| matches!(t, "assume_eq_clone_workaround" | "requires_true");
+    let mut module_to_holed: HashMap<String, bool> = HashMap::new();
+    for (path_str, stats) in file_stats_map {
+        let module = path_str_to_module(path_str);
+        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
+            || stats.holes.trivial_spec_wf_count > 0;
+        let holed = stats.holes.total_holes > 0 || has_errors;
+        module_to_holed.insert(module.clone(), holed);
+    }
+    let all_modules: HashSet<String> = module_to_holed.keys().cloned().collect();
+
+    // Build (module, path_str, holed_deps) for each file
+    let mut entries: Vec<(String, String, Vec<String>)> = Vec::new();
+    for path_str in file_stats_map.keys() {
+        let stats = file_stats_map.get(path_str).unwrap();
+        let module = path_str_to_module(path_str);
+        let mut holed_deps: Vec<String> = Vec::new();
+        for dep in &stats.crate_deps {
+            for m in &all_modules {
+                if (*m == *dep || m.starts_with(&format!("{}::", dep)))
+                    && *module_to_holed.get(m).unwrap_or(&false)
+                {
+                    holed_deps.push(m.clone());
+                }
+            }
+        }
+        holed_deps.sort();
+        holed_deps.dedup();
+        entries.push((module, path_str.clone(), holed_deps));
+    }
+
+    // Collect chapters from top_map and from file paths (for dep-only chapters)
+    let mut chapters: HashSet<String> = top_map.keys().cloned().collect();
+    for path_str in file_stats_map.keys() {
+        if let Some(ch) = path_str_to_chapter(path_str) {
+            chapters.insert(ch);
+        }
+    }
+
+    // Per-chapter: holes, files, ext_deps, int_deps
+    let mut ext_deps: HashMap<String, Vec<String>> = HashMap::new();
+    let mut int_deps: HashMap<String, Vec<String>> = HashMap::new();
+    let mut seen_ext: HashSet<(String, String)> = HashSet::new();
+    let mut seen_int: HashSet<(String, String)> = HashSet::new();
+
+    for (_, path_str, holed_deps) in &entries {
+        let Some(chap) = path_str_to_chapter(path_str) else { continue };
+        for dep in holed_deps {
+            let Some(dep_chap) = module_to_chapter(dep) else { continue };
+            let key = (chap.clone(), dep.clone());
+            if dep_chap != chap {
+                if seen_ext.insert(key) {
+                    ext_deps.entry(chap.clone()).or_default().push(dep.clone());
+                }
+            } else {
+                if seen_int.insert(key) {
+                    int_deps.entry(chap.clone()).or_default().push(dep.clone());
+                }
+            }
+        }
+    }
+
+    // Sort chapters
+    let mut chap_list: Vec<String> = chapters.into_iter().collect();
+    chap_list.sort_by(|a, b| {
+        let ka = chapter_sort_key(a);
+        let kb = chapter_sort_key(b);
+        ka.cmp(&kb)
+    });
+
+    // Holes and files per chapter
+    let mut holes: HashMap<String, usize> = HashMap::new();
+    let mut files: HashMap<String, usize> = HashMap::new();
+    for (ch, (_, h, f)) in top_map {
+        holes.insert(ch.clone(), *h);
+        files.insert(ch.clone(), *f);
+    }
+    for ch in &chap_list {
+        if !holes.contains_key(ch) {
+            holes.insert(ch.clone(), 0);
+        }
+        if !files.contains_key(ch) {
+            let count = file_stats_map.keys().filter(|p| path_str_to_chapter(p).as_deref() == Some(ch)).count();
+            files.insert(ch.clone(), count);
+        }
+    }
+
+    let n_clean = chap_list.iter().filter(|c| *holes.get(*c).unwrap_or(&0) == 0).count();
+    let n_holed = chap_list.len() - n_clean;
+    let total_holes: usize = chap_list.iter().map(|c| holes.get(c).unwrap_or(&0)).sum();
+    let total_f: usize = chap_list.iter().map(|c| *files.get(c).unwrap_or(&0)).sum();
+    let global_holes = summary.holes.total_holes;
+
+    log!("");
+    log!("=================================================================");
+    log!("4.6. Chapter by Chapter Proof Targeting");
+    log!("=================================================================");
+    log!("");
+    log!("Chapter Status — {} chapters, {} clean, {} holed, {} holes (global), {} modules",
+        chap_list.len(), n_clean, n_holed, global_holes, total_f);
+    log!("");
+
+    log!("CLEAN CHAPTERS ({})", n_clean);
+    log!("  {:<14} {:>5}", "Chapter", "Files");
+    log!("  {:<14} {:>5}", "--------------", "-----");
+    for ch in &chap_list {
+        if *holes.get(ch).unwrap_or(&0) == 0 {
+            log!("  {:<14} {:>5}", ch, files.get(ch).unwrap_or(&0));
+        }
+    }
+
+    log!("");
+    log!("HOLED CHAPTERS ({}) — {} holes", n_holed, total_holes);
+    log!("  {:<14} {:>5} {:>5}  {:<8}  {}", "Chapter", "Holes", "Files", "ClnDeps?", "Blocked by (external holed modules)");
+    log!("  {:<14} {:>5} {:>5}  {:<8}  {}", "--------------", "-----", "-----", "--------", "-----------------------------------");
+    for ch in &chap_list {
+        let h = *holes.get(ch).unwrap_or(&0);
+        if h > 0 {
+            let f = *files.get(ch).unwrap_or(&0);
+            let (status, blocked) = if let Some(deps) = ext_deps.get(ch) {
+                ("NO", deps.join(", "))
+            } else if let Some(deps) = int_deps.get(ch) {
+                ("internal", deps.join(", "))
+            } else {
+                ("YES", String::new())
+            };
+            log!("  {:<14} {:>5} {:>5}  {:<8}  {}", ch, h, f, status, blocked);
+        }
+    }
+
+    log!("");
+    log!("DEPENDENCY CHAIN (chapter-level, external only)");
+    log!("  {:<14}  {}", "Chapter", "Blocked by chapters");
+    log!("  {:<14}  {}", "--------------", "-------------------");
+    for ch in &chap_list {
+        if let Some(deps) = ext_deps.get(ch) {
+            let mut dep_chaps: HashSet<String> = HashSet::new();
+            for d in deps {
+                if let Some(dc) = module_to_chapter(d) {
+                    dep_chaps.insert(dc);
+                }
+            }
+            let mut dep_list: Vec<String> = dep_chaps.into_iter().collect();
+            dep_list.sort_by(|a, b| chapter_sort_key(a).cmp(&chapter_sort_key(b)));
+            log!("  {:<14}  {}", ch, dep_list.join(", "));
+        }
     }
 }
 
