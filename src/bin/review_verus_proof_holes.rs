@@ -236,6 +236,9 @@ struct SummaryStats {
     not_verusified_files: Vec<String>,
     /// Not verusified with clean deps: not_verusified files that depend only on clean modules
     not_verusified_clean_deps: Vec<String>,
+    /// Accepted (reviewed) hole counts by type
+    accepted_counts: HashMap<String, usize>,
+    accepted_total: usize,
     /// Structural false positive counts
     structural_fp_count: usize,
     structural_fp_by_category: HashMap<String, usize>,
@@ -3429,18 +3432,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     });
                 } else if name == "accept" {
                     let line = self.file_line(seg.ident.span());
-                    // EQ_CLONE_ASSUME: accept() inside PartialEq/Clone is structural FP
-                    if self.is_in_eq_or_clone_context() {
-                        let fn_name = self.current_fn_name.clone().unwrap_or_default();
-                        self.stats.structural_fps.push(StructuralFalsePositive {
-                            line,
-                            category: StructuralFPCategory::EqCloneAssume,
-                            name: fn_name,
-                            confidence: Confidence::High,
-                            reason: "accept() inside PartialEq/Clone — workaround for generic type bounds".to_string(),
-                        });
-                    }
-                    // All accept() treated uniformly; no special case for accept(true)
+                    // accept() is human-reviewed — never a hole, never a structural FP.
+                    // Only assume() in eq/clone context is EQ_CLONE_ASSUME.
                     self.stats.infos.push(DetectedHole {
                         line,
                         hole_type: "accept()".to_string(),
@@ -4311,13 +4304,16 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
                 info.hole_type.clone(),
                 info.context.clone(),
             ));
+            // Aggregate accepted (reviewed) counts
+            *summary.accepted_counts.entry(info.hole_type.clone()).or_insert(0) += 1;
+            summary.accepted_total += 1;
         }
 
         // Aggregate structural false positives
         summary.structural_fp_count += stats.structural_fps.len();
         for sfp in &stats.structural_fps {
             *summary.structural_fp_by_category.entry(sfp.category.label().to_string()).or_insert(0) += 1;
-            // EQ_CLONE_ASSUME is info-only (accept() pattern), not in hole count
+            // EQ_CLONE_ASSUME uses assume() as a warning (not a hole), so not in hole count
             if sfp.category != StructuralFPCategory::EqCloneAssume {
                 summary.structural_fp_in_hole_count += 1;
             }
@@ -4609,32 +4605,63 @@ fn print_summary(summary: &SummaryStats) {
         log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
     }
 
+    // Warnings section (fn_missing_*, requires_true, etc.)
+    let warning_types: Vec<(&str, &str)> = vec![
+        ("fn_missing_requires", "fn_missing_requires"),
+        ("fn_missing_ensures", "fn_missing_ensures"),
+        ("fn_missing_wf_requires", "fn_missing_wf_requires"),
+        ("fn_missing_wf_ensures", "fn_missing_wf_ensures"),
+        ("fn_missing_requires_ensures", "fn_missing_requires_ensures"),
+        ("requires_true", "requires_true"),
+        ("assume_eq_clone_workaround", "assume_eq_clone_workaround"),
+    ];
+    let total_warning_count: usize = warning_types.iter()
+        .map(|(k, _)| summary.warning_type_counts.get(*k).copied().unwrap_or(0))
+        .sum();
+    if total_warning_count > 0 {
+        log!("");
+        log!("Warnings: {} total", total_warning_count);
+        for (key, label) in &warning_types {
+            if let Some(&count) = summary.warning_type_counts.get(*key) {
+                if count > 0 {
+                    log!("   {} × {}", count, label);
+                }
+            }
+        }
+    }
+
+    // Accepted (reviewed) section
+    if summary.accepted_total > 0 {
+        log!("");
+        log!("Accepted (reviewed): {} total", summary.accepted_total);
+        let mut acc: Vec<_> = summary.accepted_counts.iter().collect();
+        acc.sort_by(|a, b| b.1.cmp(a.1));
+        for (hole_type, count) in &acc {
+            log!("   {} × {}", count, hole_type);
+        }
+    }
+
+    // Structural false positives
     if summary.structural_fp_count > 0 {
         log!("");
         log!("Structural False Positives: {} detected (language limitations, not missing proof)", summary.structural_fp_count);
         let mut cats: Vec<_> = summary.structural_fp_by_category.iter().collect();
         cats.sort_by(|a, b| b.1.cmp(a.1));
         for (cat, count) in &cats {
-            let in_hole = if *cat == "EQ_CLONE_ASSUME" {
-                "not in hole count — accept() pattern"
-            } else {
-                "in hole count"
-            };
-            log!("   {} × {} ({})", count, cat, in_hole);
+            log!("   {} × {}", count, cat);
         }
         if summary.structural_fp_in_hole_count > 0 {
-            let actionable = total_holes.saturating_sub(summary.structural_fp_in_hole_count);
             log!("");
-            log!("Real Actionable Holes: {} ({} total - {} structural FPs in count)", actionable, total_holes, summary.structural_fp_in_hole_count);
+            log!("Real Actionable Holes: {} ({} total - {} structural FPs in count)", total_holes.saturating_sub(summary.structural_fp_in_hole_count), total_holes, summary.structural_fp_in_hole_count);
         }
     }
 
-    if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
+    if summary.holes.total_holes == 0 && total_warning_count == 0 {
         log!("");
-        log!("🎉 No proof holes or warnings found! All proofs are complete.");
+        log!("No proof holes or warnings found! All proofs are complete.");
     } else if summary.holes.total_holes == 0 {
         log!("");
-        log!("🎉 No proof holes found! All proofs are complete.");
+        log!("No proof holes found! All proofs are complete.");
     }
 
     // Proof Targets: src/* and src/*/* with TOC and numbered sections
