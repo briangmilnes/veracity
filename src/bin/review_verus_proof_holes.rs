@@ -88,7 +88,6 @@ struct DetectedHole {
 enum StructuralFPCategory {
     StdTraitImpl,      // external_body on std trait method impls
     ThreadSpawn,       // external_body on thread::spawn/HFScheduler patterns
-    EqCloneAssume,     // assume()/accept() inside PartialEq::eq or Clone::clone
     RwlockGhost,       // assume() bridging ghost state across RwLock
     UnsafeSendSync,    // unsafe impl Send/Sync on Ghost-field types
     OpaqueExternal,    // external_body calling external std:: functions
@@ -115,7 +114,6 @@ impl StructuralFPCategory {
         match self {
             StructuralFPCategory::StdTraitImpl => "STD_TRAIT_IMPL",
             StructuralFPCategory::ThreadSpawn => "THREAD_SPAWN",
-            StructuralFPCategory::EqCloneAssume => "EQ_CLONE_ASSUME",
             StructuralFPCategory::RwlockGhost => "RWLOCK_GHOST",
             StructuralFPCategory::UnsafeSendSync => "UNSAFE_SEND_SYNC",
             StructuralFPCategory::OpaqueExternal => "OPAQUE_EXTERNAL",
@@ -239,10 +237,14 @@ struct SummaryStats {
     /// Accepted (reviewed) hole counts by type
     accepted_counts: HashMap<String, usize>,
     accepted_total: usize,
+    /// Accepted (reviewed) hole counts by chapter
+    accepted_by_chapter: HashMap<String, usize>,
+    /// Assume subcategory breakdown (e.g. "rwlock:reader" → count)
+    assume_subcats: HashMap<String, usize>,
     /// Structural false positive counts
     structural_fp_count: usize,
     structural_fp_by_category: HashMap<String, usize>,
-    /// Structural FPs that are included in the hole count (all except EQ_CLONE_ASSUME)
+    /// Structural FPs that are included in the hole count
     structural_fp_in_hole_count: usize,
 }
 
@@ -779,6 +781,8 @@ fn should_exclude(path: &Path, exclude_dirs: &[PathBuf]) -> bool {
     if path.components().any(|c| {
         let s = c.as_os_str();
         s == "docs" || s == "path"
+            || s == "experiments" || s == "vstdplus" || s == "standards"
+            || s == "benches" || s == "rust_verify_test"
     }) {
         return true;
     }
@@ -842,14 +846,14 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
             let has_warnings = !stats.warnings.is_empty() || stats.holes.trivial_spec_wf_count > 0;
             let has_infos = !stats.infos.is_empty();
 
-            if has_holes || has_warnings {
+            if has_holes {
                 let icon = "❌";
                 let msg = format!("{} {}", icon, path_str);
                 println!("{}", msg);
                 write_to_log(&msg);
-                
+
                 let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
-                
+
                 for hole in &stats.holes.holes {
                     let msg = format!("{}:{}: error: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
                     println!("{}", msg);
@@ -888,24 +892,63 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     write_to_log(&msg);
                 }
 
-                if has_holes {
-                    let msg = format!("   Holes: {} total", stats.holes.total_holes);
-                    println!("{}", msg);
-                    write_to_log(&msg);
-                    print_hole_counts_with_log(&stats.holes, "      ");
-                }
+                let msg = format!("   Holes: {} total", stats.holes.total_holes);
+                println!("{}", msg);
+                write_to_log(&msg);
+                print_hole_counts_with_log(&stats.holes, "      ");
 
                 if has_infos {
                     let msg = format!("   Info: {} total", stats.infos.len());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
-                
+
                 if stats.proof_functions > 0 {
-                    let msg = format!("   Proof functions: {} total ({} clean, {} holed)", 
-                             stats.proof_functions, 
-                             stats.clean_proof_functions, 
+                    let msg = format!("   Proof functions: {} total ({} clean, {} holed)",
+                             stats.proof_functions,
+                             stats.clean_proof_functions,
                              stats.holed_proof_functions);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+            } else if has_warnings {
+                let icon = "⚠";
+                let msg = format!("{} {}", icon, path_str);
+                println!("{}", msg);
+                write_to_log(&msg);
+
+                let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
+
+                for warning in &stats.warnings {
+                    let level = if matches!(warning.hole_type.as_str(), "assume_eq_clone_workaround" | "requires_true") {
+                        "warning"
+                    } else {
+                        "error"
+                    };
+                    let msg = format!("{}:{}: {}: {} - {}", abs_path.display(), warning.line, level, warning.hole_type, warning.context);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                    for ctx in build_context_lines(&file_content, warning) {
+                        println!("{}", ctx);
+                        write_to_log(&ctx);
+                    }
+                }
+
+                for info in &stats.infos {
+                    let msg = format!("{}:{}: info: {}", abs_path.display(), info.line, info.hole_type);
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
+                for sfp in &stats.structural_fps {
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
+                if has_infos {
+                    let msg = format!("   Info: {} total", stats.infos.len());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -2355,21 +2398,12 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         }
                     }
                     VerifierAttribute::ExternalTraitSpec => {
-                        if has_accept_hole_comment(content, line) {
-                            stats.infos.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_specification_accept_hole".to_string(),
-                                context: "external_trait_specification with accept hole comment".to_string(),
-                            });
-                        } else {
-                            stats.holes.external_trait_spec_count += 1;
-                            stats.holes.total_holes += 1;
-                            stats.holes.holes.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_specification".to_string(),
-                                context,
-                            });
-                        }
+                        // Verus framework plumbing, not a proof obligation
+                        stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_specification_accept_hole".to_string(),
+                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(),
+                        });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
                         if has_accept_hole_comment(content, line) {
@@ -2389,21 +2423,12 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         }
                     }
                     VerifierAttribute::ExternalTraitExt => {
-                        if has_accept_hole_comment(content, line) {
-                            stats.infos.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_extension_accept_hole".to_string(),
-                                context: "external_trait_extension with accept hole comment".to_string(),
-                            });
-                        } else {
-                            stats.holes.external_trait_ext_count += 1;
-                            stats.holes.total_holes += 1;
-                            stats.holes.holes.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_extension".to_string(),
-                                context,
-                            });
-                        }
+                        // Verus framework plumbing, not a proof obligation
+                        stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_extension_accept_hole".to_string(),
+                            context: "external_trait_extension — Verus trait extension pattern".to_string(),
+                        });
                     }
                     VerifierAttribute::External => {
                         if has_accept_hole_comment(content, line) {
@@ -2595,7 +2620,8 @@ fn analyze_verus_block(
             // First pass: collect spec_*_wf predicates for wf-flow table and tagging
             collect_spec_wf_predicates(&file, stats);
             let skip_requires_ensures = file_skips_requires_ensures(path);
-            let mut visitor = ProofHoleVisitor::new(content, line_offset, stats, skip_requires_ensures);
+            let file_stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            let mut visitor = ProofHoleVisitor::new(content, line_offset, stats, skip_requires_ensures, file_stem);
             visitor.visit_file(&file);
         }
         Err(_) => {
@@ -2622,10 +2648,12 @@ struct ProofHoleVisitor<'a> {
     skip_requires_ensures: bool,
     /// Body text of the current function (for structural FP classification)
     current_fn_body_text: Option<String>,
+    /// File stem (e.g. "AVLTreeSetMtEph") for Mt-file detection
+    file_stem: String,
 }
 
 impl<'a> ProofHoleVisitor<'a> {
-    fn new(content: &'a str, line_offset: usize, stats: &'a mut FileStats, skip_requires_ensures: bool) -> Self {
+    fn new(content: &'a str, line_offset: usize, stats: &'a mut FileStats, skip_requires_ensures: bool, file_stem: &str) -> Self {
         Self {
             content,
             line_offset,
@@ -2636,6 +2664,7 @@ impl<'a> ProofHoleVisitor<'a> {
             suppress_external_body_hole: false,
             skip_requires_ensures,
             current_fn_body_text: None,
+            file_stem: file_stem.to_string(),
         }
     }
 
@@ -3345,14 +3374,6 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 });
             }
         } else if self.is_in_eq_or_clone_context() {
-            let fn_name = self.current_fn_name.clone().unwrap_or_default();
-            self.stats.structural_fps.push(StructuralFalsePositive {
-                line,
-                category: StructuralFPCategory::EqCloneAssume,
-                name: fn_name,
-                confidence: Confidence::High,
-                reason: "assume() inside PartialEq/Clone — workaround for generic type bounds".to_string(),
-            });
             self.stats.warnings.push(DetectedHole {
                 line,
                 hole_type: "assume_eq_clone_workaround".to_string(),
@@ -3365,28 +3386,43 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 context: "assume with accept hole comment".to_string(),
             });
         } else {
-            // RWLOCK_GHOST: assume() in function with RwLock + ghost state
+            // RWLOCK_GHOST: assume() bridging ghost state across RwLock boundary.
+            // Two detection paths:
+            // 1. Original: function body mentions RwLock/acquire_* AND Ghost/Tracked
+            // 2. Mt-file: file stem contains "Mt", assume references self@ or spec_*_wf,
+            //    and function body has lock operations
             let body = self.current_fn_body_text.as_deref().unwrap_or("");
             let has_rwlock = body.contains("RwLock") || body.contains("acquire_read")
                 || body.contains("acquire_write") || body.contains("release_read")
                 || body.contains("release_write");
             let has_ghost = body.contains("Ghost") || body.contains("Tracked");
-            if has_rwlock && has_ghost {
+            let is_mt_file = self.file_stem.contains("Mt");
+            let context_str = self.context_at(line);
+            let bridges_ghost = context_str.contains("self@")
+                || (context_str.contains("spec_") && context_str.contains("_wf"));
+            let has_lock_call = body.contains("acquire_read") || body.contains("acquire_write")
+                || body.contains(".read()") || body.contains(".write()") || body.contains(".borrow()");
+            let is_rwlock_ghost = (has_rwlock && has_ghost)
+                || (is_mt_file && bridges_ghost && has_lock_call);
+            if is_rwlock_ghost {
                 let fn_name = self.current_fn_name.clone().unwrap_or_default();
+                let confidence = if has_rwlock && has_ghost { Confidence::Medium } else { Confidence::Medium };
                 self.stats.structural_fps.push(StructuralFalsePositive {
                     line,
                     category: StructuralFPCategory::RwlockGhost,
                     name: fn_name,
-                    confidence: Confidence::Low,
+                    confidence,
                     reason: "assume() bridging ghost state across RwLock boundary".to_string(),
                 });
             }
+            // Classify assume subcategory
+            let subcat = classify_assume_subcategory(&context_str, is_mt_file, is_rwlock_ghost);
             self.stats.holes.assume_count += 1;
             self.stats.holes.total_holes += 1;
             self.stats.holes.holes.push(DetectedHole {
                 line,
-                hole_type: "assume()".to_string(),
-                context: self.context_at(line),
+                hole_type: format!("assume() [{}]", subcat),
+                context: context_str,
             });
         }
         visit::visit_assume(self, i);
@@ -3911,21 +3947,12 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         }
                     }
                     VerifierAttribute::ExternalTraitSpec => {
-                        if has_accept_hole_comment(content, line) {
-                            stats.infos.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_specification_accept_hole".to_string(),
-                                context: "external_trait_specification with accept hole comment".to_string(),
-                            });
-                        } else {
-                            stats.holes.external_trait_spec_count += 1;
-                            stats.holes.total_holes += 1;
-                            stats.holes.holes.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_specification".to_string(),
-                                context,
-                            });
-                        }
+                        // Verus framework plumbing, not a proof obligation
+                        stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_specification_accept_hole".to_string(),
+                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(),
+                        });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
                         if has_accept_hole_comment(content, line) {
@@ -3945,21 +3972,12 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         }
                     }
                     VerifierAttribute::ExternalTraitExt => {
-                        if has_accept_hole_comment(content, line) {
-                            stats.infos.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_extension_accept_hole".to_string(),
-                                context: "external_trait_extension with accept hole comment".to_string(),
-                            });
-                        } else {
-                            stats.holes.external_trait_ext_count += 1;
-                            stats.holes.total_holes += 1;
-                            stats.holes.holes.push(DetectedHole {
-                                line,
-                                hole_type: "external_trait_extension".to_string(),
-                                context,
-                            });
-                        }
+                        // Verus framework plumbing, not a proof obligation
+                        stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "external_trait_extension_accept_hole".to_string(),
+                            context: "external_trait_extension — Verus trait extension pattern".to_string(),
+                        });
                     }
                     VerifierAttribute::External => {
                         if has_accept_hole_comment(content, line) {
@@ -4245,6 +4263,55 @@ fn print_file_report(path: &str, stats: &FileStats) {
     }
 }
 
+/// Extract chapter name from a path like "src/Chap05/File.rs" → "Chap05".
+fn extract_chapter_from_path(path: &str) -> Option<String> {
+    for component in path.split('/') {
+        if component.starts_with("Chap") {
+            return Some(component.to_string());
+        }
+    }
+    // Also check for "standards" directory
+    if path.contains("standards") {
+        return Some("standards".to_string());
+    }
+    None
+}
+
+/// Classify an assume() into a subcategory based on the context string.
+///
+/// Categories (from the RwLock standard and APAS patterns):
+/// - rwlock:reader — return value == self@ (reader accept)
+/// - rwlock:predicate — spec_*_wf() predicate (predicate accept)
+/// - rwlock:writer — ghost == inner (writer accept, in Mt files with lock ops)
+/// - closure — .requires(...) pattern
+/// - algorithmic — everything else (real proof targets)
+fn classify_assume_subcategory(context: &str, is_mt_file: bool, is_rwlock_ghost: bool) -> &'static str {
+    // Closure requires: assume(f.requires(...))
+    if context.contains(".requires(") {
+        return "closure";
+    }
+    if is_rwlock_ghost {
+        // RwLock subcategories based on what's being assumed
+        if context.contains("spec_") && context.contains("_wf") {
+            return "rwlock:predicate";
+        }
+        if context.contains("self@") {
+            // Reader accept: result == self@ expression
+            return "rwlock:reader";
+        }
+        // Writer accept or generic rwlock ghost bridge
+        return "rwlock:writer";
+    }
+    // Mt file assumes that reference self@ but weren't caught by rwlock detection
+    if is_mt_file && context.contains("self@") {
+        return "rwlock:reader";
+    }
+    if is_mt_file && context.contains("spec_") && context.contains("_wf") {
+        return "rwlock:predicate";
+    }
+    "algorithmic"
+}
+
 /// Only fn_missing_requires and fn_missing_ensures are "errors" (spec/style).
 /// Everything else (trivial_spec_wf, proof_fn_with_holes, spec_fn_with_holes, etc.) is a hole.
 fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path) -> SummaryStats {
@@ -4288,7 +4355,17 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.holes.opaque_count += stats.holes.opaque_count;
         summary.holes.trivial_spec_wf_count += stats.holes.trivial_spec_wf_count;
         summary.holes.total_holes += stats.holes.total_holes;
-        
+
+        // Aggregate assume subcategories from per-file holes
+        for h in &stats.holes.holes {
+            if let Some(start) = h.hole_type.find('[') {
+                if let Some(end) = h.hole_type.find(']') {
+                    let subcat = &h.hole_type[start+1..end];
+                    *summary.assume_subcats.entry(subcat.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+
         summary.axioms.axiom_fn_count += stats.axioms.axiom_fn_count;
         summary.axioms.broadcast_use_axiom_count += stats.axioms.broadcast_use_axiom_count;
         summary.axioms.total_axioms += stats.axioms.total_axioms;
@@ -4328,16 +4405,17 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
             // Aggregate accepted (reviewed) counts
             *summary.accepted_counts.entry(info.hole_type.clone()).or_insert(0) += 1;
             summary.accepted_total += 1;
+            // Aggregate accepted by chapter
+            if let Some(chap) = extract_chapter_from_path(path_str) {
+                *summary.accepted_by_chapter.entry(chap).or_insert(0) += 1;
+            }
         }
 
         // Aggregate structural false positives
         summary.structural_fp_count += stats.structural_fps.len();
         for sfp in &stats.structural_fps {
             *summary.structural_fp_by_category.entry(sfp.category.label().to_string()).or_insert(0) += 1;
-            // EQ_CLONE_ASSUME uses assume() as a warning (not a hole), so not in hole count
-            if sfp.category != StructuralFPCategory::EqCloneAssume {
-                summary.structural_fp_in_hole_count += 1;
-            }
+            summary.structural_fp_in_hole_count += 1;
         }
 
         // Aggregate for Proof Targets (root/* and root/*/*), only for paths with subdirs
@@ -4582,6 +4660,16 @@ fn print_summary(summary: &SummaryStats) {
     }
     if summary.holes.assume_count > 0 {
         log!("   {} × assume() ({}%)", summary.holes.assume_count, pct(summary.holes.assume_count, total_holes));
+        // Subcategory breakdown
+        if !summary.assume_subcats.is_empty()
+            && (summary.assume_subcats.len() > 1 || !summary.assume_subcats.contains_key("algorithmic"))
+        {
+            let mut sorted: Vec<_> = summary.assume_subcats.iter().collect();
+            sorted.sort_by(|a, b| b.1.cmp(a.1));
+            for (subcat, count) in &sorted {
+                log!("      {} × {}", count, subcat);
+            }
+        }
     }
     if summary.holes.assume_new_count > 0 {
         log!("   {} × Tracked::assume_new() ({}%)", summary.holes.assume_new_count, pct(summary.holes.assume_new_count, total_holes));
@@ -4626,6 +4714,25 @@ fn print_summary(summary: &SummaryStats) {
         log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
     }
 
+    // Per-chapter holes table
+    if let Some(top_map) = summary.by_root_top.get("src") {
+        let mut chaps: Vec<_> = top_map.iter()
+            .filter(|(k, (_, h, _))| k.starts_with("Chap") && *h > 0)
+            .map(|(k, (_, h, _))| (k.clone(), *h))
+            .collect();
+        chaps.sort_by(|a, b| a.0.cmp(&b.0));
+        if !chaps.is_empty() {
+            log!("");
+            log!("Per-Chapter Holes:");
+            for row in chaps.chunks(3) {
+                let cols: Vec<String> = row.iter()
+                    .map(|(name, holes)| format!("  {}:{:>3}", name, holes))
+                    .collect();
+                log!("{}", cols.join(""));
+            }
+        }
+    }
+
     // Warnings section (fn_missing_*, requires_true, etc.)
     let warning_types: Vec<(&str, &str)> = vec![
         ("fn_missing_requires", "fn_missing_requires"),
@@ -4659,6 +4766,19 @@ fn print_summary(summary: &SummaryStats) {
         acc.sort_by(|a, b| b.1.cmp(a.1));
         for (hole_type, count) in &acc {
             log!("   {} × {}", count, hole_type);
+        }
+        // Accepted by chapter
+        if !summary.accepted_by_chapter.is_empty() {
+            let mut chaps: Vec<_> = summary.accepted_by_chapter.iter().collect();
+            chaps.sort_by(|a, b| a.0.cmp(b.0));
+            log!("");
+            log!("Accepted by Chapter:");
+            for row in chaps.chunks(3) {
+                let cols: Vec<String> = row.iter()
+                    .map(|(name, count)| format!("  {}:{:>3}", name, count))
+                    .collect();
+                log!("{}", cols.join(""));
+            }
         }
     }
 

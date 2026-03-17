@@ -25,3 +25,41 @@ through the recursive trait dispatch. The old three-layer delegation pattern
 Evidence: `src/experiments/tree_module_style.rs` in APAS-VERUS demonstrates
 this working with `NodeTrait::spec_size(&*n)` calls through `Option<Box<Node>>`
 children — no free spec fns, no inherent impls.
+
+## Fixture Validation
+
+When validating, running runtime tests, or proof time tests **on the fixture**
+(the copy of APAS-VERUS used by veracity), run the scripts **from the fixture
+directory**.
+
+Fixture path: `tests/fixtures/APAS-VERUS`
+
+| # | Command | Purpose |
+|---|---------|---------|
+| 1 | `cd tests/fixtures/APAS-VERUS && scripts/validate.sh` | Verus verification |
+| 2 | `cd tests/fixtures/APAS-VERUS && scripts/rtt.sh` | Runtime tests |
+| 3 | `cd tests/fixtures/APAS-VERUS && scripts/ptt.sh` | Proof time tests |
+
+- Do NOT use `cargo verus verify` — use `scripts/validate.sh`.
+- Do NOT use scripts from `~/projects/APAS-VERUS/` — use the fixture scripts.
+
+## No Debug Build
+
+**Always use release builds for veracity binaries.**
+
+- `cargo build --release` or `cargo build --release --bin <name>`
+- Never use `cargo build` (debug) or `./target/debug/veracity-*`.
+
+## Path Table
+
+The **path table** is the combined ratios and timing for `veracity-read-paths`:
+
+| Metric | Description |
+|--------|-------------|
+| Paths | Number of paths emitted |
+| Output chars | Total character count of path output |
+| Source lines | Lines in source file(s) |
+| Source chars | Character count of source |
+| Paths / source line | Ratio of paths to source lines |
+| Output chars / source chars | Expansion ratio |
+| Time | Wall-clock time to emit paths |
