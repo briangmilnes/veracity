@@ -243,6 +243,10 @@ pub struct StandardArgs {
                         // Tool-specific flag with one argument, skip both
                         i += 2;
                     }
+                    "-e" | "--exclude" => {
+                        // Tool-specific flag with one argument, skip both
+                        i += 2;
+                    }
                     other => {
                         return Err(anyhow::anyhow!("Unknown option: {other}"));
                     }

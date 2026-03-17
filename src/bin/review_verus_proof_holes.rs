@@ -82,6 +82,68 @@ struct DetectedHole {
     context: String,  // Short snippet of code for context
 }
 
+/// Category of structural false positive — a hole that cannot be removed
+/// due to Verus/Rust language limitations, not missing proof effort.
+#[derive(Debug, Clone, PartialEq)]
+enum StructuralFPCategory {
+    StdTraitImpl,      // external_body on std trait method impls
+    ThreadSpawn,       // external_body on thread::spawn/HFScheduler patterns
+    EqCloneAssume,     // assume()/accept() inside PartialEq::eq or Clone::clone
+    RwlockGhost,       // assume() bridging ghost state across RwLock
+    UnsafeSendSync,    // unsafe impl Send/Sync on Ghost-field types
+    OpaqueExternal,    // external_body calling external std:: functions
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Confidence {
+    High,
+    Medium,
+    Low,
+}
+
+#[derive(Debug, Clone)]
+struct StructuralFalsePositive {
+    line: usize,
+    category: StructuralFPCategory,
+    name: String,           // fn or type name
+    confidence: Confidence,
+    reason: String,
+}
+
+impl StructuralFPCategory {
+    fn label(&self) -> &'static str {
+        match self {
+            StructuralFPCategory::StdTraitImpl => "STD_TRAIT_IMPL",
+            StructuralFPCategory::ThreadSpawn => "THREAD_SPAWN",
+            StructuralFPCategory::EqCloneAssume => "EQ_CLONE_ASSUME",
+            StructuralFPCategory::RwlockGhost => "RWLOCK_GHOST",
+            StructuralFPCategory::UnsafeSendSync => "UNSAFE_SEND_SYNC",
+            StructuralFPCategory::OpaqueExternal => "OPAQUE_EXTERNAL",
+        }
+    }
+}
+
+impl Confidence {
+    fn label(&self) -> &'static str {
+        match self {
+            Confidence::High => "high",
+            Confidence::Medium => "medium",
+            Confidence::Low => "low",
+        }
+    }
+}
+
+/// Std trait methods that cannot carry requires/ensures in Verus.
+const STD_TRAIT_METHODS: &[(&str, &str)] = &[
+    ("Iterator", "next"),
+    ("PartialOrd", "partial_cmp"),
+    ("Ord", "cmp"),
+    ("Display", "fmt"),
+    ("Debug", "fmt"),
+    ("Hash", "hash"),
+    ("PartialEq", "eq"),
+];
+
 #[derive(Debug, Default, Clone)]
 struct ProofHoleStats {
     assume_false_count: usize,
@@ -135,6 +197,10 @@ struct FileStats {
     infos: Vec<DetectedHole>,
     /// Crate module paths this file depends on (from use crate::...), excluding accept
     crate_deps: HashSet<String>,
+    /// spec_*_wf predicates found in this file (for wf-flow table and tagging)
+    spec_wf_predicates: HashSet<String>,
+    /// Structural false positives: holes due to language limitations
+    structural_fps: Vec<StructuralFalsePositive>,
 }
 
 #[derive(Debug, Default)]
@@ -170,6 +236,9 @@ struct SummaryStats {
     not_verusified_files: Vec<String>,
     /// Not verusified with clean deps: not_verusified files that depend only on clean modules
     not_verusified_clean_deps: Vec<String>,
+    /// Structural false positive counts
+    structural_fp_count: usize,
+    structural_fp_by_category: HashMap<String, usize>,
 }
 
 #[derive(Debug)]
@@ -806,7 +875,14 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
-                
+
+                for sfp in &stats.structural_fps {
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
                 if has_holes {
                     let msg = format!("   Holes: {} total", stats.holes.total_holes);
                     println!("{}", msg);
@@ -843,6 +919,13 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     }
                     let _ = &file_content; // suppress unused warning
                     let msg = format!("   Info: {} total", stats.infos.len());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
+                for sfp in &stats.structural_fps {
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -1224,6 +1307,30 @@ fn line_from_offset(content: &str, offset: usize) -> usize {
 /// Check if lines around attr_line contain "accept hole" (flexible on whitespace/punctuation).
 fn has_accept_hole_comment(content: &str, attr_line: usize) -> bool {
     has_accept_hole_comment_in_range(content, attr_line, 1, 2)
+}
+
+/// Check if the line immediately before fn_line contains `// veracity: no_requires`.
+/// Used to suppress fn_missing_requires for functions that genuinely have no precondition.
+/// True if the file should skip fn_missing_requires and fn_missing_ensures (*Example*, Problem*, Algorithm*).
+fn file_skips_requires_ensures(path: &Path) -> bool {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| {
+            s.contains("Example")
+                || s.starts_with("Problem")
+                || s.starts_with("Algorithm")
+        })
+        .unwrap_or(false)
+}
+
+fn has_no_requires_annotation(content: &str, fn_line: usize) -> bool {
+    let lines: Vec<&str> = content.lines().collect();
+    let prev_idx = fn_line.saturating_sub(2); // fn_line is 1-based, prev line 0-indexed
+    let Some(prev_line) = lines.get(prev_idx) else {
+        return false;
+    };
+    let s = prev_line.to_lowercase();
+    s.contains("veracity:") && s.contains("no_requires")
 }
 
 /// Check if "accept hole" appears in a line range [attr_line - before, attr_line + after).
@@ -1834,7 +1941,7 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
                     if path_str == "verus" || path_str == "verus_" {
                         if let Some(token_tree) = macro_call.token_tree() {
                             found_verus_macro = true;
-                            analyze_verus_block(token_tree.syntax(), &content, &mut stats);
+                            analyze_verus_block(token_tree.syntax(), &content, &mut stats, path);
                         }
                     }
                 }
@@ -1853,7 +1960,8 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     }
     
     // Always scan the entire file for unsafe patterns (they can appear outside verus! blocks)
-    analyze_unsafe_patterns(&root, &content, &mut stats);
+    let ghost_field_types = collect_ghost_field_types(&content);
+    analyze_unsafe_patterns(&root, &content, &mut stats, &ghost_field_types);
 
     stats.warnings.extend(detect_bare_impl_warnings(&root, &content));
 
@@ -1865,7 +1973,20 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
 
     extract_crate_deps(&root, &content, &mut stats);
 
+    // Exclude structural FPs for Example*/Problem* files (not algorithmic code)
+    if file_skips_structural_fps(path) {
+        stats.structural_fps.clear();
+    }
+
     Ok(stats)
+}
+
+/// Files that should not report structural false positives.
+fn file_skips_structural_fps(path: &Path) -> bool {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.contains("Example") || s.starts_with("Problem"))
+        .unwrap_or(false)
 }
 
 /// Extract crate:: module dependencies from use statements (excluding accept).
@@ -1981,7 +2102,7 @@ fn detect_rust_rwlock(content: &str, stats: &mut FileStats) {
 
 /// Analyze unsafe patterns across the entire file (including outside verus! blocks)
 /// This catches unsafe fn, unsafe impl, unsafe blocks that may be in regular Rust code
-fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileStats) {
+fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileStats, ghost_field_types: &HashSet<String>) {
     let tokens: Vec<_> = root.descendants_with_tokens()
         .filter_map(|n| n.into_token())
         .collect();
@@ -2021,6 +2142,44 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                         }
                     }
                     SyntaxKind::IMPL_KW => {
+                        // Check for unsafe impl Send/Sync on Ghost-field types
+                        let mut k = j + 1;
+                        while k < tokens.len() && tokens[k].kind() == SyntaxKind::WHITESPACE {
+                            k += 1;
+                        }
+                        let send_sync_trait = if k < tokens.len() && tokens[k].kind() == SyntaxKind::IDENT {
+                            let trait_name = tokens[k].text().to_string();
+                            if trait_name == "Send" || trait_name == "Sync" {
+                                Some(trait_name)
+                            } else { None }
+                        } else { None };
+
+                        if let Some(ref trait_name) = send_sync_trait {
+                            // Look for "for TypeName" after Send/Sync
+                            let mut m = k + 1;
+                            while m < tokens.len() && tokens[m].kind() == SyntaxKind::WHITESPACE {
+                                m += 1;
+                            }
+                            if m < tokens.len() && tokens[m].kind() == SyntaxKind::FOR_KW {
+                                m += 1;
+                                while m < tokens.len() && tokens[m].kind() == SyntaxKind::WHITESPACE {
+                                    m += 1;
+                                }
+                                if m < tokens.len() && tokens[m].kind() == SyntaxKind::IDENT {
+                                    let type_name = tokens[m].text().to_string();
+                                    if ghost_field_types.contains(&type_name) {
+                                        stats.structural_fps.push(StructuralFalsePositive {
+                                            line,
+                                            category: StructuralFPCategory::UnsafeSendSync,
+                                            name: type_name,
+                                            confidence: Confidence::High,
+                                            reason: format!("unsafe impl {} — type has Ghost<> fields erased at runtime", trait_name),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
                         if has_accept_hole_comment(content, line) {
                             stats.infos.push(DetectedHole {
                                 line,
@@ -2061,6 +2220,63 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
         }
         // Note: assume_new is handled in analyze_verus_macro() for verus! blocks
     }
+}
+
+/// Collect struct/type names that have Ghost<...> fields, by text-scanning the file content.
+fn collect_ghost_field_types(content: &str) -> HashSet<String> {
+    let mut ghost_types = HashSet::new();
+    let mut current_struct: Option<String> = None;
+    let mut brace_depth: i32 = 0;
+    let mut in_struct = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        // Match struct definitions: pub struct Foo { or struct Foo<T> {
+        if (trimmed.starts_with("pub struct ") || trimmed.starts_with("struct ")) && trimmed.contains('{') {
+            let after_struct = if trimmed.starts_with("pub struct ") {
+                &trimmed[11..]
+            } else {
+                &trimmed[7..]
+            };
+            let name: String = after_struct.chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            if !name.is_empty() {
+                current_struct = Some(name);
+                in_struct = true;
+                brace_depth = 0;
+                // Count braces on this line
+                for ch in trimmed.chars() {
+                    if ch == '{' { brace_depth += 1; }
+                    if ch == '}' { brace_depth -= 1; }
+                }
+                // Check this line for Ghost<
+                if trimmed.contains("Ghost<") || trimmed.contains("Ghost <") {
+                    if let Some(ref name) = current_struct {
+                        ghost_types.insert(name.clone());
+                    }
+                }
+                if brace_depth <= 0 { in_struct = false; current_struct = None; }
+                continue;
+            }
+        }
+        if in_struct {
+            for ch in trimmed.chars() {
+                if ch == '{' { brace_depth += 1; }
+                if ch == '}' { brace_depth -= 1; }
+            }
+            if trimmed.contains("Ghost<") || trimmed.contains("Ghost <") {
+                if let Some(ref name) = current_struct {
+                    ghost_types.insert(name.clone());
+                }
+            }
+            if brace_depth <= 0 {
+                in_struct = false;
+                current_struct = None;
+            }
+        }
+    }
+    ghost_types
 }
 
 // Analyze attributes using ra_ap_syntax token walking
@@ -2226,19 +2442,126 @@ fn has_diverge_after(tokens: &[ra_ap_syntax::SyntaxToken], start: usize) -> bool
     false
 }
 
+fn base_ident_from_expr_impl(expr: &verus_syn::Expr) -> Option<String> {
+    use verus_syn::Expr;
+    match expr {
+        Expr::Path(ep) if ep.path.leading_colon.is_none() && ep.path.segments.len() == 1 => {
+            let seg = ep.path.segments.first()?;
+            if matches!(&seg.arguments, verus_syn::PathArguments::None) {
+                Some(seg.ident.to_string())
+            } else {
+                None
+            }
+        }
+        Expr::Field(ef) => base_ident_from_expr_impl(&ef.base),
+        Expr::Reference(er) => base_ident_from_expr_impl(&er.expr),
+        Expr::Paren(ep) => base_ident_from_expr_impl(&ep.expr),
+        _ => None,
+    }
+}
+
+/// Recursively collect (receiver_base, method_name) from method calls in an expr.
+fn collect_method_calls_expr(expr: &verus_syn::Expr, out: &mut Vec<(String, String)>) {
+    use verus_syn::Expr;
+    match expr {
+        Expr::MethodCall(mc) => {
+            if let Some(base) = base_ident_from_expr_impl(&mc.receiver) {
+                out.push((base, mc.method.to_string()));
+            }
+            collect_method_calls_expr(&mc.receiver, out);
+            for arg in &mc.args {
+                collect_method_calls_expr(arg, out);
+            }
+        }
+        Expr::Binary(eb) => {
+            collect_method_calls_expr(&eb.left, out);
+            collect_method_calls_expr(&eb.right, out);
+        }
+        Expr::Unary(eu) => collect_method_calls_expr(&eu.expr, out),
+        Expr::Paren(ep) => collect_method_calls_expr(&ep.expr, out),
+        Expr::Reference(er) => collect_method_calls_expr(&er.expr, out),
+        Expr::Field(ef) => collect_method_calls_expr(&ef.base, out),
+        Expr::Call(ec) => {
+            collect_method_calls_expr(&ec.func, out);
+            for arg in &ec.args {
+                collect_method_calls_expr(arg, out);
+            }
+        }
+        Expr::If(ei) => {
+            collect_method_calls_expr(&ei.cond, out);
+            for stmt in &ei.then_branch.stmts {
+                if let verus_syn::Stmt::Expr(expr, _) = stmt {
+                    collect_method_calls_expr(expr, out);
+                }
+            }
+            if let Some((_, ref else_expr)) = ei.else_branch {
+                collect_method_calls_expr(else_expr, out);
+            }
+        }
+        Expr::Tuple(et) => {
+            for e in &et.elems {
+                collect_method_calls_expr(e, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collect spec_*_wf predicate names from the file (AST-based, no string hacking).
+fn collect_spec_wf_predicates(file: &verus_syn::File, stats: &mut FileStats) {
+    struct SpecWfCollector<'a> {
+        predicates: &'a mut HashSet<String>,
+    }
+    impl<'a> verus_syn::visit::Visit<'a> for SpecWfCollector<'a> {
+        fn visit_item_fn(&mut self, i: &'a verus_syn::ItemFn) {
+            use verus_syn::FnMode;
+            if matches!(&i.sig.mode, FnMode::Spec(_) | FnMode::SpecChecked(_)) {
+                let name = i.sig.ident.to_string();
+                if name.starts_with("spec_") && name.ends_with("_wf") {
+                    self.predicates.insert(name);
+                }
+            }
+            verus_syn::visit::visit_item_fn(self, i);
+        }
+        fn visit_trait_item_fn(&mut self, i: &'a verus_syn::TraitItemFn) {
+            use verus_syn::FnMode;
+            if matches!(&i.sig.mode, FnMode::Spec(_) | FnMode::SpecChecked(_)) {
+                let name = i.sig.ident.to_string();
+                if name.starts_with("spec_") && name.ends_with("_wf") {
+                    self.predicates.insert(name);
+                }
+            }
+            verus_syn::visit::visit_trait_item_fn(self, i);
+        }
+        fn visit_impl_item_fn(&mut self, i: &'a verus_syn::ImplItemFn) {
+            use verus_syn::FnMode;
+            if matches!(&i.sig.mode, FnMode::Spec(_) | FnMode::SpecChecked(_)) {
+                let name = i.sig.ident.to_string();
+                if name.starts_with("spec_") && name.ends_with("_wf") {
+                    self.predicates.insert(name);
+                }
+            }
+            verus_syn::visit::visit_impl_item_fn(self, i);
+        }
+    }
+    let mut collector = SpecWfCollector { predicates: &mut stats.spec_wf_predicates };
+    collector.visit_file(file);
+}
+
 /// Analyze verus! block content using verus_syn (Verus parser).
 /// Falls back to token-based analysis if verus_syn fails to parse.
 fn analyze_verus_block(
     token_tree_syntax: &SyntaxNode,
     content: &str,
     stats: &mut FileStats,
+    path: &Path,
 ) {
     let range = token_tree_syntax.text_range();
     let start: usize = range.start().into();
     let end: usize = range.end().into();
     // Token tree is { ... } — inner content is between the braces
     if start + 2 > content.len() || end > content.len() {
-        analyze_verus_macro_tokens(token_tree_syntax, content, stats);
+        analyze_verus_macro_tokens(token_tree_syntax, content, stats, path);
         return;
     }
     let inner = &content[start + 1..end - 1];
@@ -2247,12 +2570,15 @@ fn analyze_verus_block(
 
     match verus_syn::parse_file(inner) {
         Ok(file) => {
-            let mut visitor = ProofHoleVisitor::new(content, line_offset, stats);
+            // First pass: collect spec_*_wf predicates for wf-flow table and tagging
+            collect_spec_wf_predicates(&file, stats);
+            let skip_requires_ensures = file_skips_requires_ensures(path);
+            let mut visitor = ProofHoleVisitor::new(content, line_offset, stats, skip_requires_ensures);
             visitor.visit_file(&file);
         }
         Err(_) => {
             // Fallback: token-based analysis when verus_syn can't parse
-            analyze_verus_macro_tokens(token_tree_syntax, content, stats);
+            analyze_verus_macro_tokens(token_tree_syntax, content, stats, path);
         }
     }
 }
@@ -2270,10 +2596,14 @@ struct ProofHoleVisitor<'a> {
     current_fn_name: Option<String>,
     /// When true, external_body on current fn is a Verus RwLock constructor — add warning, not hole
     suppress_external_body_hole: bool,
+    /// When true, skip fn_missing_requires and fn_missing_ensures (Example*, Problem*, Algorithm*)
+    skip_requires_ensures: bool,
+    /// Body text of the current function (for structural FP classification)
+    current_fn_body_text: Option<String>,
 }
 
 impl<'a> ProofHoleVisitor<'a> {
-    fn new(content: &'a str, line_offset: usize, stats: &'a mut FileStats) -> Self {
+    fn new(content: &'a str, line_offset: usize, stats: &'a mut FileStats, skip_requires_ensures: bool) -> Self {
         Self {
             content,
             line_offset,
@@ -2282,6 +2612,8 @@ impl<'a> ProofHoleVisitor<'a> {
             current_impl_type: None,
             current_fn_name: None,
             suppress_external_body_hole: false,
+            skip_requires_ensures,
+            current_fn_body_text: None,
         }
     }
 
@@ -2325,12 +2657,148 @@ impl<'a> ProofHoleVisitor<'a> {
         sig.inputs.is_empty()
     }
 
+    /// Extract type name from Type (last path segment). Returns None for primitives/generics we skip.
+    fn type_name_from_type(ty: &verus_syn::Type) -> Option<String> {
+        use verus_syn::Type;
+        match ty {
+            Type::Path(tp) if tp.qself.is_none() => {
+                let seg = tp.path.segments.last()?;
+                if matches!(&seg.arguments, verus_syn::PathArguments::None) {
+                    Some(seg.ident.to_string())
+                } else {
+                    Some(seg.ident.to_string())
+                }
+            }
+            Type::Reference(tr) => Self::type_name_from_type(&tr.elem),
+            Type::Paren(tp) => Self::type_name_from_type(&tp.elem),
+            _ => None,
+        }
+    }
+
+    /// Convert type name to expected spec_wf predicate name (e.g. LeftistHeapPQ -> spec_leftistheappq_wf).
+    fn type_to_spec_wf_name(type_name: &str) -> String {
+        let normalized: String = type_name
+            .to_lowercase()
+            .chars()
+            .filter(|&c| c != '_')
+            .collect();
+        format!("spec_{}_wf", normalized)
+    }
+
+    /// Collect (receiver_base, method_name) from all method calls in spec exprs.
+    fn method_calls_in_spec_exprs(spec: Option<&verus_syn::Requires>) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        let Some(r) = spec else { return out };
+        for expr in &r.exprs.exprs {
+            collect_method_calls_expr(expr, &mut out);
+        }
+        out
+    }
+
+    fn method_calls_in_ensures(
+        ensures: Option<&verus_syn::Ensures>,
+        default_ensures: Option<&verus_syn::DefaultEnsures>,
+    ) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        if let Some(e) = ensures {
+            for expr in &e.exprs.exprs {
+                collect_method_calls_expr(expr, &mut out);
+            }
+        }
+        if let Some(de) = default_ensures {
+            for expr in &de.exprs.exprs {
+                collect_method_calls_expr(expr, &mut out);
+            }
+        }
+        out
+    }
+
+    /// Check exec fn f(x:X)->(y:Y) for requires x.spec_X_wf and ensures y.spec_Y_wf.
+    fn check_wf_flow(
+        &mut self,
+        sig: &verus_syn::Signature,
+        line: usize,
+        name: &str,
+        impl_type: Option<&str>,
+    ) {
+        use verus_syn::{FnArgKind, Pat, ReturnType};
+
+        let req_calls = Self::method_calls_in_spec_exprs(sig.spec.requires.as_ref());
+        let ens_calls = Self::method_calls_in_ensures(
+            sig.spec.ensures.as_ref(),
+            sig.spec.default_ensures.as_ref(),
+        );
+
+        for input in &sig.inputs {
+            let (param_name, param_ty) = match &input.kind {
+                FnArgKind::Receiver(_) => continue,
+                FnArgKind::Typed(pt) => {
+                    let param_name = match pt.pat.as_ref() {
+                        Pat::Ident(pi) => pi.ident.to_string(),
+                        _ => continue,
+                    };
+                    let ty_name = match Self::type_name_from_type(&pt.ty) {
+                        Some(t) => t,
+                        None => continue,
+                    };
+                    (param_name, ty_name)
+                }
+            };
+            let expected_wf = Self::type_to_spec_wf_name(&param_ty);
+            if !self.stats.spec_wf_predicates.contains(&expected_wf) {
+                continue;
+            }
+            let has_wf = req_calls.iter().any(|(recv, m)| recv == &param_name && m == &expected_wf);
+            if !has_wf {
+                self.stats.warnings.push(DetectedHole {
+                    line,
+                    hole_type: "fn_missing_wf_requires".to_string(),
+                    context: format!(
+                        "fn {} — requires should include {}.{}() for input type {}",
+                        name, param_name, expected_wf, param_ty
+                    ),
+                });
+            }
+        }
+
+        if let ReturnType::Type(_, _, pat_ty_opt, ty) = &sig.output {
+            let ret_ty_name = Self::type_name_from_type(ty);
+            let ret_name = pat_ty_opt.as_ref().and_then(|b| {
+                let (_, pat, _) = b.as_ref();
+                if let Pat::Ident(pi) = pat {
+                    Some(pi.ident.to_string())
+                } else {
+                    None
+                }
+            });
+            let ty_name = ret_ty_name.or_else(|| {
+                impl_type.map(|s| s.split('<').next().unwrap_or(s).to_string())
+            });
+            if let (Some(rn), Some(tn)) = (ret_name, ty_name) {
+                let expected_wf = Self::type_to_spec_wf_name(&tn);
+                if self.stats.spec_wf_predicates.contains(&expected_wf) {
+                    let has_wf = ens_calls.iter().any(|(recv, m)| recv == &rn && m == &expected_wf);
+                    if !has_wf {
+                        self.stats.warnings.push(DetectedHole {
+                            line,
+                            hole_type: "fn_missing_wf_ensures".to_string(),
+                            context: format!(
+                                "fn {} — ensures should include {}.{}() for return type {}",
+                                name, rn, expected_wf, tn
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     /// Warn for each requires clause that is just `true` (vacuous precondition).
     fn check_requires_true(&mut self, sig: &verus_syn::Signature) {
+        use verus_syn::{Expr, Lit};
         if let Some(ref r) = sig.spec.requires {
             for expr in &r.exprs.exprs {
-                let s = expr.to_token_stream().to_string();
-                if s.trim() == "true" {
+                if matches!(expr, Expr::Lit(expr_lit) if matches!(&expr_lit.lit, Lit::Bool(lb) if lb.value)) {
                     self.stats.warnings.push(DetectedHole {
                         line: self.file_line(expr.span()),
                         hole_type: "requires_true".to_string(),
@@ -2353,6 +2821,66 @@ impl<'a> ProofHoleVisitor<'a> {
             .take(60)
             .collect::<String>()
     }
+
+    /// Check if current external_body fn is a structural FP and push classification if so.
+    fn classify_external_body_structural_fp(&mut self, line: usize) {
+        let fn_name = match &self.current_fn_name {
+            Some(n) => n.clone(),
+            None => return,
+        };
+        let body = self.current_fn_body_text.as_deref().unwrap_or("");
+
+        // STD_TRAIT_IMPL: external_body on std trait method impls
+        if let Some(trait_name) = &self.current_impl_trait {
+            if STD_TRAIT_METHODS.iter().any(|(t, m)| *t == trait_name.as_str() && *m == fn_name.as_str()) {
+                self.stats.structural_fps.push(StructuralFalsePositive {
+                    line,
+                    category: StructuralFPCategory::StdTraitImpl,
+                    name: fn_name.clone(),
+                    confidence: Confidence::High,
+                    reason: format!("external_body on {}::{} — std trait cannot carry Verus specs", trait_name, fn_name),
+                });
+                return;
+            }
+        }
+
+        // THREAD_SPAWN: external_body wrapping thread::spawn or HFScheduler patterns
+        let spawn_high = body.contains("spawn_plus") || body.contains("spawn_join")
+            || body.contains("thread :: spawn") || body.contains("thread::spawn");
+        let spawn_medium = body.contains("JoinHandle") || body.contains("TaskState")
+            || body.contains("try_acquire");
+        if spawn_high {
+            self.stats.structural_fps.push(StructuralFalsePositive {
+                line,
+                category: StructuralFPCategory::ThreadSpawn,
+                name: fn_name.clone(),
+                confidence: Confidence::High,
+                reason: format!("external_body on {} — wraps thread::spawn/'static closure boundary", fn_name),
+            });
+            return;
+        }
+        if spawn_medium {
+            self.stats.structural_fps.push(StructuralFalsePositive {
+                line,
+                category: StructuralFPCategory::ThreadSpawn,
+                name: fn_name.clone(),
+                confidence: Confidence::Medium,
+                reason: format!("external_body on {} — thread/task boundary pattern", fn_name),
+            });
+            return;
+        }
+
+        // OPAQUE_EXTERNAL: external_body calling std:: functions
+        if body.contains("std ::") || body.contains("std::") {
+            self.stats.structural_fps.push(StructuralFalsePositive {
+                line,
+                category: StructuralFPCategory::OpaqueExternal,
+                name: fn_name.clone(),
+                confidence: Confidence::Medium,
+                reason: format!("external_body on {} — calls external std:: functions with no Verus spec", fn_name),
+            });
+        }
+    }
 }
 
 impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
@@ -2361,6 +2889,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         let line = self.file_line(i.sig.ident.span());
         let name = i.sig.ident.to_string();
         let prev_fn = self.current_fn_name.replace(name.clone());
+        let prev_body = self.current_fn_body_text.take();
+        self.current_fn_body_text = Some(i.block.to_token_stream().to_string());
         self.check_requires_true(&i.sig);
 
         let has_external_body = i.attrs.iter().any(|a| {
@@ -2378,46 +2908,58 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         match &i.sig.mode {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
+                let has_requires = i.sig.spec.requires.is_some();
+                let has_ensures = i.sig.spec.ensures.is_some()
+                    || i.sig.spec.default_ensures.is_some();
                 // external_body, exec_allows_no_decreases_clause (diverge), or accept hole — skip fn_missing_requires/ensures
                 if !has_external_body && !has_exec_allows_no_decreases && !has_accept_hole {
-                    let has_requires = i.sig.spec.requires.is_some();
-                    let has_ensures = i.sig.spec.ensures.is_some()
-                        || i.sig.spec.default_ensures.is_some();
                     let no_params_exempt = Self::fn_has_no_params(&i.sig);
                     if has_requires && has_ensures {
                         self.stats.fn_spec.exec_fns_complete += 1;
                     } else {
                         self.stats.fn_spec.exec_fns_missing_spec += 1;
-                        if !has_requires && !has_ensures {
-                            if no_params_exempt {
+                        if !self.skip_requires_ensures {
+                            if !has_requires && !has_ensures {
+                                if no_params_exempt {
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                } else {
+                                    if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                        self.stats.warnings.push(DetectedHole {
+                                            line,
+                                            hole_type: "fn_missing_requires".to_string(),
+                                            context: format!("fn {} — exec fn should have requires", name),
+                                        });
+                                    }
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                }
+                            } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                self.stats.warnings.push(DetectedHole {
+                                    line,
+                                    hole_type: "fn_missing_requires".to_string(),
+                                    context: format!("fn {} — exec fn should have requires", name),
+                                });
+                            } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
                                     context: format!("fn {} — exec fn should have ensures", name),
                                 });
-                            } else {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have requires and ensures", name),
-                                });
                             }
-                        } else if !has_requires && !no_params_exempt {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_requires".to_string(),
-                                context: format!("fn {} — exec fn should have requires", name),
-                            });
-                        } else if !has_ensures {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_ensures".to_string(),
-                                context: format!("fn {} — exec fn should have ensures", name),
-                            });
                         }
                     }
                 } else {
                     self.stats.fn_spec.exec_fns_complete += 1;
+                }
+                if has_requires && (i.sig.spec.ensures.is_some() || i.sig.spec.default_ensures.is_some()) {
+                    self.check_wf_flow(&i.sig, line, &name, None);
                 }
             }
             FnMode::Spec(_) | FnMode::SpecChecked(_) => {
@@ -2482,6 +3024,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         visit::visit_item_fn(self, i);
         self.suppress_external_body_hole = false;
         self.current_fn_name = prev_fn;
+        self.current_fn_body_text = prev_body;
     }
 
     fn visit_impl_item_fn(&mut self, i: &'a verus_syn::ImplItemFn) {
@@ -2489,6 +3032,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         let line = self.file_line(i.sig.ident.span());
         let name = i.sig.ident.to_string();
         let prev_fn = self.current_fn_name.replace(name.clone());
+        let prev_body = self.current_fn_body_text.take();
+        self.current_fn_body_text = Some(i.block.to_token_stream().to_string());
         self.check_requires_true(&i.sig);
 
         let has_external_body = i.attrs.iter().any(|a| {
@@ -2506,6 +3051,9 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         match &i.sig.mode {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
+                let has_requires = i.sig.spec.requires.is_some();
+                let has_ensures = i.sig.spec.ensures.is_some()
+                    || i.sig.spec.default_ensures.is_some();
                 // Trait impl methods inherit requires/ensures from the trait — no need to repeat
                 // external_body, exec_allows_no_decreases_clause, or accept hole — skip fn_missing_requires/ensures
                 let in_trait_impl = self.current_impl_trait.is_some();
@@ -2514,41 +3062,51 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 if in_trait_impl || has_external_body || has_exec_allows_no_decreases || has_accept_hole || iter_spec_exempt {
                     self.stats.fn_spec.exec_fns_complete += 1;
                 } else {
-                    let has_requires = i.sig.spec.requires.is_some();
-                    let has_ensures = i.sig.spec.ensures.is_some()
-                        || i.sig.spec.default_ensures.is_some();
                     if has_requires && has_ensures {
                         self.stats.fn_spec.exec_fns_complete += 1;
                     } else {
                         self.stats.fn_spec.exec_fns_missing_spec += 1;
-                        if !has_requires && !has_ensures {
-                            if no_params_exempt {
+                        if !self.skip_requires_ensures {
+                            if !has_requires && !has_ensures {
+                                if no_params_exempt {
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                } else {
+                                    if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                        self.stats.warnings.push(DetectedHole {
+                                            line,
+                                            hole_type: "fn_missing_requires".to_string(),
+                                            context: format!("fn {} — exec fn should have requires", name),
+                                        });
+                                    }
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                }
+                            } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                self.stats.warnings.push(DetectedHole {
+                                    line,
+                                    hole_type: "fn_missing_requires".to_string(),
+                                    context: format!("fn {} — exec fn should have requires", name),
+                                });
+                            } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
                                     context: format!("fn {} — exec fn should have ensures", name),
                                 });
-                            } else {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have requires and ensures", name),
-                                });
                             }
-                        } else if !has_requires && !no_params_exempt {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_requires".to_string(),
-                                context: format!("fn {} — exec fn should have requires", name),
-                            });
-                        } else if !has_ensures {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_ensures".to_string(),
-                                context: format!("fn {} — exec fn should have ensures", name),
-                            });
                         }
                     }
+                }
+                if has_requires && has_ensures {
+                    let impl_type = self.current_impl_type.as_deref().map(String::from);
+                    self.check_wf_flow(&i.sig, line, &name, impl_type.as_deref());
                 }
             }
             FnMode::Spec(_) | FnMode::SpecChecked(_) => {
@@ -2614,6 +3172,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         visit::visit_impl_item_fn(self, i);
         self.suppress_external_body_hole = false;
         self.current_fn_name = prev_fn;
+        self.current_fn_body_text = prev_body;
     }
 
     fn visit_trait_item_fn(&mut self, i: &'a verus_syn::TraitItemFn) {
@@ -2631,6 +3190,9 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
         match &i.sig.mode {
             FnMode::Exec(_) | FnMode::Default => {
                 self.stats.fn_spec.total_fns += 1;
+                let has_requires = i.sig.spec.requires.is_some();
+                let has_ensures = i.sig.spec.ensures.is_some()
+                    || i.sig.spec.default_ensures.is_some();
                 // Abstract trait methods (no default body) get spec from impl — skip fn_missing_requires
                 // external_body or accept hole — skip fn_missing_requires/ensures
                 let is_abstract = i.default.is_none();
@@ -2638,41 +3200,50 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 if is_abstract || has_external_body || has_accept_hole {
                     self.stats.fn_spec.exec_fns_complete += 1;
                 } else {
-                    let has_requires = i.sig.spec.requires.is_some();
-                    let has_ensures = i.sig.spec.ensures.is_some()
-                        || i.sig.spec.default_ensures.is_some();
                     if has_requires && has_ensures {
                         self.stats.fn_spec.exec_fns_complete += 1;
                     } else {
                         self.stats.fn_spec.exec_fns_missing_spec += 1;
-                        if !has_requires && !has_ensures {
-                            if no_params_exempt {
+                        if !self.skip_requires_ensures {
+                            if !has_requires && !has_ensures {
+                                if no_params_exempt {
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                } else {
+                                    if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                        self.stats.warnings.push(DetectedHole {
+                                            line,
+                                            hole_type: "fn_missing_requires".to_string(),
+                                            context: format!("fn {} — exec fn should have requires", name),
+                                        });
+                                    }
+                                    self.stats.warnings.push(DetectedHole {
+                                        line,
+                                        hole_type: "fn_missing_ensures".to_string(),
+                                        context: format!("fn {} — exec fn should have ensures", name),
+                                    });
+                                }
+                            } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
+                                self.stats.warnings.push(DetectedHole {
+                                    line,
+                                    hole_type: "fn_missing_requires".to_string(),
+                                    context: format!("fn {} — exec fn should have requires", name),
+                                });
+                            } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
                                     context: format!("fn {} — exec fn should have ensures", name),
                                 });
-                            } else {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have requires and ensures", name),
-                                });
                             }
-                        } else if !has_requires && !no_params_exempt {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_requires".to_string(),
-                                context: format!("fn {} — exec fn should have requires", name),
-                            });
-                        } else if !has_ensures {
-                            self.stats.warnings.push(DetectedHole {
-                                line,
-                                hole_type: "fn_missing_ensures".to_string(),
-                                context: format!("fn {} — exec fn should have ensures", name),
-                            });
                         }
                     }
+                }
+                if has_requires && has_ensures {
+                    self.check_wf_flow(&i.sig, line, &name, None);
                 }
             }
             FnMode::Spec(_) | FnMode::SpecChecked(_) => {
@@ -2761,12 +3332,36 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 });
             }
         } else if self.is_in_eq_or_clone_context() {
+            let fn_name = self.current_fn_name.clone().unwrap_or_default();
+            self.stats.structural_fps.push(StructuralFalsePositive {
+                line,
+                category: StructuralFPCategory::EqCloneAssume,
+                name: fn_name,
+                confidence: Confidence::High,
+                reason: "assume() inside PartialEq/Clone — workaround for generic type bounds".to_string(),
+            });
             self.stats.warnings.push(DetectedHole {
                 line,
                 hole_type: "assume_eq_clone_workaround".to_string(),
                 context: "at this point in Verus, clones may have to assume they work on generic types".to_string(),
             });
         } else {
+            // RWLOCK_GHOST: assume() in function with RwLock + ghost state
+            let body = self.current_fn_body_text.as_deref().unwrap_or("");
+            let has_rwlock = body.contains("RwLock") || body.contains("acquire_read")
+                || body.contains("acquire_write") || body.contains("release_read")
+                || body.contains("release_write");
+            let has_ghost = body.contains("Ghost") || body.contains("Tracked");
+            if has_rwlock && has_ghost {
+                let fn_name = self.current_fn_name.clone().unwrap_or_default();
+                self.stats.structural_fps.push(StructuralFalsePositive {
+                    line,
+                    category: StructuralFPCategory::RwlockGhost,
+                    name: fn_name,
+                    confidence: Confidence::Low,
+                    reason: "assume() bridging ghost state across RwLock boundary".to_string(),
+                });
+            }
             self.stats.holes.assume_count += 1;
             self.stats.holes.total_holes += 1;
             self.stats.holes.holes.push(DetectedHole {
@@ -2814,8 +3409,19 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         context: self.context_at(line),
                     });
                 } else if name == "accept" {
-                    // All accept() treated uniformly; no special case for accept(true)
                     let line = self.file_line(seg.ident.span());
+                    // EQ_CLONE_ASSUME: accept() inside PartialEq/Clone is structural FP
+                    if self.is_in_eq_or_clone_context() {
+                        let fn_name = self.current_fn_name.clone().unwrap_or_default();
+                        self.stats.structural_fps.push(StructuralFalsePositive {
+                            line,
+                            category: StructuralFPCategory::EqCloneAssume,
+                            name: fn_name,
+                            confidence: Confidence::High,
+                            reason: "accept() inside PartialEq/Clone — workaround for generic type bounds".to_string(),
+                        });
+                    }
+                    // All accept() treated uniformly; no special case for accept(true)
                     self.stats.infos.push(DetectedHole {
                         line,
                         hole_type: "accept()".to_string(),
@@ -2873,6 +3479,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     // No hole — used for diverge() etc., skip fn_missing_requires
                 }
                 VerifierAttribute::ExternalBody => {
+                    self.classify_external_body_structural_fp(line);
                     if self.suppress_external_body_hole {
                         self.stats.infos.push(DetectedHole {
                             line,
@@ -3063,7 +3670,7 @@ fn detect_verifier_attr_verus_syn(attr: &verus_syn::Attribute) -> Option<Verifie
 }
 
 /// Token-based fallback when verus_syn fails to parse.
-fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut FileStats) {
+fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut FileStats, _path: &Path) {
     // Walk the token tree looking for:
     // 1. Functions with proof modifier
     // 2. Function calls to assume/admit
@@ -3605,12 +4212,12 @@ fn print_file_report(path: &str, stats: &FileStats) {
     }
 }
 
-/// Only fn_missing_requires, fn_missing_ensures, fn_missing_requires_ensures are "errors" (spec/style).
+/// Only fn_missing_requires and fn_missing_ensures are "errors" (spec/style).
 /// Everything else (trivial_spec_wf, proof_fn_with_holes, spec_fn_with_holes, etc.) is a hole.
 fn is_spec_style_error(hole_type: &str) -> bool {
     matches!(
         hole_type,
-        "fn_missing_requires" | "fn_missing_ensures" | "fn_missing_requires_ensures"
+        "fn_missing_requires" | "fn_missing_ensures"
     )
 }
 
@@ -3692,6 +4299,12 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
                 info.hole_type.clone(),
                 info.context.clone(),
             ));
+        }
+
+        // Aggregate structural false positives
+        summary.structural_fp_count += stats.structural_fps.len();
+        for sfp in &stats.structural_fps {
+            *summary.structural_fp_by_category.entry(sfp.category.label().to_string()).or_insert(0) += 1;
         }
 
         // Aggregate for Proof Targets (root/* and root/*/*), only for paths with subdirs
@@ -3983,6 +4596,16 @@ fn print_summary(summary: &SummaryStats) {
         log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
     }
 
+    if summary.structural_fp_count > 0 {
+        log!("");
+        log!("Structural False Positives: {} detected (language limitations, not missing proof)", summary.structural_fp_count);
+        let mut cats: Vec<_> = summary.structural_fp_by_category.iter().collect();
+        cats.sort_by(|a, b| b.1.cmp(a.1));
+        for (cat, count) in &cats {
+            log!("   {} × {}", count, cat);
+        }
+    }
+
     if summary.holes.total_holes == 0 && summary.total_warnings == 0 {
         log!("");
         log!("🎉 No proof holes or warnings found! All proofs are complete.");
@@ -3990,7 +4613,7 @@ fn print_summary(summary: &SummaryStats) {
         log!("");
         log!("🎉 No proof holes found! All proofs are complete.");
     }
-    
+
     // Proof Targets: src/* and src/*/* with TOC and numbered sections
     let has_proof_targets = summary.has_subdir_paths
         && (summary.by_root_top.get("src").map(|m| !m.is_empty()).unwrap_or(false)

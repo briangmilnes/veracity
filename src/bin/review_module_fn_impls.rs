@@ -11,6 +11,7 @@
 //!   veracity-review-module-fn-impls -d src/Chap18           # generate .md
 //!   veracity-review-module-fn-impls -f src/Chap18/ArraySeq.rs
 //!   veracity-review-module-fn-impls -i eq -i hash           # ignore specific functions
+//!   veracity-review-module-fn-impls -e src/vstdplus -e src/experiments  # exclude dirs
 //!   veracity-review-module-fn-impls --extract PATH.md       # extract specs → .json
 //!   veracity-review-module-fn-impls --patch PATH.md PATH.json  # patch SpecStr from .json
 //!
@@ -114,9 +115,10 @@ fn main() -> Result<()> {
         return cmd_patch(&md_path, &json_path);
     }
 
-    // Parse -i/--ignore-fn before StandardArgs.
+    // Parse -i/--ignore-fn and -e/--exclude before StandardArgs.
     let mut ignore_fns: HashSet<String> = HashSet::new();
     let mut has_explicit_ignore = false;
+    let mut exclude_dirs: Vec<String> = Vec::new();
     let mut i = 1;
     while i < raw_args.len() {
         match raw_args[i].as_str() {
@@ -127,6 +129,14 @@ fn main() -> Result<()> {
                     i += 2;
                 } else {
                     anyhow::bail!("{} requires a function name argument", raw_args[i]);
+                }
+            }
+            "-e" | "--exclude" => {
+                if i + 1 < raw_args.len() {
+                    exclude_dirs.push(raw_args[i + 1].clone());
+                    i += 2;
+                } else {
+                    anyhow::bail!("{} requires a directory path", raw_args[i]);
                 }
             }
             _ => {
@@ -142,13 +152,16 @@ fn main() -> Result<()> {
         }
     }
 
-    let filter = FnFilter { ignore_fns };
+    let filter = FnFilter { ignore_fns, exclude_dirs };
 
     // Print active filter.
     if !filter.ignore_fns.is_empty() {
         let mut names: Vec<&str> = filter.ignore_fns.iter().map(|s| s.as_str()).collect();
         names.sort();
         eprintln!("Ignoring functions: {}", names.join(", "));
+    }
+    if !filter.exclude_dirs.is_empty() {
+        eprintln!("Excluding directories: {}", filter.exclude_dirs.join(", "));
     }
 
     // Default: generate mode.
@@ -157,6 +170,7 @@ fn main() -> Result<()> {
 
 struct FnFilter {
     ignore_fns: HashSet<String>,
+    exclude_dirs: Vec<String>,
 }
 
 impl FnFilter {
@@ -168,7 +182,13 @@ impl FnFilter {
 fn cmd_generate(filter: FnFilter) -> Result<()> {
     let args = StandardArgs::parse()?;
     let paths = args.get_search_dirs();
-    let all_files = find_rust_files(&paths);
+    let mut all_files = find_rust_files(&paths);
+    if !filter.exclude_dirs.is_empty() {
+        all_files.retain(|path| {
+            let path_str = path.display().to_string().replace('\\', "/");
+            !filter.exclude_dirs.iter().any(|ex| path_str.contains(ex))
+        });
+    }
 
     if all_files.is_empty() {
         eprintln!("No Rust files found.");

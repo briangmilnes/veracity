@@ -144,8 +144,16 @@ name = "veracity-fix-auto-triggers"
 path = "src/bin/fix_auto_triggers.rs"
 
 [[bin]]
+name = "veracity-type-subst"
+path = "src/bin/type_subst.rs"
+
+[[bin]]
 name = "veracity-review-module-fn-impls"
 path = "src/bin/review_module_fn_impls.rs"
+
+[[bin]]
+name = "veracity-review-spec-strength"
+path = "src/bin/review_spec_strength.rs"
 
 [[bin]]
 name = "veracity-paths-read"

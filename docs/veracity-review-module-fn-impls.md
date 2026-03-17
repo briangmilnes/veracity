@@ -13,6 +13,9 @@ veracity-review-module-fn-impls -d src/Chap05 -d src/Chap18
 
 # Analyze a single file
 veracity-review-module-fn-impls -f src/Chap18/ArraySeq.rs
+
+# Exclude directories (e.g. vstdplus, experiments)
+veracity-review-module-fn-impls -d src/ -e src/vstdplus -e src/experiments
 ```
 
 Output goes to `analyses/veracity-review-module-fn-impls.md` and `.json` at the project root.
