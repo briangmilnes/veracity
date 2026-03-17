@@ -239,6 +239,8 @@ struct SummaryStats {
     /// Structural false positive counts
     structural_fp_count: usize,
     structural_fp_by_category: HashMap<String, usize>,
+    /// Structural FPs that are included in the hole count (all except EQ_CLONE_ASSUME)
+    structural_fp_in_hole_count: usize,
 }
 
 #[derive(Debug)]
@@ -2142,10 +2144,27 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                         }
                     }
                     SyntaxKind::IMPL_KW => {
-                        // Check for unsafe impl Send/Sync on Ghost-field types
+                        // Check for unsafe impl [<generics>] Send/Sync for TypeName
                         let mut k = j + 1;
                         while k < tokens.len() && tokens[k].kind() == SyntaxKind::WHITESPACE {
                             k += 1;
+                        }
+                        // Skip generic parameters: impl<T: Foo + 'static>
+                        if k < tokens.len() && tokens[k].kind() == SyntaxKind::L_ANGLE {
+                            let mut angle_depth = 1;
+                            k += 1;
+                            while k < tokens.len() && angle_depth > 0 {
+                                match tokens[k].kind() {
+                                    SyntaxKind::L_ANGLE => angle_depth += 1,
+                                    SyntaxKind::R_ANGLE => angle_depth -= 1,
+                                    _ => {}
+                                }
+                                k += 1;
+                            }
+                            // Skip whitespace after >
+                            while k < tokens.len() && tokens[k].kind() == SyntaxKind::WHITESPACE {
+                                k += 1;
+                            }
                         }
                         let send_sync_trait = if k < tokens.len() && tokens[k].kind() == SyntaxKind::IDENT {
                             let trait_name = tokens[k].text().to_string();
@@ -4214,13 +4233,6 @@ fn print_file_report(path: &str, stats: &FileStats) {
 
 /// Only fn_missing_requires and fn_missing_ensures are "errors" (spec/style).
 /// Everything else (trivial_spec_wf, proof_fn_with_holes, spec_fn_with_holes, etc.) is a hole.
-fn is_spec_style_error(hole_type: &str) -> bool {
-    matches!(
-        hole_type,
-        "fn_missing_requires" | "fn_missing_ensures"
-    )
-}
-
 fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path) -> SummaryStats {
     let mut summary = SummaryStats::default();
     summary.has_subdir_paths = file_stats_map.keys().any(|p| p.contains('/'));
@@ -4305,13 +4317,16 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.structural_fp_count += stats.structural_fps.len();
         for sfp in &stats.structural_fps {
             *summary.structural_fp_by_category.entry(sfp.category.label().to_string()).or_insert(0) += 1;
+            // EQ_CLONE_ASSUME is info-only (accept() pattern), not in hole count
+            if sfp.category != StructuralFPCategory::EqCloneAssume {
+                summary.structural_fp_in_hole_count += 1;
+            }
         }
 
         // Aggregate for Proof Targets (root/* and root/*/*), only for paths with subdirs
-        // All issues (holes + fn_missing_*) count as holes for display
+        // Count only real proof holes (not fn_missing_* warnings)
         if path_str.contains('/') {
-            let file_errors = stats.warnings.iter().filter(|w| is_spec_style_error(&w.hole_type)).count();
-            let file_holes = stats.holes.total_holes + file_errors;
+            let file_holes = stats.holes.total_holes;
             let path_no_ext = path_str.strip_suffix(".rs").unwrap_or(path_str);
             let parts: Vec<&str> = path_no_ext.split('/').collect();
             let root = parts[0].to_string();
@@ -4353,8 +4368,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
             }
         }
         if !has_holed_dep {
-            let file_errors = stats.warnings.iter().filter(|w| is_spec_style_error(&w.hole_type)).count();
-            let file_holes = stats.holes.total_holes + file_errors;
+            let file_holes = stats.holes.total_holes;
             if file_holes > 0 {
                 summary.next_target_files.push((path_str.clone(), file_holes));
             }
@@ -4383,8 +4397,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
                 break;
             }
         }
-        let file_errors = stats.warnings.iter().filter(|w| is_spec_style_error(&w.hole_type)).count();
-        let file_holes = stats.holes.total_holes + file_errors;
+        let file_holes = stats.holes.total_holes;
         dir_files.entry(dir).or_default().push((file_holes, has_holed_dep));
     }
     for (dir, files) in dir_files {
@@ -4602,7 +4615,17 @@ fn print_summary(summary: &SummaryStats) {
         let mut cats: Vec<_> = summary.structural_fp_by_category.iter().collect();
         cats.sort_by(|a, b| b.1.cmp(a.1));
         for (cat, count) in &cats {
-            log!("   {} × {}", count, cat);
+            let in_hole = if *cat == "EQ_CLONE_ASSUME" {
+                "not in hole count — accept() pattern"
+            } else {
+                "in hole count"
+            };
+            log!("   {} × {} ({})", count, cat, in_hole);
+        }
+        if summary.structural_fp_in_hole_count > 0 {
+            let actionable = total_holes.saturating_sub(summary.structural_fp_in_hole_count);
+            log!("");
+            log!("Real Actionable Holes: {} ({} total - {} structural FPs in count)", actionable, total_holes, summary.structural_fp_in_hole_count);
         }
     }
 
