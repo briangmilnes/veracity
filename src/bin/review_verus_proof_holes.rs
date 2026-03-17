@@ -3003,13 +3003,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
                     };
-                    if has_accept_hole {
-                        self.stats.infos.push(item);
-                    } else {
-                        self.stats.holes.trivial_spec_wf_count += 1;
-                        self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(item);
-                    }
+                    // trivial_spec_wf is always informational (reviewed), never a hole
+                    self.stats.infos.push(item);
                 }
             }
             FnMode::Proof(_) => {
@@ -3150,13 +3145,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
                     };
-                    if has_accept_hole {
-                        self.stats.infos.push(item);
-                    } else {
-                        self.stats.holes.trivial_spec_wf_count += 1;
-                        self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(item);
-                    }
+                    // trivial_spec_wf is always informational (reviewed), never a hole
+                    self.stats.infos.push(item);
                 }
             }
             FnMode::Proof(_) => {
@@ -3287,13 +3277,8 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         hole_type: "trivial_spec_wf".to_string(),
                         context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
                     };
-                    if has_accept_hole {
-                        self.stats.infos.push(item);
-                    } else {
-                        self.stats.holes.trivial_spec_wf_count += 1;
-                        self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(item);
-                    }
+                    // trivial_spec_wf is always informational (reviewed), never a hole
+                    self.stats.infos.push(item);
                 }
             }
             FnMode::Proof(_) => {
@@ -3344,6 +3329,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     hole_type: "assume(false); diverge()".to_string(),
                     context: format!("{} — valid non-termination idiom", context),
                 });
+            } else if has_accept_hole_comment(self.content, line) {
+                self.stats.infos.push(DetectedHole {
+                    line,
+                    hole_type: "accept()".to_string(),
+                    context: "assume(false) with accept hole comment".to_string(),
+                });
             } else {
                 self.stats.holes.assume_false_count += 1;
                 self.stats.holes.total_holes += 1;
@@ -3366,6 +3357,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 line,
                 hole_type: "assume_eq_clone_workaround".to_string(),
                 context: "at this point in Verus, clones may have to assume they work on generic types".to_string(),
+            });
+        } else if has_accept_hole_comment(self.content, line) {
+            self.stats.infos.push(DetectedHole {
+                line,
+                hole_type: "accept()".to_string(),
+                context: "assume with accept hole comment".to_string(),
             });
         } else {
             // RWLOCK_GHOST: assume() in function with RwLock + ghost state
@@ -3398,13 +3395,21 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
     fn visit_assume_specification(&mut self, i: &'a verus_syn::AssumeSpecification) {
         let line = self.file_line(i.assume_specification.span());
         let context = self.context_at(line);
-        self.stats.holes.assume_specification_count += 1;
-        self.stats.holes.total_holes += 1;
-        self.stats.holes.holes.push(DetectedHole {
-            line,
-            hole_type: "assume_specification".to_string(),
-            context,
-        });
+        if has_accept_hole_comment(self.content, line) {
+            self.stats.infos.push(DetectedHole {
+                line,
+                hole_type: "assume_specification".to_string(),
+                context: "assume_specification with accept hole comment".to_string(),
+            });
+        } else {
+            self.stats.holes.assume_specification_count += 1;
+            self.stats.holes.total_holes += 1;
+            self.stats.holes.holes.push(DetectedHole {
+                line,
+                hole_type: "assume_specification".to_string(),
+                context,
+            });
+        }
         visit::visit_assume_specification(self, i);
     }
 
@@ -3414,22 +3419,38 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 let name = seg.ident.to_string();
                 if name == "admit" {
                     let line = self.file_line(seg.ident.span());
-                    self.stats.holes.admit_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole {
-                        line,
-                        hole_type: "admit()".to_string(),
-                        context: self.context_at(line),
-                    });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "admit()".to_string(),
+                            context: "admit with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.admit_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "admit()".to_string(),
+                            context: self.context_at(line),
+                        });
+                    }
                 } else if name == "assume_new" {
                     let line = self.file_line(seg.ident.span());
-                    self.stats.holes.assume_new_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole {
-                        line,
-                        hole_type: "assume_new()".to_string(),
-                        context: self.context_at(line),
-                    });
+                    if has_accept_hole_comment(self.content, line) {
+                        self.stats.infos.push(DetectedHole {
+                            line,
+                            hole_type: "assume_new()".to_string(),
+                            context: "assume_new with accept hole comment".to_string(),
+                        });
+                    } else {
+                        self.stats.holes.assume_new_count += 1;
+                        self.stats.holes.total_holes += 1;
+                        self.stats.holes.holes.push(DetectedHole {
+                            line,
+                            hole_type: "assume_new()".to_string(),
+                            context: self.context_at(line),
+                        });
+                    }
                 } else if name == "accept" {
                     let line = self.file_line(seg.ident.span());
                     // accept() is human-reviewed — never a hole, never a structural FP.
