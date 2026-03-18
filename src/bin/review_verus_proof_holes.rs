@@ -107,6 +107,7 @@ struct StructuralFalsePositive {
     name: String,           // fn or type name
     confidence: Confidence,
     reason: String,
+    context: String,        // source context for info line display
 }
 
 impl StructuralFPCategory {
@@ -244,8 +245,6 @@ struct SummaryStats {
     /// Structural false positive counts
     structural_fp_count: usize,
     structural_fp_by_category: HashMap<String, usize>,
-    /// Structural FPs that are included in the hole count
-    structural_fp_in_hole_count: usize,
 }
 
 #[derive(Debug)]
@@ -886,8 +885,8 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for sfp in &stats.structural_fps {
-                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
-                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} — {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.context, sfp.confidence.label());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -896,6 +895,24 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 println!("{}", msg);
                 write_to_log(&msg);
                 print_hole_counts_with_log(&stats.holes, "      ");
+
+                if !stats.structural_fps.is_empty() {
+                    let msg = format!("   Info: {} × structural_false_positive", stats.structural_fps.len());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                    // Per-category breakdown
+                    let mut sfp_cats: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+                    for sfp in &stats.structural_fps {
+                        *sfp_cats.entry(sfp.category.label()).or_insert(0) += 1;
+                    }
+                    let mut sorted: Vec<_> = sfp_cats.into_iter().collect();
+                    sorted.sort_by(|a, b| b.1.cmp(&a.1));
+                    for (cat, count) in &sorted {
+                        let msg = format!("      {} × {}", count, cat);
+                        println!("{}", msg);
+                        write_to_log(&msg);
+                    }
+                }
 
                 if has_infos {
                     let msg = format!("   Info: {} total", stats.infos.len());
@@ -941,8 +958,8 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for sfp in &stats.structural_fps {
-                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
-                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} — {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.context, sfp.confidence.label());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -953,7 +970,8 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                     write_to_log(&msg);
                 }
             } else {
-                let icon = if has_infos { "ℹ" } else { "✓" };
+                let has_sfps = !stats.structural_fps.is_empty();
+                let icon = if has_infos || has_sfps { "ℹ" } else { "✓" };
                 let msg = format!("{} {}", icon, path_str);
                 println!("{}", msg);
                 write_to_log(&msg);
@@ -972,8 +990,14 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for sfp in &stats.structural_fps {
-                    let msg = format!("{}:{}: info: structural_false_positive {} {} [{}]",
-                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.confidence.label());
+                    let msg = format!("{}:{}: info: structural_false_positive {} {} — {} [{}]",
+                        abs_path.display(), sfp.line, sfp.category.label(), sfp.name, sfp.context, sfp.confidence.label());
+                    println!("{}", msg);
+                    write_to_log(&msg);
+                }
+
+                if has_sfps {
+                    let msg = format!("   Info: {} × structural_false_positive", stats.structural_fps.len());
                     println!("{}", msg);
                     write_to_log(&msg);
                 }
@@ -2191,6 +2215,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                     }
                     SyntaxKind::IMPL_KW => {
                         // Check for unsafe impl [<generics>] Send/Sync for TypeName
+                        let mut is_send_sync_sfp = false;
                         let mut k = j + 1;
                         while k < tokens.len() && tokens[k].kind() == SyntaxKind::WHITESPACE {
                             k += 1;
@@ -2239,13 +2264,17 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                                             name: type_name,
                                             confidence: Confidence::High,
                                             reason: format!("unsafe impl {} — type has Ghost<> fields erased at runtime", trait_name),
+                                            context: context.clone(),
                                         });
+                                        is_send_sync_sfp = true;
                                     }
                                 }
                             }
                         }
 
-                        if has_accept_hole_comment(content, line) {
+                        if is_send_sync_sfp {
+                            // SFP — don't count as hole
+                        } else if has_accept_hole_comment(content, line) {
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe_impl_accept_hole".to_string(),
@@ -2874,10 +2903,11 @@ impl<'a> ProofHoleVisitor<'a> {
     }
 
     /// Check if current external_body fn is a structural FP and push classification if so.
-    fn classify_external_body_structural_fp(&mut self, line: usize) {
+    /// Returns true if an SFP was detected (caller should skip hole counting).
+    fn classify_external_body_structural_fp(&mut self, line: usize, context: &str) -> bool {
         let fn_name = match &self.current_fn_name {
             Some(n) => n.clone(),
-            None => return,
+            None => return false,
         };
         let body = self.current_fn_body_text.as_deref().unwrap_or("");
 
@@ -2890,8 +2920,9 @@ impl<'a> ProofHoleVisitor<'a> {
                     name: fn_name.clone(),
                     confidence: Confidence::High,
                     reason: format!("external_body on {}::{} — std trait cannot carry Verus specs", trait_name, fn_name),
+                    context: context.to_string(),
                 });
-                return;
+                return true;
             }
         }
 
@@ -2907,8 +2938,9 @@ impl<'a> ProofHoleVisitor<'a> {
                 name: fn_name.clone(),
                 confidence: Confidence::High,
                 reason: format!("external_body on {} — wraps thread::spawn/'static closure boundary", fn_name),
+                context: context.to_string(),
             });
-            return;
+            return true;
         }
         if spawn_medium {
             self.stats.structural_fps.push(StructuralFalsePositive {
@@ -2917,8 +2949,9 @@ impl<'a> ProofHoleVisitor<'a> {
                 name: fn_name.clone(),
                 confidence: Confidence::Medium,
                 reason: format!("external_body on {} — thread/task boundary pattern", fn_name),
+                context: context.to_string(),
             });
-            return;
+            return true;
         }
 
         // OPAQUE_EXTERNAL: external_body calling std:: functions
@@ -2929,8 +2962,11 @@ impl<'a> ProofHoleVisitor<'a> {
                 name: fn_name.clone(),
                 confidence: Confidence::Medium,
                 reason: format!("external_body on {} — calls external std:: functions with no Verus spec", fn_name),
+                context: context.to_string(),
             });
+            return true;
         }
+        false
     }
 }
 
@@ -3413,17 +3449,20 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     name: fn_name,
                     confidence,
                     reason: "assume() bridging ghost state across RwLock boundary".to_string(),
+                    context: context_str,
+                });
+                // SFP — don't count as a hole
+            } else {
+                // Real assume hole — count it
+                let subcat = classify_assume_subcategory(&context_str, is_mt_file, false);
+                self.stats.holes.assume_count += 1;
+                self.stats.holes.total_holes += 1;
+                self.stats.holes.holes.push(DetectedHole {
+                    line,
+                    hole_type: format!("assume() [{}]", subcat),
+                    context: context_str,
                 });
             }
-            // Classify assume subcategory
-            let subcat = classify_assume_subcategory(&context_str, is_mt_file, is_rwlock_ghost);
-            self.stats.holes.assume_count += 1;
-            self.stats.holes.total_holes += 1;
-            self.stats.holes.holes.push(DetectedHole {
-                line,
-                hole_type: format!("assume() [{}]", subcat),
-                context: context_str,
-            });
         }
         visit::visit_assume(self, i);
     }
@@ -3548,8 +3587,10 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     // No hole — used for diverge() etc., skip fn_missing_requires
                 }
                 VerifierAttribute::ExternalBody => {
-                    self.classify_external_body_structural_fp(line);
-                    if self.suppress_external_body_hole {
+                    let is_sfp = self.classify_external_body_structural_fp(line, &context);
+                    if is_sfp {
+                        // SFP already recorded; don't count as hole
+                    } else if self.suppress_external_body_hole {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "verus_rwlock_external_body".to_string(),
@@ -4415,7 +4456,6 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.structural_fp_count += stats.structural_fps.len();
         for sfp in &stats.structural_fps {
             *summary.structural_fp_by_category.entry(sfp.category.label().to_string()).or_insert(0) += 1;
-            summary.structural_fp_in_hole_count += 1;
         }
 
         // Aggregate for Proof Targets (root/* and root/*/*), only for paths with subdirs
@@ -4654,7 +4694,7 @@ fn print_summary(summary: &SummaryStats) {
     }
     let total_holes = summary.holes.total_holes;
     log!("");
-    log!("Holes Found: {} total", total_holes);
+    log!("Holes Found: {} (actionable)", total_holes);
     if summary.holes.assume_false_count > 0 {
         log!("   {} × assume(false) ({}%)", summary.holes.assume_false_count, pct(summary.holes.assume_false_count, total_holes));
     }
@@ -4785,15 +4825,11 @@ fn print_summary(summary: &SummaryStats) {
     // Structural false positives
     if summary.structural_fp_count > 0 {
         log!("");
-        log!("Structural False Positives: {} detected (language limitations, not missing proof)", summary.structural_fp_count);
+        log!("Structural (info only): {}", summary.structural_fp_count);
         let mut cats: Vec<_> = summary.structural_fp_by_category.iter().collect();
         cats.sort_by(|a, b| b.1.cmp(a.1));
         for (cat, count) in &cats {
             log!("   {} × {}", count, cat);
-        }
-        if summary.structural_fp_in_hole_count > 0 {
-            log!("");
-            log!("Real Actionable Holes: {} ({} total - {} structural FPs in count)", total_holes.saturating_sub(summary.structural_fp_in_hole_count), total_holes, summary.structural_fp_in_hole_count);
         }
     }
 
