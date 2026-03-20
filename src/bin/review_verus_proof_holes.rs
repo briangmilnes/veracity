@@ -160,7 +160,6 @@ struct ProofHoleStats {
     external_trait_ext_count: usize,
     external_count: usize,
     opaque_count: usize,
-    cfg_hidden_exec_count: usize,
     trivial_spec_wf_count: usize,
     axiom_count: usize,
     total_holes: usize,
@@ -869,7 +868,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 }
 
                 for warning in &stats.warnings {
-                    let level = if matches!(warning.hole_type.as_str(), "assume_eq_clone_workaround" | "requires_true") {
+                    let level = if matches!(warning.hole_type.as_str(), "assume_eq_clone_workaround" | "requires_true" | "cfg_hidden_fn") {
                         "warning"
                     } else {
                         "error"
@@ -942,7 +941,7 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
 
                 for warning in &stats.warnings {
-                    let level = if matches!(warning.hole_type.as_str(), "assume_eq_clone_workaround" | "requires_true") {
+                    let level = if matches!(warning.hole_type.as_str(), "assume_eq_clone_workaround" | "requires_true" | "cfg_hidden_fn") {
                         "warning"
                     } else {
                         "error"
@@ -1108,11 +1107,6 @@ fn print_hole_counts_with_log(holes: &ProofHoleStats, prefix: &str) {
         println!("{}", msg);
         write_to_log(&msg);
     }
-    if holes.cfg_hidden_exec_count > 0 {
-        let msg = format!("{}{} × cfg_hidden_exec", prefix, holes.cfg_hidden_exec_count);
-        println!("{}", msg);
-        write_to_log(&msg);
-    }
     if holes.trivial_spec_wf_count > 0 {
         let msg = format!("{}{} × trivial spec*wf {{ true }}", prefix, holes.trivial_spec_wf_count);
         println!("{}", msg);
@@ -1167,9 +1161,6 @@ fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     }
     if holes.opaque_count > 0 {
         println!("{}{} × opaque", prefix, holes.opaque_count);
-    }
-    if holes.cfg_hidden_exec_count > 0 {
-        println!("{}{} × cfg_hidden_exec", prefix, holes.cfg_hidden_exec_count);
     }
     if holes.trivial_spec_wf_count > 0 {
         println!("{}{} × trivial spec*wf {{ true }}", prefix, holes.trivial_spec_wf_count);
@@ -1507,7 +1498,7 @@ fn build_context_lines(content: &str, hole: &DetectedHole) -> Vec<String> {
         || hole.hole_type == "opaque"
         || hole.hole_type == "unsafe fn"
         || hole.hole_type == "unsafe impl"
-        || hole.hole_type == "cfg_hidden_exec";
+        || hole.hole_type == "cfg_hidden_fn";
 
     if hole.hole_type == "struct_outside_verus"
         || hole.hole_type == "enum_outside_verus"
@@ -1780,9 +1771,17 @@ fn cfg_not_verus_keep_ghost_attr(item: &impl HasAttrs) -> Option<usize> {
     None
 }
 
-/// Detect exec functions hidden behind #[cfg(not(verus_keep_ghost))] outside verus! blocks.
-/// These are algorithm implementations invisible to Verus — real proof holes.
-fn detect_cfg_hidden_exec(root: &SyntaxNode, content: &str, path: &Path, stats: &mut FileStats) {
+/// Check if an AST item has #[verifier::external_body].
+fn has_external_body_attr(item: &impl HasAttrs) -> bool {
+    item.attrs().any(|attr| {
+        let text = attr.syntax().text().to_string();
+        text.contains("external_body")
+    })
+}
+
+/// Detect functions hidden behind #[cfg(not(verus_keep_ghost))] outside verus! blocks
+/// without #[verifier::external_body]. These are invisible to Verus — emitted as warnings.
+fn detect_cfg_hidden_fn(root: &SyntaxNode, content: &str, path: &Path, stats: &mut FileStats) {
     // Skip vstdplus files — legitimate runtime stubs
     if let Some(s) = path.to_str() {
         if s.contains("/vstdplus/") || s.contains("\\vstdplus\\") {
@@ -1798,6 +1797,10 @@ fn detect_cfg_hidden_exec(root: &SyntaxNode, content: &str, path: &Path, stats: 
         if node.kind() == SyntaxKind::FN {
             if let Some(fn_def) = ast::Fn::cast(node.clone()) {
                 if let Some(attr_offset) = cfg_not_verus_keep_ghost_attr(&fn_def) {
+                    // Skip fns that also have external_body — that's the correct pattern
+                    if has_external_body_attr(&fn_def) {
+                        continue;
+                    }
                     // Skip fns inside a cfg-gated standard trait impl (handled in part B)
                     if let Some(parent_impl) = node.parent().and_then(|p| p.parent()).and_then(ast::Impl::cast) {
                         if let Some(trait_ty) = parent_impl.trait_() {
@@ -1816,15 +1819,13 @@ fn detect_cfg_hidden_exec(root: &SyntaxNode, content: &str, path: &Path, stats: 
                     if has_accept_hole_comment(content, attr_line) {
                         stats.infos.push(DetectedHole {
                             line: attr_line,
-                            hole_type: "cfg_hidden_exec_accept_hole".to_string(),
-                            context: format!("cfg_hidden_exec — accepted"),
+                            hole_type: "cfg_hidden_fn_accept_hole".to_string(),
+                            context: format!("cfg_hidden_fn — accepted"),
                         });
                     } else {
-                        stats.holes.cfg_hidden_exec_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
+                        stats.warnings.push(DetectedHole {
                             line: attr_line,
-                            hole_type: "cfg_hidden_exec".to_string(),
+                            hole_type: "cfg_hidden_fn".to_string(),
                             context,
                         });
                     }
@@ -1847,25 +1848,32 @@ fn detect_cfg_hidden_exec(root: &SyntaxNode, content: &str, path: &Path, stats: 
                         }
                     }
 
+                    // Skip impl blocks that also have external_body — correct pattern
+                    if has_external_body_attr(&impl_block) {
+                        continue;
+                    }
+
                     // Non-standard trait impl or bare impl — flag each fn method
                     if let Some(items) = impl_block.assoc_item_list() {
                         for item in items.assoc_items() {
                             if let ast::AssocItem::Fn(fn_item) = item {
+                                // Skip individual fns with external_body
+                                if has_external_body_attr(&fn_item) {
+                                    continue;
+                                }
                                 let fn_offset: usize = fn_item.syntax().text_range().start().into();
                                 let fn_line = line_from_offset(content, fn_offset);
                                 let context = get_context(content, fn_offset);
                                 if has_accept_hole_comment(content, fn_line) {
                                     stats.infos.push(DetectedHole {
                                         line: fn_line,
-                                        hole_type: "cfg_hidden_exec_accept_hole".to_string(),
-                                        context: format!("cfg_hidden_exec — accepted"),
+                                        hole_type: "cfg_hidden_fn_accept_hole".to_string(),
+                                        context: format!("cfg_hidden_fn — accepted"),
                                     });
                                 } else {
-                                    stats.holes.cfg_hidden_exec_count += 1;
-                                    stats.holes.total_holes += 1;
-                                    stats.holes.holes.push(DetectedHole {
+                                    stats.warnings.push(DetectedHole {
                                         line: fn_line,
-                                        hole_type: "cfg_hidden_exec".to_string(),
+                                        hole_type: "cfg_hidden_fn".to_string(),
                                         context,
                                     });
                                 }
@@ -2165,8 +2173,8 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
         detect_structs_outside_verus(&root, &content, &mut stats);
     }
 
-    // Detect exec functions hidden behind #[cfg(not(verus_keep_ghost))] outside verus!
-    detect_cfg_hidden_exec(&root, &content, path, &mut stats);
+    // Detect functions hidden behind #[cfg(not(verus_keep_ghost))] without external_body
+    detect_cfg_hidden_fn(&root, &content, path, &mut stats);
 
     detect_rust_rwlock(&content, &mut stats);
 
@@ -4521,7 +4529,6 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.holes.external_trait_ext_count += stats.holes.external_trait_ext_count;
         summary.holes.external_count += stats.holes.external_count;
         summary.holes.opaque_count += stats.holes.opaque_count;
-        summary.holes.cfg_hidden_exec_count += stats.holes.cfg_hidden_exec_count;
         summary.holes.trivial_spec_wf_count += stats.holes.trivial_spec_wf_count;
         summary.holes.total_holes += stats.holes.total_holes;
 
@@ -4547,7 +4554,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
 
         summary.total_warnings += stats.warnings.len() + stats.holes.trivial_spec_wf_count;
         summary.total_infos += stats.infos.len();
-        let is_warning_level = |t: &str| matches!(t, "assume_eq_clone_workaround" | "requires_true");
+        let is_warning_level = |t: &str| matches!(t, "assume_eq_clone_workaround" | "requires_true" | "cfg_hidden_fn");
         for w in &stats.warnings {
             *summary.warning_type_counts.entry(w.hole_type.clone()).or_insert(0) += 1;
             let entry = (full_path.clone(), w.line, w.hole_type.clone());
@@ -4878,9 +4885,6 @@ fn print_summary(summary: &SummaryStats) {
     if summary.holes.opaque_count > 0 {
         log!("   {} × opaque ({}%)", summary.holes.opaque_count, pct(summary.holes.opaque_count, total_holes));
     }
-    if summary.holes.cfg_hidden_exec_count > 0 {
-        log!("   {} × cfg_hidden_exec ({}%)", summary.holes.cfg_hidden_exec_count, pct(summary.holes.cfg_hidden_exec_count, total_holes));
-    }
     if summary.holes.trivial_spec_wf_count > 0 {
         log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
     }
@@ -4913,6 +4917,7 @@ fn print_summary(summary: &SummaryStats) {
         ("fn_missing_requires_ensures", "fn_missing_requires_ensures"),
         ("requires_true", "requires_true"),
         ("assume_eq_clone_workaround", "assume_eq_clone_workaround"),
+        ("cfg_hidden_fn", "cfg_hidden_fn"),
     ];
     let total_warning_count: usize = warning_types.iter()
         .map(|(k, _)| summary.warning_type_counts.get(*k).copied().unwrap_or(0))
@@ -5361,7 +5366,6 @@ fn print_global_summary(projects: &[ProjectStats]) {
         global.holes.external_trait_ext_count += project.summary.holes.external_trait_ext_count;
         global.holes.external_count += project.summary.holes.external_count;
         global.holes.opaque_count += project.summary.holes.opaque_count;
-        global.holes.cfg_hidden_exec_count += project.summary.holes.cfg_hidden_exec_count;
         global.holes.total_holes += project.summary.holes.total_holes;
 
         global.axioms.axiom_fn_count += project.summary.axioms.axiom_fn_count;
@@ -5427,9 +5431,6 @@ fn print_global_summary(projects: &[ProjectStats]) {
     }
     if global.holes.opaque_count > 0 {
         log!("   {} × opaque", global.holes.opaque_count);
-    }
-    if global.holes.cfg_hidden_exec_count > 0 {
-        log!("   {} × cfg_hidden_exec", global.holes.cfg_hidden_exec_count);
     }
 
     // De-duplicate axiom names to find unique axioms
