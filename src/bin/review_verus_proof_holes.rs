@@ -75,11 +75,12 @@ enum VerifierAttribute {
 }
 
 /// A single detected proof hole with its location
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct DetectedHole {
     line: usize,
     hole_type: String,
     context: String,  // Short snippet of code for context
+    blocked_by: Option<String>,  // Root cause name (annotation or auto-detected)
 }
 
 /// Category of structural false positive — a hole that cannot be removed
@@ -154,6 +155,8 @@ struct ProofHoleStats {
     unsafe_impl_count: usize,
     unsafe_block_count: usize,
     external_body_count: usize,
+    external_body_root_count: usize,
+    external_body_downstream_count: usize,
     external_fn_spec_count: usize,
     external_trait_spec_count: usize,
     external_type_spec_count: usize,
@@ -200,6 +203,10 @@ struct FileStats {
     spec_wf_predicates: HashSet<String>,
     /// Structural false positives: holes due to language limitations
     structural_fps: Vec<StructuralFalsePositive>,
+    /// Names of functions with external_body attribute (for auto-detecting downstream holes)
+    external_body_fn_names: HashSet<String>,
+    /// Map from function name to body text (for auto-detecting downstream calls)
+    fn_body_texts: HashMap<String, String>,
 }
 
 #[derive(Debug, Default)]
@@ -858,7 +865,11 @@ fn run_emacs_mode(args: &StandardArgs, exclude_dirs: &[PathBuf]) -> Result<()> {
                 let file_content = fs::read_to_string(&abs_path).unwrap_or_default();
 
                 for hole in &stats.holes.holes {
-                    let msg = format!("{}:{}: error: {} - {}", abs_path.display(), hole.line, hole.hole_type, hole.context);
+                    let blocked_suffix = match &hole.blocked_by {
+                        Some(name) => format!(" [blocked_by: {}]", name),
+                        None => String::new(),
+                    };
+                    let msg = format!("{}:{}: error: {}{} - {}", abs_path.display(), hole.line, hole.hole_type, blocked_suffix, hole.context);
                     println!("{}", msg);
                     write_to_log(&msg);
                     for ctx in build_context_lines(&file_content, hole) {
@@ -1076,6 +1087,14 @@ fn print_hole_counts_with_log(holes: &ProofHoleStats, prefix: &str) {
         let msg = format!("{}{} × external_body", prefix, holes.external_body_count);
         println!("{}", msg);
         write_to_log(&msg);
+        if holes.external_body_downstream_count > 0 {
+            let msg = format!("{}   {} × root cause", prefix, holes.external_body_root_count);
+            println!("{}", msg);
+            write_to_log(&msg);
+            let msg = format!("{}   {} × downstream (blocked by root causes)", prefix, holes.external_body_downstream_count);
+            println!("{}", msg);
+            write_to_log(&msg);
+        }
     }
     if holes.external_fn_spec_count > 0 {
         let msg = format!("{}{} × external_fn_specification", prefix, holes.external_fn_spec_count);
@@ -1143,6 +1162,10 @@ fn print_hole_counts(holes: &ProofHoleStats, prefix: &str) {
     }
     if holes.external_body_count > 0 {
         println!("{}{} × external_body", prefix, holes.external_body_count);
+        if holes.external_body_downstream_count > 0 {
+            println!("{}   {} × root cause", prefix, holes.external_body_root_count);
+            println!("{}   {} × downstream (blocked by root causes)", prefix, holes.external_body_downstream_count);
+        }
     }
     if holes.external_fn_spec_count > 0 {
         println!("{}{} × external_fn_specification", prefix, holes.external_fn_spec_count);
@@ -1397,6 +1420,29 @@ fn file_skips_requires_ensures(path: &Path) -> bool {
                 || s.starts_with("Algorithm")
         })
         .unwrap_or(false)
+}
+
+/// Check if lines near attr_line contain `// veracity: blocked_by(name)`.
+/// Returns Some(name) if found, None otherwise.
+fn parse_blocked_by_annotation(content: &str, attr_line: usize) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let start = attr_line.saturating_sub(3);
+    let end = (attr_line + 3).min(lines.len());
+    for line in lines.get(start..end).unwrap_or(&[]) {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("//") {
+            let rest = rest.trim();
+            if let Some(rest) = rest.strip_prefix("veracity:") {
+                let rest = rest.trim();
+                if let Some(rest) = rest.strip_prefix("blocked_by(") {
+                    if let Some(name) = rest.strip_suffix(')') {
+                        return Some(name.trim().to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 fn has_no_requires_annotation(content: &str, fn_line: usize) -> bool {
@@ -1709,13 +1755,13 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str, stats: &mut Fi
                     stats.infos.push(DetectedHole {
                         line,
                         hole_type: "struct_outside_verus_accept_hole".to_string(),
-                        context: format!("struct {} — outside verus! with accept hole comment", name),
+                        context: format!("struct {} — outside verus! with accept hole comment", name), ..Default::default()
                     });
                 } else {
                     stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "struct_outside_verus".to_string(),
-                        context: format!("struct {} — should be inside verus!", name),
+                        context: format!("struct {} — should be inside verus!", name), ..Default::default()
                     });
                 }
                 let derives = get_derives_before_offset(content, offset);
@@ -1723,7 +1769,7 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str, stats: &mut Fi
                     stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "clone_derived_outside".to_string(),
-                        context: format!("struct {} — Clone should be implemented inside verus!, not derived outside", name),
+                        context: format!("struct {} — Clone should be implemented inside verus!, not derived outside", name), ..Default::default()
                     });
                 }
             }
@@ -1737,13 +1783,13 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str, stats: &mut Fi
                     stats.infos.push(DetectedHole {
                         line,
                         hole_type: "enum_outside_verus_accept_hole".to_string(),
-                        context: format!("enum {} — outside verus! with accept hole comment", name),
+                        context: format!("enum {} — outside verus! with accept hole comment", name), ..Default::default()
                     });
                 } else {
                     stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "enum_outside_verus".to_string(),
-                        context: format!("enum {} — should be inside verus!", name),
+                        context: format!("enum {} — should be inside verus!", name), ..Default::default()
                     });
                 }
                 let derives = get_derives_before_offset(content, offset);
@@ -1751,7 +1797,7 @@ fn detect_structs_outside_verus(root: &SyntaxNode, content: &str, stats: &mut Fi
                     stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "clone_derived_outside".to_string(),
-                        context: format!("enum {} — Clone should be implemented inside verus!, not derived outside", name),
+                        context: format!("enum {} — Clone should be implemented inside verus!, not derived outside", name), ..Default::default()
                     });
                 }
             }
@@ -1820,13 +1866,13 @@ fn detect_cfg_hidden_fn(root: &SyntaxNode, content: &str, path: &Path, stats: &m
                         stats.infos.push(DetectedHole {
                             line: attr_line,
                             hole_type: "cfg_hidden_fn_accept_hole".to_string(),
-                            context: format!("cfg_hidden_fn — accepted"),
+                            context: format!("cfg_hidden_fn — accepted"), ..Default::default()
                         });
                     } else {
                         stats.warnings.push(DetectedHole {
                             line: attr_line,
                             hole_type: "cfg_hidden_fn".to_string(),
-                            context,
+                            context, ..Default::default()
                         });
                     }
                 }
@@ -1868,13 +1914,13 @@ fn detect_cfg_hidden_fn(root: &SyntaxNode, content: &str, path: &Path, stats: &m
                                     stats.infos.push(DetectedHole {
                                         line: fn_line,
                                         hole_type: "cfg_hidden_fn_accept_hole".to_string(),
-                                        context: format!("cfg_hidden_fn — accepted"),
+                                        context: format!("cfg_hidden_fn — accepted"), ..Default::default()
                                     });
                                 } else {
                                     stats.warnings.push(DetectedHole {
                                         line: fn_line,
                                         hole_type: "cfg_hidden_fn".to_string(),
-                                        context,
+                                        context, ..Default::default()
                                     });
                                 }
                             }
@@ -1949,7 +1995,7 @@ fn detect_bare_impl_warnings(root: &SyntaxNode, content: &str) -> Vec<DetectedHo
             line: *line,
             hole_type: "bare_impl".to_string(),
             context: format!("{} — `impl {}` without trait; file defines [{}]",
-                context_line, bare_type, user_traits.join(", ")),
+                context_line, bare_type, user_traits.join(", ")), ..Default::default()
         }
     }).collect()
 }
@@ -2159,7 +2205,7 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
         stats.warnings.push(DetectedHole {
             line: 1,
             hole_type: "not_verusified".to_string(),
-            context: "File has no verus! block — not verusified.".to_string(),
+            context: "File has no verus! block — not verusified.".to_string(), ..Default::default()
         });
     }
     
@@ -2183,6 +2229,41 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     // Exclude structural FPs for Example*/Problem* files (not algorithmic code)
     if file_skips_structural_fps(path) {
         stats.structural_fps.clear();
+    }
+
+    // Auto-detect downstream external_body holes: if an external_body function's body
+    // calls another external_body function, mark it as downstream.
+    if stats.external_body_fn_names.len() > 1 {
+        for hole in &mut stats.holes.holes {
+            if hole.hole_type == "external_body" && hole.blocked_by.is_none() {
+                // Find which function this hole belongs to by matching context
+                // The context contains the fn signature line
+                for (fn_name, body_text) in &stats.fn_body_texts {
+                    // Check if this hole's context mentions this function name
+                    if !hole.context.contains(fn_name) {
+                        continue;
+                    }
+                    // Check if this function's body calls another external_body function
+                    for other_fn in &stats.external_body_fn_names {
+                        if other_fn == fn_name {
+                            continue;
+                        }
+                        // Simple text search: check if the body contains a call to the other function
+                        // Match "fn_name(" or "fn_name (" or "self.fn_name(" patterns
+                        if body_text.contains(&format!("{}(", other_fn))
+                            || body_text.contains(&format!("{} (", other_fn))
+                            || body_text.contains(&format!(".{}(", other_fn))
+                        {
+                            hole.blocked_by = Some(other_fn.clone());
+                            stats.holes.external_body_root_count -= 1;
+                            stats.holes.external_body_downstream_count += 1;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     Ok(stats)
@@ -2301,7 +2382,7 @@ fn detect_rust_rwlock(content: &str, stats: &mut FileStats) {
             stats.warnings.push(DetectedHole {
                 line: line_no + 1,
                 hole_type: "rust_rwlock".to_string(),
-                context: "Use Verus RwLock (vstd::rwlock::RwLock), not std::sync::RwLock.".to_string(),
+                context: "Use Verus RwLock (vstd::rwlock::RwLock), not std::sync::RwLock.".to_string(), ..Default::default()
             });
         }
     }
@@ -2336,7 +2417,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe_fn_accept_hole".to_string(),
-                                context: "unsafe fn with accept hole comment".to_string(),
+                                context: "unsafe fn with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.unsafe_fn_count += 1;
@@ -2344,7 +2425,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe fn".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2413,7 +2494,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe_impl_accept_hole".to_string(),
-                                context: "unsafe impl with accept hole comment".to_string(),
+                                context: "unsafe impl with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.unsafe_impl_count += 1;
@@ -2421,7 +2502,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe impl".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2431,7 +2512,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe_block_accept_hole".to_string(),
-                                context: "unsafe {{}} with accept hole comment".to_string(),
+                                context: "unsafe {{}} with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.unsafe_block_count += 1;
@@ -2439,7 +2520,7 @@ fn analyze_unsafe_patterns(root: &SyntaxNode, content: &str, stats: &mut FileSta
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "unsafe {}".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2532,15 +2613,21 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_body_accept_hole".to_string(),
-                                context: "external_body with accept hole comment".to_string(),
+                                context: "external_body with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
+                            let blocked_by = parse_blocked_by_annotation(content, line);
                             stats.holes.external_body_count += 1;
+                            if blocked_by.is_some() {
+                                stats.holes.external_body_downstream_count += 1;
+                            } else {
+                                stats.holes.external_body_root_count += 1;
+                            }
                             stats.holes.total_holes += 1;
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_body".to_string(),
-                                context,
+                                context, blocked_by, ..Default::default()
                             });
                         }
                     }
@@ -2549,7 +2636,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_fn_specification_accept_hole".to_string(),
-                                context: "external_fn_specification with accept hole comment".to_string(),
+                                context: "external_fn_specification with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_fn_spec_count += 1;
@@ -2557,7 +2644,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_fn_specification".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2566,7 +2653,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_specification_accept_hole".to_string(),
-                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(),
+                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
@@ -2574,7 +2661,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_type_specification_accept_hole".to_string(),
-                                context: "external_type_specification with accept hole comment".to_string(),
+                                context: "external_type_specification with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_type_spec_count += 1;
@@ -2582,7 +2669,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_type_specification".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2591,7 +2678,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_extension_accept_hole".to_string(),
-                            context: "external_trait_extension — Verus trait extension pattern".to_string(),
+                            context: "external_trait_extension — Verus trait extension pattern".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::External => {
@@ -2599,7 +2686,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_accept_hole".to_string(),
-                                context: "external with accept hole comment".to_string(),
+                                context: "external with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_count += 1;
@@ -2607,7 +2694,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -2617,7 +2704,7 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "opaque".to_string(),
-                            context,
+                            context, ..Default::default()
                         });
                     }
                     VerifierAttribute::Axiom => {
@@ -2971,7 +3058,7 @@ impl<'a> ProofHoleVisitor<'a> {
                     context: format!(
                         "fn {} — requires should include {}.{}() for input type {}",
                         name, param_name, expected_wf, param_ty
-                    ),
+                    ), ..Default::default()
                 });
             }
         }
@@ -3000,7 +3087,7 @@ impl<'a> ProofHoleVisitor<'a> {
                             context: format!(
                                 "fn {} — ensures should include {}.{}() for return type {}",
                                 name, rn, expected_wf, tn
-                            ),
+                            ), ..Default::default()
                         });
                     }
                 }
@@ -3017,7 +3104,7 @@ impl<'a> ProofHoleVisitor<'a> {
                     self.stats.warnings.push(DetectedHole {
                         line: self.file_line(expr.span()),
                         hole_type: "requires_true".to_string(),
-                        context: "requires true — vacuous precondition".to_string(),
+                        context: "requires true — vacuous precondition".to_string(), ..Default::default()
                     });
                 }
             }
@@ -3146,33 +3233,33 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                         self.stats.warnings.push(DetectedHole {
                                             line,
                                             hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name),
+                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                         });
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name),
+                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                 });
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have ensures", name),
+                                    context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                 });
                             }
                         }
@@ -3192,7 +3279,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "spec_fn_with_holes".to_string(),
-                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                     });
                 } else {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
@@ -3201,7 +3288,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     let item = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
-                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name), ..Default::default()
                     };
                     // trivial_spec_wf is always informational (reviewed), never a hole
                     self.stats.infos.push(item);
@@ -3218,7 +3305,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.warnings.push(DetectedHole {
                             line,
                             hole_type: "proof_fn_with_holes".to_string(),
-                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                         });
                     }
                 } else {
@@ -3231,7 +3318,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 let hole = DetectedHole {
                     line,
                     hole_type: "axiom".to_string(),
-                    context: format!("axiom fn {} — axiom is a hole", name),
+                    context: format!("axiom fn {} — axiom is a hole", name), ..Default::default()
                 };
                 self.stats.holes.axiom_count += 1;
                 self.stats.holes.total_holes += 1;
@@ -3289,33 +3376,33 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                         self.stats.warnings.push(DetectedHole {
                                             line,
                                             hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name),
+                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                         });
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name),
+                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                 });
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have ensures", name),
+                                    context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                 });
                             }
                         }
@@ -3334,7 +3421,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "spec_fn_with_holes".to_string(),
-                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                     });
                 } else {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
@@ -3343,7 +3430,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     let item = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
-                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name), ..Default::default()
                     };
                     // trivial_spec_wf is always informational (reviewed), never a hole
                     self.stats.infos.push(item);
@@ -3360,7 +3447,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.warnings.push(DetectedHole {
                             line,
                             hole_type: "proof_fn_with_holes".to_string(),
-                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                         });
                     }
                 } else {
@@ -3373,7 +3460,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 let hole = DetectedHole {
                     line,
                     hole_type: "axiom".to_string(),
-                    context: format!("axiom fn {} — axiom is a hole", name),
+                    context: format!("axiom fn {} — axiom is a hole", name), ..Default::default()
                 };
                 self.stats.holes.axiom_count += 1;
                 self.stats.holes.total_holes += 1;
@@ -3422,33 +3509,33 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                         self.stats.warnings.push(DetectedHole {
                                             line,
                                             hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name),
+                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                         });
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
                                         hole_type: "fn_missing_ensures".to_string(),
-                                        context: format!("fn {} — exec fn should have ensures", name),
+                                        context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name),
+                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
                                 });
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "fn_missing_ensures".to_string(),
-                                    context: format!("fn {} — exec fn should have ensures", name),
+                                    context: format!("fn {} — exec fn should have ensures", name), ..Default::default()
                                 });
                             }
                         }
@@ -3466,7 +3553,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "spec_fn_with_holes".to_string(),
-                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name),
+                        context: format!("spec fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                     });
                 } else {
                     self.stats.fn_spec.proof_spec_fns_clean += 1;
@@ -3475,7 +3562,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     let item = DetectedHole {
                         line,
                         hole_type: "trivial_spec_wf".to_string(),
-                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name),
+                        context: format!("spec fn {} — trivial body {{ true }} or {{ true; }}, needs // accept hole", name), ..Default::default()
                     };
                     // trivial_spec_wf is always informational (reviewed), never a hole
                     self.stats.infos.push(item);
@@ -3492,7 +3579,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.warnings.push(DetectedHole {
                             line,
                             hole_type: "proof_fn_with_holes".to_string(),
-                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name),
+                            context: format!("proof fn {} — contains assume/external_body/admit, needs proof", name), ..Default::default()
                         });
                     }
                 } else {
@@ -3505,7 +3592,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 let hole = DetectedHole {
                     line,
                     hole_type: "axiom".to_string(),
-                    context: format!("axiom fn {} — axiom is a hole", name),
+                    context: format!("axiom fn {} — axiom is a hole", name), ..Default::default()
                 };
                 self.stats.holes.axiom_count += 1;
                 self.stats.holes.total_holes += 1;
@@ -3527,13 +3614,13 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 self.stats.infos.push(DetectedHole {
                     line,
                     hole_type: "assume(false); diverge()".to_string(),
-                    context: format!("{} — valid non-termination idiom", context),
+                    context: format!("{} — valid non-termination idiom", context), ..Default::default()
                 });
             } else if has_accept_hole_comment(self.content, line) {
                 self.stats.infos.push(DetectedHole {
                     line,
                     hole_type: "accept()".to_string(),
-                    context: "assume(false) with accept hole comment".to_string(),
+                    context: "assume(false) with accept hole comment".to_string(), ..Default::default()
                 });
             } else {
                 self.stats.holes.assume_false_count += 1;
@@ -3541,20 +3628,20 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 self.stats.holes.holes.push(DetectedHole {
                     line,
                     hole_type: "assume(false)".to_string(),
-                    context: format!("{} — needs diverge(); use `assume(false); diverge()`", context),
+                    context: format!("{} — needs diverge(); use `assume(false); diverge()`", context), ..Default::default()
                 });
             }
         } else if self.is_in_eq_or_clone_context() {
             self.stats.warnings.push(DetectedHole {
                 line,
                 hole_type: "assume_eq_clone_workaround".to_string(),
-                context: "at this point in Verus, clones may have to assume they work on generic types".to_string(),
+                context: "at this point in Verus, clones may have to assume they work on generic types".to_string(), ..Default::default()
             });
         } else if has_accept_hole_comment(self.content, line) {
             self.stats.infos.push(DetectedHole {
                 line,
                 hole_type: "accept()".to_string(),
-                context: "assume with accept hole comment".to_string(),
+                context: "assume with accept hole comment".to_string(), ..Default::default()
             });
         } else {
             // RWLOCK_GHOST: assume() bridging ghost state across RwLock boundary.
@@ -3595,7 +3682,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 self.stats.holes.holes.push(DetectedHole {
                     line,
                     hole_type: format!("assume() [{}]", subcat),
-                    context: context_str,
+                    context: context_str, ..Default::default()
                 });
             }
         }
@@ -3609,7 +3696,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             self.stats.infos.push(DetectedHole {
                 line,
                 hole_type: "assume_specification".to_string(),
-                context: "assume_specification with accept hole comment".to_string(),
+                context: "assume_specification with accept hole comment".to_string(), ..Default::default()
             });
         } else {
             self.stats.holes.assume_specification_count += 1;
@@ -3617,7 +3704,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
             self.stats.holes.holes.push(DetectedHole {
                 line,
                 hole_type: "assume_specification".to_string(),
-                context,
+                context, ..Default::default()
             });
         }
         visit::visit_assume_specification(self, i);
@@ -3633,7 +3720,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "admit()".to_string(),
-                            context: "admit with accept hole comment".to_string(),
+                            context: "admit with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.admit_count += 1;
@@ -3641,7 +3728,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "admit()".to_string(),
-                            context: self.context_at(line),
+                            context: self.context_at(line), ..Default::default()
                         });
                     }
                 } else if name == "assume_new" {
@@ -3650,7 +3737,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "assume_new()".to_string(),
-                            context: "assume_new with accept hole comment".to_string(),
+                            context: "assume_new with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.assume_new_count += 1;
@@ -3658,7 +3745,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "assume_new()".to_string(),
-                            context: self.context_at(line),
+                            context: self.context_at(line), ..Default::default()
                         });
                     }
                 } else if name == "accept" {
@@ -3668,7 +3755,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.infos.push(DetectedHole {
                         line,
                         hole_type: "accept()".to_string(),
-                        context: "accept hole".to_string(),
+                        context: "accept hole".to_string(), ..Default::default()
                     });
                 }
             }
@@ -3689,7 +3776,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     self.stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "debug_display_inside_verus".to_string(),
-                        context: format!("impl {} for ... — Debug/Display must be implemented outside verus!", name),
+                        context: format!("impl {} for ... — Debug/Display must be implemented outside verus!", name), ..Default::default()
                     });
                 }
                 if name == "RwLockPredicate" {
@@ -3700,7 +3787,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
                                     hole_type: "dummy_rwlock_predicate".to_string(),
-                                    context: "RwLockPredicate inv returning true is grossly underspecified.".to_string(),
+                                    context: "RwLockPredicate inv returning true is grossly underspecified.".to_string(), ..Default::default()
                                 });
                             }
                         }
@@ -3729,18 +3816,30 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "verus_rwlock_external_body".to_string(),
-                            context: "Verus RwLock new requires an external body at this point.".to_string(),
+                            context: "Verus RwLock new requires an external body at this point.".to_string(), ..Default::default()
                         });
                     } else if has_accept_hole_comment(self.content, line) {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_body_accept_hole".to_string(),
-                            context: "external_body with accept hole comment".to_string(),
+                            context: "external_body with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
+                        let blocked_by = parse_blocked_by_annotation(self.content, line);
+                        if let Some(ref name) = self.current_fn_name {
+                            self.stats.external_body_fn_names.insert(name.clone());
+                            if let Some(ref body) = self.current_fn_body_text {
+                                self.stats.fn_body_texts.insert(name.clone(), body.clone());
+                            }
+                        }
                         self.stats.holes.external_body_count += 1;
+                        if blocked_by.is_some() {
+                            self.stats.holes.external_body_downstream_count += 1;
+                        } else {
+                            self.stats.holes.external_body_root_count += 1;
+                        }
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_body".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_body".to_string(), context, blocked_by, ..Default::default() });
                     }
                 }
                 VerifierAttribute::ExternalFnSpec => {
@@ -3748,12 +3847,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_fn_specification_accept_hole".to_string(),
-                            context: "external_fn_specification with accept hole comment".to_string(),
+                            context: "external_fn_specification with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.external_fn_spec_count += 1;
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_fn_specification".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_fn_specification".to_string(), context, ..Default::default() });
                     }
                 }
                 VerifierAttribute::ExternalTraitSpec => {
@@ -3761,12 +3860,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_specification_accept_hole".to_string(),
-                            context: "external_trait_specification with accept hole comment".to_string(),
+                            context: "external_trait_specification with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.external_trait_spec_count += 1;
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_specification".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_specification".to_string(), context, ..Default::default() });
                     }
                 }
                 VerifierAttribute::ExternalTypeSpec => {
@@ -3774,12 +3873,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_type_specification_accept_hole".to_string(),
-                            context: "external_type_specification with accept hole comment".to_string(),
+                            context: "external_type_specification with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.external_type_spec_count += 1;
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_type_specification".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_type_specification".to_string(), context, ..Default::default() });
                     }
                 }
                 VerifierAttribute::ExternalTraitExt => {
@@ -3787,12 +3886,12 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_extension_accept_hole".to_string(),
-                            context: "external_trait_extension with accept hole comment".to_string(),
+                            context: "external_trait_extension with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.external_trait_ext_count += 1;
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_extension".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external_trait_extension".to_string(), context, ..Default::default() });
                     }
                 }
                 VerifierAttribute::External => {
@@ -3800,23 +3899,23 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         self.stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_accept_hole".to_string(),
-                            context: "external with accept hole comment".to_string(),
+                            context: "external with accept hole comment".to_string(), ..Default::default()
                         });
                     } else {
                         self.stats.holes.external_count += 1;
                         self.stats.holes.total_holes += 1;
-                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external".to_string(), context });
+                        self.stats.holes.holes.push(DetectedHole { line, hole_type: "external".to_string(), context, ..Default::default() });
                     }
                 }
                 VerifierAttribute::Opaque => {
                     self.stats.holes.opaque_count += 1;
                     self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "opaque".to_string(), context });
+                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "opaque".to_string(), context, ..Default::default() });
                 }
                 VerifierAttribute::Axiom => {
                     self.stats.holes.axiom_count += 1;
                     self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "axiom".to_string(), context });
+                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "axiom".to_string(), context, ..Default::default() });
                 }
             }
         }
@@ -3941,7 +4040,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                 stats.holes.holes.push(DetectedHole {
                     line,
                     hole_type: "axiom".to_string(),
-                    context,
+                    context, ..Default::default()
                 });
             }
             
@@ -3975,7 +4074,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                 stats.holes.holes.push(DetectedHole {
                     line,
                     hole_type: "assume_specification".to_string(),
-                    context,
+                    context, ..Default::default()
                 });
             }
             
@@ -3994,7 +4093,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                                 stats.infos.push(DetectedHole {
                                     line,
                                     hole_type: "assume(false); diverge()".to_string(),
-                                    context: format!("{} — valid non-termination idiom", context),
+                                    context: format!("{} — valid non-termination idiom", context), ..Default::default()
                                 });
                             } else {
                                 // assume(false) without diverge() — still a hole
@@ -4003,14 +4102,14 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                                 stats.holes.holes.push(DetectedHole {
                                     line,
                                     hole_type: "assume(false)".to_string(),
-                                    context: format!("{} — needs diverge(); use `assume(false); diverge()`", context),
+                                    context: format!("{} — needs diverge(); use `assume(false); diverge()`", context), ..Default::default()
                                 });
                             }
                         } else if looks_like_eq_clone_workaround(&context) {
                             stats.warnings.push(DetectedHole {
                                 line,
                                 hole_type: "assume_eq_clone_workaround".to_string(),
-                                context: "at this point in Verus, clones may have to assume they work on generic types".to_string(),
+                                context: "at this point in Verus, clones may have to assume they work on generic types".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.assume_count += 1;
@@ -4018,7 +4117,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "assume()".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     } else if text == "admit" {
@@ -4027,14 +4126,14 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "admit()".to_string(),
-                            context,
+                            context, ..Default::default()
                         });
                     } else if text == "accept" {
                         // All accept() treated uniformly; no special case for accept(true)
                         stats.infos.push(DetectedHole {
                             line,
                             hole_type: "accept()".to_string(),
-                            context: "accept hole".to_string(),
+                            context: "accept hole".to_string(), ..Default::default()
                         });
                     } else if text == "assume_new" {
                         // Tracked::assume_new() - a sneaky assume!
@@ -4043,7 +4142,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "assume_new()".to_string(),
-                            context,
+                            context, ..Default::default()
                         });
                     }
                 }
@@ -4071,7 +4170,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                     stats.warnings.push(DetectedHole {
                         line,
                         hole_type: "debug_display_inside_verus".to_string(),
-                        context: format!("{} — Debug/Display must be implemented outside verus!", context),
+                        context: format!("{} — Debug/Display must be implemented outside verus!", context), ..Default::default()
                     });
                 }
             }
@@ -4093,15 +4192,21 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_body_accept_hole".to_string(),
-                                context: "external_body with accept hole comment".to_string(),
+                                context: "external_body with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
+                            let blocked_by = parse_blocked_by_annotation(content, line);
                             stats.holes.external_body_count += 1;
+                            if blocked_by.is_some() {
+                                stats.holes.external_body_downstream_count += 1;
+                            } else {
+                                stats.holes.external_body_root_count += 1;
+                            }
                             stats.holes.total_holes += 1;
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_body".to_string(),
-                                context,
+                                context, blocked_by, ..Default::default()
                             });
                         }
                     }
@@ -4110,7 +4215,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_fn_specification_accept_hole".to_string(),
-                                context: "external_fn_specification with accept hole comment".to_string(),
+                                context: "external_fn_specification with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_fn_spec_count += 1;
@@ -4118,7 +4223,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_fn_specification".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -4127,7 +4232,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_specification_accept_hole".to_string(),
-                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(),
+                            context: "external_trait_specification — Verus trait wrapping pattern".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::ExternalTypeSpec => {
@@ -4135,7 +4240,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_type_specification_accept_hole".to_string(),
-                                context: "external_type_specification with accept hole comment".to_string(),
+                                context: "external_type_specification with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_type_spec_count += 1;
@@ -4143,7 +4248,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external_type_specification".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -4152,7 +4257,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         stats.infos.push(DetectedHole {
                             line,
                             hole_type: "external_trait_extension_accept_hole".to_string(),
-                            context: "external_trait_extension — Verus trait extension pattern".to_string(),
+                            context: "external_trait_extension — Verus trait extension pattern".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::External => {
@@ -4160,7 +4265,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.infos.push(DetectedHole {
                                 line,
                                 hole_type: "external_accept_hole".to_string(),
-                                context: "external with accept hole comment".to_string(),
+                                context: "external with accept hole comment".to_string(), ..Default::default()
                             });
                         } else {
                             stats.holes.external_count += 1;
@@ -4168,7 +4273,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                             stats.holes.holes.push(DetectedHole {
                                 line,
                                 hole_type: "external".to_string(),
-                                context,
+                                context, ..Default::default()
                             });
                         }
                     }
@@ -4178,7 +4283,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         stats.holes.holes.push(DetectedHole {
                             line,
                             hole_type: "opaque".to_string(),
-                            context,
+                            context, ..Default::default()
                         });
                     }
                     VerifierAttribute::Axiom => {
@@ -4523,6 +4628,8 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
         summary.holes.unsafe_impl_count += stats.holes.unsafe_impl_count;
         summary.holes.unsafe_block_count += stats.holes.unsafe_block_count;
         summary.holes.external_body_count += stats.holes.external_body_count;
+        summary.holes.external_body_root_count += stats.holes.external_body_root_count;
+        summary.holes.external_body_downstream_count += stats.holes.external_body_downstream_count;
         summary.holes.external_fn_spec_count += stats.holes.external_fn_spec_count;
         summary.holes.external_trait_spec_count += stats.holes.external_trait_spec_count;
         summary.holes.external_type_spec_count += stats.holes.external_type_spec_count;
@@ -4866,6 +4973,10 @@ fn print_summary(summary: &SummaryStats) {
     }
     if summary.holes.external_body_count > 0 {
         log!("   {} × external_body ({}%)", summary.holes.external_body_count, pct(summary.holes.external_body_count, total_holes));
+        if summary.holes.external_body_downstream_count > 0 {
+            log!("      {} × root cause", summary.holes.external_body_root_count);
+            log!("      {} × downstream (blocked by root causes)", summary.holes.external_body_downstream_count);
+        }
     }
     if summary.holes.external_fn_spec_count > 0 {
         log!("   {} × external_fn_specification ({}%)", summary.holes.external_fn_spec_count, pct(summary.holes.external_fn_spec_count, total_holes));
@@ -5300,6 +5411,10 @@ fn print_project_summary(project_name: &str, summary: &SummaryStats) {
         }
         if summary.holes.external_body_count > 0 {
             log!("     {} × external_body", summary.holes.external_body_count);
+            if summary.holes.external_body_downstream_count > 0 {
+                log!("        {} × root cause", summary.holes.external_body_root_count);
+                log!("        {} × downstream", summary.holes.external_body_downstream_count);
+            }
         }
         if summary.holes.external_fn_spec_count > 0 {
             log!("     {} × external_fn_specification", summary.holes.external_fn_spec_count);
@@ -5360,6 +5475,8 @@ fn print_global_summary(projects: &[ProjectStats]) {
         global.holes.unsafe_impl_count += project.summary.holes.unsafe_impl_count;
         global.holes.unsafe_block_count += project.summary.holes.unsafe_block_count;
         global.holes.external_body_count += project.summary.holes.external_body_count;
+        global.holes.external_body_root_count += project.summary.holes.external_body_root_count;
+        global.holes.external_body_downstream_count += project.summary.holes.external_body_downstream_count;
         global.holes.external_fn_spec_count += project.summary.holes.external_fn_spec_count;
         global.holes.external_trait_spec_count += project.summary.holes.external_trait_spec_count;
         global.holes.external_type_spec_count += project.summary.holes.external_type_spec_count;
@@ -5413,6 +5530,10 @@ fn print_global_summary(projects: &[ProjectStats]) {
     }
     if global.holes.external_body_count > 0 {
         log!("   {} × external_body", global.holes.external_body_count);
+        if global.holes.external_body_downstream_count > 0 {
+            log!("      {} × root cause", global.holes.external_body_root_count);
+            log!("      {} × downstream (blocked by root causes)", global.holes.external_body_downstream_count);
+        }
     }
     if global.holes.external_fn_spec_count > 0 {
         log!("   {} × external_fn_specification", global.holes.external_fn_spec_count);
