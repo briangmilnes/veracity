@@ -1,5 +1,35 @@
 # CLAUDE.md — Veracity Project Rules
 
+## NO STRING HACKING — USE THE AST
+
+**THOU SHALT NOT STRING HACK WHEN AN AST DOES THE JOB.**
+
+Veracity has `verus_syn` (with `visit::Visit`), `syn`, and `ra_ap_syntax` in its
+dependencies. When analyzing or transforming Verus/Rust source code:
+
+- **DO NOT** use `Regex::new()` to match Rust/Verus syntax (fn signatures,
+  ensures/requires clauses, trait blocks, impl blocks, type patterns).
+- **DO NOT** use `.contains("fn ")`, `.contains("spec fn ")`, `.contains("ensures")`
+  or similar string searches to identify language constructs.
+- **DO NOT** manually count brace/paren/bracket depth to find block boundaries.
+- **DO NOT** use `.find()`, `.split()`, `.replace()` on source text to extract
+  or transform code structure.
+
+**DO** use `verus_syn::parse_file` + `verus_syn::visit::Visit` to walk the AST.
+**DO** use `ra_ap_syntax::SourceFile::parse` for token-level analysis.
+**DO** look at `full_generic_feq.rs` for the canonical pattern: find the `verus!`
+block, parse its interior with `verus_syn`, visit items with a custom visitor.
+
+**Review every binary under construction** with the string hacking detector before
+considering it done:
+
+```bash
+./target/release/veracity-review-string-hacking -f src/bin/<your_binary>.rs
+```
+
+Zero violations required. If the detector flags your code, rewrite it using AST
+traversal. No exceptions.
+
 ## Verus Trait Pattern
 
 Rust's traits are weak compared to ML-style modules, signatures, and functors.

@@ -207,6 +207,8 @@ struct FileStats {
     external_body_fn_names: HashSet<String>,
     /// Map from function name to body text (for auto-detecting downstream calls)
     fn_body_texts: HashMap<String, String>,
+    /// Map from hole line to function name (for auto-detection matching)
+    hole_line_to_fn: HashMap<usize, String>,
 }
 
 #[derive(Debug, Default)]
@@ -249,6 +251,8 @@ struct SummaryStats {
     accepted_by_chapter: HashMap<String, usize>,
     /// Assume subcategory breakdown (e.g. "rwlock:reader" → count)
     assume_subcats: HashMap<String, usize>,
+    /// Assume(false) subcategory breakdown
+    assume_false_subcats: HashMap<String, usize>,
     /// Structural false positive counts
     structural_fp_count: usize,
     structural_fp_by_category: HashMap<String, usize>,
@@ -787,6 +791,12 @@ fn should_exclude(path: &Path, exclude_dirs: &[PathBuf]) -> bool {
     }
     if path.file_name().map_or(false, |f| f == "Types.rs") && path.parent().map_or(false, |p| p.ends_with("src")) {
         return true;
+    }
+    // Skip Example*, Problem*, and Algorithm* files (textbook demos, not algorithmic targets)
+    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+        if stem.starts_with("Example") || stem.starts_with("Problem") || stem.starts_with("Algorithm") {
+            return true;
+        }
     }
     if path.components().any(|c| {
         let s = c.as_os_str();
@@ -2236,31 +2246,29 @@ fn analyze_file(path: &Path) -> Result<FileStats> {
     if stats.external_body_fn_names.len() > 1 {
         for hole in &mut stats.holes.holes {
             if hole.hole_type == "external_body" && hole.blocked_by.is_none() {
-                // Find which function this hole belongs to by matching context
-                // The context contains the fn signature line
-                for (fn_name, body_text) in &stats.fn_body_texts {
-                    // Check if this hole's context mentions this function name
-                    if !hole.context.contains(fn_name) {
+                // Look up which function this hole belongs to
+                let fn_name = match stats.hole_line_to_fn.get(&hole.line) {
+                    Some(name) => name.clone(),
+                    None => continue,
+                };
+                let body_text = match stats.fn_body_texts.get(&fn_name) {
+                    Some(body) => body,
+                    None => continue,
+                };
+                // Check if this function's body calls another external_body function
+                for other_fn in &stats.external_body_fn_names {
+                    if *other_fn == fn_name {
                         continue;
                     }
-                    // Check if this function's body calls another external_body function
-                    for other_fn in &stats.external_body_fn_names {
-                        if other_fn == fn_name {
-                            continue;
-                        }
-                        // Simple text search: check if the body contains a call to the other function
-                        // Match "fn_name(" or "fn_name (" or "self.fn_name(" patterns
-                        if body_text.contains(&format!("{}(", other_fn))
-                            || body_text.contains(&format!("{} (", other_fn))
-                            || body_text.contains(&format!(".{}(", other_fn))
-                        {
-                            hole.blocked_by = Some(other_fn.clone());
-                            stats.holes.external_body_root_count -= 1;
-                            stats.holes.external_body_downstream_count += 1;
-                            break;
-                        }
+                    if body_text.contains(&format!("{}(", other_fn))
+                        || body_text.contains(&format!("{} (", other_fn))
+                        || body_text.contains(&format!(".{}(", other_fn))
+                    {
+                        hole.blocked_by = Some(other_fn.clone());
+                        stats.holes.external_body_root_count -= 1;
+                        stats.holes.external_body_downstream_count += 1;
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -2805,6 +2813,67 @@ fn collect_method_calls_expr(expr: &verus_syn::Expr, out: &mut Vec<(String, Stri
     }
 }
 
+/// Recursively collect (fn_name, first_arg_ident) from free function calls in an expr.
+/// Recognizes `fn_name(arg)` and `fn_name(&arg)` forms.
+fn collect_free_fn_calls_expr(expr: &verus_syn::Expr, out: &mut Vec<(String, String)>) {
+    use verus_syn::Expr;
+    match expr {
+        Expr::Call(ec) => {
+            // Check if func is a simple path (free function name)
+            if let Expr::Path(ep) = &*ec.func {
+                if ep.path.leading_colon.is_none() && ep.path.segments.len() == 1 {
+                    let seg = &ep.path.segments[0];
+                    if matches!(&seg.arguments, verus_syn::PathArguments::None) {
+                        let fn_name = seg.ident.to_string();
+                        // Extract first argument's base ident
+                        if let Some(first_arg) = ec.args.first() {
+                            if let Some(arg_ident) = base_ident_from_expr_impl(first_arg) {
+                                out.push((fn_name, arg_ident));
+                            }
+                        }
+                    }
+                }
+            }
+            // Recurse into func and args
+            collect_free_fn_calls_expr(&ec.func, out);
+            for arg in &ec.args {
+                collect_free_fn_calls_expr(arg, out);
+            }
+        }
+        Expr::MethodCall(mc) => {
+            collect_free_fn_calls_expr(&mc.receiver, out);
+            for arg in &mc.args {
+                collect_free_fn_calls_expr(arg, out);
+            }
+        }
+        Expr::Binary(eb) => {
+            collect_free_fn_calls_expr(&eb.left, out);
+            collect_free_fn_calls_expr(&eb.right, out);
+        }
+        Expr::Unary(eu) => collect_free_fn_calls_expr(&eu.expr, out),
+        Expr::Paren(ep) => collect_free_fn_calls_expr(&ep.expr, out),
+        Expr::Reference(er) => collect_free_fn_calls_expr(&er.expr, out),
+        Expr::Field(ef) => collect_free_fn_calls_expr(&ef.base, out),
+        Expr::If(ei) => {
+            collect_free_fn_calls_expr(&ei.cond, out);
+            for stmt in &ei.then_branch.stmts {
+                if let verus_syn::Stmt::Expr(expr, _) = stmt {
+                    collect_free_fn_calls_expr(expr, out);
+                }
+            }
+            if let Some((_, ref else_expr)) = ei.else_branch {
+                collect_free_fn_calls_expr(else_expr, out);
+            }
+        }
+        Expr::Tuple(et) => {
+            for e in &et.elems {
+                collect_free_fn_calls_expr(e, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Collect spec_*_wf predicate names from the file (AST-based, no string hacking).
 fn collect_spec_wf_predicates(file: &verus_syn::File, stats: &mut FileStats) {
     struct SpecWfCollector<'a> {
@@ -2997,6 +3066,34 @@ impl<'a> ProofHoleVisitor<'a> {
         out
     }
 
+    /// Collect (fn_name, first_arg_ident) from all free function calls in requires exprs.
+    fn free_fn_calls_in_spec_exprs(spec: Option<&verus_syn::Requires>) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        let Some(r) = spec else { return out };
+        for expr in &r.exprs.exprs {
+            collect_free_fn_calls_expr(expr, &mut out);
+        }
+        out
+    }
+
+    fn free_fn_calls_in_ensures(
+        ensures: Option<&verus_syn::Ensures>,
+        default_ensures: Option<&verus_syn::DefaultEnsures>,
+    ) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        if let Some(e) = ensures {
+            for expr in &e.exprs.exprs {
+                collect_free_fn_calls_expr(expr, &mut out);
+            }
+        }
+        if let Some(de) = default_ensures {
+            for expr in &de.exprs.exprs {
+                collect_free_fn_calls_expr(expr, &mut out);
+            }
+        }
+        out
+    }
+
     fn method_calls_in_ensures(
         ensures: Option<&verus_syn::Ensures>,
         default_ensures: Option<&verus_syn::DefaultEnsures>,
@@ -3030,6 +3127,11 @@ impl<'a> ProofHoleVisitor<'a> {
             sig.spec.ensures.as_ref(),
             sig.spec.default_ensures.as_ref(),
         );
+        let req_free_calls = Self::free_fn_calls_in_spec_exprs(sig.spec.requires.as_ref());
+        let ens_free_calls = Self::free_fn_calls_in_ensures(
+            sig.spec.ensures.as_ref(),
+            sig.spec.default_ensures.as_ref(),
+        );
 
         for input in &sig.inputs {
             let (param_name, param_ty) = match &input.kind {
@@ -3051,7 +3153,10 @@ impl<'a> ProofHoleVisitor<'a> {
                 continue;
             }
             let has_wf = req_calls.iter().any(|(recv, m)| recv == &param_name && m == &expected_wf);
-            if !has_wf {
+            // Also accept free function form: spec_*_wf_generic(param) or spec_*_wf_generic(&param)
+            let expected_wf_generic = format!("{}_generic", expected_wf);
+            let has_wf_generic = req_free_calls.iter().any(|(fn_name, arg)| fn_name == &expected_wf_generic && arg == &param_name);
+            if !has_wf && !has_wf_generic {
                 self.stats.warnings.push(DetectedHole {
                     line,
                     hole_type: "fn_missing_wf_requires".to_string(),
@@ -3080,7 +3185,10 @@ impl<'a> ProofHoleVisitor<'a> {
                 let expected_wf = Self::type_to_spec_wf_name(&tn);
                 if self.stats.spec_wf_predicates.contains(&expected_wf) {
                     let has_wf = ens_calls.iter().any(|(recv, m)| recv == &rn && m == &expected_wf);
-                    if !has_wf {
+                    // Also accept free function form: spec_*_wf_generic(ret) or spec_*_wf_generic(&ret)
+                    let expected_wf_generic = format!("{}_generic", expected_wf);
+                    let has_wf_generic = ens_free_calls.iter().any(|(fn_name, arg)| fn_name == &expected_wf_generic && arg == &rn);
+                    if !has_wf && !has_wf_generic {
                         self.stats.warnings.push(DetectedHole {
                             line,
                             hole_type: "fn_missing_wf_ensures".to_string(),
@@ -3623,11 +3731,18 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     context: "assume(false) with accept hole comment".to_string(), ..Default::default()
                 });
             } else {
+                let is_mt_file = self.file_stem.contains("Mt");
+                let full_line = self.content.lines().nth(line.saturating_sub(1)).unwrap_or("");
+                let subcat = if full_line.contains("// RWLOCK_GHOST") {
+                    "rwlock"
+                } else {
+                    classify_assume_subcategory(&context, is_mt_file, false)
+                };
                 self.stats.holes.assume_false_count += 1;
                 self.stats.holes.total_holes += 1;
                 self.stats.holes.holes.push(DetectedHole {
                     line,
-                    hole_type: "assume(false)".to_string(),
+                    hole_type: format!("assume(false) [{}]", subcat),
                     context: format!("{} — needs diverge(); use `assume(false); diverge()`", context), ..Default::default()
                 });
             }
@@ -3676,7 +3791,13 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 // SFP — don't count as a hole
             } else {
                 // Real assume hole — count it
-                let subcat = classify_assume_subcategory(&context_str, is_mt_file, false);
+                // Check full source line for // RWLOCK_GHOST comment
+                let full_line = self.content.lines().nth(line.saturating_sub(1)).unwrap_or("");
+                let subcat = if full_line.contains("// RWLOCK_GHOST") {
+                    "rwlock"
+                } else {
+                    classify_assume_subcategory(&context_str, is_mt_file, false)
+                };
                 self.stats.holes.assume_count += 1;
                 self.stats.holes.total_holes += 1;
                 self.stats.holes.holes.push(DetectedHole {
@@ -3828,6 +3949,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                         let blocked_by = parse_blocked_by_annotation(self.content, line);
                         if let Some(ref name) = self.current_fn_name {
                             self.stats.external_body_fn_names.insert(name.clone());
+                            self.stats.hole_line_to_fn.insert(line, name.clone());
                             if let Some(ref body) = self.current_fn_body_text {
                                 self.stats.fn_body_texts.insert(name.clone(), body.clone());
                             }
@@ -4644,7 +4766,11 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
             if let Some(start) = h.hole_type.find('[') {
                 if let Some(end) = h.hole_type.find(']') {
                     let subcat = &h.hole_type[start+1..end];
-                    *summary.assume_subcats.entry(subcat.to_string()).or_insert(0) += 1;
+                    if h.hole_type.starts_with("assume(false)") {
+                        *summary.assume_false_subcats.entry(subcat.to_string()).or_insert(0) += 1;
+                    } else {
+                        *summary.assume_subcats.entry(subcat.to_string()).or_insert(0) += 1;
+                    }
                 }
             }
         }
@@ -4722,9 +4848,7 @@ fn compute_summary(file_stats_map: &HashMap<String, FileStats>, base_dir: &Path)
     let mut module_to_holed: HashMap<String, bool> = HashMap::new();
     for (path_str, stats) in file_stats_map.iter() {
         let module = path_str_to_module(path_str);
-        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
-            || stats.holes.trivial_spec_wf_count > 0;
-        module_to_holed.insert(module, stats.holes.total_holes > 0 || has_errors);
+        module_to_holed.insert(module, stats.holes.total_holes > 0);
     }
     for (path_str, stats) in file_stats_map.iter() {
         if !path_str.starts_with("src/") {
@@ -4843,13 +4967,10 @@ fn path_str_to_module(path_str: &str) -> String {
 }
 
 fn print_depends_upon(file_stats_map: &HashMap<String, FileStats>) {
-    let is_warning_level = |t: &str| matches!(t, "assume_eq_clone_workaround" | "requires_true");
     let mut module_to_holed: HashMap<String, bool> = HashMap::new();
     for (path_str, stats) in file_stats_map {
         let module = path_str_to_module(path_str);
-        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
-            || stats.holes.trivial_spec_wf_count > 0;
-        let holed = stats.holes.total_holes > 0 || has_errors;
+        let holed = stats.holes.total_holes > 0;
         module_to_holed.insert(module.clone(), holed);
     }
     let all_modules: HashSet<String> = module_to_holed.keys().cloned().collect();
@@ -4937,19 +5058,29 @@ fn print_summary(summary: &SummaryStats) {
     let total_holes = summary.holes.total_holes;
     log!("");
     log!("Holes Found: {} (actionable)", total_holes);
+    // assume(false) — flattened by subcategory
     if summary.holes.assume_false_count > 0 {
-        log!("   {} × assume(false) ({}%)", summary.holes.assume_false_count, pct(summary.holes.assume_false_count, total_holes));
+        if summary.assume_false_subcats.len() <= 1 {
+            let subcat = summary.assume_false_subcats.keys().next().map(|s| s.as_str()).unwrap_or("algorithmic");
+            log!("   {} × assume(false) [{}] ({}%)", summary.holes.assume_false_count, subcat, pct(summary.holes.assume_false_count, total_holes));
+        } else {
+            let mut sorted: Vec<_> = summary.assume_false_subcats.iter().collect();
+            sorted.sort_by(|a, b| b.1.cmp(a.1));
+            for (subcat, count) in &sorted {
+                log!("   {} × assume(false) [{}] ({}%)", count, subcat, pct(**count, total_holes));
+            }
+        }
     }
+    // assume() — flattened by subcategory
     if summary.holes.assume_count > 0 {
-        log!("   {} × assume() ({}%)", summary.holes.assume_count, pct(summary.holes.assume_count, total_holes));
-        // Subcategory breakdown
-        if !summary.assume_subcats.is_empty()
-            && (summary.assume_subcats.len() > 1 || !summary.assume_subcats.contains_key("algorithmic"))
-        {
+        if summary.assume_subcats.len() <= 1 {
+            let subcat = summary.assume_subcats.keys().next().map(|s| s.as_str()).unwrap_or("algorithmic");
+            log!("   {} × assume() [{}] ({}%)", summary.holes.assume_count, subcat, pct(summary.holes.assume_count, total_holes));
+        } else {
             let mut sorted: Vec<_> = summary.assume_subcats.iter().collect();
             sorted.sort_by(|a, b| b.1.cmp(a.1));
             for (subcat, count) in &sorted {
-                log!("      {} × {}", count, subcat);
+                log!("   {} × assume() [{}] ({}%)", count, subcat, pct(**count, total_holes));
             }
         }
     }
@@ -4998,6 +5129,40 @@ fn print_summary(summary: &SummaryStats) {
     }
     if summary.holes.trivial_spec_wf_count > 0 {
         log!("   {} × trivial spec*wf {{ true }} ({}%)", summary.holes.trivial_spec_wf_count, pct(summary.holes.trivial_spec_wf_count, total_holes));
+    }
+
+    // Real Proof Targets: subtract rwlock/unreachable subcats
+    {
+        let non_actionable = |subcats: &HashMap<String, usize>| -> usize {
+            subcats.iter()
+                .filter(|(k, _)| k.contains("rwlock") || k.contains("unreachable"))
+                .map(|(_, v)| *v)
+                .sum::<usize>()
+        };
+        let rwlock_count: usize = [&summary.assume_subcats, &summary.assume_false_subcats].iter()
+            .flat_map(|m| m.iter())
+            .filter(|(k, _)| k.contains("rwlock"))
+            .map(|(_, v)| *v)
+            .sum();
+        let unreachable_count: usize = [&summary.assume_subcats, &summary.assume_false_subcats].iter()
+            .flat_map(|m| m.iter())
+            .filter(|(k, _)| k.contains("unreachable"))
+            .map(|(_, v)| *v)
+            .sum();
+        let total_non_actionable = non_actionable(&summary.assume_subcats) + non_actionable(&summary.assume_false_subcats);
+        let real_targets = total_holes.saturating_sub(total_non_actionable);
+        if total_non_actionable == 0 {
+            log!("Real Proof Targets: {} (all actionable)", total_holes);
+        } else {
+            let mut parts = vec![format!("{} total", total_holes)];
+            if rwlock_count > 0 {
+                parts.push(format!("{} rwlock", rwlock_count));
+            }
+            if unreachable_count > 0 {
+                parts.push(format!("{} unreachable", unreachable_count));
+            }
+            log!("Real Proof Targets: {} ({})", real_targets, parts.join(" - "));
+        }
     }
 
     // Per-chapter holes table
@@ -5219,13 +5384,10 @@ fn print_chapter_by_chapter_proof_targeting(
         _ => return,
     };
 
-    let is_warning_level = |t: &str| matches!(t, "assume_eq_clone_workaround" | "requires_true");
     let mut module_to_holed: HashMap<String, bool> = HashMap::new();
     for (path_str, stats) in file_stats_map {
         let module = path_str_to_module(path_str);
-        let has_errors = stats.warnings.iter().any(|w| !is_warning_level(&w.hole_type))
-            || stats.holes.trivial_spec_wf_count > 0;
-        let holed = stats.holes.total_holes > 0 || has_errors;
+        let holed = stats.holes.total_holes > 0;
         module_to_holed.insert(module.clone(), holed);
     }
     let all_modules: HashSet<String> = module_to_holed.keys().cloned().collect();

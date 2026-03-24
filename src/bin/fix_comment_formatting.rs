@@ -289,6 +289,8 @@ fn parse_standard_args(args: &[String]) -> Result<StandardArgs> {
         src_dirs: vec!["src".to_string(), "source".to_string()],
         test_dirs: vec!["tests".to_string(), "test".to_string()],
         bench_dirs: vec!["benches".to_string(), "bench".to_string()],
+        exclude_dirs: Vec::new(),
+        all: false,
     })
 }
 

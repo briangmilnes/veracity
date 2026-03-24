@@ -24,6 +24,7 @@ verus_syn = { path = "../verus/dependencies/syn", features = ["full", "visit", "
 jsonschema = "0.37"
 quote = "1.0"
 proc-macro2 = "1.0"
+toml = "0.8"
 
 [dev-dependencies]
 serial_test = "3.0"
@@ -194,3 +195,15 @@ path = "src/bin/verusification.rs"
 [[bin]]
 name = "veracity-update-to-style"
 path = "src/bin/update_to_style.rs"
+
+[[bin]]
+name = "veracity-full-generic-feq"
+path = "src/bin/full_generic_feq.rs"
+
+[[bin]]
+name = "veracity-iter-vs-rec"
+path = "src/bin/iter_vs_rec.rs"
+
+[[bin]]
+name = "veracity-fix-redundant-finites"
+path = "src/bin/fix_redundant_finites.rs"

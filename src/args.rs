@@ -28,6 +28,10 @@ pub struct StandardArgs {
         pub test_dirs: Vec<String>,
         /// Bench directory names to search (default: ["benches", "bench", "benchmark"])
         pub bench_dirs: Vec<String>,
+        /// Directory names to exclude (matched at any depth)
+        pub exclude_dirs: Vec<String>,
+        /// Include tests and benches directories (default: src only)
+        pub all: bool,
     }
 
     impl StandardArgs {
@@ -80,7 +84,7 @@ pub struct StandardArgs {
             if args.len() == 1 {
                 // No arguments - default to codebase (src/, tests/, benches/)
                 let current_dir = std::env::current_dir()?;
-                return Ok(StandardArgs { 
+                return Ok(StandardArgs {
                     paths: vec![current_dir],
                     is_module_search: false,
                     project: None,
@@ -90,6 +94,8 @@ pub struct StandardArgs {
                     src_dirs: Self::default_src_dirs(),
                     test_dirs: Self::default_test_dirs(),
                     bench_dirs: Self::default_bench_dirs(),
+                    exclude_dirs: Vec::new(),
+                    all: false,
                 });
             }
             
@@ -103,6 +109,8 @@ pub struct StandardArgs {
             let mut src_dirs = Self::default_src_dirs();
             let mut test_dirs = Self::default_test_dirs();
             let mut bench_dirs = Self::default_bench_dirs();
+            let mut exclude_dirs: Vec<String> = Vec::new();
+            let mut all = false;
             
             while i < args.len() {
                 match args[i].as_str() {
@@ -244,8 +252,16 @@ pub struct StandardArgs {
                         i += 2;
                     }
                     "-e" | "--exclude" => {
-                        // Tool-specific flag with one argument, skip both
-                        i += 2;
+                        i += 1;
+                        if i >= args.len() {
+                            return Err(anyhow::anyhow!("--exclude requires a directory name"));
+                        }
+                        exclude_dirs.push(args[i].clone());
+                        i += 1;
+                    }
+                    "-a" | "--all" => {
+                        all = true;
+                        i += 1;
                     }
                     other => {
                         return Err(anyhow::anyhow!("Unknown option: {other}"));
@@ -267,16 +283,18 @@ pub struct StandardArgs {
                 return Err(anyhow::anyhow!("No paths specified"));
             }
             
-            Ok(StandardArgs { 
-                paths, 
-                is_module_search, 
-                project, 
-                language, 
+            Ok(StandardArgs {
+                paths,
+                is_module_search,
+                project,
+                language,
                 repositories,
                 multi_codebase,
                 src_dirs,
                 test_dirs,
                 bench_dirs,
+                exclude_dirs,
+                all,
             })
         }
         
@@ -365,7 +383,7 @@ pub struct StandardArgs {
                 }
             }
             
-            Ok(StandardArgs { 
+            Ok(StandardArgs {
                 paths: found_paths,
                 is_module_search: true,
                 project: None,
@@ -375,6 +393,8 @@ pub struct StandardArgs {
                 src_dirs: Self::default_src_dirs(),
                 test_dirs: Self::default_test_dirs(),
                 bench_dirs: Self::default_bench_dirs(),
+                exclude_dirs: Vec::new(),
+                all: false,
             })
         }
         
@@ -418,6 +438,8 @@ pub struct StandardArgs {
             println!("  -t, --test-dirs NAMES      Test directory names (comma-separated, replaces defaults)");
             println!("  -b, --bench-dirs NAMES     Bench directory names (comma-separated, replaces defaults)");
             println!("      --src-dirs NAMES       Source directory names (comma-separated, replaces defaults)");
+            println!("  -e, --exclude DIR          Exclude directories by name (repeatable)");
+            println!("  -a, --all                  Include tests and benches directories");
             println!("  -p, --project NAME         Enable project-specific tools (e.g., 'APAS')");
             println!("  -l, --language NAME        Language variant: 'Rust' (default) or 'Verus'");
             println!("  -h, --help                 Show this help message");
