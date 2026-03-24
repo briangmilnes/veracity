@@ -207,3 +207,7 @@ path = "src/bin/iter_vs_rec.rs"
 [[bin]]
 name = "veracity-fix-redundant-finites"
 path = "src/bin/fix_redundant_finites.rs"
+
+[[bin]]
+name = "veracity-review-status"
+path = "src/bin/review_status.rs"
