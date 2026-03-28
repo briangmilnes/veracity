@@ -284,15 +284,6 @@ fn is_toc_entry_line(line: &str) -> bool {
 
 /// Classify an ra_ap_syntax item outside verus! into a section number (12-14).
 fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> u32 {
-    if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
-        // macro_rules! → section 13
-        if let Some(path) = macro_call.path() {
-            let name = path.to_string();
-            if name == "macro_rules" {
-                return 13;
-            }
-        }
-    }
     if let Some(impl_block) = ast::Impl::cast(node.clone()) {
         // Check trait name for Debug/Display → section 14
         if let Some(trait_) = impl_block.trait_() {
@@ -313,7 +304,9 @@ fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> u32 {
         // Other impl outside verus! → section 14 (derive impls)
         return 14;
     }
-    if let Some(_) = ast::MacroDef::cast(node.clone()) {
+    if ast::MacroDef::cast(node.clone()).is_some()
+        || ast::MacroRules::cast(node.clone()).is_some()
+    {
         return 13;
     }
     14 // default for unknown outside-verus items
@@ -473,6 +466,22 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
     let _before_order: Vec<u32> = ext_items.iter().map(|i| i.2).collect();
     let _after_order: Vec<u32> = sorted.iter().map(|i| i.2).collect();
 
+    // Check which section headers already exist just before the outside region
+    // (at the end of the verus! block). Avoid duplicating them.
+    let boundary_region = &result[after_verus.saturating_sub(200)..after_verus];
+    let mut boundary_sections: Vec<u32> = Vec::new();
+    for line in boundary_region.lines() {
+        if is_section_header_line(line.trim()) {
+            if let Some(hdr) = parse_section_header(&CommentToken {
+                line_num: 0, text: line.trim().to_string(),
+            }) {
+                if let Some(canon) = canonical_number(base_section_name(&hdr.section_name)) {
+                    boundary_sections.push(canon);
+                }
+            }
+        }
+    }
+
     // Reassemble with section headers.
     let indent = "    "; // standard indentation inside pub mod
     let mut new_outside = String::new();
@@ -483,10 +492,14 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         let cleaned = strip_section_headers_from_text(item_text);
 
         if prev_section != Some(section) {
-            if let Some(name) = canonical_name(section) {
-                new_outside.push_str(&format!(
-                    "\n{}//\t\t{}. {}\n", indent, section, name
-                ));
+            // Skip if this section header was already inserted at the verus! boundary.
+            let at_boundary = prev_section.is_none() && boundary_sections.contains(&section);
+            if !at_boundary {
+                if let Some(name) = canonical_name(section) {
+                    new_outside.push_str(&format!(
+                        "\n{}//\t\t{}. {}\n", indent, section, name
+                    ));
+                }
             }
             prev_section = Some(section);
         }
@@ -1549,6 +1562,50 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
         }
     }
 
+    // Step 0c: Remove duplicate section headers that are near each other
+    // (within 5 lines, skipping blanks, `}`, and `} // verus!` lines).
+    // This catches the inside-verus/outside-verus boundary duplication
+    // without removing legitimate repeated sections in multi-type files.
+    {
+        let mut i = 0;
+        while i < lines.len() {
+            if !is_section_header_line(lines[i].trim()) {
+                i += 1;
+                continue;
+            }
+            let a = match parse_section_header(&CommentToken {
+                line_num: 0, text: lines[i].trim().to_string(),
+            }) {
+                Some(h) => h,
+                None => { i += 1; continue; }
+            };
+
+            // Scan forward up to 5 lines for a duplicate, skipping blanks and braces.
+            let mut j = i + 1;
+            while j < lines.len() && j <= i + 5 {
+                let trimmed = lines[j].trim();
+                if trimmed.is_empty() || trimmed == "}" || trimmed.starts_with("} //") {
+                    j += 1;
+                    continue;
+                }
+                if is_section_header_line(trimmed) {
+                    if let Some(b) = parse_section_header(&CommentToken {
+                        line_num: 0, text: trimmed.to_string(),
+                    }) {
+                        if a.section_num == b.section_num && a.num_suffix == b.num_suffix {
+                            lines.remove(j);
+                            changed = true;
+                            // Don't increment j — re-check this position.
+                            continue;
+                        }
+                    }
+                }
+                break; // Hit non-blank, non-brace, non-header content — stop.
+            }
+            i += 1;
+        }
+    }
+
     // Fixes 1-4 use line numbers. When content was reordered, re-analyze
     // to get fresh line numbers. The reorder function handles headers inside
     // verus!, but sections outside verus! (12-14) still need fixing.
@@ -1978,6 +2035,47 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
             if existing != toc_lines {
                 lines.splice(start..end, toc_lines.iter().cloned());
             }
+        }
+    }
+
+    // Final dedup: remove any duplicate section headers that survived the pipeline.
+    // This handles cases where different steps insert the same header.
+    {
+        let mut i = 0;
+        while i < lines.len() {
+            if !is_section_header_line(lines[i].trim()) {
+                i += 1;
+                continue;
+            }
+            let a = match parse_section_header(&CommentToken {
+                line_num: 0, text: lines[i].trim().to_string(),
+            }) {
+                Some(h) => h,
+                None => { i += 1; continue; }
+            };
+
+            // Scan forward up to 5 lines for a duplicate, skipping blanks and braces.
+            let mut j = i + 1;
+            while j < lines.len() && j <= i + 5 {
+                let trimmed = lines[j].trim();
+                if trimmed.is_empty() || trimmed == "}" || trimmed.starts_with("} //") {
+                    j += 1;
+                    continue;
+                }
+                if is_section_header_line(trimmed) {
+                    if let Some(b) = parse_section_header(&CommentToken {
+                        line_num: 0, text: trimmed.to_string(),
+                    }) {
+                        if a.section_num == b.section_num && a.num_suffix == b.num_suffix {
+                            lines.remove(j);
+                            changed = true;
+                            continue;
+                        }
+                    }
+                }
+                break;
+            }
+            i += 1;
         }
     }
 
