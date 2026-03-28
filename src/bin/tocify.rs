@@ -60,6 +60,18 @@ fn canonical_number(name: &str) -> Option<u32> {
     if matches.len() == 1 {
         return Some(matches[0].0);
     }
+    // Match non-standard variants of canonical section names.
+    if normalized.starts_with("impl ") || normalized.starts_with("bare impl")
+        || normalized.starts_with("verified helper")
+    {
+        return Some(9); // All impl/helper variants → section 9
+    }
+    if normalized == "spec functions" {
+        return Some(6); // "spec functions" = "spec fns"
+    }
+    if normalized.starts_with("ninject") || normalized.starts_with("lock predicate") {
+        return Some(11); // Lock predicates → section 11
+    }
     None
 }
 
