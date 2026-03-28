@@ -701,6 +701,25 @@ fn reorder_verus_items(content: &str) -> Option<String> {
     }
 }
 
+/// Collapse runs of 3+ consecutive blank lines to at most 2.
+fn collapse_blank_lines(content: &str) -> String {
+    let mut result = String::new();
+    let mut blank_count = 0u32;
+    for line in content.lines() {
+        if line.trim().is_empty() {
+            blank_count += 1;
+            if blank_count <= 2 {
+                result.push('\n');
+            }
+        } else {
+            blank_count = 0;
+            result.push_str(line);
+            result.push('\n');
+        }
+    }
+    result
+}
+
 /// Strip section header comments and in-body TOC blocks from a chunk of text.
 fn strip_section_headers_from_text(text: &str) -> String {
     let mut result = String::new();
@@ -1951,7 +1970,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
     }
 
     if changed {
-        Some(lines.join("\n") + "\n")
+        Some(collapse_blank_lines(&(lines.join("\n") + "\n")))
     } else {
         None
     }
