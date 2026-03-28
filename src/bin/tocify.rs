@@ -307,26 +307,83 @@ fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> u32 {
     14 // default for unknown outside-verus items
 }
 
-/// Reorder items outside verus! (sections 12-14).
+/// Insert section headers for items outside verus! — both before (sections 1-2)
+/// and after (sections 12-14). Reorders after-verus items by section number.
 /// Returns modified content if changes were made.
 fn reorder_outside_verus(content: &str) -> Option<String> {
-    // Find verus! block end and pub mod end.
-    let (_, verus_close, _) = find_verus_block(content)?;
+    let (verus_open, verus_close, _) = find_verus_block(content)?;
+    let mut result = content.to_string();
+    let mut changed = false;
+
+    // --- Before verus!: insert section 1 (module) and section 2 (imports) headers ---
+    // Find `pub mod` line and `use` block between file top and verus! open.
+    {
+        let before_verus = &result[..verus_open];
+        let lines: Vec<&str> = before_verus.lines().collect();
+        let mut new_lines: Vec<String> = Vec::new();
+        let mut has_mod_header = false;
+        let mut has_use_header = false;
+        let mut first_use_seen = false;
+
+        // Check if headers already exist.
+        for line in &lines {
+            if is_section_header_line(line.trim()) {
+                if let Some(hdr) = parse_section_header(&CommentToken {
+                    line_num: 0, text: line.trim().to_string(),
+                }) {
+                    let canon = canonical_number(base_section_name(&hdr.section_name));
+                    if canon == Some(1) { has_mod_header = true; }
+                    if canon == Some(2) { has_use_header = true; }
+                }
+            }
+        }
+
+        for line in &lines {
+            let trimmed = line.trim();
+            // Insert section 1 header before `pub mod`.
+            if !has_mod_header && (trimmed.starts_with("pub mod ") || trimmed.starts_with("mod ")) {
+                new_lines.push(String::new());
+                new_lines.push("//\t\t1. module".to_string());
+                new_lines.push(String::new());
+                has_mod_header = true;
+            }
+            // Insert section 2 header before first `use` inside pub mod.
+            if !has_use_header && !first_use_seen && trimmed.starts_with("use ") {
+                first_use_seen = true;
+                new_lines.push(String::new());
+                let indent: String = line.chars().take_while(|c| c.is_whitespace()).collect();
+                new_lines.push(format!("{}//\t\t2. imports", indent));
+                new_lines.push(String::new());
+                has_use_header = true;
+            }
+            new_lines.push(line.to_string());
+        }
+
+        let new_before = new_lines.join("\n");
+        if new_before != before_verus.trim_end_matches('\n') {
+            // Rebuild content with new before-verus section.
+            result = format!("{}\n{}", new_before, &result[verus_open..]);
+            changed = true;
+        }
+    }
+
+    // Re-find verus block in potentially modified content.
+    let (_, verus_close, _) = find_verus_block(&result)?;
 
     // Find the line after verus! closing brace.
     let verus_end_byte = verus_close;
     // Find the next newline after the verus close.
-    let after_verus = content[verus_end_byte..].find('\n')
+    let after_verus = result[verus_end_byte..].find('\n')
         .map(|p| verus_end_byte + p + 1)
-        .unwrap_or(content.len());
+        .unwrap_or(result.len());
 
     // Find the last `}` in the file (pub mod closing brace).
-    let mod_close = content.rfind('}')?;
+    let mod_close = result.rfind('}')?;
     if mod_close <= after_verus {
         return None; // nothing between verus! end and mod close
     }
 
-    let outside = &content[after_verus..mod_close];
+    let outside = &result[after_verus..mod_close];
     if outside.trim().is_empty() {
         return None;
     }
@@ -416,7 +473,7 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         if prev_section != Some(section) {
             if let Some(name) = canonical_name(section) {
                 new_outside.push_str(&format!(
-                    "\n{}//\t\t{}. {}\n\n", indent, section, name
+                    "\n{}//\t\t{}. {}\n", indent, section, name
                 ));
             }
             prev_section = Some(section);
@@ -424,13 +481,16 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         new_outside.push_str(&cleaned);
     }
 
-    let new_content = format!("{}{}{}", &content[..after_verus], new_outside, &content[mod_close..]);
+    let new_content = format!("{}{}{}", &result[..after_verus], new_outside, &result[mod_close..]);
 
-    if new_content == content {
-        None
-    } else {
-        Some(new_content)
+    // Return if anything changed from original.
+    if new_content != content {
+        return Some(new_content);
     }
+    if result != content {
+        return Some(result);
+    }
+    None
 }
 
 /// Extract, classify, and reorder items inside the verus! block.
@@ -583,7 +643,7 @@ fn reorder_verus_items(content: &str) -> Option<String> {
         if prev_section != Some(item.section) {
             if let Some(name) = canonical_name(item.section) {
                 new_inner.push_str(&format!(
-                    "\n{}//\t\t{}. {}\n\n", indent, item.section, name
+                    "\n{}//\t\t{}. {}\n", indent, item.section, name
                 ));
             }
             prev_section = Some(item.section);
@@ -617,7 +677,7 @@ fn reorder_verus_items(content: &str) -> Option<String> {
             if prev_section != Some(item.section) {
                 if let Some(name) = canonical_name(item.section) {
                     new_inner.push_str(&format!(
-                        "\n{}//\t\t{}{}. {}\n\n", indent, item.section, suffix, name
+                        "\n{}//\t\t{}{}. {}\n", indent, item.section, suffix, name
                     ));
                 }
                 prev_section = Some(item.section);
@@ -665,9 +725,8 @@ fn strip_section_headers_from_text(text: &str) -> String {
             prev_was_stripped = true;
             continue;
         }
-        // Skip blank line immediately after a stripped line.
+        // Skip ALL consecutive blank lines after a stripped line.
         if prev_was_stripped && line.trim().is_empty() {
-            prev_was_stripped = false;
             continue;
         }
         prev_was_stripped = false;
