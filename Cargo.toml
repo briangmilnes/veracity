@@ -211,3 +211,11 @@ path = "src/bin/fix_redundant_finites.rs"
 [[bin]]
 name = "veracity-review-status"
 path = "src/bin/review_status.rs"
+
+[[bin]]
+name = "veracity-compare-par-mut"
+path = "src/bin/compare_par_mut.rs"
+
+[[bin]]
+name = "veracity-tocify"
+path = "src/bin/tocify.rs"
