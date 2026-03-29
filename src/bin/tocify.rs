@@ -166,7 +166,10 @@ fn classify_verus_item(item: &verus_syn::Item) -> u32 {
     match item {
         verus_syn::Item::Use(_) => 2,
         verus_syn::Item::BroadcastUse(_) => 3,
-        verus_syn::Item::Struct(_) | verus_syn::Item::Enum(_) | verus_syn::Item::Type(_) => 4,
+        verus_syn::Item::Struct(s) => {
+            if is_iterator_type_name(&s.ident.to_string()) { 10 } else { 4 }
+        }
+        verus_syn::Item::Enum(_) | verus_syn::Item::Type(_) => 4,
         verus_syn::Item::Const(_) | verus_syn::Item::Static(_) => 4,
         verus_syn::Item::Impl(impl_item) => classify_impl(impl_item),
         verus_syn::Item::Fn(fn_item) => classify_fn(fn_item),
@@ -177,19 +180,33 @@ fn classify_verus_item(item: &verus_syn::Item) -> u32 {
     }
 }
 
+/// Check if a type name is an iterator-related type (belongs in section 10).
+fn is_iterator_type_name(name: &str) -> bool {
+    name.ends_with("Iter")
+        || name.ends_with("Iterator")
+        || name.ends_with("GhostIterator")
+        || name.ends_with("IntoIter")
+}
+
 /// Classify an impl block by its trait name.
 fn classify_impl(impl_item: &verus_syn::ItemImpl) -> u32 {
+    // Extract the self type name for iterator detection.
+    let self_type_name = extract_self_type_name(&impl_item.self_ty);
+    let is_iter_type = self_type_name.as_ref().map_or(false, |n| is_iterator_type_name(n));
+
     if let Some((_, ref path, _)) = impl_item.trait_ {
         let trait_name = path.segments.last()
             .map(|s| s.ident.to_string())
             .unwrap_or_default();
 
         match trait_name.as_str() {
-            "View" | "DeepView" => 5,
+            "View" | "DeepView" => {
+                if is_iter_type { 10 } else { 5 }
+            }
             "Iterator" | "IntoIterator" | "ForLoopGhostIteratorNew"
                 | "ForLoopGhostIterator" => 10,
             "RwLockPredicate" => 11,
-            "Clone" | "PartialEq" | "Eq" | "Default" => 12,
+            "Clone" | "PartialEq" | "Eq" | "Default" | "Hash" => 12,
             // PartialEqSpecImpl goes in section 9 per the standard (line 279-284
             // of table_of_contents_standard.rs): cfg-gated trait impls are
             // classified as regular impls, which must precede section 10.
@@ -199,6 +216,17 @@ fn classify_impl(impl_item: &verus_syn::ItemImpl) -> u32 {
     } else {
         // Bare impl (inherent) — section 9.
         9
+    }
+}
+
+/// Extract the base type name from a verus_syn Type (e.g., "RelationStEphIter" from
+/// `RelationStEphIter<'a, X, Y>`).
+fn extract_self_type_name(ty: &verus_syn::Type) -> Option<String> {
+    match ty {
+        verus_syn::Type::Path(tp) => {
+            tp.path.segments.last().map(|s| s.ident.to_string())
+        }
+        _ => None,
     }
 }
 
@@ -634,8 +662,9 @@ fn reorder_verus_items(content: &str) -> Option<String> {
             groups.last_mut().unwrap().push(item);
         } else if !current_group.is_empty()
             && item.section < current_group.last().unwrap().section
+            && item.section == 4 // Only a new struct/enum/type starts a new group.
         {
-            // Section number went down — new type group starts.
+            // Section 4 after a higher section — new type group starts.
             groups.push(current_group);
             current_group = vec![item];
         } else {
