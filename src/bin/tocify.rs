@@ -661,10 +661,10 @@ fn reorder_verus_items(content: &str) -> Option<String> {
             }
             groups.last_mut().unwrap().push(item);
         } else if !current_group.is_empty()
-            && item.section < current_group.last().unwrap().section
-            && item.section == 4 // Only a new struct/enum/type starts a new group.
+            && item.section == 4
+            && current_group.iter().any(|i| i.section == 4)
         {
-            // Section 4 after a higher section — new type group starts.
+            // Section 4 after the group already has a section 4 — new type group.
             groups.push(current_group);
             current_group = vec![item];
         } else {
