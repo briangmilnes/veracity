@@ -385,12 +385,12 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
     // Find the last `}` in the file (pub mod closing brace).
     let mod_close = result.rfind('}')?;
     if mod_close <= after_verus {
-        return None; // nothing between verus! end and mod close
+        return if changed { Some(result) } else { None };
     }
 
     let outside = &result[after_verus..mod_close];
     if outside.trim().is_empty() {
-        return None;
+        return if changed { Some(result) } else { None };
     }
 
     // Parse outside content with ra_ap_syntax.
