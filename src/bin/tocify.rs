@@ -159,24 +159,29 @@ struct TopLevelItem {
     section: u32,
     /// Original index for stable sort.
     original_index: usize,
+    /// True if this item can start a new type group (struct/enum, not type alias/const).
+    is_group_starter: bool,
 }
 
-/// Classify a verus_syn Item into a section number.
-fn classify_verus_item(item: &verus_syn::Item) -> u32 {
+/// Classify a verus_syn Item into (section_number, is_group_starter).
+/// Group starters are struct/enum definitions that can begin a new type group.
+/// Type aliases, consts, and other section-4 items don't start new groups.
+fn classify_verus_item(item: &verus_syn::Item) -> (u32, bool) {
     match item {
-        verus_syn::Item::Use(_) => 2,
-        verus_syn::Item::BroadcastUse(_) => 3,
+        verus_syn::Item::Use(_) => (2, false),
+        verus_syn::Item::BroadcastUse(_) => (3, false),
         verus_syn::Item::Struct(s) => {
-            if is_iterator_type_name(&s.ident.to_string()) { 10 } else { 4 }
+            if is_iterator_type_name(&s.ident.to_string()) { (10, false) } else { (4, true) }
         }
-        verus_syn::Item::Enum(_) | verus_syn::Item::Type(_) => 4,
-        verus_syn::Item::Const(_) | verus_syn::Item::Static(_) => 4,
-        verus_syn::Item::Impl(impl_item) => classify_impl(impl_item),
-        verus_syn::Item::Fn(fn_item) => classify_fn(fn_item),
-        verus_syn::Item::Trait(_) => 8,
-        verus_syn::Item::BroadcastGroup(_) => 7,
-        verus_syn::Item::Macro(_) => 4, // macros inside verus! are rare, keep with defs
-        _ => 9, // fallback
+        verus_syn::Item::Enum(_) => (4, true),
+        verus_syn::Item::Type(_) => (4, false), // type alias — not a group starter
+        verus_syn::Item::Const(_) | verus_syn::Item::Static(_) => (4, false),
+        verus_syn::Item::Impl(impl_item) => (classify_impl(impl_item), false),
+        verus_syn::Item::Fn(fn_item) => (classify_fn(fn_item), false),
+        verus_syn::Item::Trait(_) => (8, false),
+        verus_syn::Item::BroadcastGroup(_) => (7, false),
+        verus_syn::Item::Macro(_) => (4, false),
+        _ => (9, false),
     }
 }
 
@@ -206,11 +211,8 @@ fn classify_impl(impl_item: &verus_syn::ItemImpl) -> u32 {
             "Iterator" | "IntoIterator" | "ForLoopGhostIteratorNew"
                 | "ForLoopGhostIterator" => 10,
             "RwLockPredicate" => 11,
-            "Clone" | "PartialEq" | "Eq" | "Default" | "Hash" => 12,
-            // PartialEqSpecImpl goes in section 9 per the standard (line 279-284
-            // of table_of_contents_standard.rs): cfg-gated trait impls are
-            // classified as regular impls, which must precede section 10.
-            "PartialEqSpecImpl" => 9,
+            "Clone" | "PartialEq" | "Eq" | "Default" | "Hash"
+                | "PartialEqSpecImpl" => 12,
             _ => 9,
         }
     } else {
@@ -565,12 +567,13 @@ fn reorder_verus_items(content: &str) -> Option<String> {
     for (idx, item) in verus_file.items.iter().enumerate() {
         let start = span_start_byte(inner, item);
         let end = span_end_byte(inner, item);
-        let section = classify_verus_item(item);
+        let (section, is_group_starter) = classify_verus_item(item);
         items.push(TopLevelItem {
             start,
             end,
             section,
             original_index: idx,
+            is_group_starter,
         });
     }
 
@@ -661,10 +664,10 @@ fn reorder_verus_items(content: &str) -> Option<String> {
             }
             groups.last_mut().unwrap().push(item);
         } else if !current_group.is_empty()
-            && item.section == 4
-            && current_group.iter().any(|i| i.section == 4)
+            && item.is_group_starter
+            && current_group.iter().any(|i| i.is_group_starter)
         {
-            // Section 4 after the group already has a section 4 — new type group.
+            // New struct/enum after the group already has one — new type group.
             groups.push(current_group);
             current_group = vec![item];
         } else {
