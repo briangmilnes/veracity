@@ -195,6 +195,10 @@ struct VariantInfo {
     wf_name: Option<String>,
     /// Line number of the wf predicate.
     wf_line: usize,
+    /// Top-level conjuncts from the wf predicate body (extracted from impl).
+    wf_conjuncts: Vec<String>,
+    /// Whether a reference variant declares `spec fn spec_root` (for spec_root/@ normalization).
+    has_spec_root: bool,
     /// Module traits extracted in Phase 3.
     traits: Vec<TraitInfo>,
 }
@@ -845,6 +849,84 @@ impl<'ast> Visit<'ast> for WfCollector {
 }
 
 // ---------------------------------------------------------------------------
+// Visitor: collect wf predicate body conjuncts from impl blocks
+// ---------------------------------------------------------------------------
+
+struct WfBodyCollector {
+    #[allow(dead_code)]
+    inner: String,
+    wf_conjuncts: Vec<String>,
+}
+
+/// Split a token-stream string at top-level `&&` operators (not inside parens/brackets/braces).
+fn split_top_level_conjuncts(body: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut depth = 0i32;
+    let mut current = String::new();
+    let chars: Vec<char> = body.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        match chars[i] {
+            '(' | '[' | '{' => { depth += 1; current.push(chars[i]); }
+            ')' | ']' | '}' => { depth -= 1; current.push(chars[i]); }
+            '&' if depth == 0 && i + 1 < chars.len() && chars[i + 1] == '&' => {
+                let trimmed = current.trim().to_string();
+                if !trimmed.is_empty() {
+                    result.push(trimmed);
+                }
+                current.clear();
+                i += 2;
+                continue;
+            }
+            c => { current.push(c); }
+        }
+        i += 1;
+    }
+    let trimmed = current.trim().to_string();
+    if !trimmed.is_empty() {
+        result.push(trimmed);
+    }
+    result
+}
+
+impl<'ast> Visit<'ast> for WfBodyCollector {
+    fn visit_impl_item_fn(&mut self, i: &'ast verus_syn::ImplItemFn) {
+        let name = i.sig.ident.to_string();
+        if name.starts_with("spec_") && name.ends_with("_wf") && self.wf_conjuncts.is_empty() {
+            // Extract the body as token text and split on top-level &&.
+            let body_text = i.block.to_token_stream().to_string();
+            // Strip outer braces.
+            let body_inner = body_text.trim()
+                .strip_prefix('{').unwrap_or(&body_text)
+                .strip_suffix('}').unwrap_or(&body_text)
+                .trim();
+            let conjuncts = split_top_level_conjuncts(body_inner);
+            self.wf_conjuncts = conjuncts.into_iter()
+                .map(|c| normalize_type(&c))
+                .collect();
+        }
+        verus_syn::visit::visit_impl_item_fn(self, i);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Visitor: detect spec_root in trait declarations
+// ---------------------------------------------------------------------------
+
+struct SpecRootDetector {
+    has_spec_root: bool,
+}
+
+impl<'ast> Visit<'ast> for SpecRootDetector {
+    fn visit_trait_item_fn(&mut self, i: &'ast verus_syn::TraitItemFn) {
+        if i.sig.ident == "spec_root" {
+            self.has_spec_root = true;
+        }
+        verus_syn::visit::visit_trait_item_fn(self, i);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Visitor: collect trait definitions (Phase 3)
 // ---------------------------------------------------------------------------
 
@@ -1034,6 +1116,8 @@ fn extract_variant_info(
                 view_line: 0,
                 wf_name: None,
                 wf_line: 0,
+                wf_conjuncts: Vec::new(),
+                has_spec_root: false,
                 traits: Vec::new(),
             });
         }
@@ -1053,6 +1137,8 @@ fn extract_variant_info(
                 view_line: 0,
                 wf_name: None,
                 wf_line: 0,
+                wf_conjuncts: Vec::new(),
+                has_spec_root: false,
                 traits: Vec::new(),
             });
         }
@@ -1111,6 +1197,19 @@ fn extract_variant_info(
         0
     };
 
+    // Collect wf body conjuncts from impl blocks.
+    let mut wf_body_collector = WfBodyCollector {
+        inner: inner.to_string(),
+        wf_conjuncts: Vec::new(),
+    };
+    wf_body_collector.visit_file(&verus_file);
+
+    // Detect spec_root in trait declarations.
+    let mut spec_root_detector = SpecRootDetector {
+        has_spec_root: false,
+    };
+    spec_root_detector.visit_file(&verus_file);
+
     // Collect traits (Phase 3).
     let mut trait_collector = TraitCollector {
         inner: inner.to_string(),
@@ -1135,6 +1234,8 @@ fn extract_variant_info(
         view_line,
         wf_name: wf_collector.wf_name,
         wf_line,
+        wf_conjuncts: wf_body_collector.wf_conjuncts,
+        has_spec_root: spec_root_detector.has_spec_root,
         traits,
     })
 }
@@ -1267,10 +1368,17 @@ fn compare_group(
                             && other_si.fields.iter().any(|f| f.name == field.name)
                     });
                     if !others_have {
+                        // Ghost fields are expected structural differences (e.g., ghost_root
+                        // in MtEph for RwLock patterns). Downgrade to Info.
+                        let level = if field.is_ghost {
+                            DiagLevel::Info
+                        } else {
+                            DiagLevel::Warning
+                        };
                         diags.push(Diagnostic {
                             file: info.rel_path.clone(),
                             line: si.line,
-                            level: DiagLevel::Warning,
+                            level,
                             message: format!(
                                 "{} field `{}` has no counterpart in other variants",
                                 kind, field.name
@@ -1658,15 +1766,25 @@ fn compare_traits(
             let cur_super = &t.supertraits;
             if ref_super != cur_super {
                 if ref_super.is_empty() || cur_super.is_empty() {
-                    let empty_side = if ref_super.is_empty() { ref_info.variant } else { info.variant };
+                    // One side has no supertrait bounds — this is a structural
+                    // difference (e.g., MtEph adds `Sized + View<V = ...>`), not
+                    // a parse failure. Downgrade to Info.
+                    let msg = if ref_super.is_empty() {
+                        format!(
+                            "supertrait bounds `{}` added by {} (ref {} has none)",
+                            cur_super, info.variant, ref_info.variant
+                        )
+                    } else {
+                        format!(
+                            "supertrait bounds `{}` from {} absent in {}",
+                            ref_super, ref_info.variant, info.variant
+                        )
+                    };
                     diags.push(Diagnostic {
                         file: info.rel_path.clone(),
                         line: t.line,
-                        level: DiagLevel::Warning,
-                        message: format!(
-                            "supertrait parse incomplete for {} — ref `{}`, cur `{}`",
-                            empty_side, ref_super, cur_super
-                        ),
+                        level: DiagLevel::Info,
+                        message: msg,
                     });
                 } else if types_differ_only_by_variant(ref_super, cur_super) {
                     diags.push(Diagnostic {
@@ -1797,6 +1915,23 @@ fn compare_traits(
                             message: format!(
                                 "{} variant-named spec_*_wf absent — has own variant wf: {}",
                                 wf_expected.len(), wf_str.join(", ")
+                            ),
+                        });
+                    }
+                    // Separate spec_root when current variant has View impl
+                    // (View is the equivalent of spec_root).
+                    let (view_equiv, truly_missing): (Vec<&&str>, Vec<&&str>) =
+                        truly_missing.into_iter().partition(|name| {
+                            **name == "spec_root" && info.view_type.is_some()
+                        });
+                    if !view_equiv.is_empty() {
+                        diags.push(Diagnostic {
+                            file: info.rel_path.clone(),
+                            line: t.line,
+                            level: DiagLevel::Info,
+                            message: format!(
+                                "`spec_root` absent — {} uses View impl instead",
+                                info.variant
                             ),
                         });
                     }
@@ -2113,6 +2248,103 @@ fn is_wf_clause(clause: &str) -> bool {
         || (trimmed.contains("_wf") && trimmed.contains("self"))
 }
 
+/// Normalize `expr . spec_root ()` to `expr @` in clause text.
+/// Handles `self . spec_root ()`, `old ( self ) . spec_root ()`,
+/// and named bindings like `tree . spec_root ()`.
+fn normalize_spec_root_to_view(clause: &str) -> String {
+    // Token-stream format uses spaces: `. spec_root ()`
+    let pattern = ". spec_root ()";
+    if !clause.contains(pattern) {
+        return clause.to_string();
+    }
+    clause.replace(pattern, " @")
+}
+
+/// Strip the receiver prefix from a clause, returning just the predicate part.
+/// E.g., `self @ . tree_is_bst ()` → `.tree_is_bst()` (compacted).
+/// E.g., `tree @ . spec_size () <= usize :: MAX` → `.spec_size()<=usize::MAX` (compacted).
+fn strip_receiver(compact_clause: &str) -> Option<&str> {
+    // Find first `.` or `@` which starts the predicate access chain.
+    // In compacted form (no spaces), look for `@.` or just the first `.` after an ident.
+    if let Some(pos) = compact_clause.find("@.") {
+        Some(&compact_clause[pos + 1..])
+    } else if let Some(pos) = compact_clause.find('.') {
+        Some(&compact_clause[pos..])
+    } else {
+        None
+    }
+}
+
+/// Check if a reference clause is subsumed by any of the current variant's wf conjuncts.
+/// Returns true if the clause (after normalization) matches a wf conjunct.
+fn clause_subsumed_by_wf(
+    ref_clause_normalized: &str,
+    wf_conjuncts: &[String],
+    ref_has_spec_root: bool,
+    cur_has_view: bool,
+) -> bool {
+    if wf_conjuncts.is_empty() {
+        return false;
+    }
+    // Normalize the reference clause: strip variant suffixes, apply spec_root → @.
+    let mut ref_norm = normalize_clause_for_comparison(ref_clause_normalized);
+    if ref_has_spec_root && cur_has_view {
+        ref_norm = normalize_spec_root_to_view(&ref_norm);
+    }
+    // Strip whitespace for flexible matching.
+    let ref_compact: String = ref_norm.chars().filter(|c| !c.is_whitespace()).collect();
+
+    for conjunct in wf_conjuncts {
+        let mut conj_norm = normalize_clause_for_comparison(conjunct);
+        conj_norm = normalize_spec_root_to_view(&conj_norm);
+        let conj_compact: String = conj_norm.chars().filter(|c| !c.is_whitespace()).collect();
+        // Direct match.
+        if ref_compact == conj_compact {
+            return true;
+        }
+        // Receiver-agnostic match: strip the receiver (self/tree/inserted/etc.)
+        // and compare just the predicate chain + arguments.
+        if let (Some(ref_pred), Some(conj_pred)) = (strip_receiver(&ref_compact), strip_receiver(&conj_compact)) {
+            if ref_pred == conj_pred {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Extract Ok-arm conjuncts from a match-on-Result ensures clause.
+/// Returns None if the clause is not a match expression.
+fn extract_match_ok_conjuncts(clause: &str) -> Option<Vec<String>> {
+    let trimmed = clause.trim();
+    if !trimmed.starts_with("match ") {
+        return None;
+    }
+    // Find `Ok ( _ ) =>`  or `Ok ( _ ) | Ok ( () ) =>`
+    let ok_marker = "Ok (";
+    let ok_pos = trimmed.find(ok_marker)?;
+    // Find the `=>` after the Ok pattern.
+    let after_ok = &trimmed[ok_pos..];
+    let arrow_pos = after_ok.find("=>")?;
+    let ok_body_start = ok_pos + arrow_pos + 2;
+    let ok_body = &trimmed[ok_body_start..];
+    // The Ok body ends at `Err (` or end of match (closing `}` or `, Err`).
+    let ok_body_end = ok_body.find(", Err (")
+        .or_else(|| ok_body.find(",Err("))
+        .or_else(|| ok_body.rfind('}'))
+        .unwrap_or(ok_body.len());
+    let ok_content = ok_body[..ok_body_end].trim();
+    // Strip trailing comma if present.
+    let ok_content = ok_content.strip_suffix(',').unwrap_or(ok_content).trim();
+    // Split on top-level && to get individual conjuncts.
+    let conjuncts = split_top_level_conjuncts(ok_content);
+    if conjuncts.is_empty() {
+        None
+    } else {
+        Some(conjuncts.into_iter().map(|c| normalize_type(&c)).collect())
+    }
+}
+
 /// Compare two sets of clauses (requires or ensures) between ref and cur functions.
 fn compare_clauses(
     kind: &str,
@@ -2128,6 +2360,21 @@ fn compare_clauses(
         return;
     }
 
+    // Expand match-arm ensures: if a clause is a match on Result, extract Ok-arm conjuncts.
+    let expand_match_clauses = |clauses: &[String]| -> Vec<String> {
+        let mut expanded = Vec::new();
+        for c in clauses {
+            if let Some(ok_conjuncts) = extract_match_ok_conjuncts(c) {
+                expanded.extend(ok_conjuncts);
+            } else {
+                expanded.push(c.clone());
+            }
+        }
+        expanded
+    };
+    let ref_clauses_expanded = expand_match_clauses(ref_clauses);
+    let cur_clauses_expanded = expand_match_clauses(cur_clauses);
+
     // Detect eph/per shift: one side is &mut self (ephemeral), the other is not.
     let eph_per_shift = kind == "ensures"
         && ((ref_fn.self_kind == "&mut self" && cur_fn.self_kind != "&mut self")
@@ -2138,34 +2385,47 @@ fn compare_clauses(
     let ref_ret_is_self = return_is_self(&ref_fn.return_type);
     let cur_ret_is_self = return_is_self(&cur_fn.return_type);
 
+    // Determine if spec_root/@ normalization should apply.
+    let apply_spec_root_norm = ref_info.has_spec_root && cur_info.view_type.is_some();
+
     // Build display versions (variant-stripped only) for diagnostic messages.
-    let mut ref_display: Vec<String> = ref_clauses.iter()
+    let mut ref_display: Vec<String> = ref_clauses_expanded.iter()
         .map(|c| normalize_clause_for_comparison(c))
         .collect();
-    let mut cur_display: Vec<String> = cur_clauses.iter()
+    let mut cur_display: Vec<String> = cur_clauses_expanded.iter()
         .map(|c| normalize_clause_for_comparison(c))
         .collect();
 
-    // Build match versions (with PRE/POST normalization if eph/per shift).
+    // Build match versions (with PRE/POST normalization if eph/per shift,
+    // plus spec_root/@ normalization if applicable).
+    let apply_extra_norm = |s: &str| -> String {
+        if apply_spec_root_norm {
+            normalize_spec_root_to_view(s)
+        } else {
+            s.to_string()
+        }
+    };
     let mut ref_sorted: Vec<String> = if eph_per_shift {
-        ref_clauses.iter()
+        ref_clauses_expanded.iter()
             .map(|c| {
                 let stripped = normalize_clause_for_comparison(c);
-                normalize_eph_per_clause(&stripped, ref_is_eph, ref_fn.return_name.as_deref(), ref_ret_is_self)
+                let normed = normalize_eph_per_clause(&stripped, ref_is_eph, ref_fn.return_name.as_deref(), ref_ret_is_self);
+                apply_extra_norm(&normed)
             })
             .collect()
     } else {
-        ref_display.clone()
+        ref_display.iter().map(|c| apply_extra_norm(c)).collect()
     };
     let mut cur_sorted: Vec<String> = if eph_per_shift {
-        cur_clauses.iter()
+        cur_clauses_expanded.iter()
             .map(|c| {
                 let stripped = normalize_clause_for_comparison(c);
-                normalize_eph_per_clause(&stripped, cur_is_eph, cur_fn.return_name.as_deref(), cur_ret_is_self)
+                let normed = normalize_eph_per_clause(&stripped, cur_is_eph, cur_fn.return_name.as_deref(), cur_ret_is_self);
+                apply_extra_norm(&normed)
             })
             .collect()
     } else {
-        cur_display.clone()
+        cur_display.iter().map(|c| apply_extra_norm(c)).collect()
     };
 
     // Sort both paired arrays together so display stays aligned with match.
@@ -2186,22 +2446,8 @@ fn compare_clauses(
         return; // Equivalent after normalization — nothing to report.
     }
 
-    // Clause count comparison.
-    if ref_clauses.len() != cur_clauses.len() {
-        diags.push(Diagnostic {
-            file: cur_info.rel_path.clone(),
-            line: cur_fn.line,
-            level: DiagLevel::Warning,
-            message: format!(
-                "`{}`: {} clause count {} vs {} ({} has {})",
-                cur_fn.name, kind,
-                cur_clauses.len(), ref_clauses.len(),
-                ref_info.variant, ref_clauses.len()
-            ),
-        });
-    }
-
     // Match clauses from sorted sets. Track which have been matched.
+    // (Count comparison is deferred until after wf subsumption.)
     let mut ref_matched = vec![false; ref_sorted.len()];
     let mut cur_matched = vec![false; cur_sorted.len()];
 
@@ -2262,6 +2508,51 @@ fn compare_clauses(
                 });
             }
         }
+    }
+
+    // Pass 2.5: wf subsumption — check unmatched ref clauses against cur variant's wf conjuncts.
+    let cur_has_view = cur_info.view_type.is_some();
+    let mut _wf_subsumed_count = 0usize;
+    for ri in 0..ref_sorted.len() {
+        if ref_matched[ri] { continue; }
+        if clause_subsumed_by_wf(&ref_sorted[ri], &cur_info.wf_conjuncts, ref_info.has_spec_root, cur_has_view) {
+            ref_matched[ri] = true;
+            _wf_subsumed_count += 1;
+            diags.push(Diagnostic {
+                file: cur_info.rel_path.clone(),
+                line: cur_fn.line,
+                level: DiagLevel::Info,
+                message: format!(
+                    "`{}`: {} clause `{}` subsumed by {} wf predicate",
+                    cur_fn.name, kind,
+                    truncate_clause(&ref_display[ri], 60),
+                    cur_info.variant,
+                ),
+            });
+        }
+    }
+
+    // Clause count comparison (deferred until after wf subsumption).
+    // Only warn when there are genuinely unmatched ref clauses remaining.
+    let ref_unmatched = ref_matched.iter().filter(|m| !*m).count();
+    let cur_unmatched = cur_matched.iter().filter(|m| !*m).count();
+    if ref_clauses_expanded.len() != cur_clauses_expanded.len() && (ref_unmatched > 0 || cur_unmatched > 0) {
+        let level = if cur_clauses_expanded.len() < ref_clauses_expanded.len() && ref_unmatched > 0 {
+            DiagLevel::Warning
+        } else {
+            DiagLevel::Info
+        };
+        diags.push(Diagnostic {
+            file: cur_info.rel_path.clone(),
+            line: cur_fn.line,
+            level,
+            message: format!(
+                "`{}`: {} clause count {} vs {} ({} has {})",
+                cur_fn.name, kind,
+                cur_clauses_expanded.len(), ref_clauses_expanded.len(),
+                ref_info.variant, ref_clauses_expanded.len()
+            ),
+        });
     }
 
     // Report unmatched reference clauses (spec weakening).
