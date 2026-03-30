@@ -1303,6 +1303,64 @@ fn is_owned_vs_borrowed(a: &str, b: &str) -> bool {
     false
 }
 
+/// Check if one type is Result-wrapped and the other is the inner type.
+/// E.g., `Result < () , () >` vs `()` — Mt lock operations add Result.
+fn is_result_wrapping(a: &str, b: &str) -> bool {
+    // Extract the first type argument from `Result < T , E >`.
+    // The input is a normalized token string with spaces around delimiters.
+    fn strip_result(s: &str) -> Option<&str> {
+        let s = s.trim();
+        let inner = s.strip_prefix("Result < ")?.strip_suffix(" >")?;
+        // Find the top-level comma by tracking angle bracket nesting.
+        let comma_pos = inner.char_indices()
+            .scan(0i32, |nesting, (i, c)| {
+                match c {
+                    '<' => *nesting += 1,
+                    '>' => *nesting -= 1,
+                    _ => {}
+                }
+                Some((i, c, *nesting))
+            })
+            .find(|&(_, c, n)| c == ',' && n == 0)
+            .map(|(i, _, _)| i)?;
+        Some(inner[..comma_pos].trim())
+    }
+    // a = Result<T, E>, b = T
+    if let Some(inner) = strip_result(a) {
+        if inner == b || types_differ_only_by_variant(inner, b) {
+            return true;
+        }
+    }
+    // b = Result<T, E>, a = T
+    if let Some(inner) = strip_result(b) {
+        if inner == a || types_differ_only_by_variant(a, inner) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Check if two return types are different APAS collection types that serve the
+/// same role (e.g., ArraySeqStPerS vs AVLTreeSeqStPerS — both are sequence types).
+fn is_different_collection_backing(a: &str, b: &str) -> bool {
+    // Known collection family prefixes. Types within the same family are
+    // interchangeable at the trait level (same View type).
+    const SEQ_FAMILIES: &[&str] = &["ArraySeq", "AVLTreeSeq", "LinkedList"];
+    const SET_FAMILIES: &[&str] = &["ArraySet", "AVLTreeSet", "OrderedSet", "HashSet"];
+    const TABLE_FAMILIES: &[&str] = &["Table", "OrderedTable", "AugOrderedTable"];
+
+    fn family_match(ty: &str, families: &[&str]) -> bool {
+        families.iter().any(|f| ty.contains(f))
+    }
+
+    for families in &[SEQ_FAMILIES, SET_FAMILIES, TABLE_FAMILIES] {
+        if family_match(a, families) && family_match(b, families) {
+            return true;
+        }
+    }
+    false
+}
+
 fn is_st_vs_mt(a: Variant, b: Variant) -> bool {
     matches!(
         (a, b),
@@ -1643,12 +1701,26 @@ fn compare_traits(
                             &ref_fn.return_type, &cur_fn.return_type
                         );
 
+                        // Mt wraps in Result (lock can fail).
+                        let result_wrap = is_result_wrapping(
+                            &ref_fn.return_type, &cur_fn.return_type
+                        );
+
+                        // Different collection backing type (same role).
+                        let diff_backing = is_different_collection_backing(
+                            &ref_fn.return_type, &cur_fn.return_type
+                        );
+
                         let (level, suffix) = if is_return_shift {
                             (DiagLevel::Info, " (Eph→Per return shift)")
                         } else if is_self_vs_concrete {
                             (DiagLevel::Info, "")
                         } else if owned_borrowed {
                             (DiagLevel::Info, " (owned/borrowed pattern)")
+                        } else if result_wrap {
+                            (DiagLevel::Info, " (Result wrapping)")
+                        } else if diff_backing {
+                            (DiagLevel::Info, " (different collection backing)")
                         } else {
                             (DiagLevel::Error, "")
                         };
