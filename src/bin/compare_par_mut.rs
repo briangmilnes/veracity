@@ -583,6 +583,8 @@ impl<'ast> Visit<'ast> for StructCollector {
 
 struct ViewCollector {
     inner: String,
+    /// Primary struct names to match (e.g. ["SetMtEph", "SetMtEphS"]).
+    primary_names: Vec<String>,
     view_type: Option<String>,
     view_line: usize,
 }
@@ -597,6 +599,18 @@ impl<'ast> Visit<'ast> for ViewCollector {
                 .map(|s| s.ident.to_string())
                 .unwrap_or_default();
             if trait_name == "View" {
+                // Extract self type name to filter to the primary struct only.
+                let self_type_name = extract_impl_self_type_name(&i.self_ty);
+                let is_primary = self_type_name.as_ref().map_or(false, |name| {
+                    self.primary_names.iter().any(|pn| pn == name)
+                });
+
+                // Skip View impls on non-primary types (iterators, locked wrappers, etc.)
+                if !self.primary_names.is_empty() && !is_primary {
+                    verus_syn::visit::visit_item_impl(self, i);
+                    return;
+                }
+
                 // Find `type V = ...;` in the impl body.
                 for item in &i.items {
                     if let verus_syn::ImplItem::Type(ref assoc_type) = item {
@@ -613,6 +627,16 @@ impl<'ast> Visit<'ast> for ViewCollector {
             }
         }
         verus_syn::visit::visit_item_impl(self, i);
+    }
+}
+
+/// Extract the base type name from a verus_syn impl's self_ty (Box<Type>).
+fn extract_impl_self_type_name(ty: &verus_syn::Type) -> Option<String> {
+    match ty {
+        verus_syn::Type::Path(tp) => {
+            tp.path.segments.last().map(|s| s.ident.to_string())
+        }
+        _ => None,
     }
 }
 
@@ -875,9 +899,10 @@ fn extract_variant_info(
         s
     });
 
-    // Collect View type.
+    // Collect View type (filtered to the primary struct only).
     let mut view_collector = ViewCollector {
         inner: inner.to_string(),
+        primary_names: expected_names.clone(),
         view_type: None,
         view_line: 0,
     };
