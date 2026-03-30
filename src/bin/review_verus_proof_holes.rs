@@ -2762,6 +2762,17 @@ fn base_ident_from_expr_impl(expr: &verus_syn::Expr) -> Option<String> {
         Expr::Field(ef) => base_ident_from_expr_impl(&ef.base),
         Expr::Reference(er) => base_ident_from_expr_impl(&er.expr),
         Expr::Paren(ep) => base_ident_from_expr_impl(&ep.expr),
+        // Handle old(x) — unwrap to extract x
+        Expr::Call(ec) => {
+            if let Expr::Path(ep) = &*ec.func {
+                if ep.path.segments.len() == 1 && ep.path.segments[0].ident == "old" {
+                    if let Some(first_arg) = ec.args.first() {
+                        return base_ident_from_expr_impl(first_arg);
+                    }
+                }
+            }
+            None
+        }
         _ => None,
     }
 }
@@ -2821,15 +2832,30 @@ fn collect_free_fn_calls_expr(expr: &verus_syn::Expr, out: &mut Vec<(String, Str
         Expr::Call(ec) => {
             // Check if func is a simple path (free function name)
             if let Expr::Path(ep) = &*ec.func {
-                if ep.path.leading_colon.is_none() && ep.path.segments.len() == 1 {
+                let resolved_fn_name = if ep.path.leading_colon.is_none() && ep.path.segments.len() == 1 {
                     let seg = &ep.path.segments[0];
                     if matches!(&seg.arguments, verus_syn::PathArguments::None) {
-                        let fn_name = seg.ident.to_string();
-                        // Extract first argument's base ident
-                        if let Some(first_arg) = ec.args.first() {
-                            if let Some(arg_ident) = base_ident_from_expr_impl(first_arg) {
-                                out.push((fn_name, arg_ident));
-                            }
+                        Some(seg.ident.to_string())
+                    } else {
+                        None
+                    }
+                } else if ep.path.leading_colon.is_none() && ep.path.segments.len() == 2 {
+                    // Handle Self::spec_*_wf(x) — polymorphic trait dispatch
+                    let prefix = &ep.path.segments[0];
+                    let seg = &ep.path.segments[1];
+                    if prefix.ident == "Self" && matches!(&seg.arguments, verus_syn::PathArguments::None) {
+                        Some(seg.ident.to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                if let Some(fn_name) = resolved_fn_name {
+                    // Extract first argument's base ident
+                    if let Some(first_arg) = ec.args.first() {
+                        if let Some(arg_ident) = base_ident_from_expr_impl(first_arg) {
+                            out.push((fn_name, arg_ident));
                         }
                     }
                 }
@@ -3028,6 +3054,41 @@ impl<'a> ProofHoleVisitor<'a> {
         sig.inputs.is_empty()
     }
 
+    /// Push fn_missing_requires: warning if any param has a wf predicate, info otherwise.
+    /// Functions whose params have no known spec_*_wf predicate genuinely need no precondition.
+    fn push_fn_missing_requires(&mut self, sig: &verus_syn::Signature, line: usize, name: &str) {
+        let hole = DetectedHole {
+            line,
+            hole_type: "fn_missing_requires".to_string(),
+            context: format!("fn {} — exec fn should have requires", name),
+            ..Default::default()
+        };
+        if self.fn_has_any_wf_param(sig) {
+            self.stats.warnings.push(hole);
+        } else {
+            self.stats.infos.push(hole);
+        }
+    }
+
+    /// True if at least one non-receiver parameter has a type with a known spec_*_wf predicate.
+    fn fn_has_any_wf_param(&self, sig: &verus_syn::Signature) -> bool {
+        use verus_syn::FnArgKind;
+        for input in &sig.inputs {
+            match &input.kind {
+                FnArgKind::Receiver(_) => continue,
+                FnArgKind::Typed(pt) => {
+                    if let Some(ty_name) = Self::type_name_from_type(&pt.ty) {
+                        let expected_wf = Self::type_to_spec_wf_name(&ty_name);
+                        if self.stats.spec_wf_predicates.contains(&expected_wf) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
     /// Extract type name from Type (last path segment). Returns None for primitives/generics we skip.
     fn type_name_from_type(ty: &verus_syn::Type) -> Option<String> {
         use verus_syn::Type;
@@ -3152,11 +3213,18 @@ impl<'a> ProofHoleVisitor<'a> {
             if !self.stats.spec_wf_predicates.contains(&expected_wf) {
                 continue;
             }
-            let has_wf = req_calls.iter().any(|(recv, m)| recv == &param_name && m == &expected_wf);
-            // Also accept free function form: spec_*_wf_generic(param) or spec_*_wf_generic(&param)
-            let expected_wf_generic = format!("{}_generic", expected_wf);
-            let has_wf_generic = req_free_calls.iter().any(|(fn_name, arg)| fn_name == &expected_wf_generic && arg == &param_name);
-            if !has_wf && !has_wf_generic {
+            // Accept method call: param.spec_*_wf() where the method is any known wf predicate
+            let has_wf_method = req_calls.iter().any(|(recv, m)| {
+                recv == &param_name && self.stats.spec_wf_predicates.contains(m)
+            });
+            // Accept free function form: spec_*_wf(param), spec_*_wf_generic(param), Self::spec_*_wf(param)
+            let has_wf_free = req_free_calls.iter().any(|(fn_name, arg)| {
+                arg == &param_name && (
+                    self.stats.spec_wf_predicates.contains(fn_name)
+                    || fn_name.ends_with("_generic") && self.stats.spec_wf_predicates.contains(&fn_name[..fn_name.len() - 8])
+                )
+            });
+            if !has_wf_method && !has_wf_free {
                 self.stats.warnings.push(DetectedHole {
                     line,
                     hole_type: "fn_missing_wf_requires".to_string(),
@@ -3184,11 +3252,18 @@ impl<'a> ProofHoleVisitor<'a> {
             if let (Some(rn), Some(tn)) = (ret_name, ty_name) {
                 let expected_wf = Self::type_to_spec_wf_name(&tn);
                 if self.stats.spec_wf_predicates.contains(&expected_wf) {
-                    let has_wf = ens_calls.iter().any(|(recv, m)| recv == &rn && m == &expected_wf);
-                    // Also accept free function form: spec_*_wf_generic(ret) or spec_*_wf_generic(&ret)
-                    let expected_wf_generic = format!("{}_generic", expected_wf);
-                    let has_wf_generic = ens_free_calls.iter().any(|(fn_name, arg)| fn_name == &expected_wf_generic && arg == &rn);
-                    if !has_wf && !has_wf_generic {
+                    // Accept method call: ret.spec_*_wf() where the method is any known wf predicate
+                    let has_wf_method = ens_calls.iter().any(|(recv, m)| {
+                        recv == &rn && self.stats.spec_wf_predicates.contains(m)
+                    });
+                    // Accept free function form: spec_*_wf(ret), spec_*_wf_generic(ret), Self::spec_*_wf(ret)
+                    let has_wf_free = ens_free_calls.iter().any(|(fn_name, arg)| {
+                        arg == &rn && (
+                            self.stats.spec_wf_predicates.contains(fn_name)
+                            || fn_name.ends_with("_generic") && self.stats.spec_wf_predicates.contains(&fn_name[..fn_name.len() - 8])
+                        )
+                    });
+                    if !has_wf_method && !has_wf_free {
                         self.stats.warnings.push(DetectedHole {
                             line,
                             hole_type: "fn_missing_wf_ensures".to_string(),
@@ -3345,11 +3420,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                        self.stats.warnings.push(DetectedHole {
-                                            line,
-                                            hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                        });
+                                        self.push_fn_missing_requires(&i.sig, line, &name);
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
@@ -3358,11 +3429,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                });
+                                self.push_fn_missing_requires(&i.sig, line, &name);
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
@@ -3488,11 +3555,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                        self.stats.warnings.push(DetectedHole {
-                                            line,
-                                            hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                        });
+                                        self.push_fn_missing_requires(&i.sig, line, &name);
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
@@ -3501,11 +3564,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                });
+                                self.push_fn_missing_requires(&i.sig, line, &name);
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,
@@ -3621,11 +3680,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 } else {
                                     if !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                        self.stats.warnings.push(DetectedHole {
-                                            line,
-                                            hole_type: "fn_missing_requires".to_string(),
-                                            context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                        });
+                                        self.push_fn_missing_requires(&i.sig, line, &name);
                                     }
                                     self.stats.warnings.push(DetectedHole {
                                         line,
@@ -3634,11 +3689,7 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                                     });
                                 }
                             } else if !has_requires && !no_params_exempt && !has_no_requires_annotation(self.content, line) {
-                                self.stats.warnings.push(DetectedHole {
-                                    line,
-                                    hole_type: "fn_missing_requires".to_string(),
-                                    context: format!("fn {} — exec fn should have requires", name), ..Default::default()
-                                });
+                                self.push_fn_missing_requires(&i.sig, line, &name);
                             } else if !has_ensures {
                                 self.stats.warnings.push(DetectedHole {
                                     line,

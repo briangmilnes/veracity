@@ -142,6 +142,7 @@ impl Variant {
             Variant::MtPer => "MtPer",
         }
     }
+
 }
 
 impl PartialOrd for Variant {
@@ -528,6 +529,167 @@ fn types_differ_only_by_variant(a: &str, b: &str) -> bool {
     // e.g., "FooIterStEph" vs "FooStPerIter" → both strip to "FooIter".
     let strip_var = |s: &str| s.replace("__VAR__", "");
     strip_var(&na) == strip_var(&nb)
+}
+
+// ---------------------------------------------------------------------------
+// Supertrait-aware generic bounds comparison
+// ---------------------------------------------------------------------------
+
+/// Known supertrait relationships in APAS-VERUS.
+/// Each entry: (subtrait, list of traits it implies).
+const SUPERTRAIT_MAP: &[(&str, &[&str])] = &[
+    ("StT", &["View", "Sized", "PartialEq", "Eq", "Clone"]),
+    ("StTInMtT", &["StT", "Send", "Sync"]),
+    ("MtKey", &["StTInMtT", "Ord"]),
+    ("MtVal", &["StTInMtT"]),
+    ("HashOrd", &["StT", "Hash", "Ord"]),
+];
+
+/// Parse a single param's bounds string like "T : StT + Ord" into (name, vec of bounds).
+/// Returns (param_name, bounds_set). A bare "F" returns ("F", []).
+fn parse_param_bounds(param: &str) -> (&str, Vec<&str>) {
+    let param = param.trim();
+    if let Some((name, rest)) = param.split_once(':') {
+        let bounds: Vec<&str> = rest.split('+')
+            .map(|b| b.trim())
+            .filter(|b| !b.is_empty())
+            .collect();
+        (name.trim(), bounds)
+    } else {
+        (param, Vec::new())
+    }
+}
+
+/// Expand a set of bounds through the supertrait map.
+/// E.g., ["MtKey"] → ["MtKey", "StTInMtT", "StT", "Ord"]
+fn expand_supertraits<'a>(bounds: &[&'a str]) -> Vec<&'a str> {
+    let mut expanded: Vec<&str> = bounds.to_vec();
+    let mut i = 0;
+    while i < expanded.len() {
+        let b = expanded[i];
+        for &(sub, implied) in SUPERTRAIT_MAP {
+            if b == sub {
+                for &imp in implied {
+                    if !expanded.contains(&imp) {
+                        expanded.push(imp);
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+    expanded
+}
+
+/// Split a generic bounds string into individual param strings at top-level commas,
+/// respecting angle bracket depth.
+fn split_generic_params(s: &str) -> Vec<&str> {
+    let mut result = Vec::new();
+    let mut depth = 0i32;
+    let mut start = 0;
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'<' => depth += 1,
+            b'>' => depth -= 1,
+            b',' if depth == 0 => {
+                result.push(s[start..i].trim());
+                start = i + 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    let tail = s[start..].trim();
+    if !tail.is_empty() {
+        result.push(tail);
+    }
+    result
+}
+
+/// Check if `mt_bounds` (from an Mt variant) subsume `st_bounds` (from an St variant)
+/// through known supertrait relationships. Returns true if the Mt bounds are a strict
+/// superset after supertrait expansion, ignoring 'static.
+fn bounds_subsume_via_supertraits(st_bounds_str: &str, mt_bounds_str: &str) -> bool {
+    let st_params = split_generic_params(st_bounds_str);
+    let mt_params = split_generic_params(mt_bounds_str);
+
+    if st_params.len() != mt_params.len() {
+        return false;
+    }
+
+    for (sp, mp) in st_params.iter().zip(mt_params.iter()) {
+        let (st_name, st_bounds) = parse_param_bounds(sp);
+        let (mt_name, mt_bounds) = parse_param_bounds(mp);
+
+        // Param names must match (ignoring variant suffixes already handled elsewhere).
+        if st_name != mt_name {
+            return false;
+        }
+
+        // Filter out 'static — Mt universally adds it for thread safety.
+        let mt_bounds_filtered: Vec<&str> = mt_bounds.iter()
+            .copied()
+            .filter(|&b| b != "'static")
+            .collect();
+
+        // Expand both sides through supertrait map.
+        let mt_expanded = expand_supertraits(&mt_bounds_filtered);
+        let st_expanded = expand_supertraits(&st_bounds);
+
+        // Check that every expanded St bound is covered by the expanded Mt bounds.
+        // A bound is covered if it's directly present, or if all of its own
+        // supertrait expansions are present (transitive coverage).
+        for st_b in &st_expanded {
+            if !mt_expanded.contains(st_b) {
+                // Check if st_b's own expansions are all covered.
+                let st_b_subs = expand_supertraits(&[st_b]);
+                let all_subs_covered = st_b_subs.iter()
+                    .filter(|&&s| s != *st_b)
+                    .all(|s| mt_expanded.contains(s));
+                if st_b_subs.len() <= 1 || !all_subs_covered {
+                    return false;
+                }
+            }
+        }
+    }
+
+    true
+}
+
+/// Check if Mt bounds add extra traits beyond supertrait substitution of St bounds.
+/// Returns the list of extra bounds not implied by the St bounds.
+fn extra_bounds_beyond_supertraits(st_bounds_str: &str, mt_bounds_str: &str) -> Vec<String> {
+    let st_params = split_generic_params(st_bounds_str);
+    let mt_params = split_generic_params(mt_bounds_str);
+    let mut extras = Vec::new();
+
+    for (sp, mp) in st_params.iter().zip(mt_params.iter()) {
+        let (_st_name, st_bounds) = parse_param_bounds(sp);
+        let (mt_name, mt_bounds) = parse_param_bounds(mp);
+
+        let mt_bounds_filtered: Vec<&str> = mt_bounds.iter()
+            .copied()
+            .filter(|&b| b != "'static")
+            .collect();
+
+        // Expand St bounds through supertrait map to see what's already implied.
+        let st_expanded = expand_supertraits(&st_bounds);
+
+        for mt_b in &mt_bounds_filtered {
+            if !st_expanded.contains(mt_b) {
+                // Check if this Mt bound is a supertrait that implies all St bounds.
+                let mt_b_expanded = expand_supertraits(&[mt_b]);
+                let covers_st = st_bounds.iter().all(|sb| mt_b_expanded.contains(sb));
+                if !covers_st {
+                    extras.push(format!("{}: {}", mt_name, mt_b));
+                }
+            }
+        }
+    }
+
+    extras
 }
 
 // ---------------------------------------------------------------------------
@@ -1490,15 +1652,51 @@ fn compare_traits(
             if ref_trait.generic_bounds != t.generic_bounds
                 && !types_differ_only_by_variant(&ref_trait.generic_bounds, &t.generic_bounds)
             {
-                diags.push(Diagnostic {
-                    file: info.rel_path.clone(),
-                    line: t.line,
-                    level: DiagLevel::Warning,
-                    message: format!(
-                        "generic bounds `<{}>` but {} has `<{}>`",
-                        t.generic_bounds, ref_info.variant, ref_trait.generic_bounds
-                    ),
-                });
+                // Check if the difference is explained by known supertrait relationships.
+                // Either direction: current subsumes ref, or ref subsumes current.
+                let cur_subsumes_ref = bounds_subsume_via_supertraits(&ref_trait.generic_bounds, &t.generic_bounds);
+                let ref_subsumes_cur = bounds_subsume_via_supertraits(&t.generic_bounds, &ref_trait.generic_bounds);
+
+                if cur_subsumes_ref || ref_subsumes_cur {
+                    // One variant's bounds are a supertrait-compatible extension of the other.
+                    let extras = if cur_subsumes_ref {
+                        extra_bounds_beyond_supertraits(&ref_trait.generic_bounds, &t.generic_bounds)
+                    } else {
+                        extra_bounds_beyond_supertraits(&t.generic_bounds, &ref_trait.generic_bounds)
+                    };
+                    if extras.is_empty() {
+                        diags.push(Diagnostic {
+                            file: info.rel_path.clone(),
+                            line: t.line,
+                            level: DiagLevel::Info,
+                            message: format!(
+                                "generic bounds `<{}>` — supertrait-compatible with {} `<{}>`",
+                                t.generic_bounds, ref_info.variant, ref_trait.generic_bounds
+                            ),
+                        });
+                    } else {
+                        diags.push(Diagnostic {
+                            file: info.rel_path.clone(),
+                            line: t.line,
+                            level: DiagLevel::Info,
+                            message: format!(
+                                "generic bounds `<{}>` — supertrait-compatible with {} `<{}>` (extra: {})",
+                                t.generic_bounds, ref_info.variant, ref_trait.generic_bounds,
+                                extras.join(", ")
+                            ),
+                        });
+                    }
+                } else {
+                    diags.push(Diagnostic {
+                        file: info.rel_path.clone(),
+                        line: t.line,
+                        level: DiagLevel::Warning,
+                        message: format!(
+                            "generic bounds `<{}>` but {} has `<{}>`",
+                            t.generic_bounds, ref_info.variant, ref_trait.generic_bounds
+                        ),
+                    });
+                }
             }
         }
 
