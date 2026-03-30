@@ -649,22 +649,14 @@ fn reorder_verus_items(content: &str) -> Option<String> {
         }
     }
 
-    // Detect type groups by finding where section numbers reset (go back down).
+    // Detect type groups: split only when a new struct/enum (group starter)
+    // appears after the current group already has one. Tail sections (11-12)
+    // stay with the preceding type group rather than splitting off.
     let mut groups: Vec<Vec<&TopLevelItem>> = Vec::new();
     let mut current_group: Vec<&TopLevelItem> = Vec::new();
 
     for item in &reorderable {
-        if item.section >= 11 {
-            if !current_group.is_empty() {
-                groups.push(current_group);
-                current_group = Vec::new();
-            }
-            if groups.last().map_or(true, |g| g.iter().any(|i| i.section < 11)) {
-                groups.push(Vec::new());
-            }
-            groups.last_mut().unwrap().push(item);
-        } else if !current_group.is_empty()
-            && item.is_group_starter
+        if item.is_group_starter
             && current_group.iter().any(|i| i.is_group_starter)
         {
             // New struct/enum after the group already has one — new type group.
