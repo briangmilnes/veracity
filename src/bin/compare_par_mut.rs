@@ -75,8 +75,16 @@ macro_rules! log {
 #[command(about = "St/Mt × Eph/Per variant alignment checker")]
 struct Cli {
     /// Codebase root path (must have src/Chap* directories).
-    #[arg(default_value = ".")]
+    #[arg(short = 'c', long = "codebase", default_value = ".")]
     path: PathBuf,
+
+    /// Analyze a single file (filters to groups containing this file).
+    #[arg(short = 'f', long = "file")]
+    file: Option<PathBuf>,
+
+    /// Analyze specific directories (repeatable).
+    #[arg(short = 'd', long = "dir")]
+    dir: Vec<PathBuf>,
 
     /// Output as markdown tables instead of emacs compile format.
     #[arg(short = 'm', long = "markdown")]
@@ -1384,6 +1392,37 @@ fn is_eph_vs_per(a: Variant, b: Variant) -> bool {
     )
 }
 
+/// Generate directed comparison pairs from the variant lattice.
+///
+/// The lattice flows specs in this order:
+///   StPer → StEph → MtEph
+///     |                ↑
+///     +--→ MtPer ------+
+///
+/// Each pair is (reference, current): warnings mean reference has something
+/// that current doesn't. Only pairs where both variants are present are emitted.
+fn lattice_pairs(present: &[Variant]) -> Vec<(Variant, Variant)> {
+    let has = |v: Variant| present.contains(&v);
+    let mut pairs = Vec::new();
+    // StPer → StEph
+    if has(Variant::StPer) && has(Variant::StEph) {
+        pairs.push((Variant::StPer, Variant::StEph));
+    }
+    // StPer → MtPer
+    if has(Variant::StPer) && has(Variant::MtPer) {
+        pairs.push((Variant::StPer, Variant::MtPer));
+    }
+    // StEph → MtEph
+    if has(Variant::StEph) && has(Variant::MtEph) {
+        pairs.push((Variant::StEph, Variant::MtEph));
+    }
+    // MtPer → MtEph
+    if has(Variant::MtPer) && has(Variant::MtEph) {
+        pairs.push((Variant::MtPer, Variant::MtEph));
+    }
+    pairs
+}
+
 fn is_per(v: Variant) -> bool {
     matches!(v, Variant::StPer | Variant::MtPer)
 }
@@ -1523,20 +1562,6 @@ fn is_different_collection_backing(a: &str, b: &str) -> bool {
     false
 }
 
-fn is_st_vs_mt(a: Variant, b: Variant) -> bool {
-    matches!(
-        (a, b),
-        (Variant::StEph, Variant::MtEph)
-        | (Variant::MtEph, Variant::StEph)
-        | (Variant::StPer, Variant::MtPer)
-        | (Variant::MtPer, Variant::StPer)
-        | (Variant::StEph, Variant::MtPer)
-        | (Variant::MtPer, Variant::StEph)
-        | (Variant::StPer, Variant::MtEph)
-        | (Variant::MtEph, Variant::StPer)
-    )
-}
-
 fn compare_traits(
     infos: &[VariantInfo],
     _group: &FileGroup,
@@ -1591,27 +1616,32 @@ fn compare_traits(
             });
         }
 
-        // Use highest-priority variant as reference (StPer > MtPer > StEph > MtEph).
-        let ref_idx = trait_set.iter()
-            .enumerate()
-            .max_by_key(|(_, (info, _))| info.variant.priority())
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        let (ref_info, ref_trait) = trait_set[ref_idx];
-
-        // Compare other variants against the reference.
-        let others: Vec<(&VariantInfo, &TraitInfo)> = trait_set.iter()
-            .enumerate()
-            .filter(|(i, _)| *i != ref_idx)
-            .map(|(_, x)| *x)
+        // Generate lattice-based comparison pairs instead of comparing
+        // all variants against the single highest-priority reference.
+        let present_variants: Vec<Variant> = trait_set.iter()
+            .map(|(info, _)| info.variant)
             .collect();
+        let pairs = lattice_pairs(&present_variants);
 
-        // Compare supertraits across variants.
-        for &(info, t) in &others {
+        // Helper: find the (VariantInfo, TraitInfo) for a given variant.
+        let find_trait = |v: Variant| -> Option<(&VariantInfo, &TraitInfo)> {
+            trait_set.iter().find(|(info, _)| info.variant == v).copied()
+        };
+
+        for (ref_variant, cur_variant) in &pairs {
+            let (ref_info, ref_trait) = match find_trait(*ref_variant) {
+                Some(x) => x,
+                None => continue,
+            };
+            let (info, t) = match find_trait(*cur_variant) {
+                Some(x) => x,
+                None => continue,
+            };
+
+            // Compare supertraits.
             let ref_super = &ref_trait.supertraits;
             let cur_super = &t.supertraits;
             if ref_super != cur_super {
-                // Empty supertrait = parse failure, not a real mismatch.
                 if ref_super.is_empty() || cur_super.is_empty() {
                     let empty_side = if ref_super.is_empty() { ref_info.variant } else { info.variant };
                     diags.push(Diagnostic {
@@ -1645,20 +1675,15 @@ fn compare_traits(
                     });
                 }
             }
-        }
 
-        // Compare generic bounds across variants.
-        for &(info, t) in &others {
+            // Compare generic bounds.
             if ref_trait.generic_bounds != t.generic_bounds
                 && !types_differ_only_by_variant(&ref_trait.generic_bounds, &t.generic_bounds)
             {
-                // Check if the difference is explained by known supertrait relationships.
-                // Either direction: current subsumes ref, or ref subsumes current.
                 let cur_subsumes_ref = bounds_subsume_via_supertraits(&ref_trait.generic_bounds, &t.generic_bounds);
                 let ref_subsumes_cur = bounds_subsume_via_supertraits(&t.generic_bounds, &ref_trait.generic_bounds);
 
                 if cur_subsumes_ref || ref_subsumes_cur {
-                    // One variant's bounds are a supertrait-compatible extension of the other.
                     let extras = if cur_subsumes_ref {
                         extra_bounds_beyond_supertraits(&ref_trait.generic_bounds, &t.generic_bounds)
                     } else {
@@ -1698,26 +1723,20 @@ fn compare_traits(
                     });
                 }
             }
-        }
 
-        // Build function name sets for the reference trait (exec/default functions only).
-        let ref_fn_names: Vec<&str> = ref_trait.functions.iter()
-            .map(|f| f.name.as_str())
-            .collect();
-
-        // Compare function sets across variants.
-        for &(info, t) in &others {
+            // Build function name sets.
+            let ref_fn_names: Vec<&str> = ref_trait.functions.iter()
+                .map(|f| f.name.as_str())
+                .collect();
             let cur_fn_names: Vec<&str> = t.functions.iter()
                 .map(|f| f.name.as_str())
                 .collect();
 
-            // Functions in reference but missing in this variant.
+            // Functions in reference but missing in current.
             let missing: Vec<&&str> = ref_fn_names.iter()
                 .filter(|n| !cur_fn_names.contains(n))
                 .collect();
             if !missing.is_empty() {
-                // When comparing Eph ref → Per cur, split missing into
-                // expected (ref fn is &mut self) vs unexpected.
                 let eph_per = is_eph_vs_per(ref_info.variant, info.variant)
                     && is_per(info.variant);
 
@@ -1744,9 +1763,6 @@ fn compare_traits(
                     });
                 }
                 if !unexpected.is_empty() {
-                    // Further classify: spec_*_wf names that have a
-                    // variant-substituted counterpart in the current trait
-                    // are expected (each variant has its own wf name).
                     let (wf_expected, truly_missing): (Vec<&&str>, Vec<&&str>) =
                         unexpected.iter().partition(|name| {
                             let n = ***name;
@@ -1785,13 +1801,11 @@ fn compare_traits(
                 }
             }
 
-            // Functions in this variant but not in reference.
+            // Functions in current but not in reference.
             let extra: Vec<&&str> = cur_fn_names.iter()
                 .filter(|n| !ref_fn_names.contains(n))
                 .collect();
             if !extra.is_empty() {
-                // When Per is reference and current is Eph, extra &mut self
-                // functions are expected mutation additions.
                 let eph_adds_mut = is_eph_vs_per(ref_info.variant, info.variant)
                     && !is_per(info.variant);
 
@@ -1839,8 +1853,6 @@ fn compare_traits(
                 if let Some(cur_fn) = t.functions.iter().find(|f| f.name == ref_fn.name) {
                     // Compare param count.
                     if ref_fn.param_types.len() != cur_fn.param_types.len() {
-                        // Eph/Per param count differences are often intentional
-                        // (self-receiver shift changes effective param count).
                         let level = if eph_per {
                             DiagLevel::Info
                         } else {
@@ -1884,27 +1896,22 @@ fn compare_traits(
                     if ref_fn.return_type != cur_fn.return_type
                         && !types_differ_only_by_variant(&ref_fn.return_type, &cur_fn.return_type)
                     {
-                        // Self vs concrete type is a common pattern, not an error.
                         let is_self_vs_concrete =
                             ref_fn.return_type == "Self" || cur_fn.return_type == "Self";
 
-                        // Eph→Per return shift: () → Self, Result<(),E> → Result<Self,E>.
                         let is_return_shift = eph_per && (
                             is_eph_to_per_return_shift(&ref_fn.return_type, &cur_fn.return_type)
                             || is_eph_to_per_return_shift(&cur_fn.return_type, &ref_fn.return_type)
                         );
 
-                        // Mt returns owned, St returns borrowed (RwLock pattern).
                         let owned_borrowed = is_owned_vs_borrowed(
                             &ref_fn.return_type, &cur_fn.return_type
                         );
 
-                        // Mt wraps in Result (lock can fail).
                         let result_wrap = is_result_wrapping(
                             &ref_fn.return_type, &cur_fn.return_type
                         );
 
-                        // Different collection backing type (same role).
                         let diff_backing = is_different_collection_backing(
                             &ref_fn.return_type, &cur_fn.return_type
                         );
@@ -2000,10 +2007,13 @@ fn compare_traits(
             }
         }
 
-        // Emit matched function summary.
-        let matched: Vec<&str> = ref_fn_names.iter()
-            .filter(|n| trait_set[1..].iter().all(|(_, t)| t.functions.iter().any(|f| f.name == **n)))
-            .copied()
+        // Emit matched function summary across all variants in this trait group.
+        let all_fn_names: Vec<&str> = trait_set.iter()
+            .flat_map(|(_, t)| t.functions.iter().map(|f| f.name.as_str()))
+            .collect();
+        let unique_fns: std::collections::BTreeSet<&str> = all_fn_names.into_iter().collect();
+        let matched: Vec<&str> = unique_fns.into_iter()
+            .filter(|n| trait_set.iter().all(|(_, t)| t.functions.iter().any(|f| f.name == *n)))
             .collect();
         if !matched.is_empty() && trait_set.len() > 1 {
             let first_rel = &trait_set[0].0.rel_path;
@@ -2251,23 +2261,28 @@ fn compare_phase4(
                 continue;
             }
 
-            // Pick highest-priority reference.
-            let ref_idx = trait_set.iter()
-                .enumerate()
-                .max_by_key(|(_, (info, _))| info.variant.priority())
-                .map(|(i, _)| i)
-                .unwrap_or(0);
-            let (ref_info, ref_trait) = trait_set[ref_idx];
-
-            let others: Vec<(&VariantInfo, &TraitInfo)> = trait_set.iter()
-                .enumerate()
-                .filter(|(i, _)| *i != ref_idx)
-                .map(|(_, x)| *x)
+            // Generate lattice-based comparison pairs.
+            let present_variants: Vec<Variant> = trait_set.iter()
+                .map(|(info, _)| info.variant)
                 .collect();
+            let pairs = lattice_pairs(&present_variants);
 
-            // Compare clauses for each matched function.
-            for ref_fn in &ref_trait.functions {
-                for &(cur_info, cur_trait) in &others {
+            let find_trait = |v: Variant| -> Option<(&VariantInfo, &TraitInfo)> {
+                trait_set.iter().find(|(info, _)| info.variant == v).copied()
+            };
+
+            for (ref_variant, cur_variant) in &pairs {
+                let (ref_info, ref_trait) = match find_trait(*ref_variant) {
+                    Some(x) => x,
+                    None => continue,
+                };
+                let (cur_info, cur_trait) = match find_trait(*cur_variant) {
+                    Some(x) => x,
+                    None => continue,
+                };
+
+                // Compare clauses for each matched function.
+                for ref_fn in &ref_trait.functions {
                     if let Some(cur_fn) = cur_trait.functions.iter().find(|f| f.name == ref_fn.name) {
                         // Compare requires clauses.
                         if ref_fn.has_requires && cur_fn.has_requires {
@@ -2513,6 +2528,33 @@ fn main() {
             log!("Filtered to Chap{}: {} groups", n, groups.len());
             log!("");
         }
+    }
+
+    // Apply -f (single file) filter: keep only groups containing this file.
+    if let Some(ref file_path) = cli.file {
+        let canonical = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.clone());
+        groups.retain(|g| {
+            g.variants.values().any(|p| {
+                fs::canonicalize(p).map_or(false, |cp| cp == canonical)
+            })
+        });
+        log!("Filtered to file {}: {} groups", file_path.display(), groups.len());
+        log!("");
+    }
+
+    // Apply -d (directory) filter: keep only groups with files under these directories.
+    if !cli.dir.is_empty() {
+        let canonical_dirs: Vec<PathBuf> = cli.dir.iter()
+            .filter_map(|d| fs::canonicalize(d).ok())
+            .collect();
+        groups.retain(|g| {
+            g.variants.values().any(|p| {
+                let cp = fs::canonicalize(p).unwrap_or_else(|_| p.clone());
+                canonical_dirs.iter().any(|d| cp.starts_with(d))
+            })
+        });
+        log!("Filtered to {} directories: {} groups", cli.dir.len(), groups.len());
+        log!("");
     }
 
     // Phase 4 only mode.
