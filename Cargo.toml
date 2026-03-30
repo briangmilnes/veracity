@@ -217,5 +217,9 @@ name = "veracity-compare-par-mut"
 path = "src/bin/compare_par_mut.rs"
 
 [[bin]]
+name = "veracity-annotate-alg-analysis"
+path = "src/bin/annotate_alg_analysis.rs"
+
+[[bin]]
 name = "veracity-tocify"
 path = "src/bin/tocify.rs"

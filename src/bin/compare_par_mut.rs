@@ -261,6 +261,8 @@ struct TraitFnInfo {
     self_kind: String,
     /// Return type string, normalized.
     return_type: String,
+    /// Named return binding (e.g., "joined" from `-> (joined: Self)`).
+    return_name: Option<String>,
     has_requires: bool,
     has_ensures: bool,
     /// Individual requires clause texts, normalized.
@@ -899,6 +901,17 @@ fn extract_return_type(sig: &verus_syn::Signature) -> String {
     }
 }
 
+/// Extract the named return binding from a signature, e.g. "joined" from `-> (joined: Self)`.
+fn extract_return_name(sig: &verus_syn::Signature) -> Option<String> {
+    if let verus_syn::ReturnType::Type(_, _, Some(ref pat_box), _) = sig.output {
+        let (_, ref pat, _) = **pat_box;
+        if let verus_syn::Pat::Ident(ref pat_ident) = pat {
+            return Some(pat_ident.ident.to_string());
+        }
+    }
+    None
+}
+
 /// Extract generic bounds string from a trait's generics.
 fn extract_generic_bounds(generics: &verus_syn::Generics) -> String {
     let parts: Vec<String> = generics
@@ -935,6 +948,7 @@ fn extract_trait_fn(inner: &str, fn_item: &verus_syn::TraitItemFn) -> TraitFnInf
     let self_kind = self_kind_str(&fn_item.sig);
     let param_types = extract_param_types(&fn_item.sig);
     let return_type = extract_return_type(&fn_item.sig);
+    let return_name = extract_return_name(&fn_item.sig);
     let has_requires = fn_item.sig.spec.requires.is_some();
     let has_ensures = fn_item.sig.spec.ensures.is_some();
 
@@ -954,6 +968,7 @@ fn extract_trait_fn(inner: &str, fn_item: &verus_syn::TraitItemFn) -> TraitFnInf
         param_types,
         self_kind,
         return_type,
+        return_name,
         has_requires,
         has_ensures,
         requires_clauses,
@@ -2045,6 +2060,52 @@ fn normalize_clause_for_comparison(clause: &str) -> String {
     result
 }
 
+/// Determine if a return type is `Self` (post-state of the object, not a tuple or other type).
+fn return_is_self(return_type: &str) -> bool {
+    return_type == "Self"
+}
+
+fn normalize_eph_per_clause(clause: &str, is_ephemeral: bool, return_name: Option<&str>, ret_is_self: bool) -> String {
+    let mut result = clause.to_string();
+    if is_ephemeral {
+        result = result.replace("old ( self )", "__PRE__");
+        result = result.replace("old (self)", "__PRE__");
+        result = result.replace("old(self)", "__PRE__");
+        result = replace_token(&result, "self", "__POST__");
+    } else {
+        result = replace_token(&result, "self", "__PRE__");
+        if ret_is_self {
+            if let Some(ret) = return_name {
+                result = replace_token(&result, ret, "__POST__");
+            }
+        }
+    }
+    result
+}
+
+fn replace_token(s: &str, token: &str, replacement: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let tok_bytes = token.as_bytes();
+    let tok_len = tok_bytes.len();
+    let mut i = 0;
+    while i < bytes.len() {
+        if i + tok_len <= bytes.len()
+            && &bytes[i..i + tok_len] == tok_bytes
+            && (i == 0 || !bytes[i - 1].is_ascii_alphanumeric() && bytes[i - 1] != b'_')
+            && (i + tok_len == bytes.len()
+                || !bytes[i + tok_len].is_ascii_alphanumeric() && bytes[i + tok_len] != b'_')
+        {
+            result.push_str(replacement);
+            i += tok_len;
+        } else {
+            result.push(bytes[i] as char);
+            i += 1;
+        }
+    }
+    result
+}
+
 /// Check if a clause is purely a wf predicate call (e.g., `self.spec_foo_wf()`).
 fn is_wf_clause(clause: &str) -> bool {
     let trimmed = clause.trim();
@@ -2054,11 +2115,12 @@ fn is_wf_clause(clause: &str) -> bool {
 
 /// Compare two sets of clauses (requires or ensures) between ref and cur functions.
 fn compare_clauses(
-    kind: &str,  // "requires" or "ensures"
+    kind: &str,
     ref_clauses: &[String],
     cur_clauses: &[String],
     ref_info: &VariantInfo,
     cur_info: &VariantInfo,
+    ref_fn: &TraitFnInfo,
     cur_fn: &TraitFnInfo,
     diags: &mut Vec<Diagnostic>,
 ) {
@@ -2066,15 +2128,58 @@ fn compare_clauses(
         return;
     }
 
-    // Normalize and sort both sets for order-independent comparison.
-    let mut ref_sorted: Vec<String> = ref_clauses.iter()
+    // Detect eph/per shift: one side is &mut self (ephemeral), the other is not.
+    let eph_per_shift = kind == "ensures"
+        && ((ref_fn.self_kind == "&mut self" && cur_fn.self_kind != "&mut self")
+            || (ref_fn.self_kind != "&mut self" && cur_fn.self_kind == "&mut self"));
+
+    let ref_is_eph = ref_fn.self_kind == "&mut self";
+    let cur_is_eph = cur_fn.self_kind == "&mut self";
+    let ref_ret_is_self = return_is_self(&ref_fn.return_type);
+    let cur_ret_is_self = return_is_self(&cur_fn.return_type);
+
+    // Build display versions (variant-stripped only) for diagnostic messages.
+    let mut ref_display: Vec<String> = ref_clauses.iter()
         .map(|c| normalize_clause_for_comparison(c))
         .collect();
-    let mut cur_sorted: Vec<String> = cur_clauses.iter()
+    let mut cur_display: Vec<String> = cur_clauses.iter()
         .map(|c| normalize_clause_for_comparison(c))
         .collect();
-    ref_sorted.sort();
-    cur_sorted.sort();
+
+    // Build match versions (with PRE/POST normalization if eph/per shift).
+    let mut ref_sorted: Vec<String> = if eph_per_shift {
+        ref_clauses.iter()
+            .map(|c| {
+                let stripped = normalize_clause_for_comparison(c);
+                normalize_eph_per_clause(&stripped, ref_is_eph, ref_fn.return_name.as_deref(), ref_ret_is_self)
+            })
+            .collect()
+    } else {
+        ref_display.clone()
+    };
+    let mut cur_sorted: Vec<String> = if eph_per_shift {
+        cur_clauses.iter()
+            .map(|c| {
+                let stripped = normalize_clause_for_comparison(c);
+                normalize_eph_per_clause(&stripped, cur_is_eph, cur_fn.return_name.as_deref(), cur_ret_is_self)
+            })
+            .collect()
+    } else {
+        cur_display.clone()
+    };
+
+    // Sort both paired arrays together so display stays aligned with match.
+    {
+        let mut ref_pairs: Vec<(String, String)> = ref_sorted.into_iter().zip(ref_display.into_iter()).collect();
+        ref_pairs.sort_by(|a, b| a.0.cmp(&b.0));
+        ref_sorted = ref_pairs.iter().map(|p| p.0.clone()).collect();
+        ref_display = ref_pairs.iter().map(|p| p.1.clone()).collect();
+
+        let mut cur_pairs: Vec<(String, String)> = cur_sorted.into_iter().zip(cur_display.into_iter()).collect();
+        cur_pairs.sort_by(|a, b| a.0.cmp(&b.0));
+        cur_sorted = cur_pairs.iter().map(|p| p.0.clone()).collect();
+        cur_display = cur_pairs.iter().map(|p| p.1.clone()).collect();
+    }
 
     // If sorted normalized sets are identical, clauses are equivalent.
     if ref_sorted == cur_sorted {
@@ -2151,8 +2256,8 @@ fn compare_clauses(
                     message: format!(
                         "`{}`: {} clause fuzzy match — ref: `{}` ~ cur: `{}`",
                         cur_fn.name, kind,
-                        truncate_clause(&ref_sorted[ri], 60),
-                        truncate_clause(&cur_sorted[ci], 60),
+                        truncate_clause(&ref_display[ri], 60),
+                        truncate_clause(&cur_display[ci], 60),
                     ),
                 });
             }
@@ -2162,7 +2267,7 @@ fn compare_clauses(
     // Report unmatched reference clauses (spec weakening).
     for (ri, matched) in ref_matched.iter().enumerate() {
         if !matched {
-            let is_wf = is_wf_clause(&ref_sorted[ri]);
+            let is_wf = is_wf_clause(&ref_display[ri]);
             let level = if is_wf { DiagLevel::Info } else { DiagLevel::Warning };
             diags.push(Diagnostic {
                 file: cur_info.rel_path.clone(),
@@ -2171,7 +2276,7 @@ fn compare_clauses(
                 message: format!(
                     "`{}`: {} has {} clause `{}` with no match in {}",
                     cur_fn.name, ref_info.variant, kind,
-                    truncate_clause(&ref_sorted[ri], 80),
+                    truncate_clause(&ref_display[ri], 80),
                     cur_info.variant,
                 ),
             });
@@ -2188,7 +2293,7 @@ fn compare_clauses(
                 message: format!(
                     "`{}`: {} has extra {} clause `{}` not in {}",
                     cur_fn.name, cur_info.variant, kind,
-                    truncate_clause(&cur_sorted[ci], 80),
+                    truncate_clause(&cur_display[ci], 80),
                     ref_info.variant,
                 ),
             });
@@ -2290,7 +2395,7 @@ fn compare_phase4(
                                 "requires",
                                 &ref_fn.requires_clauses,
                                 &cur_fn.requires_clauses,
-                                ref_info, cur_info, cur_fn,
+                                ref_info, cur_info, ref_fn, cur_fn,
                                 diags,
                             );
                         }
@@ -2300,7 +2405,7 @@ fn compare_phase4(
                                 "ensures",
                                 &ref_fn.ensures_clauses,
                                 &cur_fn.ensures_clauses,
-                                ref_info, cur_info, cur_fn,
+                                ref_info, cur_info, ref_fn, cur_fn,
                                 diags,
                             );
                         }

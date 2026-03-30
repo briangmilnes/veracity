@@ -1570,7 +1570,14 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
     // This strips all existing section headers and re-inserts canonical ones.
     let original_content = analysis.lines.join("\n") + "\n";
     // Step 0a: Reorder inside verus!.
-    let (mut lines, mut changed, reordered) = if let Some(reordered) = reorder_verus_items(&original_content) {
+    // Skip reorder for files with duplicate TOC headers — they need manual attention.
+    let toc_header_count = analysis.lines.iter()
+        .filter(|l| is_toc_header_line(l))
+        .count();
+    let skip_reorder = toc_header_count > 1;
+    let (mut lines, mut changed, reordered) = if skip_reorder {
+        (analysis.lines.clone(), false, false)
+    } else if let Some(reordered) = reorder_verus_items(&original_content) {
         let new_lines: Vec<String> = reordered.lines().map(|l| l.to_string()).collect();
         (new_lines, true, true)
     } else {
@@ -1578,7 +1585,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
     };
 
     // Step 0b: Reorder outside verus! (sections 12-14).
-    {
+    if !skip_reorder {
         let current = lines.join("\n") + "\n";
         if let Some(reordered_outside) = reorder_outside_verus(&current) {
             lines = reordered_outside.lines().map(|l| l.to_string()).collect();
@@ -1590,7 +1597,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
     // (within 5 lines, skipping blanks, `}`, and `} // verus!` lines).
     // This catches the inside-verus/outside-verus boundary duplication
     // without removing legitimate repeated sections in multi-type files.
-    {
+    if !skip_reorder {
         let mut i = 0;
         while i < lines.len() {
             if !is_section_header_line(lines[i].trim()) {
@@ -1667,7 +1674,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
         .map(|h| h.as_slice())
         .unwrap_or(&analysis.section_headers);
 
-    {
+    if !skip_reorder {
 
     // Fix 1: Fix section headers — correct numbers and normalize to tab format.
     for hdr in section_headers {
@@ -1829,6 +1836,24 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
             }
             toc_end = Some(end);
             break;
+        }
+    }
+
+    // If the TOC is inside `pub mod`, remove it and let it fall through to insertion.
+    if let (Some(start), Some(end)) = (toc_start, toc_end) {
+        let inside_pub_mod = lines[..start].iter().any(|l| {
+            let t = l.trim();
+            (t.starts_with("pub mod ") || t.starts_with("mod ")) && t.ends_with('{')
+        }) && !lines[..start].iter().rev().any(|l| l.trim() == "}");
+        if inside_pub_mod {
+            lines.drain(start..end);
+            // Also drain trailing blank line if present.
+            if start < lines.len() && lines[start].trim().is_empty() {
+                lines.remove(start);
+            }
+            changed = true;
+            toc_start = None;
+            toc_end = None;
         }
     }
 
