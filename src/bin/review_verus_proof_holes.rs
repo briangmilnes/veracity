@@ -3809,6 +3809,20 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                 hole_type: "accept()".to_string(),
                 context: "assume with accept hole comment".to_string(), ..Default::default()
             });
+        } else if is_type_level_predicate_assume(i) {
+            // Type-level predicate assumes (obeys_cmp_spec, obeys_feq_full, etc.)
+            // belong in requires clauses, not as assumes. Always count as a real hole,
+            // even in Mt files with RwLock — these are NOT structural gaps.
+            let is_mt_file = self.file_stem.contains("Mt");
+            let context_str = self.context_at(line);
+            let subcat = classify_assume_subcategory(&context_str, is_mt_file, false);
+            self.stats.holes.assume_count += 1;
+            self.stats.holes.total_holes += 1;
+            self.stats.holes.holes.push(DetectedHole {
+                line,
+                hole_type: format!("assume() [{}:type-predicate]", subcat),
+                context: context_str, ..Default::default()
+            });
         } else {
             // RWLOCK_GHOST: assume() bridging ghost state across RwLock boundary.
             // Two detection paths:
@@ -4133,6 +4147,36 @@ fn is_assume_false(assume: &verus_syn::Assume) -> bool {
 
 fn has_diverge_after_in_block(_assume: &verus_syn::Assume) -> bool {
     // Verus AST doesn't give us easy access to "next statement". For now, conservatively false.
+    false
+}
+
+/// Known type-level predicate function names.
+/// These are global predicates about types (not about specific values) and belong
+/// in `requires` clauses, not as `assume()` inside function bodies. When these
+/// appear as assumes in Mt files with RwLock, they should NOT be classified as
+/// structural RWLOCK_GHOST false positives — they are fixable proof obligations.
+const TYPE_LEVEL_PREDICATES: &[&str] = &[
+    "obeys_cmp_spec",
+    "obeys_feq_full",
+    "obeys_feq_clone",
+    "obeys_feq_full_trigger",
+    "obeys_clone_view_spec",
+    "view_ord_consistent",
+];
+
+/// Check if an assume expression is a call to a type-level predicate.
+/// These are bare function calls (no receiver) like `obeys_cmp_spec::<T>()`.
+fn is_type_level_predicate_assume(assume: &verus_syn::Assume) -> bool {
+    use verus_syn::Expr;
+    // The assume expr is typically a Call whose func is a Path.
+    if let Expr::Call(call) = &*assume.expr {
+        if let Expr::Path(path) = &*call.func {
+            if let Some(seg) = path.path.segments.last() {
+                let name = seg.ident.to_string();
+                return TYPE_LEVEL_PREDICATES.iter().any(|p| name == *p);
+            }
+        }
+    }
     false
 }
 
