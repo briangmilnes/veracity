@@ -83,11 +83,6 @@ fn canonical_name(num: u32) -> Option<&'static str> {
         .map(|(_, name)| *name)
 }
 
-/// Canonical ordering position for a section number.
-fn section_order(num: u32) -> u32 {
-    num
-}
-
 // ---------------------------------------------------------------------------
 // verus! block location and span conversion (from full_generic_feq.rs)
 // ---------------------------------------------------------------------------
@@ -111,6 +106,28 @@ fn find_verus_block(content: &str) -> Option<(usize, usize, usize)> {
                         return Some((open, close, brace_line));
                     }
                 }
+            }
+        }
+    }
+    None
+}
+
+/// Find the byte offset of the `pub mod` block's closing `}`.
+/// This is more reliable than `rfind('}')` which may match `}` inside
+/// `macro_rules!` or other items after the module close.
+fn find_pub_mod_close(content: &str) -> Option<usize> {
+    let parsed = ra_ap_syntax::SourceFile::parse(content, ra_ap_syntax::Edition::Edition2021);
+    let tree = parsed.tree();
+    let root = tree.syntax();
+
+    for child in root.children() {
+        if let Some(module) = ast::Module::cast(child) {
+            if let Some(item_list) = module.item_list() {
+                // The item_list includes the `{ ... }` — its end is right after `}`.
+                let range = item_list.syntax().text_range();
+                let close: usize = range.end().into();
+                // close points just after `}`, we want the `}` itself.
+                return Some(close - 1);
             }
         }
     }
@@ -148,40 +165,39 @@ fn line_col_to_byte(content: &str, line: usize, col: usize) -> usize {
 // Item classification for reordering
 // ---------------------------------------------------------------------------
 
-/// A top-level item with its text range and section classification.
-#[derive(Debug)]
-struct TopLevelItem {
-    /// Byte offset of start (including leading comments/attrs) in the source slice.
-    start: usize,
-    /// Byte offset of end in the source slice.
-    end: usize,
-    /// Section number (2-14).
-    section: u32,
-    /// Original index for stable sort.
-    original_index: usize,
-    /// True if this item can start a new type group (struct/enum, not type alias/const).
-    is_group_starter: bool,
-}
-
-/// Classify a verus_syn Item into (section_number, is_group_starter).
+/// Classify a verus_syn Item into (section_number, is_group_starter, type_name).
 /// Group starters are struct/enum definitions that can begin a new type group.
 /// Type aliases, consts, and other section-4 items don't start new groups.
-fn classify_verus_item(item: &verus_syn::Item) -> (u32, bool) {
+fn classify_verus_item(item: &verus_syn::Item) -> (u32, bool, Option<String>) {
     match item {
-        verus_syn::Item::Use(_) => (2, false),
-        verus_syn::Item::BroadcastUse(_) => (3, false),
+        verus_syn::Item::Use(_) => (2, false, None),
+        verus_syn::Item::BroadcastUse(_) => (3, false, None),
         verus_syn::Item::Struct(s) => {
-            if is_iterator_type_name(&s.ident.to_string()) { (10, false) } else { (4, true) }
+            let name = s.ident.to_string();
+            if is_iterator_type_name(&name) { (10, false, Some(name)) } else { (4, true, Some(name)) }
         }
-        verus_syn::Item::Enum(_) => (4, true),
-        verus_syn::Item::Type(_) => (4, false), // type alias — not a group starter
-        verus_syn::Item::Const(_) | verus_syn::Item::Static(_) => (4, false),
-        verus_syn::Item::Impl(impl_item) => (classify_impl(impl_item), false),
-        verus_syn::Item::Fn(fn_item) => (classify_fn(fn_item), false),
-        verus_syn::Item::Trait(_) => (8, false),
-        verus_syn::Item::BroadcastGroup(_) => (7, false),
-        verus_syn::Item::Macro(_) => (4, false),
-        _ => (9, false),
+        verus_syn::Item::Enum(e) => {
+            let name = e.ident.to_string();
+            (4, true, Some(name))
+        }
+        verus_syn::Item::Type(t) => {
+            let name = t.ident.to_string();
+            (4, false, Some(name))
+        }
+        verus_syn::Item::Const(_) | verus_syn::Item::Static(_) => (4, false, None),
+        verus_syn::Item::Impl(impl_item) => {
+            let section = classify_impl(impl_item);
+            let type_name = extract_self_type_name(&impl_item.self_ty);
+            (section, false, type_name)
+        }
+        verus_syn::Item::Fn(fn_item) => (classify_fn(fn_item), false, None),
+        verus_syn::Item::Trait(t) => {
+            let name = t.ident.to_string();
+            (8, false, Some(name))
+        }
+        verus_syn::Item::BroadcastGroup(_) => (7, false, None),
+        verus_syn::Item::Macro(_) => (4, false, None),
+        _ => (9, false, None),
     }
 }
 
@@ -232,10 +248,26 @@ fn extract_self_type_name(ty: &verus_syn::Type) -> Option<String> {
     }
 }
 
+/// Check if a function name is iterator-related (belongs in section 10).
+fn is_iterator_fn_name(name: &str) -> bool {
+    name == "iter_invariant"
+        || name.starts_with("iter_")
+        || name.ends_with("_iter")
+}
+
 /// Classify a function by its mode.
 fn classify_fn(fn_item: &verus_syn::ItemFn) -> u32 {
+    let name = fn_item.sig.ident.to_string();
+
     match &fn_item.sig.mode {
-        verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_) => 6,
+        verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_) => {
+            // Iterator-related spec fns stay in section 10.
+            if is_iterator_fn_name(&name) {
+                10
+            } else {
+                6
+            }
+        }
         verus_syn::FnMode::Proof(_) | verus_syn::FnMode::ProofAxiom(_) => 7,
         _ => {
             // Broadcast proof fn: check broadcast field.
@@ -248,25 +280,30 @@ fn classify_fn(fn_item: &verus_syn::ItemFn) -> u32 {
     }
 }
 
+/// Check if text starts with a section number (digit) or "Section " prefix.
+fn starts_with_section_num(text: &str) -> bool {
+    text.starts_with("Section ") || text.chars().next().map_or(false, |c| c.is_ascii_digit())
+}
+
 /// Check if a line is a section header comment (to be stripped during reordering).
 fn is_section_header_line(line: &str) -> bool {
     let stripped = line.trim_start();
     if !stripped.starts_with("//") || stripped.starts_with("///") || stripped.starts_with("//!") {
         return false;
     }
-    // Check for tab format: //\t\t<digit>
+    // Check for tab format: //\t\t<digit> or //\t\tSection <digit>
     if stripped.starts_with("//\t\t") {
         let after = &stripped[4..];
-        if after.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if starts_with_section_num(after) {
             if let Some((_, _, name)) = parse_numbered_section(after, 0, stripped) {
                 return canonical_number(base_section_name(&name)).is_some();
             }
         }
     }
-    // Check for space format: // <digit>
+    // Check for space format: // <digit> or // Section <digit>
     let after_slashes = stripped.trim_start_matches("//");
     let trimmed = after_slashes.trim_start();
-    if trimmed.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+    if starts_with_section_num(trimmed) {
         if let Some((_, _, name)) = parse_numbered_section(trimmed, 0, stripped) {
             return canonical_number(base_section_name(&name)).is_some();
         }
@@ -291,19 +328,19 @@ fn is_toc_entry_line(line: &str) -> bool {
         return false;
     }
     let after_slashes = stripped.trim_start_matches("//");
-    // Tab format: //\t<digit> (one tab, not two)
+    // Tab format: //\t<digit> or //\tSection <digit> (one tab, not two)
     if after_slashes.starts_with('\t') && !after_slashes.starts_with("\t\t") {
         let trimmed = after_slashes[1..].trim_start();
-        if trimmed.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if starts_with_section_num(trimmed) {
             if let Some((_, _, name)) = parse_numbered_section(trimmed, 0, stripped) {
                 return canonical_number(base_section_name(&name)).is_some();
             }
         }
     }
-    // Space format: //  <digit>
+    // Space format: //  <digit> or //  Section <digit>
     if after_slashes.starts_with("  ") {
         let trimmed = after_slashes.trim_start();
-        if trimmed.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if starts_with_section_num(trimmed) {
             if let Some((_, _, name)) = parse_numbered_section(trimmed, 0, stripped) {
                 return canonical_number(base_section_name(&name)).is_some();
             }
@@ -312,19 +349,26 @@ fn is_toc_entry_line(line: &str) -> bool {
     false
 }
 
-/// Classify an ra_ap_syntax item outside verus! into a section number (12-14).
-fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> u32 {
+/// Classify an ra_ap_syntax item outside verus! into (section_number, type_name).
+fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> (u32, Option<String>) {
     if let Some(impl_block) = ast::Impl::cast(node.clone()) {
+        // Extract self-type name from the impl block.
+        let self_type = impl_block.self_ty().and_then(|ty| {
+            if let Some(path) = ast::PathType::cast(ty.syntax().clone()) {
+                path.path()?.segment()?.name_ref().map(|n| n.to_string())
+            } else {
+                None
+            }
+        });
         // Check trait name for Debug/Display → section 14
         if let Some(trait_) = impl_block.trait_() {
-            // Extract the last path segment name via AST.
             if let Some(path) = ast::PathType::cast(trait_.syntax().clone()) {
                 if let Some(p) = path.path() {
                     if let Some(seg) = p.segment() {
                         if let Some(name_ref) = seg.name_ref() {
                             let name = name_ref.to_string();
                             if name == "Debug" || name == "Display" {
-                                return 14;
+                                return (14, self_type);
                             }
                         }
                     }
@@ -332,21 +376,21 @@ fn classify_outside_verus_item(node: &ra_ap_syntax::SyntaxNode) -> u32 {
             }
         }
         // Other impl outside verus! → section 14 (derive impls)
-        return 14;
+        return (14, self_type);
     }
     if ast::MacroDef::cast(node.clone()).is_some()
         || ast::MacroRules::cast(node.clone()).is_some()
     {
-        return 13;
+        return (13, None);
     }
-    14 // default for unknown outside-verus items
+    (14, None) // default for unknown outside-verus items
 }
 
 /// Insert section headers for items outside verus! — both before (sections 1-2)
 /// and after (sections 12-14). Reorders after-verus items by section number.
 /// Returns modified content if changes were made.
 fn reorder_outside_verus(content: &str) -> Option<String> {
-    let (verus_open, verus_close, _) = find_verus_block(content)?;
+    let (verus_open, _, _) = find_verus_block(content)?;
     let mut result = content.to_string();
     let mut changed = false;
 
@@ -378,7 +422,7 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
             // Insert section 1 header before `pub mod`.
             if !has_mod_header && (trimmed.starts_with("pub mod ") || trimmed.starts_with("mod ")) {
                 new_lines.push(String::new());
-                new_lines.push("//\t\t1. module".to_string());
+                new_lines.push("//\t\tSection 1. module".to_string());
                 new_lines.push(String::new());
                 has_mod_header = true;
             }
@@ -387,7 +431,7 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
                 first_use_seen = true;
                 new_lines.push(String::new());
                 let indent: String = line.chars().take_while(|c| c.is_whitespace()).collect();
-                new_lines.push(format!("{}//\t\t2. imports", indent));
+                new_lines.push(format!("{}//\t\tSection 2. imports", indent));
                 new_lines.push(String::new());
                 has_use_header = true;
             }
@@ -412,8 +456,9 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         .map(|p| verus_end_byte + p + 1)
         .unwrap_or(result.len());
 
-    // Find the last `}` in the file (pub mod closing brace).
-    let mod_close = result.rfind('}')?;
+    // Find the pub mod closing brace using AST (not rfind which may match
+    // braces inside macro_rules! or other items after the module).
+    let mod_close = find_pub_mod_close(&result)?;
     if mod_close <= after_verus {
         return if changed { Some(result) } else { None };
     }
@@ -428,14 +473,15 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
     let tree = parsed.tree();
     let root = tree.syntax();
 
-    // Collect top-level items with their ranges and sections.
-    let mut items: Vec<(usize, usize, u32, String)> = Vec::new(); // (start, end, section, text)
+    // Collect top-level items with their ranges, sections, and type names.
+    // (start, end, section, text, type_name)
+    let mut items: Vec<(usize, usize, u32, String, Option<String>)> = Vec::new();
     for child in root.children() {
         let range = child.text_range();
         let start: usize = range.start().into();
         let end: usize = range.end().into();
-        let section = classify_outside_verus_item(&child);
-        items.push((start, end, section, outside[start..end].to_string()));
+        let (section, type_name) = classify_outside_verus_item(&child);
+        items.push((start, end, section, outside[start..end].to_string(), type_name));
     }
 
     if items.is_empty() {
@@ -457,9 +503,10 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
     };
 
     // Build extended ranges including leading comments/blank lines/section headers.
-    let mut ext_items: Vec<(usize, usize, u32)> = Vec::new();
-    for (idx, &(start, end, section, _)) in items.iter().enumerate() {
-        let item_line = byte_to_line(start);
+    // (adj_start, end, section, type_name)
+    let mut ext_items: Vec<(usize, usize, u32, Option<String>)> = Vec::new();
+    for (idx, (start, end, section, _, type_name)) in items.iter().enumerate() {
+        let item_line = byte_to_line(*start);
         let prev_end_line = if idx == 0 { 0 } else { byte_to_line(ext_items[idx - 1].1) + 1 };
 
         let mut attach_line = item_line;
@@ -478,8 +525,8 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
                 line -= 1;
             }
         }
-        let adj_start = line_starts.get(attach_line).copied().unwrap_or(start);
-        ext_items.push((adj_start, end, section));
+        let adj_start = line_starts.get(attach_line).copied().unwrap_or(*start);
+        ext_items.push((adj_start, *end, *section, type_name.clone()));
     }
 
     // Extend each item's end to the next item's start.
@@ -488,13 +535,54 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         ext_items[i].1 = next_start;
     }
 
-    // Sort by section number (stable).
-    let mut sorted: Vec<(usize, usize, u32)> = ext_items.clone();
-    sorted.sort_by_key(|item| item.2);
+    // Build type registry from verus! interior for suffix assignment.
+    let verus_type_registry = {
+        if let Some((int_start, int_end)) = find_verus_interior_lines(
+            &result.lines().map(|l| l.to_string()).collect::<Vec<_>>(),
+        ) {
+            let int_lines: Vec<String> = result.lines().map(|l| l.to_string())
+                .collect::<Vec<_>>()[int_start..int_end].to_vec();
+            let int_items = classify_interior_items(&int_lines);
+            build_type_registry(&int_items)
+        } else {
+            Vec::new()
+        }
+    };
+    let use_suffixes = verus_type_registry.len() > 1;
 
-    // Check if order changed.
-    let _before_order: Vec<u32> = ext_items.iter().map(|i| i.2).collect();
-    let _after_order: Vec<u32> = sorted.iter().map(|i| i.2).collect();
+    // Resolve suffix for each outside item.
+    let resolve_outside_suffix = |type_name: &Option<String>| -> String {
+        if !use_suffixes { return String::new(); }
+        if let Some(tn) = type_name {
+            // Direct match.
+            if let Some(idx) = verus_type_registry.iter().position(|t| t == tn) {
+                return String::from((b'a' + idx as u8) as char);
+            }
+            // Iterator suffix stripping.
+            for suffix in &["Iter", "Iterator", "GhostIterator", "IntoIter"] {
+                if let Some(prefix) = tn.strip_suffix(suffix) {
+                    if let Some(idx) = verus_type_registry.iter().position(|t| t == prefix) {
+                        return String::from((b'a' + idx as u8) as char);
+                    }
+                }
+            }
+            // Prefix match.
+            for (idx, t) in verus_type_registry.iter().enumerate() {
+                if tn.starts_with(t.as_str()) {
+                    return String::from((b'a' + idx as u8) as char);
+                }
+            }
+        }
+        String::new()
+    };
+
+    // Sort by (section, suffix) so per-type items group together.
+    let mut sorted: Vec<(usize, usize, u32, Option<String>)> = ext_items.clone();
+    sorted.sort_by(|a, b| {
+        let sa = resolve_outside_suffix(&a.3);
+        let sb = resolve_outside_suffix(&b.3);
+        a.2.cmp(&b.2).then(sa.cmp(&sb))
+    });
 
     // Check which section headers already exist just before the outside region
     // (at the end of the verus! block). Avoid duplicating them.
@@ -512,26 +600,28 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
         }
     }
 
-    // Reassemble with section headers.
+    // Reassemble with section headers (including per-type suffixes).
     let indent = "    "; // standard indentation inside pub mod
     let mut new_outside = String::new();
-    let mut prev_section: Option<u32> = None;
+    let mut prev_key: Option<(u32, String)> = None; // (section, suffix)
 
-    for &(start, end, section) in &sorted {
+    for &(start, end, section, ref type_name) in &sorted {
         let item_text = &outside[start..end];
         let cleaned = strip_section_headers_from_text(item_text);
+        let suffix = resolve_outside_suffix(type_name);
+        let key = (section, suffix.clone());
 
-        if prev_section != Some(section) {
+        if prev_key.as_ref() != Some(&key) {
             // Skip if this section header was already inserted at the verus! boundary.
-            let at_boundary = prev_section.is_none() && boundary_sections.contains(&section);
+            let at_boundary = prev_key.is_none() && boundary_sections.contains(&section);
             if !at_boundary {
                 if let Some(name) = canonical_name(section) {
                     new_outside.push_str(&format!(
-                        "\n{}//\t\t{}. {}\n", indent, section, name
+                        "\n{}//\t\tSection {}{}. {}\n", indent, section, suffix, name
                     ));
                 }
             }
-            prev_section = Some(section);
+            prev_key = Some(key);
         }
         new_outside.push_str(&cleaned);
     }
@@ -548,205 +638,395 @@ fn reorder_outside_verus(content: &str) -> Option<String> {
     None
 }
 
-/// Extract, classify, and reorder items inside the verus! block.
-/// Returns the new content if reordering changed anything, None otherwise.
-fn reorder_verus_items(content: &str) -> Option<String> {
-    let (open, close, _) = find_verus_block(content)?;
-    let inner = &content[open + 1..close - 1];
-    let inner_base = open + 1;
+/// Line-range info for a classified verus item.
+#[derive(Debug, Clone)]
+struct ItemLineRange {
+    /// Start line (inclusive) in the verus! interior, including leading comments.
+    start_line: usize,
+    /// End line (exclusive) in the verus! interior.
+    end_line: usize,
+    /// Section number (2-14).
+    section: u32,
+    /// Original index for stable sort.
+    original_index: usize,
+    /// True if this item can start a new type group (struct/enum).
+    is_group_starter: bool,
+    /// Type name this item belongs to (for suffix assignment).
+    /// - Struct/Enum: the defined type name
+    /// - Impl: the self-type name
+    /// - Trait: the trait name (resolved to a type later)
+    /// - Free fn/broadcast: None
+    type_name: Option<String>,
+}
 
-    // Parse the verus! interior with verus_syn.
-    let verus_file = verus_syn::parse_file(inner).ok()?;
+/// Find the line range of the verus! interior in the full file lines.
+/// Returns (interior_first_line, interior_last_line_exclusive) — 0-based in `lines`.
+fn find_verus_interior_lines(lines: &[String]) -> Option<(usize, usize)> {
+    let content = lines.join("\n") + "\n";
+    let (open, close, _) = find_verus_block(&content)?;
+    // open is byte offset of '{', close is byte offset after '}'.
+    // interior_first_line: the line AFTER the '{' line.
+    let open_line = content[..=open].matches('\n').count(); // 0-based line of '{'
+    // close-1 is the '}' byte. Find its line.
+    let close_line = content[..close - 1].matches('\n').count(); // 0-based line of '}'
+    Some((open_line + 1, close_line))
+}
+
+/// Parse and classify items in the verus! interior, returning line ranges.
+/// `interior_lines` are the lines inside verus! (between { and }).
+fn classify_interior_items(interior_lines: &[String]) -> Vec<ItemLineRange> {
+    let inner = interior_lines.join("\n") + "\n";
+    let verus_file = match verus_syn::parse_file(&inner) {
+        Ok(f) => f,
+        Err(_) => return Vec::new(),
+    };
 
     if verus_file.items.is_empty() {
-        return None;
+        return Vec::new();
     }
 
-    // Build items with byte ranges.
-    let mut items: Vec<TopLevelItem> = Vec::new();
-    for (idx, item) in verus_file.items.iter().enumerate() {
-        let start = span_start_byte(inner, item);
-        let end = span_end_byte(inner, item);
-        let (section, is_group_starter) = classify_verus_item(item);
-        items.push(TopLevelItem {
-            start,
-            end,
-            section,
-            original_index: idx,
-            is_group_starter,
-        });
-    }
-
-    // Extend each item's start backwards to capture leading comments/attributes,
-    // and extend end forward to the start of the next item.
-    // First, compute the adjusted ranges.
-    let inner_lines: Vec<&str> = inner.lines().collect();
+    // Build line_starts for byte→line conversion.
+    let inner_line_strs: Vec<&str> = inner.lines().collect();
     let mut line_starts: Vec<usize> = Vec::new();
     {
         let mut pos = 0;
-        for line in &inner_lines {
+        for line in &inner_line_strs {
             line_starts.push(pos);
             pos += line.len() + 1;
         }
     }
-
-    // Map byte offset to line number.
     let byte_to_line = |byte: usize| -> usize {
         line_starts.partition_point(|&s| s <= byte).saturating_sub(1)
     };
 
-    // For each item, extend start backwards to capture leading comments/attrs.
-    for i in 0..items.len() {
-        let item_line = byte_to_line(items[i].start);
-        let prev_end_line = if i == 0 {
-            0
+    let mut items: Vec<ItemLineRange> = Vec::new();
+    for (idx, item) in verus_file.items.iter().enumerate() {
+        let start_byte = span_start_byte(&inner, item);
+        let end_byte = span_end_byte(&inner, item);
+        let (section, is_group_starter, type_name) = classify_verus_item(item);
+
+        let start_line = byte_to_line(start_byte);
+        // end_byte points just past the item; find the line it's on and go one past.
+        let end_line = if end_byte >= inner.len() {
+            inner_line_strs.len()
         } else {
-            byte_to_line(items[i - 1].end)
+            byte_to_line(end_byte) + 1
         };
 
-        // Scan backwards from item_line.
-        let mut attach_line = item_line;
-        let mut line = if item_line > 0 { item_line - 1 } else { 0 };
-        while line >= prev_end_line.max(if i == 0 { 0 } else { prev_end_line + 1 }) {
-            let l = inner_lines.get(line).unwrap_or(&"");
-            let trimmed = l.trim();
-            if trimmed.is_empty() {
-                // blank line — include it (might separate comment from item)
-                attach_line = line;
-            } else if is_section_header_line(trimmed) {
-                // Section header — attach to the item it labels.
-                attach_line = line;
-            } else if trimmed.starts_with("//") || trimmed.starts_with("#[") {
-                // Comment or attribute — attach.
-                attach_line = line;
-            } else {
-                break;
-            }
-            if line == 0 { break; }
-            line -= 1;
-        }
-        items[i].start = line_starts.get(attach_line).copied().unwrap_or(items[i].start);
+        items.push(ItemLineRange {
+            start_line,
+            end_line,
+            section,
+            original_index: idx,
+            is_group_starter,
+            type_name,
+        });
     }
 
-    // Extend each item's end to the start of the next item (or end of inner).
+    // Extend start_line backward to capture leading comments/attrs/section headers.
+    for i in 0..items.len() {
+        let item_line = items[i].start_line;
+        let prev_end_line = if i == 0 { 0 } else { items[i - 1].end_line };
+
+        let mut attach_line = item_line;
+        if item_line > 0 {
+            let mut line = item_line - 1;
+            loop {
+                if line < prev_end_line { break; }
+                let l = interior_lines.get(line).map(|s| s.as_str()).unwrap_or("");
+                let trimmed = l.trim();
+                if trimmed.is_empty()
+                    || is_section_header_line(trimmed)
+                    || trimmed.starts_with("//")
+                    || trimmed.starts_with("#[")
+                {
+                    attach_line = line;
+                } else {
+                    break;
+                }
+                if line == 0 { break; }
+                line -= 1;
+            }
+        }
+        items[i].start_line = attach_line;
+    }
+
+    // Extend each item's end_line to the next item's start_line.
     for i in 0..items.len() {
         let next_start = if i + 1 < items.len() {
-            items[i + 1].start
+            items[i + 1].start_line
         } else {
-            inner.len()
+            interior_lines.len()
         };
-        items[i].end = next_start;
+        items[i].end_line = next_start;
     }
 
-    // Separate pinned items (sections 1-3) from reorderable items (sections 4+).
-    let mut pinned: Vec<&TopLevelItem> = Vec::new();
-    let mut reorderable: Vec<&TopLevelItem> = Vec::new();
-    for item in &items {
-        if item.section <= 3 {
-            pinned.push(item);
-        } else {
-            reorderable.push(item);
-        }
+    items
+}
+
+/// Resolve an item's type_name to a type group index.
+/// Returns None for global items (no type, or section 2-3).
+fn resolve_type_group(
+    item: &ItemLineRange,
+    type_registry: &[String],
+) -> Option<usize> {
+    // Sections 2-3 are always global.
+    if item.section <= 3 {
+        return None;
     }
-
-    // Detect type groups: split only when a new struct/enum (group starter)
-    // appears after the current group already has one. Tail sections (11-12)
-    // stay with the preceding type group rather than splitting off.
-    let mut groups: Vec<Vec<&TopLevelItem>> = Vec::new();
-    let mut current_group: Vec<&TopLevelItem> = Vec::new();
-
-    for item in &reorderable {
-        if item.is_group_starter
-            && current_group.iter().any(|i| i.is_group_starter)
-        {
-            // New struct/enum after the group already has one — new type group.
-            groups.push(current_group);
-            current_group = vec![item];
-        } else {
-            current_group.push(item);
-        }
+    let type_name = match &item.type_name {
+        Some(n) => n,
+        None => return None,
+    };
+    // Direct match to a known type.
+    if let Some(idx) = type_registry.iter().position(|t| t == type_name) {
+        return Some(idx);
     }
-    if !current_group.is_empty() {
-        groups.push(current_group);
-    }
-
-    // Sort within each type group by section number (stable sort preserves order
-    // within same section).
-    for group in &mut groups {
-        group.sort_by_key(|item| (item.section, item.original_index));
-    }
-
-    // Reassemble the verus! interior.
-    let mut new_inner = String::new();
-    let mut prev_section: Option<u32> = None;
-    let indent = "    "; // standard verus! indentation
-
-    // Add pinned items first (sections 1-3, in original order).
-    // Strip and re-insert section headers just like reorderable items,
-    // so headers don't end up misplaced (inside previous item's text)
-    // or duplicated (preserved in pinned text + re-inserted for reorderable).
-    for item in &pinned {
-        let item_text = &inner[item.start..item.end];
-        let cleaned = strip_section_headers_from_text(item_text);
-
-        if prev_section != Some(item.section) {
-            if let Some(name) = canonical_name(item.section) {
-                new_inner.push_str(&format!(
-                    "\n{}//\t\t{}. {}\n", indent, item.section, name
-                ));
+    // Iterator type: strip Iter/Iterator/IntoIter suffix to find parent.
+    for suffix in &["Iter", "Iterator", "GhostIterator", "IntoIter"] {
+        if let Some(prefix) = type_name.strip_suffix(suffix) {
+            if let Some(idx) = type_registry.iter().position(|t| t == prefix) {
+                return Some(idx);
             }
-            prev_section = Some(item.section);
         }
-
-        new_inner.push_str(&cleaned);
     }
+    // Trait name: strip "Trait" suffix to find type.
+    if let Some(prefix) = type_name.strip_suffix("Trait") {
+        if let Some(idx) = type_registry.iter().position(|t| t == prefix) {
+            return Some(idx);
+        }
+    }
+    // Check if any type name is a prefix of this name (e.g., FooSpecImpl → Foo).
+    for (idx, t) in type_registry.iter().enumerate() {
+        if type_name.starts_with(t.as_str()) {
+            return Some(idx);
+        }
+    }
+    None
+}
 
-    // Add reordered items with section header comments at transitions.
-    // Use letter suffixes (a, b, c...) when there are multiple type groups.
-    let type_groups: Vec<&Vec<&TopLevelItem>> = groups.iter()
-        .filter(|g| g.iter().any(|i| i.section <= 10))
-        .collect();
-    let use_suffixes = type_groups.len() > 1;
-    let mut group_idx = 0u8;
+/// Build a type registry (ordered list of type names) from section-4 group starters.
+fn build_type_registry(items: &[ItemLineRange]) -> Vec<String> {
+    items.iter()
+        .filter(|i| i.is_group_starter && i.section == 4)
+        .filter_map(|i| i.type_name.clone())
+        .collect()
+}
 
-    for group in &groups {
-        let is_type_group = group.iter().any(|i| i.section <= 10);
-        let suffix = if use_suffixes && is_type_group {
-            let s = (b'a' + group_idx) as char;
-            group_idx += 1;
-            s.to_string()
-        } else {
-            String::new()
-        };
+/// Assign each item a group order for sorting.
+/// Returns a Vec parallel to `items` with (group_order, suffix).
+/// group_order 0 = global (before all types), 1..n = per-type groups.
+/// Items without a detected type get positional fallback (nearest preceding type).
+fn assign_type_groups(items: &[ItemLineRange], type_registry: &[String])
+    -> Vec<(usize, String)>
+{
+    let use_suffixes = type_registry.len() > 1;
+    let mut result: Vec<(usize, String)> = Vec::new();
+    let mut last_type_group: Option<usize> = None;
 
-        for item in group {
-            let item_text = &inner[item.start..item.end];
-            let cleaned = strip_section_headers_from_text(item_text);
+    for item in items {
+        let group = resolve_type_group(item, type_registry);
+        let group_order;
+        let suffix;
 
-            if prev_section != Some(item.section) {
-                if let Some(name) = canonical_name(item.section) {
-                    new_inner.push_str(&format!(
-                        "\n{}//\t\t{}{}. {}\n", indent, item.section, suffix, name
-                    ));
+        match group {
+            Some(g) => {
+                group_order = g + 1; // 1-based, 0 is global
+                last_type_group = Some(g);
+                suffix = if use_suffixes {
+                    String::from((b'a' + g as u8) as char)
+                } else {
+                    String::new()
+                };
+            }
+            None => {
+                if item.section <= 3 {
+                    // Global items (imports, broadcast use).
+                    group_order = 0;
+                    suffix = String::new();
+                } else if let Some(g) = last_type_group {
+                    // Positional fallback: assign to last seen type.
+                    group_order = g + 1;
+                    suffix = if use_suffixes {
+                        String::from((b'a' + g as u8) as char)
+                    } else {
+                        String::new()
+                    };
+                } else {
+                    // Before any type definition — global.
+                    group_order = 0;
+                    suffix = String::new();
                 }
-                prev_section = Some(item.section);
             }
-
-            new_inner.push_str(&cleaned);
         }
-        // Reset section tracking between type groups.
-        prev_section = None;
+        result.push((group_order, suffix));
+    }
+    result
+}
+
+/// Extract, classify, and reorder items inside the verus! block.
+/// Uses line-based extraction with one-move-at-a-time for robustness.
+/// Returns the new content if reordering changed anything, None otherwise.
+fn reorder_verus_items(content: &str) -> Option<String> {
+    let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+    let mut changed = false;
+
+    // Phase 1: Strip section headers and TOC blocks from verus! interior.
+    if let Some((int_start, int_end)) = find_verus_interior_lines(&lines) {
+        let mut i = int_start;
+        while i < int_end.min(lines.len()) {
+            let trimmed = lines[i].trim().to_string();
+            if is_section_header_line(&trimmed)
+                || is_toc_header_line(&lines[i])
+                || is_toc_entry_line(&lines[i])
+            {
+                lines.remove(i);
+                changed = true;
+            } else {
+                i += 1;
+            }
+        }
     }
 
-    // Reconstruct full file.
-    let before_inner = &content[..inner_base];
-    let after_inner = &content[close - 1..];
-    let new_content = format!("{}{}{}", before_inner, new_inner, after_inner);
+    // Phase 2: Iterative one-move-at-a-time reordering using type-based groups.
+    // Sort order follows the TOC standard:
+    //   Phase 0: global items (sections 2-3) — before all types
+    //   Phase 1: per-type cycle (sections 4-10) — grouped by type, ordered by section
+    //   Phase 2: per-section-then-type (sections 11+) — grouped by section, then by type
+    for _iteration in 0..200 {
+        let (int_start, int_end) = match find_verus_interior_lines(&lines) {
+            Some(r) => r,
+            None => break,
+        };
+        let interior: Vec<String> = lines[int_start..int_end].to_vec();
+        let items = classify_interior_items(&interior);
+        if items.is_empty() { break; }
 
-    if new_content == content {
-        None
+        // Only reorder sections 3+ (sections 1-2 are module/imports, before verus!).
+        let reorderable: Vec<usize> = items.iter().enumerate()
+            .filter(|(_, item)| item.section >= 3)
+            .map(|(i, _)| i)
+            .collect();
+
+        if reorderable.is_empty() { break; }
+
+        // Build type registry and assign groups.
+        let type_registry = build_type_registry(&items);
+        let groups = assign_type_groups(&items, &type_registry);
+
+        // Build sort key: (phase, primary, section, secondary, original_index)
+        let sort_key = |i: usize| -> (u32, usize, u32, usize, usize) {
+            let (group_order, _) = &groups[i];
+            let section = items[i].section;
+            if section <= 3 {
+                // Global: before all types.
+                (0, 0, section, 0, items[i].original_index)
+            } else if section <= 10 {
+                // Per-type cycle: group by type, then section.
+                (1, *group_order, section, 0, items[i].original_index)
+            } else {
+                // Sections 11+: group by section, then type.
+                (2, 0, section, *group_order, items[i].original_index)
+            }
+        };
+
+        let mut desired = reorderable.clone();
+        desired.sort_by_key(|&i| sort_key(i));
+
+        if reorderable == desired { break; }
+
+        // Find the first position where actual differs from desired.
+        let mut found_move = false;
+        for pos in 0..reorderable.len() {
+            if reorderable[pos] != desired[pos] {
+                let move_from = reorderable.iter().position(|&i| i == desired[pos]).unwrap();
+                let from_idx = reorderable[move_from];
+                let to_idx = reorderable[pos];
+
+                let from_item = &items[from_idx];
+                let to_item = &items[to_idx];
+
+                let from_start = int_start + from_item.start_line;
+                let from_end = int_start + from_item.end_line;
+                let to_start = int_start + to_item.start_line;
+
+                let moving_lines: Vec<String> = lines[from_start..from_end].to_vec();
+                lines.drain(from_start..from_end);
+
+                let insert_at = if from_start < to_start {
+                    to_start - moving_lines.len()
+                } else {
+                    to_start
+                };
+
+                for (j, line) in moving_lines.into_iter().enumerate() {
+                    lines.insert(insert_at + j, line);
+                }
+
+                changed = true;
+                found_move = true;
+                break;
+            }
+        }
+
+        if !found_move { break; }
+    }
+
+    // Phase 3: Insert section headers at section transitions using type-based suffixes.
+    if let Some((int_start, int_end)) = find_verus_interior_lines(&lines) {
+        let interior: Vec<String> = lines[int_start..int_end].to_vec();
+        let items = classify_interior_items(&interior);
+        let indent = "    ";
+
+        let type_registry = build_type_registry(&items);
+        let groups = assign_type_groups(&items, &type_registry);
+
+        let mut insertions: Vec<(usize, String)> = Vec::new();
+        // Track (phase, group_order, section) to detect header transitions.
+        let mut prev_key: Option<(u32, usize, u32)> = None;
+
+        for (i, item) in items.iter().enumerate() {
+            // Skip section 2 (imports are before verus!, no header needed inside).
+            if item.section == 2 { continue; }
+
+            let (group_order, ref suffix) = groups[i];
+            let key = if item.section <= 3 {
+                (0, 0, item.section)
+            } else if item.section <= 10 {
+                (1, group_order, item.section)
+            } else {
+                (2, group_order, item.section) // sections 11+: new header per type per section
+            };
+
+            if prev_key != Some(key) {
+                if let Some(name) = canonical_name(item.section) {
+                    let file_line = int_start + item.start_line;
+                    insertions.push((file_line, format!(
+                        "\n{}//\t\tSection {}{}. {}\n", indent, item.section, suffix, name
+                    )));
+                }
+                prev_key = Some(key);
+            }
+        }
+
+        // Sort insertions by line (descending) so we can insert without shifting.
+        insertions.sort_by(|a, b| b.0.cmp(&a.0));
+
+        for (line_num, header_text) in insertions {
+            let header_lines: Vec<String> = header_text.lines()
+                .map(|l| l.to_string())
+                .collect();
+            for (j, hl) in header_lines.into_iter().enumerate() {
+                lines.insert(line_num + j, hl);
+            }
+            changed = true;
+        }
+    }
+
+    if changed {
+        Some(lines.join("\n") + "\n")
     } else {
-        Some(new_content)
+        None
     }
 }
 
@@ -969,7 +1249,7 @@ struct FileAnalysis {
 
 /// Directories always excluded from TOC processing.
 const DEFAULT_EXCLUDES: &[&str] = &[
-    "tests", "rust_verify_test", "experiments", "vstdplus",
+    "tests", "rust_verify_test", "experiments",
     "standards", "target", "attic", "analyses", "benches", "docs",
 ];
 
@@ -1128,7 +1408,7 @@ fn parse_toc_entry(comment: &CommentToken) -> Option<TocEntry> {
     let after_slashes = text.strip_prefix("//")?;
     let trimmed = after_slashes.trim_start();
     if !trimmed.is_empty()
-        && trimmed.chars().next().map_or(false, |c| c.is_ascii_digit())
+        && starts_with_section_num(trimmed)
         && !after_slashes.trim().starts_with("Table")
     {
         return parse_numbered_section(trimmed, comment.line_num, text)
@@ -1171,8 +1451,8 @@ fn parse_section_header(comment: &CommentToken) -> Option<SectionHeader> {
     if stripped.starts_with("//") && !stripped.starts_with("///") && !stripped.starts_with("//!") {
         let after_slashes = &stripped[2..];
         let trimmed = after_slashes.trim_start();
-        // Must start with a digit and must match a canonical section name.
-        if trimmed.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        // Must start with a digit or "Section " and must match a canonical section name.
+        if starts_with_section_num(trimmed) {
             return parse_numbered_section(trimmed, comment.line_num, text)
                 .filter(|(_, _, name)| canonical_number(base_section_name(name)).is_some())
                 .map(|(num, suffix, name)| SectionHeader {
@@ -1192,6 +1472,8 @@ fn parse_section_header(comment: &CommentToken) -> Option<SectionHeader> {
 /// Returns (canonical_section_number, letter_suffix, full_section_text_after_dot).
 fn parse_numbered_section(text: &str, _line_num: usize, _raw: &str) -> Option<(u32, String, String)> {
     let text = text.trim();
+    // Strip optional "Section " prefix (new format).
+    let text = text.strip_prefix("Section ").unwrap_or(text);
     // Find the dot after the number (possibly with letter suffix like "4a.").
     let dot_pos = text.find('.')?;
     let num_part = &text[..dot_pos];
@@ -1458,7 +1740,7 @@ fn analyze_file(path: &Path, codebase: &Path) -> Result<FileAnalysis> {
     // Check section header indentation.
     for hdr in &section_headers {
         let stripped = hdr.raw_text.trim_start();
-        let expected_inner = format!("//\t\t{}. {}", hdr.section_num, hdr.section_name);
+        let expected_inner = format!("//\t\tSection {}. {}", hdr.section_num, hdr.section_name);
         // Section 1 header appears outside verus!, so no leading whitespace needed.
         // Sections 2+ are inside verus!, typically with 4 spaces of indentation.
         if stripped != expected_inner {
@@ -1691,12 +1973,14 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
         // Reconstruct the number part: preserve letter suffix from the raw text.
         let raw_stripped = hdr.raw_text.trim_start();
         let after_slashes = raw_stripped.trim_start_matches("//").trim_start_matches('\t').trim_start();
-        let dot_pos_raw = after_slashes.find('.').unwrap_or(0);
-        let num_part_raw = &after_slashes[..dot_pos_raw];
+        // Strip optional "Section " prefix before extracting number.
+        let after_section = after_slashes.strip_prefix("Section ").unwrap_or(after_slashes);
+        let dot_pos_raw = after_section.find('.').unwrap_or(0);
+        let num_part_raw = &after_section[..dot_pos_raw];
         // Extract letter suffix if present.
         let letter_suffix: String = num_part_raw.chars().skip_while(|c| c.is_ascii_digit()).collect();
         let canonical_line = format!(
-            "{}//\t\t{}{}. {}",
+            "{}//\t\tSection {}{}. {}",
             leading_ws, expected_num, letter_suffix, hdr.section_name
         );
         if lines[line_idx] != canonical_line {
@@ -1728,7 +2012,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
         let line_idx = entry.line_num - 1;
         if line_idx < lines.len() {
             let num = canonical_number(base_section_name(&entry.section_name)).unwrap_or(entry.section_num);
-            let canonical = format!("//\t{}. {}", num, entry.section_name);
+            let canonical = format!("//\tSection {}. {}", num, entry.section_name);
             if lines[line_idx].trim() != canonical.trim() {
                 // Check if the line content matches but formatting is wrong.
                 let trimmed = lines[line_idx].trim();
@@ -1800,7 +2084,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
     let mut toc_lines = Vec::new();
     toc_lines.push("//  Table of Contents".to_string());
     for (num, suffix, name) in &unique_sections {
-        toc_lines.push(format!("//\t{}{}. {}", num, suffix, name));
+        toc_lines.push(format!("//\tSection {}{}. {}", num, suffix, name));
     }
 
     // Find where the TOC block should be.
@@ -1824,7 +2108,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
                     true
                 } else if let Some(after) = l.strip_prefix("//") {
                     let trimmed = after.trim_start();
-                    !after.is_empty() && trimmed.chars().next().map_or(false, |c| c.is_ascii_digit())
+                    !after.is_empty() && starts_with_section_num(trimmed)
                 } else {
                     false
                 };
@@ -1984,6 +2268,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
                             let trimmed = lines[j].trim();
                             // Check if this is the "1. module" header.
                             if let Some(after) = trimmed.strip_prefix("//\t\t") {
+                                let after = after.strip_prefix("Section ").unwrap_or(after);
                                 if after.starts_with("1.") || after.starts_with("1 ") {
                                     kept_module_line = Some(lines[j].clone());
                                 }
@@ -2049,7 +2334,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
         let mut toc_lines = Vec::new();
         toc_lines.push("//  Table of Contents".to_string());
         for (num, suffix, name) in &unique_sections {
-            toc_lines.push(format!("//\t{}{}. {}", num, suffix, name));
+            toc_lines.push(format!("//\tSection {}{}. {}", num, suffix, name));
         }
 
         // Find and replace TOC block.
@@ -2067,7 +2352,7 @@ fn fix_file(analysis: &FileAnalysis) -> Option<String> {
                             true
                         } else if let Some(a) = l.strip_prefix("//") {
                             let tr = a.trim_start();
-                            !a.is_empty() && tr.chars().next().map_or(false, |c| c.is_ascii_digit())
+                            !a.is_empty() && starts_with_section_num(tr)
                         } else {
                             false
                         };
