@@ -545,11 +545,39 @@ fn collect_fn_proof_lines(tree: &SyntaxNode, content: &str) -> Vec<FnProofInfo> 
                             continue;
                         }
                     }
-                    // Also count assert/assume/reveal as single proof lines
+                    // Count assert/assume/reveal statements as proof lines.
+                    // These can span multiple lines: assert(...); or assert(...) by { ... };
                     if tokens[k].kind() == SyntaxKind::IDENT {
                         let text = tokens[k].text();
                         if matches!(text, "assert" | "assume" | "reveal" | "reveal_with_fuel") {
-                            proof_count += 1;
+                            let assert_start = line_of_offset(content, tokens[k].text_range().start().into());
+                            // Scan forward to find the end of the statement (;) or by { ... }
+                            let mut end_line = assert_start;
+                            let mut ak = k + 1;
+                            let mut paren_d = 0i32;
+                            while ak < body_close {
+                                match tokens[ak].kind() {
+                                    SyntaxKind::L_PAREN => paren_d += 1,
+                                    SyntaxKind::R_PAREN => paren_d -= 1,
+                                    SyntaxKind::SEMICOLON if paren_d <= 0 => {
+                                        end_line = line_of_offset(content, tokens[ak].text_range().start().into());
+                                        break;
+                                    }
+                                    SyntaxKind::L_CURLY if paren_d <= 0 => {
+                                        // by { ... } block
+                                        let bc = find_matching_brace(&tokens, ak);
+                                        end_line = line_of_offset(content, tokens[bc].text_range().start().into());
+                                        ak = bc;
+                                        // Continue to semicolon after the block
+                                    }
+                                    _ => {}
+                                }
+                                end_line = line_of_offset(content, tokens[ak].text_range().start().into());
+                                ak += 1;
+                            }
+                            proof_count += end_line.saturating_sub(assert_start) + 1;
+                            k = ak;
+                            continue;
                         }
                     }
                     k += 1;
@@ -628,7 +656,7 @@ fn filter_excludes(files: Vec<PathBuf>, exclude_dirs: &[String]) -> Vec<PathBuf>
     }).collect()
 }
 
-fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: std::time::Instant) -> Result<()> {
+fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: std::time::Instant, outlier_threshold: usize) -> Result<()> {
     let rust_files = find_rust_files(search_dirs);
     let rust_files = filter_excludes(rust_files, &_args.exclude_dirs);
 
@@ -640,8 +668,8 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
     let mut total_rust = 0;
     let mut total_lines = 0;
 
-    // Per-function proof line data: (chapter, file_stem, Vec<FnProofInfo>)
-    let mut all_fn_data: Vec<(String, String, Vec<FnProofInfo>)> = Vec::new();
+    // Per-file data: (chapter, file_stem, loc_counts, Vec<FnProofInfo>)
+    let mut all_fn_data: Vec<(String, String, VerusLocCounts, Vec<FnProofInfo>)> = Vec::new();
 
     log!("{:>8}/{:>8}/{:>8}/{:>8} File", "Spec", "Proof", "Exec", "Rust");
     log!("{}", "-".repeat(44));
@@ -676,6 +704,7 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
                                                 token_tree.syntax(), &content);
                                             if !fn_data.is_empty() {
                                                 let rel_str = rel_path.display().to_string();
+                                                // Use ChapNN if present, otherwise parent dir name
                                                 let chapter = rel_str.find("/Chap")
                                                     .or_else(|| rel_str.find("Chap"))
                                                     .map(|idx| {
@@ -684,14 +713,21 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
                                                         } else {
                                                             &rel_str[idx..]
                                                         };
-                                                        rest.split('/').next().unwrap_or("other").to_string()
+                                                        rest.split('/').next().unwrap_or("").to_string()
                                                     })
-                                                    .unwrap_or_else(|| "other".to_string());
+                                                    .unwrap_or_else(|| {
+                                                        // Use parent dir name (e.g. "vstdplus", "standards")
+                                                        rel_path.parent()
+                                                            .and_then(|p| p.file_name())
+                                                            .and_then(|n| n.to_str())
+                                                            .unwrap_or("root")
+                                                            .to_string()
+                                                    });
                                                 let file_stem = file.file_stem()
                                                     .and_then(|s| s.to_str())
                                                     .unwrap_or("unknown")
                                                     .to_string();
-                                                all_fn_data.push((chapter, file_stem, fn_data));
+                                                all_fn_data.push((chapter, file_stem, counts, fn_data));
                                             }
                                         }
                                     }
@@ -723,80 +759,99 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
         log!("========================");
 
         // ── Proof lines by chapter ──────────────────────────────────
+        // Columns: ProofTotal (all proof lines), breakdown by fn kind, ExecLOC (actual exec lines), ratio
         log!();
-        log!("By chapter (total proof lines):");
-        log!("| {:>3} | {:<10} | {:>8} | {:>6} | {:>6} |",
-            "#", "Chapter", "Total", "Exec", "Proof");
-        log!("| {:-<3} | {:-<10} | {:-<8} | {:-<6} | {:-<6} |",
-            "", "", "", "", "");
-        let mut chapter_data: std::collections::HashMap<String, (usize, usize, usize)> =
+        log!("By chapter:");
+        log!("| {:>3} | {:<10} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} |",
+            "#", "Chapter", "PrfTot", "InSpec", "InExec", "InProof", "ExecLOC", "Prf/Ex");
+        log!("| {:-<3} | {:-<10} | {:-<7} | {:-<7} | {:-<7} | {:-<7} | {:-<7} | {:-<7} |",
+            "", "", "", "", "", "", "", "");
+        // (proof_total, in_spec, in_exec, in_proof, exec_loc)
+        let mut chapter_data: std::collections::HashMap<String, (usize, usize, usize, usize, usize)> =
             std::collections::HashMap::new();
-        for (chapter, _, fns) in &all_fn_data {
-            let entry = chapter_data.entry(chapter.clone()).or_insert((0, 0, 0));
+        for (chapter, _, file_counts, fns) in &all_fn_data {
+            let entry = chapter_data.entry(chapter.clone()).or_insert((0, 0, 0, 0, 0));
             for f in fns {
                 entry.0 += f.proof_lines;
-                if f.kind == FnKind::Exec { entry.1 += f.proof_lines; }
-                if f.kind == FnKind::Proof { entry.2 += f.proof_lines; }
+                match f.kind {
+                    FnKind::Spec => entry.1 += f.proof_lines,
+                    FnKind::Exec => entry.2 += f.proof_lines,
+                    FnKind::Proof => entry.3 += f.proof_lines,
+                }
             }
+            entry.4 += file_counts.exec;
         }
         let mut sorted_chapters: Vec<_> = chapter_data.iter()
-            .filter(|(_, (t, _, _))| *t > 0)
+            .filter(|(_, (t, _, _, _, _))| *t > 0)
             .collect();
         sorted_chapters.sort_by(|a, b| b.1.0.cmp(&a.1.0));
-        for (i, (chap, (total, exec, proof))) in sorted_chapters.iter().enumerate() {
-            log!("| {:>3} | {:<10} | {:>8} | {:>6} | {:>6} |",
-                i + 1, chap, format_number(*total), format_number(*exec), format_number(*proof));
+        for (i, (chap, (total, in_spec, in_exec, in_proof, exec_loc))) in sorted_chapters.iter().enumerate() {
+            let ratio = if *exec_loc > 0 { format!("{:.2}", *total as f64 / *exec_loc as f64) } else { "-".to_string() };
+            log!("| {:>3} | {:<10} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} |",
+                i + 1, chap, format_number(*total), format_number(*in_spec), format_number(*in_exec),
+                format_number(*in_proof), format_number(*exec_loc), ratio);
         }
-        let chap_totals: Vec<usize> = sorted_chapters.iter().map(|(_, (t, _, _))| *t).collect();
+        let chap_totals: Vec<usize> = sorted_chapters.iter().map(|(_, (t, _, _, _, _))| *t).collect();
         if !chap_totals.is_empty() {
             let (min, max, avg, med) = compute_stats(&chap_totals);
             let sum: usize = chap_totals.iter().sum();
+            let total_exec_loc: usize = sorted_chapters.iter().map(|(_, (_, _, _, _, e))| *e).sum();
+            let overall_ratio = if total_exec_loc > 0 { format!("{:.2}", sum as f64 / total_exec_loc as f64) } else { "-".to_string() };
             log!();
-            log!("{} chapters, {} total proof lines", chap_totals.len(), format_number(sum));
-            log!("{} min  {} max  {:.1} avg  {:.1} median",
+            log!("{} chapters, {} proof lines, {} exec lines, ratio {}",
+                chap_totals.len(), format_number(sum), format_number(total_exec_loc), overall_ratio);
+            log!("{} min  {} max  {:.1} avg  {:.1} median (proof lines)",
                 format_number(min), format_number(max), avg, med);
         }
 
         // ── Proof lines by module ───────────────────────────────────
         log!();
-        log!("By module (total proof lines per file):");
-        log!("| {:>3} | {:<10} | {:<30} | {:>8} | {:>6} | {:>6} |",
-            "#", "Chap", "Module", "Total", "Exec", "Proof");
-        log!("| {:-<3} | {:-<10} | {:-<30} | {:-<8} | {:-<6} | {:-<6} |",
-            "", "", "", "", "", "");
-        let mut module_rows: Vec<(&str, &str, usize, usize, usize)> = Vec::new();
-        for (chapter, file_stem, fns) in &all_fn_data {
+        log!("By module:");
+        log!("| {:>3} | {:<10} | {:<30} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} | {:>6} |",
+            "#", "Chap", "Module", "PrfTot", "InSpec", "InExec", "InProof", "ExecLOC", "Prf/Ex");
+        log!("| {:-<3} | {:-<10} | {:-<30} | {:-<7} | {:-<7} | {:-<7} | {:-<7} | {:-<7} | {:-<6} |",
+            "", "", "", "", "", "", "", "", "");
+        // (chap, stem, proof_total, in_spec, in_exec, in_proof, exec_loc)
+        let mut module_rows: Vec<(&str, &str, usize, usize, usize, usize, usize)> = Vec::new();
+        for (chapter, file_stem, file_counts, fns) in &all_fn_data {
             let total: usize = fns.iter().map(|f| f.proof_lines).sum();
-            let exec: usize = fns.iter().filter(|f| f.kind == FnKind::Exec).map(|f| f.proof_lines).sum();
-            let proof: usize = fns.iter().filter(|f| f.kind == FnKind::Proof).map(|f| f.proof_lines).sum();
+            let in_spec: usize = fns.iter().filter(|f| f.kind == FnKind::Spec).map(|f| f.proof_lines).sum();
+            let in_exec: usize = fns.iter().filter(|f| f.kind == FnKind::Exec).map(|f| f.proof_lines).sum();
+            let in_proof: usize = fns.iter().filter(|f| f.kind == FnKind::Proof).map(|f| f.proof_lines).sum();
             if total > 0 {
-                module_rows.push((chapter, file_stem, total, exec, proof));
+                module_rows.push((chapter, file_stem, total, in_spec, in_exec, in_proof, file_counts.exec));
             }
         }
         module_rows.sort_by(|a, b| b.2.cmp(&a.2));
-        for (i, (chap, module, total, exec, proof)) in module_rows.iter().enumerate() {
-            log!("| {:>3} | {:<10} | {:<30} | {:>8} | {:>6} | {:>6} |",
-                i + 1, chap, module, format_number(*total), format_number(*exec), format_number(*proof));
+        for (i, (chap, module, total, in_spec, in_exec, in_proof, exec_loc)) in module_rows.iter().enumerate() {
+            let ratio = if *exec_loc > 0 { format!("{:.2}", *total as f64 / *exec_loc as f64) } else { "-".to_string() };
+            log!("| {:>3} | {:<10} | {:<30} | {:>7} | {:>7} | {:>7} | {:>7} | {:>7} | {:>6} |",
+                i + 1, chap, module, format_number(*total), format_number(*in_spec), format_number(*in_exec),
+                format_number(*in_proof), format_number(*exec_loc), ratio);
         }
-        let mod_totals: Vec<usize> = module_rows.iter().map(|(_, _, t, _, _)| *t).collect();
+        let mod_totals: Vec<usize> = module_rows.iter().map(|(_, _, t, _, _, _, _)| *t).collect();
+        let mod_exec: Vec<usize> = module_rows.iter().map(|(_, _, _, _, _, _, e)| *e).collect();
         if !mod_totals.is_empty() {
             let (min, max, avg, med) = compute_stats(&mod_totals);
             let sum: usize = mod_totals.iter().sum();
+            let total_exec: usize = mod_exec.iter().sum();
+            let ratio = if total_exec > 0 { format!("{:.2}", sum as f64 / total_exec as f64) } else { "-".to_string() };
             log!();
-            log!("{} modules, {} total proof lines", mod_totals.len(), format_number(sum));
-            log!("{} min  {} max  {:.1} avg  {:.1} median",
+            log!("{} modules, {} proof lines, {} exec lines, ratio {}",
+                mod_totals.len(), format_number(sum), format_number(total_exec), ratio);
+            log!("{} min  {} max  {:.1} avg  {:.1} median (proof lines)",
                 format_number(min), format_number(max), avg, med);
         }
 
         // ── Stats per exec function ─────────────────────────────────
         log!();
         let exec_proof_lines: Vec<usize> = all_fn_data.iter()
-            .flat_map(|(_, _, fns)| fns.iter())
+            .flat_map(|(_, _, _, fns)| fns.iter())
             .filter(|f| f.kind == FnKind::Exec && f.proof_lines > 0)
             .map(|f| f.proof_lines)
             .collect();
         let exec_total: usize = all_fn_data.iter()
-            .flat_map(|(_, _, fns)| fns.iter())
+            .flat_map(|(_, _, _, fns)| fns.iter())
             .filter(|f| f.kind == FnKind::Exec)
             .count();
         log!("Per exec function (proof lines within exec fns):");
@@ -813,7 +868,7 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
         // ── Stats per proof function ────────────────────────────────
         log!();
         let proof_fn_lines: Vec<usize> = all_fn_data.iter()
-            .flat_map(|(_, _, fns)| fns.iter())
+            .flat_map(|(_, _, _, fns)| fns.iter())
             .filter(|f| f.kind == FnKind::Proof && f.proof_lines > 0)
             .map(|f| f.proof_lines)
             .collect();
@@ -830,33 +885,38 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
         // ── Grand total ─────────────────────────────────────────────
         log!();
         let all_proof: Vec<usize> = all_fn_data.iter()
-            .flat_map(|(_, _, fns)| fns.iter())
+            .flat_map(|(_, _, _, fns)| fns.iter())
             .filter(|f| f.proof_lines > 0)
             .map(|f| f.proof_lines)
             .collect();
         let total_proof_lines: usize = all_proof.iter().sum();
         let total_fns = all_fn_data.iter()
-            .map(|(_, _, fns)| fns.len())
+            .map(|(_, _, _, fns)| fns.len())
             .sum::<usize>();
         let fns_with_proof = all_proof.len();
+
+        let grand_exec_loc: usize = all_fn_data.iter().map(|(_, _, c, _)| c.exec).sum();
+        let grand_ratio = if grand_exec_loc > 0 {
+            format!("{:.2}", total_proof_lines as f64 / grand_exec_loc as f64)
+        } else { "-".to_string() };
 
         log!("Grand total:");
         log!("  {} total functions, {} with proof lines ({:.0}%)",
             format_number(total_fns),
             format_number(fns_with_proof),
             if total_fns > 0 { fns_with_proof as f64 / total_fns as f64 * 100.0 } else { 0.0 });
-        log!("  {} total proof lines across all functions",
-            format_number(total_proof_lines));
+        log!("  {} total proof lines, {} exec lines, ratio {}",
+            format_number(total_proof_lines), format_number(grand_exec_loc), grand_ratio);
         if !all_proof.is_empty() {
             let (min, max, avg, med) = compute_stats(&all_proof);
-            log!("  {} min  {} max  {:.1} avg  {:.1} median",
+            log!("  {} min  {} max  {:.1} avg  {:.1} median (proof lines per fn)",
                 format_number(min), format_number(max), avg, med);
         }
 
         // ── Outliers ────────────────────────────────────────────────
-        let threshold = _args.outlier_threshold;
+        let threshold = outlier_threshold;
         let mut outliers: Vec<(&str, &str, &str, &str, usize)> = Vec::new();
-        for (chapter, file_stem, fns) in &all_fn_data {
+        for (chapter, file_stem, file_counts, fns) in &all_fn_data {
             for f in fns {
                 if f.proof_lines >= threshold {
                     let kind_str = match f.kind {
@@ -1098,6 +1158,21 @@ fn count_repositories(repo_dir: &PathBuf, language: &str, src_dirs: &[String], t
 
 fn main() -> Result<()> {
     let start = Instant::now();
+
+    // Extract -o/--outliers-over before StandardArgs parses (it will skip it as unknown).
+    let outlier_threshold: usize = {
+        let raw: Vec<String> = std::env::args().collect();
+        let mut threshold = 50;
+        let mut i = 1;
+        while i < raw.len() {
+            if (raw[i] == "-o" || raw[i] == "--outliers-over") && i + 1 < raw.len() {
+                threshold = raw[i + 1].parse().unwrap_or(50);
+            }
+            i += 1;
+        }
+        threshold
+    };
+
     let args = StandardArgs::parse()?;
 
     // Handle repository scanning mode
@@ -1127,7 +1202,7 @@ fn main() -> Result<()> {
 
     // If Verus mode, use different counting
     if is_verus {
-        return count_verus_project(&args, &base_dir, &search_dirs, start);
+        return count_verus_project(&args, &base_dir, &search_dirs, start, outlier_threshold);
     }
 
     // Categorize search directories
