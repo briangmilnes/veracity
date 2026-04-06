@@ -9,10 +9,81 @@
 use anyhow::Result;
 use veracity::{StandardArgs, format_number, find_rust_files, parse_source};
 use ra_ap_syntax::{ast::{self, AstNode}, SyntaxKind, SyntaxNode};
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::io::{self, Write};
 use std::time::Instant;
+
+thread_local! {
+    static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+}
+
+/// Walk up from a directory to find the project root (directory containing Cargo.toml).
+/// Falls back to the given directory if no Cargo.toml is found.
+fn find_project_root(start: &Path) -> PathBuf {
+    let mut dir = if start.is_file() {
+        start.parent().unwrap_or(start).to_path_buf()
+    } else {
+        start.to_path_buf()
+    };
+    loop {
+        if dir.join("Cargo.toml").exists() {
+            return dir;
+        }
+        match dir.parent() {
+            Some(parent) if parent != dir => dir = parent.to_path_buf(),
+            _ => break,
+        }
+    }
+    // Fallback: use the original directory
+    if start.is_file() {
+        start.parent().unwrap_or(start).to_path_buf()
+    } else {
+        start.to_path_buf()
+    }
+}
+
+fn init_logging(base_dir: &Path) {
+    let project_root = find_project_root(base_dir);
+    let analyses_dir = project_root.join("analyses");
+    let _ = std::fs::create_dir_all(&analyses_dir);
+    let log_path = analyses_dir.join("veracity-count-loc.log");
+    let _ = std::fs::write(&log_path, "");
+    LOG_FILE_PATH.with(|p| {
+        *p.borrow_mut() = Some(log_path);
+    });
+}
+
+macro_rules! log {
+    () => {{
+        use std::io::Write;
+        println!();
+        LOG_FILE_PATH.with(|p| {
+            if let Some(ref log_path) = *p.borrow() {
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true).append(true).open(log_path)
+                {
+                    let _ = writeln!(file);
+                }
+            }
+        });
+    }};
+    ($($arg:tt)*) => {{
+        use std::io::Write;
+        let msg = format!($($arg)*);
+        println!("{}", msg);
+        LOG_FILE_PATH.with(|p| {
+            if let Some(ref log_path) = *p.borrow() {
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true).append(true).open(log_path)
+                {
+                    let _ = writeln!(file, "{}", msg);
+                }
+            }
+        });
+    }};
+}
 
 #[derive(Debug, Default, Clone, Copy)]
 struct VerusLocCounts {
@@ -22,6 +93,7 @@ struct VerusLocCounts {
     rust: usize,  // Plain Rust code outside verus! blocks
     total: usize,
 }
+
 
 // Line category constants (0 = uncategorized)
 const CAT_SPEC: u8 = 1;
@@ -55,8 +127,16 @@ fn find_matching_brace(tokens: &[ra_ap_syntax::SyntaxToken], open_idx: usize) ->
     tokens.len().saturating_sub(1)
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum FnKind { Spec, Proof, Exec }
+
+/// Per-function proof line data for the proof-density report.
+#[derive(Debug, Clone)]
+struct FnProofInfo {
+    fn_name: String,
+    proof_lines: usize,
+    kind: FnKind,
+}
 
 /// Determine whether a fn token is spec, proof, or exec by looking back for modifiers.
 /// Stops at boundary tokens (}, ;, {) to avoid picking up modifiers from a previous item.
@@ -338,6 +418,173 @@ fn analyze_verus_token_tree(tree: &SyntaxNode, content: &str, line_cat: &mut [u8
     }
 }
 
+/// Extract per-function proof line counts from a verus! token tree.
+/// Returns a list of FnProofInfo for each function found.
+fn collect_fn_proof_lines(tree: &SyntaxNode, content: &str) -> Vec<FnProofInfo> {
+    let tokens: Vec<ra_ap_syntax::SyntaxToken> = tree.descendants_with_tokens()
+        .filter_map(|n| n.into_token())
+        .collect();
+
+    let num_lines = content.lines().count();
+    let mut results = Vec::new();
+    let mut i = 0;
+
+    while i < tokens.len() {
+        if tokens[i].kind() != SyntaxKind::FN_KW {
+            i += 1;
+            continue;
+        }
+
+        let kind = determine_fn_kind(&tokens, i);
+
+        // Extract function name: the IDENT token after fn keyword (skip whitespace)
+        let fn_name = {
+            let mut ni = i + 1;
+            while ni < tokens.len() && tokens[ni].kind() == SyntaxKind::WHITESPACE {
+                ni += 1;
+            }
+            if ni < tokens.len() && tokens[ni].kind() == SyntaxKind::IDENT {
+                tokens[ni].text().to_string()
+            } else {
+                "<unknown>".to_string()
+            }
+        };
+
+        // Find body open brace or semicolon (bodyless)
+        let mut j = i + 1;
+        let mut paren_depth = 0;
+        let mut body_open_idx = None;
+        let mut clause_start_idx: Option<usize> = None;
+        let mut past_params = false;
+
+        while j < tokens.len() {
+            match tokens[j].kind() {
+                SyntaxKind::SEMICOLON if paren_depth == 0 => {
+                    // Bodyless declaration — count clause lines as proof for the fn
+                    let fn_line = line_of_offset(content, tokens[i].text_range().start().into());
+                    let end_line = line_of_offset(content, tokens[j].text_range().start().into());
+                    let total_lines = end_line.saturating_sub(fn_line) + 1;
+                    // For bodyless fns, proof lines = spec clause lines
+                    let proof_lines = if let Some(cs) = clause_start_idx {
+                        let cl = line_of_offset(content, tokens[cs].text_range().start().into());
+                        end_line.saturating_sub(cl) + 1
+                    } else {
+                        0
+                    };
+                    results.push(FnProofInfo { fn_name: fn_name.clone(), proof_lines, kind });
+                    i = j + 1;
+                    body_open_idx = None;
+                    break;
+                }
+                SyntaxKind::L_CURLY if paren_depth == 0 => {
+                    body_open_idx = Some(j);
+                    break;
+                }
+                SyntaxKind::L_PAREN => paren_depth += 1,
+                SyntaxKind::R_PAREN => {
+                    if paren_depth > 0 { paren_depth -= 1; }
+                    if paren_depth == 0 { past_params = true; }
+                }
+                SyntaxKind::IDENT if past_params && paren_depth == 0 && clause_start_idx.is_none() => {
+                    let text = tokens[j].text();
+                    if matches!(text, "requires" | "ensures" | "recommends" | "decreases" | "invariant") {
+                        clause_start_idx = Some(j);
+                    }
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+
+        let body_open = match body_open_idx {
+            Some(idx) => idx,
+            None => continue,
+        };
+
+        let body_close = find_matching_brace(&tokens, body_open);
+        let fn_start_line = line_of_offset(content, tokens[i].text_range().start().into());
+        let fn_end_line = line_of_offset(content, tokens[body_close].text_range().start().into());
+
+        // Count proof lines: for spec/proof fns, all body lines are proof.
+        // For exec fns, count spec clause lines + proof {} block lines.
+        let proof_lines = match kind {
+            FnKind::Spec => {
+                // Spec fn body lines
+                let body_start = line_of_offset(content, tokens[body_open].text_range().start().into());
+                fn_end_line.saturating_sub(body_start) + 1
+            }
+            FnKind::Proof => {
+                // All lines of a proof fn
+                fn_end_line.saturating_sub(fn_start_line) + 1
+            }
+            FnKind::Exec => {
+                // Spec clause lines + proof {} blocks inside the body
+                let mut proof_count = 0;
+
+                // Count spec clause lines (requires/ensures/etc.)
+                if let Some(cs) = clause_start_idx {
+                    let clause_line = line_of_offset(content, tokens[cs].text_range().start().into());
+                    let body_line = line_of_offset(content, tokens[body_open].text_range().start().into());
+                    proof_count += body_line.saturating_sub(clause_line);
+                }
+
+                // Count proof {} blocks inside the body
+                let mut k = body_open + 1;
+                while k < body_close {
+                    if tokens[k].kind() == SyntaxKind::IDENT && tokens[k].text() == "proof" {
+                        let mut m = k + 1;
+                        while m < body_close && tokens[m].kind() == SyntaxKind::WHITESPACE {
+                            m += 1;
+                        }
+                        if m < body_close && tokens[m].kind() == SyntaxKind::L_CURLY {
+                            let ps = line_of_offset(content, tokens[k].text_range().start().into());
+                            let pc = find_matching_brace(&tokens, m);
+                            let pe = line_of_offset(content, tokens[pc].text_range().start().into());
+                            proof_count += pe.saturating_sub(ps) + 1;
+                            k = pc + 1;
+                            continue;
+                        }
+                    }
+                    // Also count assert/assume/reveal as single proof lines
+                    if tokens[k].kind() == SyntaxKind::IDENT {
+                        let text = tokens[k].text();
+                        if matches!(text, "assert" | "assume" | "reveal" | "reveal_with_fuel") {
+                            proof_count += 1;
+                        }
+                    }
+                    k += 1;
+                }
+
+                proof_count
+            }
+        };
+
+        results.push(FnProofInfo { fn_name, proof_lines, kind });
+        i = body_close + 1;
+    }
+
+    results
+}
+
+/// Compute min/max/avg/median from a slice of values.
+fn compute_stats(values: &[usize]) -> (usize, usize, f64, f64) {
+    if values.is_empty() {
+        return (0, 0, 0.0, 0.0);
+    }
+    let min = *values.iter().min().unwrap();
+    let max = *values.iter().max().unwrap();
+    let sum: usize = values.iter().sum();
+    let avg = sum as f64 / values.len() as f64;
+    let mut sorted = values.to_vec();
+    sorted.sort();
+    let median = if sorted.len() % 2 == 0 {
+        (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) as f64 / 2.0
+    } else {
+        sorted[sorted.len() / 2] as f64
+    };
+    (min, max, avg, median)
+}
+
 fn find_script_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(dir) {
@@ -385,53 +632,265 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
     let rust_files = find_rust_files(search_dirs);
     let rust_files = filter_excludes(rust_files, &_args.exclude_dirs);
 
+    init_logging(base_dir);
+
     let mut total_spec = 0;
     let mut total_proof = 0;
     let mut total_exec = 0;
     let mut total_rust = 0;
     let mut total_lines = 0;
 
-    println!("{:>8}/{:>8}/{:>8}/{:>8} File", "Spec", "Proof", "Exec", "Rust");
-    println!("{}", "-".repeat(44));
+    // Per-function proof line data: (chapter, file_stem, Vec<FnProofInfo>)
+    let mut all_fn_data: Vec<(String, String, Vec<FnProofInfo>)> = Vec::new();
+
+    log!("{:>8}/{:>8}/{:>8}/{:>8} File", "Spec", "Proof", "Exec", "Rust");
+    log!("{}", "-".repeat(44));
 
     for file in &rust_files {
         if let Ok(counts) = count_verus_lines_in_file(file) {
-            if let Ok(rel_path) = file.strip_prefix(base_dir) {
-                println!("{:>8}/{:>8}/{:>8}/{:>8} {}",
-                    format_number(counts.spec),
-                    format_number(counts.proof),
-                    format_number(counts.exec),
-                    format_number(counts.rust),
-                    rel_path.display()
-                );
-            } else {
-                println!("{:>8}/{:>8}/{:>8}/{:>8} {}",
-                    format_number(counts.spec),
-                    format_number(counts.proof),
-                    format_number(counts.exec),
-                    format_number(counts.rust),
-                    file.display()
-                );
-            }
+            let rel_path = file.strip_prefix(base_dir).unwrap_or(file);
+            log!("{:>8}/{:>8}/{:>8}/{:>8} {}",
+                format_number(counts.spec),
+                format_number(counts.proof),
+                format_number(counts.exec),
+                format_number(counts.rust),
+                rel_path.display()
+            );
             total_spec += counts.spec;
             total_proof += counts.proof;
             total_exec += counts.exec;
             total_rust += counts.rust;
             total_lines += counts.total;
+
+            // Collect per-function proof data
+            if let Ok(content) = fs::read_to_string(file) {
+                if let Ok(source_file) = parse_source(&content) {
+                    let root = source_file.syntax();
+                    for node in root.descendants() {
+                        if node.kind() == SyntaxKind::MACRO_CALL {
+                            if let Some(macro_call) = ast::MacroCall::cast(node.clone()) {
+                                if let Some(path) = macro_call.path() {
+                                    if path.to_string() == "verus" {
+                                        if let Some(token_tree) = macro_call.token_tree() {
+                                            let fn_data = collect_fn_proof_lines(
+                                                token_tree.syntax(), &content);
+                                            if !fn_data.is_empty() {
+                                                let rel_str = rel_path.display().to_string();
+                                                let chapter = rel_str.find("/Chap")
+                                                    .or_else(|| rel_str.find("Chap"))
+                                                    .map(|idx| {
+                                                        let rest = if rel_str.as_bytes()[idx] == b'/' {
+                                                            &rel_str[idx + 1..]
+                                                        } else {
+                                                            &rel_str[idx..]
+                                                        };
+                                                        rest.split('/').next().unwrap_or("other").to_string()
+                                                    })
+                                                    .unwrap_or_else(|| "other".to_string());
+                                                let file_stem = file.file_stem()
+                                                    .and_then(|s| s.to_str())
+                                                    .unwrap_or("unknown")
+                                                    .to_string();
+                                                all_fn_data.push((chapter, file_stem, fn_data));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    println!("{}", "-".repeat(44));
-    println!("{:>8} {:>8} {:>8} {:>8}", "spec", "proof", "exec", "rust");
-    println!("{:>8}/{:>8}/{:>8}/{:>8} Total",
+    log!("{}", "-".repeat(44));
+    log!("{:>8} {:>8} {:>8} {:>8}", "spec", "proof", "exec", "rust");
+    log!("{:>8}/{:>8}/{:>8}/{:>8} Total",
         format_number(total_spec),
         format_number(total_proof),
         format_number(total_exec),
         format_number(total_rust)
     );
-    println!("{:>8} total lines", format_number(total_lines));
-    println!("{} files analyzed", format_number(rust_files.len()));
-    println!("{}ms", start.elapsed().as_millis());
+    log!("{:>8} total lines", format_number(total_lines));
+    log!("{} files analyzed", format_number(rust_files.len()));
+    log!("{}ms", start.elapsed().as_millis());
+
+    // ── Proof lines per function report ─────────────────────────────
+    if !all_fn_data.is_empty() {
+        log!();
+        log!("Proof Lines Per Function");
+        log!("========================");
+
+        // ── Proof lines by chapter ──────────────────────────────────
+        log!();
+        log!("By chapter (total proof lines):");
+        log!("| {:>3} | {:<10} | {:>8} | {:>6} | {:>6} |",
+            "#", "Chapter", "Total", "Exec", "Proof");
+        log!("| {:-<3} | {:-<10} | {:-<8} | {:-<6} | {:-<6} |",
+            "", "", "", "", "");
+        let mut chapter_data: std::collections::HashMap<String, (usize, usize, usize)> =
+            std::collections::HashMap::new();
+        for (chapter, _, fns) in &all_fn_data {
+            let entry = chapter_data.entry(chapter.clone()).or_insert((0, 0, 0));
+            for f in fns {
+                entry.0 += f.proof_lines;
+                if f.kind == FnKind::Exec { entry.1 += f.proof_lines; }
+                if f.kind == FnKind::Proof { entry.2 += f.proof_lines; }
+            }
+        }
+        let mut sorted_chapters: Vec<_> = chapter_data.iter()
+            .filter(|(_, (t, _, _))| *t > 0)
+            .collect();
+        sorted_chapters.sort_by(|a, b| b.1.0.cmp(&a.1.0));
+        for (i, (chap, (total, exec, proof))) in sorted_chapters.iter().enumerate() {
+            log!("| {:>3} | {:<10} | {:>8} | {:>6} | {:>6} |",
+                i + 1, chap, format_number(*total), format_number(*exec), format_number(*proof));
+        }
+        let chap_totals: Vec<usize> = sorted_chapters.iter().map(|(_, (t, _, _))| *t).collect();
+        if !chap_totals.is_empty() {
+            let (min, max, avg, med) = compute_stats(&chap_totals);
+            let sum: usize = chap_totals.iter().sum();
+            log!();
+            log!("{} chapters, {} total proof lines", chap_totals.len(), format_number(sum));
+            log!("{} min  {} max  {:.1} avg  {:.1} median",
+                format_number(min), format_number(max), avg, med);
+        }
+
+        // ── Proof lines by module ───────────────────────────────────
+        log!();
+        log!("By module (total proof lines per file):");
+        log!("| {:>3} | {:<10} | {:<30} | {:>8} | {:>6} | {:>6} |",
+            "#", "Chap", "Module", "Total", "Exec", "Proof");
+        log!("| {:-<3} | {:-<10} | {:-<30} | {:-<8} | {:-<6} | {:-<6} |",
+            "", "", "", "", "", "");
+        let mut module_rows: Vec<(&str, &str, usize, usize, usize)> = Vec::new();
+        for (chapter, file_stem, fns) in &all_fn_data {
+            let total: usize = fns.iter().map(|f| f.proof_lines).sum();
+            let exec: usize = fns.iter().filter(|f| f.kind == FnKind::Exec).map(|f| f.proof_lines).sum();
+            let proof: usize = fns.iter().filter(|f| f.kind == FnKind::Proof).map(|f| f.proof_lines).sum();
+            if total > 0 {
+                module_rows.push((chapter, file_stem, total, exec, proof));
+            }
+        }
+        module_rows.sort_by(|a, b| b.2.cmp(&a.2));
+        for (i, (chap, module, total, exec, proof)) in module_rows.iter().enumerate() {
+            log!("| {:>3} | {:<10} | {:<30} | {:>8} | {:>6} | {:>6} |",
+                i + 1, chap, module, format_number(*total), format_number(*exec), format_number(*proof));
+        }
+        let mod_totals: Vec<usize> = module_rows.iter().map(|(_, _, t, _, _)| *t).collect();
+        if !mod_totals.is_empty() {
+            let (min, max, avg, med) = compute_stats(&mod_totals);
+            let sum: usize = mod_totals.iter().sum();
+            log!();
+            log!("{} modules, {} total proof lines", mod_totals.len(), format_number(sum));
+            log!("{} min  {} max  {:.1} avg  {:.1} median",
+                format_number(min), format_number(max), avg, med);
+        }
+
+        // ── Stats per exec function ─────────────────────────────────
+        log!();
+        let exec_proof_lines: Vec<usize> = all_fn_data.iter()
+            .flat_map(|(_, _, fns)| fns.iter())
+            .filter(|f| f.kind == FnKind::Exec && f.proof_lines > 0)
+            .map(|f| f.proof_lines)
+            .collect();
+        let exec_total: usize = all_fn_data.iter()
+            .flat_map(|(_, _, fns)| fns.iter())
+            .filter(|f| f.kind == FnKind::Exec)
+            .count();
+        log!("Per exec function (proof lines within exec fns):");
+        log!("  {} exec functions total, {} with proof lines",
+            format_number(exec_total), format_number(exec_proof_lines.len()));
+        if !exec_proof_lines.is_empty() {
+            let (min, max, avg, med) = compute_stats(&exec_proof_lines);
+            let sum: usize = exec_proof_lines.iter().sum();
+            log!("  {} total proof lines in exec fns", format_number(sum));
+            log!("  {} min  {} max  {:.1} avg  {:.1} median",
+                format_number(min), format_number(max), avg, med);
+        }
+
+        // ── Stats per proof function ────────────────────────────────
+        log!();
+        let proof_fn_lines: Vec<usize> = all_fn_data.iter()
+            .flat_map(|(_, _, fns)| fns.iter())
+            .filter(|f| f.kind == FnKind::Proof && f.proof_lines > 0)
+            .map(|f| f.proof_lines)
+            .collect();
+        log!("Per proof function:");
+        log!("  {} proof functions", format_number(proof_fn_lines.len()));
+        if !proof_fn_lines.is_empty() {
+            let (min, max, avg, med) = compute_stats(&proof_fn_lines);
+            let sum: usize = proof_fn_lines.iter().sum();
+            log!("  {} total proof lines in proof fns", format_number(sum));
+            log!("  {} min  {} max  {:.1} avg  {:.1} median",
+                format_number(min), format_number(max), avg, med);
+        }
+
+        // ── Grand total ─────────────────────────────────────────────
+        log!();
+        let all_proof: Vec<usize> = all_fn_data.iter()
+            .flat_map(|(_, _, fns)| fns.iter())
+            .filter(|f| f.proof_lines > 0)
+            .map(|f| f.proof_lines)
+            .collect();
+        let total_proof_lines: usize = all_proof.iter().sum();
+        let total_fns = all_fn_data.iter()
+            .map(|(_, _, fns)| fns.len())
+            .sum::<usize>();
+        let fns_with_proof = all_proof.len();
+
+        log!("Grand total:");
+        log!("  {} total functions, {} with proof lines ({:.0}%)",
+            format_number(total_fns),
+            format_number(fns_with_proof),
+            if total_fns > 0 { fns_with_proof as f64 / total_fns as f64 * 100.0 } else { 0.0 });
+        log!("  {} total proof lines across all functions",
+            format_number(total_proof_lines));
+        if !all_proof.is_empty() {
+            let (min, max, avg, med) = compute_stats(&all_proof);
+            log!("  {} min  {} max  {:.1} avg  {:.1} median",
+                format_number(min), format_number(max), avg, med);
+        }
+
+        // ── Outliers ────────────────────────────────────────────────
+        let threshold = _args.outlier_threshold;
+        let mut outliers: Vec<(&str, &str, &str, &str, usize)> = Vec::new();
+        for (chapter, file_stem, fns) in &all_fn_data {
+            for f in fns {
+                if f.proof_lines >= threshold {
+                    let kind_str = match f.kind {
+                        FnKind::Exec => "exec",
+                        FnKind::Proof => "proof",
+                        FnKind::Spec => "spec",
+                    };
+                    outliers.push((chapter, file_stem, kind_str, &f.fn_name, f.proof_lines));
+                }
+            }
+        }
+        outliers.sort_by(|a, b| b.4.cmp(&a.4));
+
+        log!();
+        log!("Outliers (>= {} proof lines):", threshold);
+        if outliers.is_empty() {
+            log!("  (none)");
+        } else {
+            let max_name = outliers.iter().map(|(_, _, _, n, _)| n.len()).max().unwrap_or(20).max(8);
+            log!("| {:>3} | {:<10} | {:<30} | {:<mw$} | {:>5} | {:>6} |",
+                "#", "Chap", "Module", "Function", "Kind", "Lines",
+                mw = max_name);
+            log!("| {:-<3} | {:-<10} | {:-<30} | {:-<mw$} | {:-<5} | {:-<6} |",
+                "", "", "", "", "", "",
+                mw = max_name);
+            for (i, (chap, module, kind, name, lines)) in outliers.iter().enumerate() {
+                log!("| {:>3} | {:<10} | {:<30} | {:<mw$} | {:>5} | {:>6} |",
+                    i + 1, chap, module, name, kind, format_number(*lines),
+                    mw = max_name);
+            }
+            log!();
+            log!("{} functions over {} proof lines", outliers.len(), threshold);
+        }
+    }
 
     Ok(())
 }

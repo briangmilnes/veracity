@@ -19,23 +19,54 @@
 use anyhow::Result;
 use ra_ap_syntax::{ast::{self, HasName}, AstNode, SyntaxKind, SyntaxToken};
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 thread_local! {
     static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    static SUMMARY_LOG_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
 
-fn init_logging(base_dir: &Path) -> PathBuf {
-    let analyses_dir = base_dir.join("analyses");
+/// Walk up from a directory to find the project root (directory containing Cargo.toml).
+/// Falls back to the given directory if no Cargo.toml is found.
+fn find_project_root(start: &Path) -> PathBuf {
+    let mut dir = if start.is_file() {
+        start.parent().unwrap_or(start).to_path_buf()
+    } else {
+        start.to_path_buf()
+    };
+    loop {
+        if dir.join("Cargo.toml").exists() {
+            return dir;
+        }
+        match dir.parent() {
+            Some(parent) if parent != dir => dir = parent.to_path_buf(),
+            _ => break,
+        }
+    }
+    if start.is_file() {
+        start.parent().unwrap_or(start).to_path_buf()
+    } else {
+        start.to_path_buf()
+    }
+}
+
+fn init_logging(base_dir: &Path) -> (PathBuf, PathBuf) {
+    let project_root = find_project_root(base_dir);
+    let analyses_dir = project_root.join("analyses");
     let _ = std::fs::create_dir_all(&analyses_dir);
     let log_path = analyses_dir.join("veracity-review-verus-style.log");
+    let summary_path = analyses_dir.join("veracity-review-verus-style-summary.log");
     let _ = std::fs::write(&log_path, "");
+    let _ = std::fs::write(&summary_path, "");
     LOG_FILE_PATH.with(|p| {
         *p.borrow_mut() = Some(log_path.clone());
     });
-    log_path
+    SUMMARY_LOG_PATH.with(|p| {
+        *p.borrow_mut() = Some(summary_path.clone());
+    });
+    (log_path, summary_path)
 }
 
 macro_rules! log {
@@ -84,6 +115,41 @@ macro_rules! emit {
                     .create(true)
                     .append(true)
                     .open(log_path)
+                {
+                    let _ = writeln!(file, "{}", msg);
+                }
+            }
+        });
+    }};
+}
+
+/// Log to stdout, main log, AND summary log.
+macro_rules! summary_log {
+    () => {{
+        use std::io::Write;
+        log!();
+        SUMMARY_LOG_PATH.with(|p| {
+            if let Some(ref path) = *p.borrow() {
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(path)
+                {
+                    let _ = writeln!(file);
+                }
+            }
+        });
+    }};
+    ($($arg:tt)*) => {{
+        use std::io::Write;
+        let msg = format!($($arg)*);
+        log!("{}", msg);
+        SUMMARY_LOG_PATH.with(|p| {
+            if let Some(ref path) = *p.borrow() {
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(path)
                 {
                     let _ = writeln!(file, "{}", msg);
                 }
@@ -253,6 +319,15 @@ impl StyleArgs {
         eprintln!("  19. Return value names should be meaningful (not 'r' or 'result')");
         eprintln!("  20. Every trait defined in file must have at least one impl");
         eprintln!("  21. broadcast use: vstd:: entries before crate:: entries");
+        eprintln!("  22:spec.   Free spec fns with primary-type param → trait signatures");
+        eprintln!("  22:exec.   Free exec fns with primary-type param → trait methods");
+        eprintln!("  22:proof.  Free proof fns with primary-type param → trait methods");
+        eprintln!("  22a:spec.  Free spec fns correctly free (Standard 19, info)");
+        eprintln!("  22a:exec.  Free exec fns correctly free (Standard 19, info)");
+        eprintln!("  22a:proof. Free proof fns correctly free (Standard 19, info)");
+        eprintln!("  23a. Spec/proof fn looser bounds than trait (info, intentional)");
+        eprintln!("  23b. Free fn stricter/incompatible bounds vs trait (warning)");
+        eprintln!("  24. Copyright line at top of file");
         eprintln!();
         eprintln!("Checks performed (-av flag):");
         eprintln!("  6. use crate::...::* grouped, ends with blank line");
@@ -306,11 +381,22 @@ struct FileStructure {
     // Types imported from crate
     crate_type_imports: Vec<(String, String)>, // (type_name, module_path)
     
-    // Struct definitions
-    struct_defs: Vec<(usize, String)>,  // (line, name)
+    // Struct definitions: (line, name)
+    struct_defs: Vec<(usize, String)>,
+
+    // Structs that have #[derive(Debug)] or #[derive(Display)] (inside or outside verus!)
+    derived_debug: HashSet<String>,   // struct names with derive(Debug)
+    derived_display: HashSet<String>, // struct names with derive(Display)
+
+    // Ghost-only structs (declared with `ghost struct` or all fields Ghost/Tracked)
+    ghost_structs: HashSet<String>,
     
     // Collection structs: structs holding Vec, HashMap, HashSet, or crate-imported types
     collection_structs: Vec<(usize, String)>,  // (line, struct_name)
+
+    // Trait method names per type: from `impl Trait for Type` blocks
+    // Maps cleaned type name → set of method names
+    trait_method_names: HashMap<String, HashSet<String>>,
     
     // Crate type names: capitalized identifiers from use crate::... paths (inside verus!)
     crate_type_names: HashSet<String>,
@@ -325,17 +411,26 @@ struct FileStructure {
     // Generic return value names (Rule 19): (line, fn_name, return_name)
     generic_return_names: Vec<(usize, String, String)>,
 
-    // Free spec fns (Rule 22): spec fns at module level, not in any trait or impl
-    free_spec_fns: Vec<(usize, String)>,  // (line, fn_name)
+    // Free spec fns (Rule 22:spec): spec fns at module level, not in any trait or impl
+    // (line, fn_name, first_param_base_type)
+    free_spec_fns: Vec<(usize, String, Option<String>)>,
 
-    // Spec fns with bodies in trait declarations (Rule 22): should be abstract (no body)
+    // Free exec fns (Rule 22:exec): exec fns at module level, not in any trait or impl
+    // (line, fn_name, first_param_base_type)
+    free_exec_fns: Vec<(usize, String, Option<String>)>,
+
+    // Free proof fns (Rule 22:proof): proof fns at module level, not in any trait or impl
+    // (line, fn_name, first_param_base_type)
+    free_proof_fns: Vec<(usize, String, Option<String>)>,
+
+    // Spec fns with bodies in trait declarations (Rule 22:spec): should be abstract (no body)
     trait_spec_fns_with_body: Vec<(usize, String, String)>,  // (line, trait_name, fn_name)
 
     // Trait generic bounds (Rule 23): (trait_name, [(param_name, bounds_string)])
     trait_generic_bounds: Vec<(String, Vec<(String, String)>)>,
 
-    // Free fn generic bounds (Rule 23): (line, fn_name, [(param_name, bounds_string)])
-    free_fn_generic_bounds: Vec<(usize, String, Vec<(String, String)>)>,
+    // Free fn generic bounds (Rule 23): (line, fn_name, is_spec_or_proof, [(param_name, bounds_string)])
+    free_fn_generic_bounds: Vec<(usize, String, bool, Vec<(String, String)>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -574,6 +669,63 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                 let line = s.ident.span().start().line + line_offset;
                 structure.struct_defs.push((line, name.clone()));
 
+                // Check for #[derive(Debug/Display)] attributes
+                for attr in &s.attrs {
+                    use quote::ToTokens;
+                    let attr_str = attr.to_token_stream().to_string();
+                    if attr_str.contains("derive") {
+                        // Extract derive names from the token stream
+                        // attr_str looks like: # [derive (Clone , Debug , ...)]
+                        if let Some(start) = attr_str.find("derive") {
+                            let rest = &attr_str[start..];
+                            if let Some(paren_start) = rest.find('(') {
+                                if let Some(paren_end) = rest.find(')') {
+                                    let inner = &rest[paren_start + 1..paren_end];
+                                    for derive_name in inner.split(',') {
+                                        let d = derive_name.trim();
+                                        if d == "Debug" {
+                                            structure.derived_debug.insert(name.clone());
+                                        } else if d == "Display" {
+                                            structure.derived_display.insert(name.clone());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check for ghost struct (DataMode::Ghost)
+                if matches!(s.mode, verus_syn::DataMode::Ghost(_)) {
+                    structure.ghost_structs.insert(name.clone());
+                }
+
+                // Check if all fields are Ghost<T> or Tracked<T>
+                if !matches!(s.mode, verus_syn::DataMode::Ghost(_)) {
+                    let all_ghost_tracked = match &s.fields {
+                        verus_syn::Fields::Named(fields) if !fields.named.is_empty() => {
+                            fields.named.iter().all(|f| {
+                                use quote::ToTokens;
+                                let ty = f.ty.to_token_stream().to_string();
+                                let trimmed = ty.trim();
+                                trimmed.starts_with("Ghost") || trimmed.starts_with("Tracked")
+                            })
+                        }
+                        verus_syn::Fields::Unnamed(fields) if !fields.unnamed.is_empty() => {
+                            fields.unnamed.iter().all(|f| {
+                                use quote::ToTokens;
+                                let ty = f.ty.to_token_stream().to_string();
+                                let trimmed = ty.trim();
+                                trimmed.starts_with("Ghost") || trimmed.starts_with("Tracked")
+                            })
+                        }
+                        _ => false,
+                    };
+                    if all_ghost_tracked {
+                        structure.ghost_structs.insert(name.clone());
+                    }
+                }
+
                 // Check if this struct holds a collection type
                 let is_collection = match &s.fields {
                     verus_syn::Fields::Named(fields) => {
@@ -614,7 +766,36 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
             verus_syn::Item::Enum(e) => {
                 let name = e.ident.to_string();
                 let line = e.ident.span().start().line + line_offset;
-                structure.struct_defs.push((line, name));
+                structure.struct_defs.push((line, name.clone()));
+
+                // Check for #[derive(Debug/Display)] on enums
+                for attr in &e.attrs {
+                    use quote::ToTokens;
+                    let attr_str = attr.to_token_stream().to_string();
+                    if attr_str.contains("derive") {
+                        if let Some(start) = attr_str.find("derive") {
+                            let rest = &attr_str[start..];
+                            if let Some(paren_start) = rest.find('(') {
+                                if let Some(paren_end) = rest.find(')') {
+                                    let inner = &rest[paren_start + 1..paren_end];
+                                    for derive_name in inner.split(',') {
+                                        let d = derive_name.trim();
+                                        if d == "Debug" {
+                                            structure.derived_debug.insert(name.clone());
+                                        } else if d == "Display" {
+                                            structure.derived_display.insert(name.clone());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check for ghost enum
+                if matches!(e.mode, verus_syn::DataMode::Ghost(_)) {
+                    structure.ghost_structs.insert(name);
+                }
             }
             verus_syn::Item::Type(t) => {
                 use quote::ToTokens;
@@ -659,7 +840,7 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                             // Spec fns are always OK, count them as having specs
                             fn_count += 1;
                             fn_with_spec_count += 1;
-                            // Track spec fns with bodies in trait declarations (Rule 22)
+                            // Track spec fns with bodies in trait declarations (Rule 22:spec)
                             if fn_item.default.is_some() {
                                 let fn_line = fn_item.sig.ident.span().start().line + line_offset;
                                 structure.trait_spec_fns_with_body.push((
@@ -745,6 +926,19 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                     }
                 }
                 
+                // Collect method names per type (for collection detection)
+                if trait_name.is_some() && !is_derive_trait {
+                    let clean_type = for_type.replace(' ', "")
+                        .split('<').next().unwrap_or(&for_type).to_string();
+                    let methods = structure.trait_method_names
+                        .entry(clean_type).or_insert_with(HashSet::new);
+                    for item in &i.items {
+                        if let verus_syn::ImplItem::Fn(fn_item) = item {
+                            methods.insert(fn_item.sig.ident.to_string());
+                        }
+                    }
+                }
+
                 // Track iter_* methods on inherent impls (e.g. graphs with iter_vertices, iter_arcs)
                 if trait_name.is_none() {
                     for item in &i.items {
@@ -776,19 +970,42 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                 // Check for generic return names (Rule 19)
                 check_generic_return_name(&f.sig, line_offset, &mut structure.generic_return_names);
 
-                // Track free spec fns (Rule 22)
-                let is_spec = matches!(f.sig.mode,
-                    verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_));
-                if is_spec {
-                    let line = f.sig.ident.span().start().line + line_offset;
-                    structure.free_spec_fns.push((line, f.sig.ident.to_string()));
-                }
-
-                // Track free fn generic bounds (Rule 23) — both spec and exec
+                // Track free fns by mode (Rule 22:spec, 22:exec, 22:proof)
                 {
                     use quote::ToTokens;
                     let line = f.sig.ident.span().start().line + line_offset;
                     let fn_name = f.sig.ident.to_string();
+                    // Extract first param's base type name
+                    let first_param_base = f.sig.inputs.first().and_then(|arg| {
+                        match &arg.kind {
+                            verus_syn::FnArgKind::Typed(pt) => {
+                                let ty_str = pt.ty.to_token_stream().to_string();
+                                Some(extract_base_type_ident(&ty_str))
+                            }
+                            verus_syn::FnArgKind::Receiver(_) => Some("Self".to_string()),
+                        }
+                    });
+                    match &f.sig.mode {
+                        verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_) => {
+                            structure.free_spec_fns.push((line, fn_name, first_param_base));
+                        }
+                        verus_syn::FnMode::Proof(_) | verus_syn::FnMode::ProofAxiom(_) => {
+                            structure.free_proof_fns.push((line, fn_name, first_param_base));
+                        }
+                        verus_syn::FnMode::Exec(_) | verus_syn::FnMode::Default => {
+                            structure.free_exec_fns.push((line, fn_name, first_param_base));
+                        }
+                    }
+                }
+
+                // Track free fn generic bounds (Rule 23) — spec/proof and exec
+                {
+                    use quote::ToTokens;
+                    let line = f.sig.ident.span().start().line + line_offset;
+                    let fn_name = f.sig.ident.to_string();
+                    let is_spec_or_proof = matches!(f.sig.mode,
+                        verus_syn::FnMode::Spec(_) | verus_syn::FnMode::SpecChecked(_)
+                        | verus_syn::FnMode::Proof(_) | verus_syn::FnMode::ProofAxiom(_));
                     let bounds: Vec<(String, String)> = f.sig.generics.params.iter()
                         .filter_map(|p| match p {
                             verus_syn::GenericParam::Type(tp) => {
@@ -800,7 +1017,7 @@ fn parse_verus_block(content: &str, structure: &mut FileStructure) {
                         })
                         .collect();
                     if !bounds.is_empty() {
-                        structure.free_fn_generic_bounds.push((line, fn_name, bounds));
+                        structure.free_fn_generic_bounds.push((line, fn_name, is_spec_or_proof, bounds));
                     }
                 }
             }
@@ -1737,20 +1954,154 @@ fn check_order_violations(ordered: &[OrderedItem]) -> Vec<(usize, String)> {
     violations
 }
 
+/// Extract the base type identifier from a type string.
+/// Strips `&`, `&mut`, `Option<...>`, `Box<...>`, `Arc<...>`, `Ghost<...>`,
+/// generic args `<...>`, and returns the core ident.
+/// e.g. "& mut Option < Box < Node < T > > >" → "Node"
+///      "& OrderedTableStEphS < K , V >" → "OrderedTableStEphS"
+///      "Vec < T >" → "Vec"
+///      "usize" → "usize"
+fn extract_base_type_ident(ty_str: &str) -> String {
+    let s = ty_str.trim();
+    // Strip leading & and &mut
+    let s = s.strip_prefix('&').unwrap_or(s).trim();
+    let s = s.strip_prefix("mut").map(|r| r.trim_start()).unwrap_or(s);
+    // Recursively strip wrapper types: Option<X>, Box<X>, Arc<X>, Ghost<X>
+    fn strip_wrappers(s: &str) -> &str {
+        let s = s.trim();
+        for wrapper in &["Option", "Box", "Arc", "Ghost", "Tracked"] {
+            if let Some(rest) = s.strip_prefix(wrapper) {
+                let rest = rest.trim();
+                if let Some(inner) = rest.strip_prefix('<') {
+                    // Find matching > from the end
+                    if let Some(inner) = inner.strip_suffix('>') {
+                        return strip_wrappers(inner.trim());
+                    }
+                }
+            }
+        }
+        s
+    }
+    let s = strip_wrappers(s);
+    // Take the ident before any '<'
+    let base = s.split('<').next().unwrap_or(s).trim();
+    // Take the last path segment (e.g. "crate :: Foo" → "Foo")
+    let base = base.split("::").last().unwrap_or(base).trim();
+    base.to_string()
+}
+
+/// Check if a type has a collection-like API based on its trait method names.
+/// A type is considered a collection if its trait methods include >= 2 of these groups:
+///   - Mutators: insert, push, add, remove, delete, append
+///   - Size: len, size, is_empty, spec_len
+///   - Lookup: contains, find, get, nth, index
+fn has_collection_api(methods: &HashSet<String>) -> bool {
+    let has_mutator = methods.iter().any(|m| {
+        matches!(m.as_str(), "insert" | "push" | "add" | "remove" | "delete" | "append"
+            | "push_back" | "pop" | "enqueue" | "dequeue")
+    });
+    let has_size = methods.iter().any(|m| {
+        matches!(m.as_str(), "len" | "size" | "is_empty" | "spec_len")
+    });
+    let has_lookup = methods.iter().any(|m| {
+        matches!(m.as_str(), "contains" | "find" | "get" | "nth" | "index"
+            | "first" | "last" | "contains_key" | "find_key")
+    });
+    let group_count = has_mutator as u32 + has_size as u32 + has_lookup as u32;
+    group_count >= 2
+}
+
+/// Expand a trait alias into its constituent leaf bounds.
+/// Known aliases from the APAS-VERUS codebase:
+///   StT       = Eq + PartialEq + Clone + Display + Debug + Sized + View
+///   StTInMtT  = StT + Send + Sync + 'static
+///   MtKey     = StTInMtT + Ord + 'static
+///   MtVal     = StTInMtT + 'static
+fn expand_trait_bound(bound: &str) -> Vec<String> {
+    match bound.trim() {
+        "StT" => vec![
+            "Eq", "PartialEq", "Clone", "Display", "Debug", "Sized", "View",
+        ].into_iter().map(String::from).collect(),
+        "StTInMtT" => {
+            let mut v = expand_trait_bound("StT");
+            v.extend(["Send", "Sync", "'static"].iter().map(|s| s.to_string()));
+            v
+        }
+        "MtKey" => {
+            let mut v = expand_trait_bound("StTInMtT");
+            v.push("Ord".to_string());
+            // 'static already included from StTInMtT
+            v
+        }
+        "MtVal" => {
+            // StTInMtT + 'static — 'static already in StTInMtT
+            expand_trait_bound("StTInMtT")
+        }
+        other => vec![other.to_string()],
+    }
+}
+
+/// Parse a bounds string like "View + Clone + Eq" into a set of expanded leaf bounds.
+fn parse_bounds_to_set(bounds_str: &str) -> std::collections::HashSet<String> {
+    let mut result = std::collections::HashSet::new();
+    if bounds_str.is_empty() {
+        return result;
+    }
+    for part in bounds_str.split('+') {
+        let trimmed = part.trim();
+        if !trimmed.is_empty() {
+            result.extend(expand_trait_bound(trimmed));
+        }
+    }
+    result
+}
+
+/// Check if fn_bounds is a subset of trait_bounds after alias expansion.
+/// Returns true if every bound in fn_bounds is implied by trait_bounds.
+fn fn_bounds_are_subset(fn_bounds_str: &str, trait_bounds_str: &str) -> bool {
+    let fn_set = parse_bounds_to_set(fn_bounds_str);
+    let trait_set = parse_bounds_to_set(trait_bounds_str);
+    fn_set.is_subset(&trait_set)
+}
+
+/// Compare rule labels naturally: numeric prefix compared as numbers, then suffix lexicographically.
+/// e.g. "2" < "10" < "22" < "22:exec" < "22:proof" < "22:spec" < "23"
+fn natural_rule_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    // Split into numeric prefix and remainder
+    fn split_rule(s: &str) -> (u32, &str) {
+        let num_end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
+        let num = s[..num_end].parse::<u32>().unwrap_or(0);
+        (num, &s[num_end..])
+    }
+    let (an, asuf) = split_rule(a);
+    let (bn, bsuf) = split_rule(b);
+    an.cmp(&bn).then(asuf.cmp(bsuf))
+}
+
 /// Result of checking a file - tracks both passed and failed checks
 #[derive(Debug, Default)]
 struct CheckResult {
-    passed: Vec<(usize, String)>,  // (rule_num, description)
-    failed: Vec<(usize, usize, String)>,  // (rule_num, line, message)
+    passed: Vec<(String, String)>,  // (rule_label, description)
+    failed: Vec<(String, usize, String)>,  // (rule_label, line, message)
+    /// [23b] bound gap info: (gap_bounds, file_stem) for summary table 3
+    bound_gaps: Vec<(Vec<String>, String)>,
 }
 
 impl CheckResult {
     fn pass(&mut self, rule: usize, desc: &str) {
-        self.passed.push((rule, desc.to_string()));
+        self.passed.push((rule.to_string(), desc.to_string()));
     }
-    
+
     fn fail(&mut self, rule: usize, line: usize, msg: String) {
-        self.failed.push((rule, line, msg));
+        self.failed.push((rule.to_string(), line, msg));
+    }
+
+    fn pass_s(&mut self, rule: &str, desc: &str) {
+        self.passed.push((rule.to_string(), desc.to_string()));
+    }
+
+    fn fail_s(&mut self, rule: &str, line: usize, msg: String) {
+        self.failed.push((rule.to_string(), line, msg));
     }
 }
 
@@ -2003,11 +2354,16 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
         }
     }
     // Warn for structs/enums missing Debug or Display outside verus!
+    // Skip ghost-only types and types that already have derive(Debug/Display).
     for (line, name) in &structure.struct_defs {
-        if !types_with_debug.contains(name) {
+        // Ghost-only types have no runtime representation — skip entirely
+        if structure.ghost_structs.contains(name) {
+            continue;
+        }
+        if !types_with_debug.contains(name) && !structure.derived_debug.contains(name) {
             result.fail(14, *line, format!("struct {} should have impl Debug outside verus!", name));
         }
-        if !types_with_display.contains(name) {
+        if !types_with_display.contains(name) && !structure.derived_display.contains(name) {
             result.fail(14, *line, format!("struct {} should have impl Display outside verus!", name));
         }
     }
@@ -2086,8 +2442,17 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
         .and_then(|s| s.to_str())
         .map(|s| s.to_string());
     
-    if !structure.collection_structs.is_empty() {
-        for (_coll_line, coll_name) in &structure.collection_structs {
+    // Filter collection_structs: only keep types that have a collection-like API
+    let real_collections: Vec<&(usize, String)> = structure.collection_structs.iter()
+        .filter(|(_, coll_name)| {
+            // Check if this type has collection-like methods in its trait
+            structure.trait_method_names.get(coll_name)
+                .map_or(false, |methods| has_collection_api(methods))
+        })
+        .collect();
+
+    if !real_collections.is_empty() {
+        for (_coll_line, coll_name) in &real_collections {
             // Check Iterator: inside verus!, outside verus!, iter_* methods, or missing entirely
             let has_iterator_inside = structure.iterator_impls.iter().any(|(_, iv)| *iv);
             let has_iterator_outside = structure.iterator_impls.iter().any(|(_, iv)| !*iv);
@@ -2162,7 +2527,7 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
         }
     }
     if check17_issues.is_empty() {
-        if structure.collection_structs.is_empty() {
+        if real_collections.is_empty() {
             result.pass(17, "no collection structs (ok)");
         } else {
             result.pass(17, &check17_ok.join(", "));
@@ -2251,57 +2616,164 @@ fn check_file(file_path: &Path, content: &str, args: &StyleArgs) -> CheckResult 
         }
     }
 
-    // Check 22: Spec fns should have abstract signatures in traits, not be free or have bodies in traits
-    let mut check22_failed = false;
-    for (line, fn_name) in &structure.free_spec_fns {
-        result.fail(22, *line, format!(
-            "free spec fn {} should be an abstract signature in a trait with body in the impl",
-            fn_name
-        ));
-        check22_failed = true;
+    // Collect primary types: types that appear as `impl SomeTrait for PrimaryType<...>`.
+    // Extract the base ident (before `<`).
+    let primary_types: HashSet<String> = structure.impl_blocks.iter()
+        .filter(|ib| ib.trait_name.is_some() && !ib.is_derive_trait)
+        .map(|ib| {
+            ib.for_type.split('<').next().unwrap_or(&ib.for_type)
+                .split("::").last().unwrap_or(&ib.for_type)
+                .trim().to_string()
+        })
+        .filter(|t| !t.is_empty())
+        .collect();
+    let has_trait_impls = !primary_types.is_empty();
+
+    // Classify a free fn: does its first param's base type match a primary type?
+    // If no trait impls in file, all free fns are correctly free (nothing to move into).
+    let should_be_trait_method = |first_param_base: &Option<String>| -> bool {
+        if !has_trait_impls { return false; }
+        match first_param_base {
+            Some(base) => primary_types.contains(base),
+            None => false, // no params → correctly free
+        }
+    };
+
+    // Check 22:spec — free spec fns and spec fns with bodies in trait decls
+    let mut check22_spec_failed = false;
+    let mut _check22a_spec_count = 0usize;
+    for (line, fn_name, first_param_base) in &structure.free_spec_fns {
+        if should_be_trait_method(first_param_base) {
+            result.fail_s("22:spec", *line, format!(
+                "free spec fn {} should be an abstract signature in a trait with body in the impl",
+                fn_name
+            ));
+            check22_spec_failed = true;
+        } else {
+            result.pass_s("22a:spec", &format!(
+                "free spec fn {} correctly free (Standard 19)", fn_name
+            ));
+            _check22a_spec_count += 1;
+        }
     }
     for (line, trait_name, fn_name) in &structure.trait_spec_fns_with_body {
-        result.fail(22, *line, format!(
+        result.fail_s("22:spec", *line, format!(
             "spec fn {} in trait {} has a body; should be abstract (no body) with concrete spec in the impl",
             fn_name, trait_name
         ));
-        check22_failed = true;
+        check22_spec_failed = true;
     }
-    if !check22_failed {
+    if !check22_spec_failed {
         if structure.free_spec_fns.is_empty() && structure.trait_spec_fns_with_body.is_empty() {
-            result.pass(22, "spec fns: all in traits as abstract signatures");
+            result.pass_s("22:spec", "spec fns: all in traits as abstract signatures");
         }
     }
 
-    // Check 23: Free fn type param bounds must match trait type param bounds.
+    // Check 22:exec — free exec fns should be trait methods
+    let mut check22_exec_failed = false;
+    let mut _check22a_exec_count = 0usize;
+    for (line, fn_name, first_param_base) in &structure.free_exec_fns {
+        if should_be_trait_method(first_param_base) {
+            result.fail_s("22:exec", *line, format!(
+                "free fn {} should be a trait method", fn_name
+            ));
+            check22_exec_failed = true;
+        } else {
+            result.pass_s("22a:exec", &format!(
+                "free fn {} correctly free (Standard 19)", fn_name
+            ));
+            _check22a_exec_count += 1;
+        }
+    }
+    if !check22_exec_failed {
+        if structure.free_exec_fns.is_empty() {
+            result.pass_s("22:exec", "exec fns: all in traits");
+        }
+    }
+
+    // Check 22:proof — free proof fns should be trait methods
+    let mut check22_proof_failed = false;
+    let mut _check22a_proof_count = 0usize;
+    for (line, fn_name, first_param_base) in &structure.free_proof_fns {
+        if should_be_trait_method(first_param_base) {
+            result.fail_s("22:proof", *line, format!(
+                "free proof fn {} should be a trait method", fn_name
+            ));
+            check22_proof_failed = true;
+        } else {
+            result.pass_s("22a:proof", &format!(
+                "free proof fn {} correctly free (Standard 19)", fn_name
+            ));
+            _check22a_proof_count += 1;
+        }
+    }
+    if !check22_proof_failed {
+        if structure.free_proof_fns.is_empty() {
+            result.pass_s("22:proof", "proof fns: all in traits");
+        }
+    }
+
+    // Check 23a/23b: Free fn type param bounds vs trait type param bounds.
+    // 23a (info): spec/proof fn has looser bounds than trait — intentional.
+    // 23b (warning): fn has stricter or incompatible bounds — real problem.
     // Skip vstdplus and experiments directories.
     let is_infra_file = file_str.contains("/vstdplus/") || file_str.contains("/experiments/");
-    let mut check23_failed = false;
+    let mut check23a_count = 0usize;
+    let mut check23b_failed = false;
     if !is_infra_file && !structure.trait_generic_bounds.is_empty() {
         // Use the first trait as the primary trait.
         let (trait_name, trait_bounds) = &structure.trait_generic_bounds[0];
 
-        for (line, fn_name, fn_bounds) in &structure.free_fn_generic_bounds {
+        for (line, fn_name, is_spec_or_proof, fn_bounds) in &structure.free_fn_generic_bounds {
             for (fp_name, fp_bounds) in fn_bounds {
                 if let Some((_, tp_bounds)) = trait_bounds.iter().find(|(tn, _)| tn == fp_name) {
                     if fp_bounds != tp_bounds {
                         let fp_display = if fp_bounds.is_empty() { "(none)".to_string() } else { fp_bounds.clone() };
                         let tp_display = if tp_bounds.is_empty() { "(none)".to_string() } else { tp_bounds.clone() };
-                        result.fail(23, *line, format!(
-                            "free fn {} param {} has bounds `{}` but trait {} has `{}`",
-                            fn_name, fp_name, fp_display, trait_name, tp_display
-                        ));
-                        check23_failed = true;
+
+                        // Check if fn bounds are a subset of trait bounds (looser = ok for spec/proof)
+                        if *is_spec_or_proof && fn_bounds_are_subset(fp_bounds, tp_bounds) {
+                            result.pass_s("23a", &format!(
+                                "spec/proof fn {} param {} has looser bounds `{}` (trait {} has `{}`)",
+                                fn_name, fp_name, fp_display, trait_name, tp_display
+                            ));
+                            check23a_count += 1;
+                        } else {
+                            result.fail_s("23b", *line, format!(
+                                "free fn {} param {} has bounds `{}` but trait {} has `{}`",
+                                fn_name, fp_name, fp_display, trait_name, tp_display
+                            ));
+                            // Compute gap: bounds in fn but not in trait
+                            let fn_set = parse_bounds_to_set(fp_bounds);
+                            let trait_set = parse_bounds_to_set(tp_bounds);
+                            let mut gap: Vec<String> = fn_set.difference(&trait_set).cloned().collect();
+                            gap.sort();
+                            // Extract ChapNN/FileName stem
+                            let file_stem = file_str
+                                .rfind("/src/").map(|i| &file_str[i + 5..])
+                                .unwrap_or(&file_str)
+                                .trim_end_matches(".rs")
+                                .to_string();
+                            result.bound_gaps.push((gap, file_stem));
+                            check23b_failed = true;
+                        }
                     }
                 }
             }
         }
     }
-    if !check23_failed {
+    if check23a_count == 0 {
         if structure.free_fn_generic_bounds.is_empty() || is_infra_file {
-            result.pass(23, "free fn type bounds: N/A");
+            result.pass_s("23a", "spec/proof fn looser bounds: N/A");
         } else {
-            result.pass(23, "free fn type bounds match trait");
+            result.pass_s("23a", "no spec/proof fns with looser bounds");
+        }
+    }
+    if !check23b_failed {
+        if structure.free_fn_generic_bounds.is_empty() || is_infra_file {
+            result.pass_s("23b", "free fn stricter bounds: N/A");
+        } else {
+            result.pass_s("23b", "free fn type bounds compatible with trait");
         }
     }
 
@@ -2920,7 +3392,7 @@ fn main() -> Result<()> {
         args.path.clone()
     };
     
-    let log_path = init_logging(&base_dir);
+    let (log_path, summary_path) = init_logging(&base_dir);
     
     log!("Verus Style Review");
     log!("==================");
@@ -2949,7 +3421,13 @@ fn main() -> Result<()> {
     let mut total_issues = 0;
     let mut total_passed = 0;
     let mut files_with_issues = 0;
-    
+
+    // Summary accumulators
+    let mut warnings_by_rule: HashMap<String, usize> = HashMap::new();
+    let mut warnings_by_chapter: HashMap<String, HashMap<String, usize>> = HashMap::new();
+    let mut all_bound_gaps: Vec<(Vec<String>, String)> = Vec::new();
+    let mut rule22a_info_count = 0usize;
+
     for file in &files {
         let content = match std::fs::read_to_string(file) {
             Ok(c) => c,
@@ -2958,27 +3436,47 @@ fn main() -> Result<()> {
                 continue;
             }
         };
-        
+
         let result = check_file(file, &content, &args);
         let file_str = file.display().to_string();
+
+        // Extract chapter from path (e.g. "Chap18" from ".../src/Chap18/Foo.rs")
+        let chapter = file_str
+            .find("/Chap").map(|i| {
+                let rest = &file_str[i + 1..];
+                rest.find('/').map(|j| rest[..j].to_string())
+            })
+            .flatten()
+            .unwrap_or_else(|| "other".to_string());
 
         // Always print file header
         log!("{}:", file_str);
 
         // Print passed checks
         let mut passed_sorted = result.passed.clone();
-        passed_sorted.sort_by_key(|(rule, _)| *rule);
+        passed_sorted.sort_by(|(a, _), (b, _)| natural_rule_cmp(a, b));
         for (rule, desc) in &passed_sorted {
             log!("{}:1: info: [{}] {}", file_str, rule, desc);
+            if rule.starts_with("22a:") {
+                rule22a_info_count += 1;
+            }
         }
         total_passed += passed_sorted.len();
 
-        // Print failed checks
+        // Print failed checks and accumulate summary data
         let mut failed_sorted = result.failed.clone();
-        failed_sorted.sort_by_key(|(rule, line, _)| (*rule, *line));
+        failed_sorted.sort_by(|(a_rule, a_line, _), (b_rule, b_line, _)| {
+            natural_rule_cmp(a_rule, b_rule).then(a_line.cmp(b_line))
+        });
         for (rule, line, msg) in &failed_sorted {
             log!("{}:{}: warning: [{}] {}", file_str, line, rule, msg);
+            *warnings_by_rule.entry(rule.clone()).or_insert(0) += 1;
+            *warnings_by_chapter.entry(chapter.clone()).or_insert_with(HashMap::new)
+                .entry(rule.clone()).or_insert(0) += 1;
         }
+
+        // Collect bound gap data for table 3
+        all_bound_gaps.extend(result.bound_gaps);
 
         if !result.failed.is_empty() {
             files_with_issues += 1;
@@ -2988,11 +3486,164 @@ fn main() -> Result<()> {
         // Blank line after each file
         log!();
     }
-    
+
     log!("════════════════════════════════════════════════════════════════");
-    log!("Summary: {} passed, {} warnings in {} files (checked {} files)", 
+    log!("Summary: {} passed, {} warnings in {} files (checked {} files)",
         total_passed, total_issues, files_with_issues, files.len());
     log!("════════════════════════════════════════════════════════════════");
+
+    // ── Detailed summary tables ──────────────────────────────────────
+    summary_log!();
+    summary_log!("Style Review Summary");
+    summary_log!("=====================");
+
+    // Rule description map
+    let rule_desc = |rule: &str| -> &str {
+        match rule {
+            "2" => "vstd::prelude::* before verus!",
+            "3" => "File has verus! macro",
+            "4" => "std imports grouped",
+            "5" => "vstd imports grouped",
+            "6" => "Crate glob imports grouped",
+            "7" => "Crate imports are globs",
+            "8" => "Lit imports grouped",
+            "9" => "File has broadcast use",
+            "10" => "Type imports have broadcast groups",
+            "11" => "Set/Seq broadcast groups",
+            "12" => "Trait fns have specs",
+            "13" => "Trait impl inside verus!",
+            "14" => "Debug/Display impl outside verus!",
+            "15" => "PartialEq/Eq/Clone/Hash/Ord inside verus!",
+            "16" => "Lit macro at end of file",
+            "17" => "Iterator/IntoIterator inside verus!",
+            "18" => "Definition order inside verus!",
+            "19" => "Meaningful return value names",
+            "20" => "Every trait has at least one impl",
+            "21" => "Broadcast use: vstd before crate",
+            "22:spec" => "Free spec fn should be trait signature with impl body",
+            "22:exec" => "Free exec fn should be trait method",
+            "22:proof" => "Free proof fn should be trait method",
+            "22a:spec" => "Free spec fn correctly free (Standard 19)",
+            "22a:exec" => "Free exec fn correctly free (Standard 19)",
+            "22a:proof" => "Free proof fn correctly free (Standard 19)",
+            "23a" => "Spec/proof fn looser bounds (intentional)",
+            "23b" => "Free fn stricter/incompatible bounds vs trait",
+            "24" => "Copyright line at top of file",
+            _ => "",
+        }
+    };
+
+    // Table 1: Warnings by rule (sorted by count descending)
+    summary_log!();
+    summary_log!("Warnings by rule:");
+    let mut rule_counts: Vec<(String, usize)> = warnings_by_rule.into_iter().collect();
+    rule_counts.sort_by(|a, b| b.1.cmp(&a.1).then(natural_rule_cmp(&a.0, &b.0)));
+
+    // Calculate column widths
+    let max_rule_w = rule_counts.iter().map(|(r, _)| r.len() + 2).max().unwrap_or(6).max(6); // +2 for []
+    let max_count_w = rule_counts.iter().map(|(_, c)| c.to_string().len()).max().unwrap_or(5).max(5);
+    let max_desc_w = rule_counts.iter().map(|(r, _)| rule_desc(r).len()).max().unwrap_or(11).max(11);
+
+    summary_log!("| {:>3} | {:<rw$} | {:>cw$} | {:<dw$} |",
+        "#", "Rule", "Count", "Description",
+        rw = max_rule_w, cw = max_count_w, dw = max_desc_w);
+    summary_log!("| {:-<3} | {:-<rw$} | {:-<cw$} | {:-<dw$} |",
+        "", "", "", "",
+        rw = max_rule_w, cw = max_count_w, dw = max_desc_w);
+    for (i, (rule, count)) in rule_counts.iter().enumerate() {
+        let rule_display = format!("[{}]", rule);
+        summary_log!("| {:>3} | {:<rw$} | {:>cw$} | {:<dw$} |",
+            i + 1, rule_display, count, rule_desc(rule),
+            rw = max_rule_w, cw = max_count_w, dw = max_desc_w);
+    }
+    summary_log!();
+    summary_log!("Total: {} warnings, {} files checked.", total_issues, files.len());
+    if rule22a_info_count > 0 {
+        summary_log!("Note: {} free functions correctly placed per Standard 19 ([22a] info, not shown).",
+            rule22a_info_count);
+    }
+
+    // Table 2: Warnings by chapter (sorted by warning count descending)
+    summary_log!();
+    summary_log!("Warnings by chapter:");
+    let mut chapter_counts: Vec<(String, usize, String)> = warnings_by_chapter.iter().map(|(chap, rules)| {
+        let total: usize = rules.values().sum();
+        // Top 3 rules for this chapter
+        let mut rule_list: Vec<(&String, &usize)> = rules.iter().collect();
+        rule_list.sort_by(|a, b| b.1.cmp(a.1));
+        let top3: String = rule_list.iter().take(3)
+            .map(|(r, c)| format!("[{}] {}", r, c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        (chap.clone(), total, top3)
+    }).collect();
+    chapter_counts.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+
+    let max_chap_w = chapter_counts.iter().map(|(c, _, _)| c.len()).max().unwrap_or(7).max(7);
+    let max_chap_count_w = chapter_counts.iter().map(|(_, c, _)| c.to_string().len()).max().unwrap_or(8).max(8);
+    let max_top_w = chapter_counts.iter().map(|(_, _, t)| t.len()).max().unwrap_or(9).max(9);
+
+    summary_log!("| {:>3} | {:<chw$} | {:>ccw$} | {:<tw$} |",
+        "#", "Chapter", "Warnings", "Top rules",
+        chw = max_chap_w, ccw = max_chap_count_w, tw = max_top_w);
+    summary_log!("| {:-<3} | {:-<chw$} | {:-<ccw$} | {:-<tw$} |",
+        "", "", "", "",
+        chw = max_chap_w, ccw = max_chap_count_w, tw = max_top_w);
+    for (i, (chap, count, top)) in chapter_counts.iter().enumerate() {
+        summary_log!("| {:>3} | {:<chw$} | {:>ccw$} | {:<tw$} |",
+            i + 1, chap, count, top,
+            chw = max_chap_w, ccw = max_chap_count_w, tw = max_top_w);
+    }
+
+    // Table 3: [23b] bound mismatch patterns (only if any exist)
+    if !all_bound_gaps.is_empty() {
+        // Group by gap signature
+        let mut gap_groups: HashMap<String, (usize, HashSet<String>)> = HashMap::new();
+        for (gap_bounds, file_stem) in &all_bound_gaps {
+            let key = if gap_bounds.is_empty() {
+                "(empty)".to_string()
+            } else {
+                gap_bounds.join("+")
+            };
+            let entry = gap_groups.entry(key).or_insert_with(|| (0, HashSet::new()));
+            entry.0 += 1;
+            entry.1.insert(file_stem.clone());
+        }
+        let mut gap_list: Vec<(String, usize, Vec<String>)> = gap_groups.into_iter()
+            .map(|(gap, (count, files))| {
+                let mut fv: Vec<String> = files.into_iter().collect();
+                fv.sort();
+                (gap, count, fv)
+            })
+            .collect();
+        gap_list.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+
+        summary_log!();
+        summary_log!("[23b] bound mismatch patterns:");
+
+        let max_gap_w = gap_list.iter().map(|(g, _, _)| g.len()).max().unwrap_or(24).max(24);
+        let max_gap_count_w = gap_list.iter().map(|(_, c, _)| c.to_string().len()).max().unwrap_or(5).max(5);
+
+        summary_log!("| {:>3} | {:<gw$} | {:>gcw$} | Example files |",
+            "#", "Gap (fn has, trait lacks)", "Count",
+            gw = max_gap_w, gcw = max_gap_count_w);
+        summary_log!("| {:-<3} | {:-<gw$} | {:-<gcw$} | ------------- |",
+            "", "", "",
+            gw = max_gap_w, gcw = max_gap_count_w);
+        for (i, (gap, count, files)) in gap_list.iter().enumerate() {
+            let files_display = if files.len() <= 3 {
+                files.join(", ")
+            } else {
+                format!("{}, ... ({} files)", files[..2].join(", "), files.len())
+            };
+            summary_log!("| {:>3} | {:<gw$} | {:>gcw$} | {} |",
+                i + 1, gap, count, files_display,
+                gw = max_gap_w, gcw = max_gap_count_w);
+        }
+    }
+
+    summary_log!();
+    summary_log!("Summary log: {}", summary_path.display());
     
     // Reorder pass (--dry-run implies --reorder)
     if args.reorder || args.dry_run {

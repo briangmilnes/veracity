@@ -32,6 +32,8 @@ pub struct StandardArgs {
         pub exclude_dirs: Vec<String>,
         /// Include tests and benches directories (default: src only)
         pub all: bool,
+        /// Outlier threshold for proof line reports (default: 50)
+        pub outlier_threshold: usize,
     }
 
     impl StandardArgs {
@@ -96,6 +98,7 @@ pub struct StandardArgs {
                     bench_dirs: Self::default_bench_dirs(),
                     exclude_dirs: Vec::new(),
                     all: false,
+                    outlier_threshold: 50,
                 });
             }
             
@@ -111,6 +114,7 @@ pub struct StandardArgs {
             let mut bench_dirs = Self::default_bench_dirs();
             let mut exclude_dirs: Vec<String> = Vec::new();
             let mut all = false;
+            let mut outlier_threshold = 50usize;
             
             while i < args.len() {
                 match args[i].as_str() {
@@ -263,6 +267,13 @@ pub struct StandardArgs {
                         all = true;
                         i += 1;
                     }
+                    "-o" | "--outliers-over" => {
+                        i += 1;
+                        if i < args.len() {
+                            outlier_threshold = args[i].parse().unwrap_or(50);
+                        }
+                        i += 1;
+                    }
                     other => {
                         return Err(anyhow::anyhow!("Unknown option: {other}"));
                     }
@@ -295,9 +306,10 @@ pub struct StandardArgs {
                 bench_dirs,
                 exclude_dirs,
                 all,
+                outlier_threshold,
             })
         }
-        
+
         /// Find a module by name in src/, and its corresponding test and bench files
         /// 
         /// Searches for:
@@ -395,9 +407,10 @@ pub struct StandardArgs {
                 bench_dirs: Self::default_bench_dirs(),
                 exclude_dirs: Vec::new(),
                 all: false,
+                outlier_threshold: 50,
             })
         }
-        
+
         /// Recursively search for a file
         fn search_for_file(dir: &PathBuf, filename: &str, results: &mut Vec<PathBuf>) -> Result<()> {
             // Skip directories that should be excluded

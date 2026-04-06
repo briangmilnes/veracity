@@ -209,6 +209,10 @@ name = "veracity-fix-redundant-finites"
 path = "src/bin/fix_redundant_finites.rs"
 
 [[bin]]
+name = "veracity-fix-import-order"
+path = "src/bin/fix_import_order.rs"
+
+[[bin]]
 name = "veracity-review-status"
 path = "src/bin/review_status.rs"
 
@@ -223,6 +227,10 @@ path = "src/bin/annotate_alg_analysis.rs"
 [[bin]]
 name = "veracity-annotate-alg-analysis-from-toml"
 path = "src/bin/annotate_alg_analysis_from_toml.rs"
+
+[[bin]]
+name = "veracity-analyze-alg-analysis"
+path = "src/bin/analyze_alg_analysis.rs"
 
 [[bin]]
 name = "veracity-tocify"
