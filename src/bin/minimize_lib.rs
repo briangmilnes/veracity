@@ -12,9 +12,10 @@
 //!
 //! Binary: veracity-minimize-lib
 //!
-//! Logs to: analyses/veracity-minimize-lib.log
+//! Logs to: analyses/veracity-minimize-lib.YYYYMMDD-HHMMSS.log
 
 use anyhow::Result;
+use chrono::Local;
 use ra_ap_syntax::{ast::{self, HasName}, AstNode, SyntaxKind};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -26,6 +27,26 @@ use std::cell::RefCell;
 
 thread_local! {
     static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    static ISOLATE_CHAPTER: RefCell<Option<String>> = const { RefCell::new(None) };
+    static APAS_PROJECT: RefCell<bool> = const { RefCell::new(false) };
+}
+
+fn set_isolate_chapter(chapter: Option<&str>) {
+    ISOLATE_CHAPTER.with(|c| {
+        *c.borrow_mut() = chapter.map(|s| s.to_string());
+    });
+}
+
+fn get_isolate_chapter() -> Option<String> {
+    ISOLATE_CHAPTER.with(|c| c.borrow().clone())
+}
+
+fn set_apas_project(v: bool) {
+    APAS_PROJECT.with(|p| *p.borrow_mut() = v);
+}
+
+fn is_apas_project() -> bool {
+    APAS_PROJECT.with(|p| *p.borrow())
 }
 
 /// Initialize logging, returns (log_path, created_analyses_dir)
@@ -33,8 +54,10 @@ fn init_logging(codebase: &Path) -> (PathBuf, bool) {
     let analyses_dir = codebase.join("analyses");
     let created_dir = !analyses_dir.exists();
     let _ = std::fs::create_dir_all(&analyses_dir);
-    let log_path = analyses_dir.join("veracity-minimize-lib.log");
-    // Clear the log file
+    let now = Local::now();
+    let log_name = format!("veracity-minimize-lib.{}.log", now.format("%Y%m%d-%H%M%S"));
+    let log_path = analyses_dir.join(log_name);
+    // Start with an empty log file
     let _ = std::fs::write(&log_path, "");
     LOG_FILE_PATH.with(|p| {
         *p.borrow_mut() = Some(log_path.clone());
@@ -96,6 +119,10 @@ struct MinimizeArgs {
     type_minimization: bool,
     types_file: Option<PathBuf>,
     single_file: Option<PathBuf>,
+    project: Option<String>,
+    chapters: Vec<String>,
+    no_lib_min: bool,
+    fn_filter: Option<String>,
 }
 
 /// A discovered broadcast group from vstd
@@ -248,7 +275,11 @@ impl MinimizeArgs {
         let mut type_minimization = false;
         let mut types_file: Option<PathBuf> = None;
         let mut single_file: Option<PathBuf> = None;
-        
+        let mut project: Option<String> = None;
+        let mut chapters: Vec<String> = Vec::new();
+        let mut no_lib_min = false;
+        let mut fn_filter: Option<String> = None;
+
         let mut i = 1;
         while i < args.len() {
             match args[i].as_str() {
@@ -407,6 +438,34 @@ impl MinimizeArgs {
                     type_minimization = true; // -T implies type minimization
                     i += 1;
                 }
+                "--project" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--project requires a project name (e.g., APAS)"));
+                    }
+                    project = Some(args[i].clone());
+                    i += 1;
+                }
+                "--chapter" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--chapter requires a chapter name (e.g., Chap37)"));
+                    }
+                    chapters.push(args[i].clone());
+                    i += 1;
+                }
+                "--no-lib-min" => {
+                    no_lib_min = true;
+                    i += 1;
+                }
+                "--fn" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--fn requires a function name"));
+                    }
+                    fn_filter = Some(args[i].clone());
+                    i += 1;
+                }
                 "--help" | "-h" => {
                     Self::print_usage(&args[0]);
                     std::process::exit(0);
@@ -419,27 +478,44 @@ impl MinimizeArgs {
         
         let codebase = codebase.ok_or_else(|| anyhow::anyhow!("-c/--codebase is required"))?;
         let library = library.ok_or_else(|| anyhow::anyhow!("-l/--library is required"))?;
-        
-        Ok(MinimizeArgs { 
-            codebase, 
-            library, 
-            dry_run, 
-            max_lemmas, 
-            max_asserts, 
+
+        // Infer chapter from library path if --project APAS but --chapter not given
+        if chapters.is_empty() && project.as_deref() == Some("APAS") {
+            let lib_str = library.to_string_lossy();
+            // Match src/ChapNN/ in the library path
+            if let Some(chapter_from_path) = lib_str
+                .split('/')
+                .find(|seg| seg.starts_with("Chap") && seg.len() > 4)
+                .map(|s| s.to_string())
+            {
+                chapters.push(chapter_from_path);
+            }
+        }
+
+        Ok(MinimizeArgs {
+            codebase,
+            library,
+            dry_run,
+            max_lemmas,
+            max_asserts,
             max_admits,
             max_proof_blocks,
             max_types,
-            exclude_dirs, 
-            update_broadcasts, 
-            apply_lib_broadcasts, 
-            danger_mode, 
-            fail_fast, 
+            exclude_dirs,
+            update_broadcasts,
+            apply_lib_broadcasts,
+            danger_mode,
+            fail_fast,
             assert_minimization,
             admit_minimization,
             proof_block_minimization,
             type_minimization,
             types_file,
             single_file,
+            project,
+            chapters,
+            no_lib_min,
+            fn_filter,
         })
     }
     
@@ -471,6 +547,9 @@ impl MinimizeArgs {
         log!("  -L, --apply-lib-broadcasts  Apply broadcast groups to library files");
         log!("  -n, --dry-run               Show what would be done without modifying files");
         log!("  -f, --fail-fast             Exit on first verification failure (for debugging)");
+        log!("  --project NAME              Project mode (e.g., APAS for APAS-VERUS isolate mode)");
+        log!("  --chapter ChapNN            Chapter to isolate (repeatable: --chapter Chap02 --chapter Chap03)");
+        log!("  --no-lib-min                Skip Phases 7 & 8 (library lemma minimization)");
         log!("  --danger                    Run even with uncommitted changes (DANGEROUS!)");
         log!("  -h, --help                  Show this help message");
         log!();
@@ -498,6 +577,18 @@ impl MinimizeArgs {
         log!();
         log!("  # Test if types in a file are used:");
         log!("  {} -c ./my-project -l ./my-project/src/lib -t ./my-project/src/lib/types.rs", name);
+        log!();
+        log!("  # APAS isolate mode (fast: ~10-30s per iteration instead of ~100s):");
+        log!("  {} -c ~/APAS-VERUS -l src/Chap37/Foo.rs --project APAS --chapter Chap37", name);
+        log!("  # Chapter auto-inferred from library path:");
+        log!("  {} -c ~/APAS-VERUS -l src/Chap37/Foo.rs --project APAS", name);
+        log!();
+        log!("  # APAS chapter-only minimization (skip library lemma phases 7/8, run asserts):");
+        log!("  {} -c ~/APAS-VERUS -l src/vstdplus --project APAS -a --no-lib-min --chapter Chap36", name);
+        log!();
+        log!("  # APAS multi-chapter (iterate over chapters, auto-commit between each):");
+        log!("  {} -c ~/APAS-VERUS -l src/vstdplus --project APAS -a --no-lib-min \\", name);
+        log!("      --chapter Chap02 --chapter Chap03 --chapter Chap04");
     }
 }
 
@@ -1136,8 +1227,24 @@ fn find_call_sites(lemma_name: &str, codebase: &Path, library: &Path) -> Result<
     Ok((lib_calls, codebase_calls))
 }
 
-/// Run verus verification and return (success, stderr_output)
+/// Run verus verification and return (success, output)
 fn run_verus(codebase: &Path) -> Result<(bool, String)> {
+    // APAS project mode: always use scripts/validate.sh (isolate or full)
+    if is_apas_project() {
+        let mut cmd = Command::new("bash");
+        cmd.current_dir(codebase);
+        cmd.arg("scripts/validate.sh");
+        if let Some(chapter) = get_isolate_chapter() {
+            cmd.arg("isolate").arg(&chapter);
+        }
+        let output = cmd.output()?;
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let combined = format!("{}\n{}", stdout, stderr);
+        let success = combined.contains("0 errors");
+        return Ok((success, combined));
+    }
+
     // Check if this is a cargo-verus project (has Cargo.toml with verus metadata)
     let cargo_toml = codebase.join("Cargo.toml");
     if cargo_toml.exists() {
@@ -1147,13 +1254,13 @@ fn run_verus(codebase: &Path) -> Result<(bool, String)> {
             let mut cmd = Command::new("cargo");
             cmd.current_dir(codebase);
             cmd.args(["verus", "build"]);
-            
+
             let output = cmd.output()?;
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
             return Ok((output.status.success(), stderr));
         }
     }
-    
+
     // Fall back to direct verus invocation for non-cargo projects
     let mut cmd = Command::new("verus");
     cmd.current_dir(codebase);
@@ -1164,7 +1271,7 @@ fn run_verus(codebase: &Path) -> Result<(bool, String)> {
         "20",
         "--expand-errors",
     ]);
-    
+
     let output = cmd.output()?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     Ok((output.status.success(), stderr))
@@ -2091,41 +2198,17 @@ fn restore_file(file: &Path, original: &str) -> Result<()> {
 }
 
 /// Run verus and check for Z3 errors
-/// Returns (success, has_z3_errors, duration)
+/// Returns (success, has_z3_errors, output, duration)
 fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, Duration)> {
     let start = Instant::now();
-    
-    // Check if this is a cargo-verus project
-    let cargo_toml = codebase.join("Cargo.toml");
-    let output = if cargo_toml.exists() {
-        let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
-        if content.contains("[package.metadata.verus]") || content.contains("vstd") {
-            let mut cmd = Command::new("cargo");
-            cmd.current_dir(codebase);
-            cmd.args(["verus", "build"]);
-            cmd.output()?
-        } else {
-            let mut cmd = Command::new("verus");
-            cmd.current_dir(codebase);
-            cmd.args(["--crate-type=lib", "src/lib.rs", "--multiple-errors", "20", "--expand-errors"]);
-            cmd.output()?
-        }
-    } else {
-        let mut cmd = Command::new("verus");
-        cmd.current_dir(codebase);
-        cmd.args(["--crate-type=lib", "src/lib.rs", "--multiple-errors", "20", "--expand-errors"]);
-        cmd.output()?
-    };
-    
+    let (success, combined) = run_verus(codebase)?;
     let duration = start.elapsed();
-    let success = output.status.success();
-    
-    // Check for Z3 errors in stderr
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let has_z3_errors = stderr.contains("Z3") && 
-                        (stderr.contains("error") || stderr.contains("timeout") || stderr.contains("unknown"));
-    
-    Ok((success, has_z3_errors, stderr, duration))
+
+    // Check for Z3 errors in output
+    let has_z3_errors = combined.contains("Z3") &&
+                        (combined.contains("error") || combined.contains("timeout") || combined.contains("unknown"));
+
+    Ok((success, has_z3_errors, combined, duration))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2230,6 +2313,9 @@ fn strip_veracity_markers_from_file(file: &Path) -> Result<usize> {
             // Patterns: UNUSED <code>, TESTING <code>, UNNEEDED assert <code>, etc.
             let code_start = if marker_content.starts_with("UNUSED ") {
                 Some("UNUSED ".len())
+            } else if marker_content.starts_with("TESTING assert ") {
+                // Multi-word marker: "TESTING assert" — strip both words, not just "TESTING"
+                Some("TESTING assert ".len())
             } else if marker_content.starts_with("TESTING ") {
                 Some("TESTING ".len())
             } else if marker_content.starts_with("UNNEEDED assert ") {
@@ -2703,6 +2789,12 @@ struct AssertInfo {
     assert_type: String,  // "assert", "assert_by", "assert_forall_by"
     content: String,      // The full assert statement (may span multiple lines)
     context: String,      // Function/lemma name it's in
+}
+
+/// Return true if this assert should be skipped (never a candidate for removal).
+/// Well-formedness asserts (`_wf`) are structural invariants, not proof scaffolding.
+fn is_protected_assert(a: &AssertInfo) -> bool {
+    a.content.contains("_wf(") || a.content.contains("_wf()")
 }
 
 /// Find all assert statements in a file using AST parsing
@@ -3375,7 +3467,8 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
     log!();
     
     // Find asserts in the file
-    let asserts = find_asserts_in_file(file)?;
+    let asserts: Vec<_> = find_asserts_in_file(file)?
+        .into_iter().filter(|a| !is_protected_assert(a)).collect();
     log!("Found {} assert statements", asserts.len());
     
     // Find proof blocks in the file
@@ -3503,6 +3596,144 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
     Ok(())
 }
 
+/// Run single-function mode: test asserts and proof blocks in one named function.
+/// Scans: -F file if given, else src/ChapNN/ if --chapter given, else whole codebase.
+/// Filters all items to those whose context contains the fn_filter string.
+fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
+    let start_time = Instant::now();
+    let fn_name = args.fn_filter.as_deref().unwrap();
+
+    // Determine files to scan
+    let files: Vec<PathBuf> = if let Some(ref f) = args.single_file {
+        vec![f.clone()]
+    } else {
+        match get_isolate_chapter() {
+            Some(ref ch) => {
+                let dir = args.codebase.join("src").join(ch);
+                if dir.exists() { find_rust_files(&dir) }
+                else { find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs) }
+            }
+            None => find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs),
+        }
+    };
+
+    log!("Target function: {}", fn_name);
+    log!("Scanning {} file(s)...", files.len());
+    log!();
+
+    // Collect asserts and proof blocks matching the function filter
+    let mut asserts: Vec<AssertInfo> = Vec::new();
+    let mut proof_blocks: Vec<ProofBlock> = Vec::new();
+    for file in &files {
+        if let Ok(a) = find_asserts_in_file(file) {
+            asserts.extend(
+                a.into_iter()
+                    .filter(|a| !is_protected_assert(a) && a.context.contains(fn_name))
+            );
+        }
+        if let Ok(b) = find_proof_blocks_in_file(file) {
+            proof_blocks.extend(b.into_iter().filter(|b| b.context.contains(fn_name)));
+        }
+    }
+
+    log!("Found {} assert(s) in fn {}", asserts.len(), fn_name);
+    log!("Found {} proof {{}} block(s) in fn {}", proof_blocks.len(), fn_name);
+    log!();
+
+    if asserts.is_empty() && proof_blocks.is_empty() {
+        log!("Nothing to test for fn {}.", fn_name);
+        return Ok(());
+    }
+
+    // Estimate
+    let total = asserts.len() + proof_blocks.len();
+    let est = baseline_time * total as u32;
+    log!("Estimated time: {} ({} × {})", format_duration(est), total, format_duration(baseline_time));
+    log!();
+
+    // Test asserts
+    if args.assert_minimization && !asserts.is_empty() {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Testing asserts in fn {}", fn_name);
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+
+        let test_count = args.max_asserts.unwrap_or(asserts.len()).min(asserts.len());
+        let mut tested = 0;
+        let mut removed = 0;
+        let mut time_saved = Duration::ZERO;
+
+        for (i, assert_info) in asserts.iter().take(test_count).enumerate() {
+            let rel = assert_info.file.strip_prefix(&args.codebase).unwrap_or(&assert_info.file);
+            log_no_newline!("  [{}/{}] {} L{} ({})... ",
+                i + 1, test_count,
+                assert_info.assert_type,
+                assert_info.line,
+                rel.display());
+
+            if args.dry_run { log!("(dry-run, skipped)"); continue; }
+
+            let (needed, verify_time, saved) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            tested += 1;
+            if needed {
+                log!("NEEDED [{}]", format_duration(verify_time));
+            } else {
+                removed += 1;
+                time_saved += saved;
+                log!("UNNEEDED [{}]", format_duration(verify_time));
+            }
+            if args.fail_fast && !needed { break; }
+        }
+
+        log!();
+        log!("Assert summary: {} tested, {} removed, {} time saved",
+            tested, removed, format_duration(time_saved));
+        log!();
+    }
+
+    // Test proof blocks
+    if args.proof_block_minimization && !proof_blocks.is_empty() {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Testing proof {{}} blocks in fn {}", fn_name);
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+
+        let test_count = args.max_proof_blocks.unwrap_or(proof_blocks.len()).min(proof_blocks.len());
+        let mut tested = 0;
+        let mut removed = 0;
+        let mut time_saved = Duration::ZERO;
+
+        for (i, block) in proof_blocks.iter().take(test_count).enumerate() {
+            let rel = block.file.strip_prefix(&args.codebase).unwrap_or(&block.file);
+            log_no_newline!("  [{}/{}] lines {}-{} ({})... ",
+                i + 1, test_count,
+                block.start_line, block.end_line,
+                rel.display());
+
+            if args.dry_run { log!("(dry-run, skipped)"); continue; }
+
+            let (needed, verify_time, saved) = test_proof_block(block, &args.codebase, baseline_time)?;
+            tested += 1;
+            if needed {
+                log!("NEEDED [{}]", format_duration(verify_time));
+            } else {
+                removed += 1;
+                time_saved += saved;
+                log!("UNNEEDED [{}]", format_duration(verify_time));
+            }
+            if args.fail_fast && !needed { break; }
+        }
+
+        log!();
+        log!("Proof block summary: {} tested, {} removed, {} time saved",
+            tested, removed, format_duration(time_saved));
+        log!();
+    }
+
+    log!("✓ Function mode complete in {}.", format_duration(start_time.elapsed()));
+    Ok(())
+}
+
 enum GitStatus {
     Clean,           // In git, committed
     Uncommitted,     // In git, has uncommitted changes
@@ -3543,12 +3774,49 @@ fn check_git_status(codebase: &Path) -> GitStatus {
     }
 }
 
+fn git_commit_chapter(codebase: &Path, chapter: &str) -> Result<()> {
+    log!();
+    log!("Auto-committing {} results...", chapter);
+
+    let add_out = Command::new("git")
+        .args(["add", "-A"])
+        .current_dir(codebase)
+        .output()?;
+    if !add_out.status.success() {
+        log!("  ⚠ git add failed: {}", String::from_utf8_lossy(&add_out.stderr));
+        return Ok(());
+    }
+
+    let commit_msg = format!("Veracity: {} complete", chapter);
+    let commit_out = Command::new("git")
+        .args(["commit", "-m", &commit_msg])
+        .current_dir(codebase)
+        .output()?;
+
+    if commit_out.status.success() {
+        log!("  ✓ Committed: {}", commit_msg);
+    } else {
+        let stderr = String::from_utf8_lossy(&commit_out.stderr);
+        if stderr.contains("nothing to commit") {
+            log!("  (nothing to commit for {})", chapter);
+        } else {
+            log!("  ⚠ git commit failed: {}", stderr.trim());
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = MinimizeArgs::parse()?;
     
     // Initialize logging first so all output goes to the log
     let (log_path, created_analyses_dir) = init_logging(&args.codebase);
-    
+
+    // Set APAS project mode and isolate chapter for all run_verus calls
+    set_apas_project(args.project.as_deref() == Some("APAS"));
+    set_isolate_chapter(args.chapters.first().map(|s| s.as_str()));
+
     // Check git status (ignore our log file - it's expected to be untracked)
     let git_status = check_git_status(&args.codebase);
     
@@ -3577,6 +3845,25 @@ fn main() -> Result<()> {
     log!("  -e, --exclude:      {}", if args.exclude_dirs.is_empty() { "(none)".to_string() } else { args.exclude_dirs.join(", ") });
     log!("  -f, --fail-fast:    {}", args.fail_fast);
     log!("  --danger:           {}", args.danger_mode);
+    log!("  --no-lib-min:       {}", args.no_lib_min);
+    if let Some(ref proj) = args.project {
+        log!("  --project:          {}", proj);
+    }
+    if !args.chapters.is_empty() {
+        log!("  --chapter:          {}", args.chapters.join(", "));
+    }
+    if let Some(ref fn_name) = args.fn_filter {
+        log!("  --fn:               {}", fn_name);
+    }
+    log!();
+
+    // Log verification mode
+    match args.chapters.as_slice() {
+        [] => log!("Mode: full crate verification (estimated 90-120s per iteration)"),
+        [ch] => log!("Mode: APAS isolate {} (estimated 10-30s per iteration)", ch),
+        chs => log!("Mode: APAS isolate × {} chapters: {} (estimated 10-30s per iteration each)",
+            chs.len(), chs.join(", ")),
+    }
     log!();
     
     // Print reassurance and phase overview
@@ -3694,6 +3981,24 @@ fn main() -> Result<()> {
         log!();
     }
     
+    // Determine chapters to iterate (empty chapters = no chapter scoping, single pass)
+    let effective_chapters: Vec<Option<&str>> = if args.chapters.is_empty() {
+        vec![None]
+    } else {
+        args.chapters.iter().map(|s| Some(s.as_str())).collect()
+    };
+    let multi_chapter = effective_chapters.len() > 1;
+
+    for (chapter_idx, &current_chapter) in effective_chapters.iter().enumerate() {
+    if multi_chapter {
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Chapter {}/{}: {}", chapter_idx + 1, effective_chapters.len(),
+            current_chapter.unwrap_or("(all)"));
+        log!("═══════════════════════════════════════════════════════════════");
+    }
+    set_isolate_chapter(current_chapter);
+
     // Phase 1: Verify codebase
     log!("═══════════════════════════════════════════════════════════════");
     log!("Phase 1: Analyzing and verifying codebase");
@@ -3737,7 +4042,13 @@ fn main() -> Result<()> {
         // Jump directly to single-file assert and proof block testing
         return run_single_file_mode(&args, initial_duration);
     }
-    
+
+    // Function-filter mode: skip all library phases, test only asserts/proof-blocks
+    // in the named function.
+    if args.fn_filter.is_some() {
+        return run_fn_filter_mode(&args, initial_duration);
+    }
+
     // Phase 2: Analyze library structure
     log!("Phase 2: Analyzing library structure...");
     
@@ -3855,15 +4166,26 @@ fn main() -> Result<()> {
     let estimated_phase7 = initial_duration * (actual_to_test as u32);
     let estimated_phase8 = initial_duration * (actual_to_test as u32);
     
-    // Count asserts for Phase 9/10 estimate (rough estimate: ~10 asserts per file)
+    // Count asserts for Phase 9/10 estimate (rough estimate: ~10 asserts per file).
+    // Phase 10 scans only the chapter dir when --chapter is set, so use that for estimate.
     let lib_file_count_for_asserts = find_rust_files(&args.library).len();
-    let codebase_file_count_for_asserts = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs).len();
+    let codebase_file_count_for_asserts = match get_isolate_chapter() {
+        Some(ref ch) => {
+            let chapter_dir = args.codebase.join("src").join(ch);
+            if chapter_dir.exists() {
+                find_rust_files(&chapter_dir).len()
+            } else {
+                find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs).len()
+            }
+        }
+        None => find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs).len(),
+    };
     let estimated_lib_asserts = lib_file_count_for_asserts * 10;
     let estimated_codebase_asserts = codebase_file_count_for_asserts * 10;
     let actual_lib_asserts_to_test = args.max_asserts.unwrap_or(estimated_lib_asserts).min(estimated_lib_asserts);
     let actual_codebase_asserts_to_test = args.max_asserts.unwrap_or(estimated_codebase_asserts).min(estimated_codebase_asserts);
     
-    let estimated_phase9 = if args.assert_minimization {
+    let estimated_phase9 = if args.assert_minimization && !args.no_lib_min {
         initial_duration * (actual_lib_asserts_to_test as u32)
     } else {
         Duration::from_secs(0)
@@ -4279,6 +4601,23 @@ fn main() -> Result<()> {
         stats.modules_removable.insert(m.clone());
     }
     
+    let mut dependent_count: usize = 0;
+    let mut independent_count: usize = 0;
+    let mut dependent_lemmas: Vec<(String, PathBuf, String)> = Vec::new();
+    let mut unused_lemmas: Vec<(String, PathBuf, String)> = Vec::new();
+    let mut dependent_but_used: Vec<(String, PathBuf, String)> = Vec::new();
+
+    if args.no_lib_min {
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 7: Skipped (--no-lib-min)");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+        log!("═══════════════════════════════════════════════════════════════");
+        log!("Phase 8: Skipped (--no-lib-min)");
+        log!("═══════════════════════════════════════════════════════════════");
+        log!();
+    } else {
+
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 7: Test lemma dependence on vstd
     // ═══════════════════════════════════════════════════════════════════════
@@ -4289,12 +4628,6 @@ fn main() -> Result<()> {
     log!("For each lemma: replace body with {{}}, verify, restore.");
     log!("If verification passes, vstd broadcast groups can prove it (DEPENDENT).");
     log!();
-    
-    let mut dependent_count: usize = 0;
-    let mut independent_count: usize = 0;
-    
-    // Track dependent lemmas: (name, file, type_info)
-    let mut dependent_lemmas: Vec<(String, PathBuf, String)> = Vec::new();
     
     for (i, ((name, file), variants)) in sorted_groups.iter().enumerate() {
         let variant_count = variants.len();
@@ -4363,11 +4696,6 @@ fn main() -> Result<()> {
     log!("For each lemma: comment out definition + calls, verify.");
     log!("If verification fails, lemma is USED. If passes, lemma is UNUSED.");
     log!();
-    
-    // Track which lemmas were commented out (UNUSED)
-    let mut unused_lemmas: Vec<(String, PathBuf, String)> = Vec::new(); // (name, file, type_info)
-    // Track dependent lemmas that are still needed (DEPENDENT but USED)
-    let mut dependent_but_used: Vec<(String, PathBuf, String)> = Vec::new();
     
     // Track line shifts from USED marker insertions
     let mut line_shifts = LineShiftTracker::new();
@@ -4447,7 +4775,9 @@ fn main() -> Result<()> {
             }
         }
     }
-    
+
+    } // end if !args.no_lib_min
+
     // Count unused spec functions (but don't modify files - would break syntax)
     stats.spec_fns_total = spec_fns.len();
     for (_, lib_uses, codebase_uses) in &spec_fn_usage {
@@ -4463,7 +4793,7 @@ fn main() -> Result<()> {
     let mut lib_asserts_removed = 0;
     let mut lib_time_saved = Duration::ZERO;
     
-    if args.assert_minimization {
+    if args.assert_minimization && !args.no_lib_min {
         log!();
         log!("═══════════════════════════════════════════════════════════════");
         log!("Phase 9: Testing library asserts");
@@ -4480,7 +4810,7 @@ fn main() -> Result<()> {
         let mut lib_asserts: Vec<AssertInfo> = Vec::new();
         for file in &lib_files {
             if let Ok(asserts) = find_asserts_in_file(file) {
-                lib_asserts.extend(asserts);
+                lib_asserts.extend(asserts.into_iter().filter(|a| !is_protected_assert(a)));
             }
         }
         
@@ -4546,12 +4876,19 @@ fn main() -> Result<()> {
         // Get updated baseline after Phase 9 changes
         let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
         
-        // Find all asserts in codebase files (excluding library)
-        let codebase_files = find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs);
+        // Find all asserts in codebase files: chapter dir if in chapter mode, else full codebase
+        let codebase_files = match get_isolate_chapter() {
+            Some(ref ch) => {
+                let chapter_dir = args.codebase.join("src").join(ch);
+                if chapter_dir.exists() { find_rust_files(&chapter_dir) }
+                else { find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs) }
+            }
+            None => find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs),
+        };
         let mut codebase_asserts: Vec<AssertInfo> = Vec::new();
         for file in &codebase_files {
             if let Ok(asserts) = find_asserts_in_file(file) {
-                codebase_asserts.extend(asserts);
+                codebase_asserts.extend(asserts.into_iter().filter(|a| !is_protected_assert(a)));
             }
         }
         
@@ -4616,16 +4953,28 @@ fn main() -> Result<()> {
         // Get updated baseline
         let (_, _, baseline_time) = run_verus_timed(&args.codebase)?;
         
-        // Determine which files to scan
+        // Determine which files to scan for admits
         let files_to_scan: Vec<PathBuf> = if let Some(ref single_file) = args.single_file {
             vec![single_file.clone()]
         } else {
-            // Scan all files (library + codebase)
-            let mut all_files = find_rust_files(&args.library);
-            all_files.extend(find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs));
-            all_files
+            match get_isolate_chapter() {
+                Some(ref ch) => {
+                    let chapter_dir = args.codebase.join("src").join(ch);
+                    if chapter_dir.exists() { find_rust_files(&chapter_dir) }
+                    else {
+                        let mut all_files = find_rust_files(&args.library);
+                        all_files.extend(find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs));
+                        all_files
+                    }
+                }
+                None => {
+                    let mut all_files = find_rust_files(&args.library);
+                    all_files.extend(find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs));
+                    all_files
+                }
+            }
         };
-        
+
         // Find all admits
         let mut all_admits: Vec<AdmitInfo> = Vec::new();
         for file in &files_to_scan {
@@ -4699,13 +5048,20 @@ fn main() -> Result<()> {
         log!("═══════════════════════════════════════════════════════════════");
         log!();
         
-        // Determine which files to scan
+        // Determine which files to scan for proof blocks
         let files_to_scan: Vec<PathBuf> = if let Some(ref single_file) = args.single_file {
             vec![single_file.clone()]
         } else {
-            find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs)
+            match get_isolate_chapter() {
+                Some(ref ch) => {
+                    let chapter_dir = args.codebase.join("src").join(ch);
+                    if chapter_dir.exists() { find_rust_files(&chapter_dir) }
+                    else { find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs) }
+                }
+                None => find_rust_files_excluding(&args.codebase, &args.library, &args.exclude_dirs),
+            }
         };
-        
+
         // Find all proof blocks
         let mut all_proof_blocks: Vec<ProofBlock> = Vec::new();
         for file in &files_to_scan {
@@ -5138,6 +5494,15 @@ fn main() -> Result<()> {
         log!("⚠ Minimization complete but final verification failed.");
         log!("  You may need to restore some lemmas manually.");
     }
-    
+
+    // Auto-commit chapter results in multi-chapter mode
+    if multi_chapter && !args.dry_run {
+        if let Some(ch) = current_chapter {
+            git_commit_chapter(&args.codebase, ch)?;
+        }
+    }
+
+    } // end for chapter loop
+
     Ok(())
 }

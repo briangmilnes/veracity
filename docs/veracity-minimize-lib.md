@@ -5,14 +5,19 @@ Automatically minimize your vstd library dependencies by testing which lemmas ar
 ## Quick Start
 
 ```bash
-# Full minimization (all 12 phases)
+# Full minimization (all 14 phases)
 veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -L -b -a -p
 
 # Dry run first
 veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -n
 
-# Quick test with 5 lemmas
-veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -N 5
+# One chapter only (fast: 10-30s/iter, skips library phases)
+veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus \
+    --chapter Chap23 --no-lib-min -a -p
+
+# Minimize a single function
+veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus \
+    --chapter Chap23 --fn lemma_foo -a -p
 
 # Test proof blocks in a single file
 veracity-minimize-lib -c ./my-project -l ./my-project/src/vstdplus -F ./my-project/src/main.rs -p
@@ -36,7 +41,10 @@ The tool iteratively tests each lemma in your library to determine:
 | `-c, --codebase PATH` | Path to codebase to verify |
 | `-l, --library PATH` | Path to library containing lemmas |
 | `-F, --file FILE` | Analyze only this single file (skip full codebase) |
+| `--chapter ChapNN` | Scope to one chapter in isolate mode (repeatable) |
+| `--fn NAME` | Test only asserts/proof-blocks in the named function |
 | `-n, --dry-run` | Show what would be done |
+| `--no-lib-min` | Skip Phases 7, 8, and 9 (library minimization) |
 | `-b, --broadcasts` | Apply broadcast groups to codebase |
 | `-L, --lib-broadcasts` | Apply broadcast groups to library |
 | `-a, --asserts` | Test and minimize asserts |
@@ -124,19 +132,60 @@ Phase 11 (proof blocks): 3 tested, 1 removed
 ✓ Minimization complete! Codebase still verifies.
 ```
 
+## Chapter Mode
+
+Use `--chapter` to scope one run to a single chapter using Verus isolate mode. This is
+dramatically faster (10-30s per verification instead of 90-120s) and limits assert/proof-block
+testing to that chapter's directory.
+
+```bash
+# Minimize asserts and proof blocks in Chap23 only
+veracity-minimize-lib -c ./project -l ./project/lib --chapter Chap23 --no-lib-min -a -p
+
+# Run multiple chapters in one invocation (auto-commits between chapters)
+veracity-minimize-lib -c ./project -l ./project/lib \
+    --chapter Chap21 --chapter Chap22 --chapter Chap23 --no-lib-min -a -p
+```
+
+`--chapter` implies `--project APAS`. Use `--no-lib-min` to skip library lemma testing
+(Phases 7, 8, 9) and focus only on the chapter's asserts and proof blocks. Without
+`--no-lib-min`, Phases 7 and 8 still test all library lemmas (just in isolate mode).
+
+Multi-chapter mode auto-commits after each chapter with message `Veracity: ChapNN complete`.
+
+## Function Filter Mode
+
+Use `--fn` to narrow testing to a single named function. This skips all library phases
+and tests only the asserts and `proof { }` blocks inside the named function (or functions
+whose name contains the given string). Combine with `--chapter` or `-F` to scope the file
+search.
+
+```bash
+# Test only asserts in lemma_foo (in Chap23)
+veracity-minimize-lib -c ./project -l ./project/lib \
+    --chapter Chap23 --fn lemma_foo -a -p
+
+# Test only proof blocks in a single file
+veracity-minimize-lib -c ./project -l ./project/lib \
+    -F ./project/src/Chap23/BSTStEph.rs --fn lemma_insert_preserves_wf -p
+```
+
+`--fn` does substring matching, so `--fn insert` matches `lemma_insert`, `lemma_insert_wf`,
+`impl_insert_sorted`, etc.
+
 ## Single File Mode
 
 Use `-F` to focus on a single file. This **skips phases 2-8** (all library analysis) and goes directly to testing asserts and proof blocks. This is much faster for iterative development.
 
 ```bash
 # Test asserts and proof blocks in one file
-veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/algo.rs -a -p
+veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/main.rs -a -p
 
 # Dry-run first to see what would be tested
-veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/algo.rs -a -p -n
+veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/main.rs -a -p -n
 
 # Quick test: first 3 proof blocks only
-veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/algo.rs -P 3
+veracity-minimize-lib -c ./project -l ./project/lib -F ./project/src/main.rs -P 3
 ```
 
 **Note**: The `-l` library path is still required but only used for excluding library files from codebase analysis. In single-file mode, library lemmas are not tested.
