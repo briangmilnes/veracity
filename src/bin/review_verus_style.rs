@@ -1734,11 +1734,14 @@ fn outside_section_name(section: u32) -> &'static str {
     }
 }
 
-/// An item with its line number, section, and description
+/// An item with its line number, section, type association, and description.
 #[derive(Debug, Clone)]
 struct OrderedItem {
     line: usize,
     section: u32,
+    /// The type this item belongs to (for per-type-group cycling).
+    /// None for global items (imports, broadcast use).
+    type_name: Option<String>,
     description: String,
 }
 
@@ -1801,6 +1804,18 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
         Err(_) => return ordered,
     };
     
+    // Helper: extract base type ident from a verus_syn type expression
+    let base_type_from_syn = |ty: &verus_syn::Type| -> String {
+        use quote::ToTokens;
+        let s = ty.to_token_stream().to_string();
+        extract_base_type_ident(&s)
+    };
+
+    // Helper: strip "Trait" suffix from trait name to get associated type
+    let type_from_trait = |trait_name: &str| -> String {
+        trait_name.strip_suffix("Trait").unwrap_or(trait_name).to_string()
+    };
+
     for item in &file.items {
         match item {
             verus_syn::Item::Use(u) => {
@@ -1810,6 +1825,7 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                 ordered.push(OrderedItem {
                     line,
                     section,
+                    type_name: None, // global
                     description: format!("use {}::...", seg),
                 });
             }
@@ -1818,31 +1834,44 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_BROADCAST_USE,
+                    type_name: None, // global
                     description: "broadcast use".to_string(),
                 });
             }
             verus_syn::Item::Struct(s) => {
+                let name = s.ident.to_string();
                 let line = s.ident.span().start().line + line_offset;
+                // Iterator structs (FooIter, FooGhostIterator) belong in the iterator section
+                let is_iter_struct = name.ends_with("Iter")
+                    || name.ends_with("Iterator")
+                    || name.ends_with("GhostIterator")
+                    || name.ends_with("GhostIter");
+                let section = if is_iter_struct { SECTION_ITER_IMPL } else { SECTION_TYPE_DEF };
                 ordered.push(OrderedItem {
                     line,
-                    section: SECTION_TYPE_DEF,
-                    description: format!("struct {}", s.ident),
+                    section,
+                    type_name: Some(name.clone()),
+                    description: format!("struct {}", name),
                 });
             }
             verus_syn::Item::Enum(e) => {
+                let name = e.ident.to_string();
                 let line = e.ident.span().start().line + line_offset;
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_TYPE_DEF,
-                    description: format!("enum {}", e.ident),
+                    type_name: Some(name.clone()),
+                    description: format!("enum {}", name),
                 });
             }
             verus_syn::Item::Type(t) => {
+                let name = t.ident.to_string();
                 let line = t.ident.span().start().line + line_offset;
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_TYPE_DEF,
-                    description: format!("type {}", t.ident),
+                    type_name: Some(name.clone()),
+                    description: format!("type {}", name),
                 });
             }
             verus_syn::Item::Const(c) => {
@@ -1850,40 +1879,61 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_TYPE_DEF,
+                    type_name: None, // consts don't belong to a type group
                     description: format!("const {}", c.ident),
                 });
             }
             verus_syn::Item::Fn(f) => {
+                let fn_name = f.sig.ident.to_string();
                 let line = f.sig.ident.span().start().line + line_offset;
-                let section = fn_section(&f.sig.mode);
                 let mode = fn_mode_str(&f.sig.mode);
+                // Iterator-related free fns belong in the iterator section
+                let section = if fn_name == "iter_invariant" || fn_name.starts_with("iter_") {
+                    SECTION_ITER_IMPL
+                } else {
+                    fn_section(&f.sig.mode)
+                };
                 ordered.push(OrderedItem {
                     line,
                     section,
-                    description: format!("{} {}", mode, f.sig.ident),
+                    type_name: None,
+                    description: format!("{} {}", mode, fn_name),
                 });
             }
             verus_syn::Item::Trait(t) => {
+                let name = t.ident.to_string();
                 let line = t.ident.span().start().line + line_offset;
+                let assoc_type = type_from_trait(&name);
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_TRAIT,
-                    description: format!("trait {}", t.ident),
+                    type_name: Some(assoc_type),
+                    description: format!("trait {}", name),
                 });
             }
             verus_syn::Item::Impl(i) => {
                 use quote::ToTokens;
                 let line = i.impl_token.span.start().line + line_offset;
                 let type_str = i.self_ty.to_token_stream().to_string();
+                let base_type = base_type_from_syn(&i.self_ty);
+                // Check if the target type is an iterator type
+                let is_iter_target = base_type.ends_with("Iter")
+                    || base_type.ends_with("Iterator")
+                    || base_type.ends_with("GhostIterator")
+                    || base_type.ends_with("GhostIter");
                 let (desc, section) = if let Some((_, path, _)) = &i.trait_ {
                     let trait_name = path.segments.last()
                         .map(|s| s.ident.to_string())
                         .unwrap_or_default();
-                    if trait_name == "View" {
+                    if is_iter_target {
+                        // All impls for iterator types belong in the iterator section
+                        (format!("impl {} for {}", trait_name, type_str), SECTION_ITER_IMPL)
+                    } else if trait_name == "View" {
                         (format!("impl View for {}", type_str), SECTION_VIEW_IMPL)
                     } else {
                         let is_derive = matches!(trait_name.as_str(),
-                            "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord");
+                            "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord"
+                            | "PartialEqSpecImpl" | "Default");
                         let is_iter = matches!(trait_name.as_str(),
                             "Iterator" | "IntoIterator" | "ForLoopGhostIterator" | "ForLoopGhostIteratorNew");
                         let sect = if trait_name == "RwLockPredicate" {
@@ -1903,6 +1953,7 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                 ordered.push(OrderedItem {
                     line,
                     section,
+                    type_name: Some(base_type),
                     description: desc,
                 });
             }
@@ -1911,6 +1962,7 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
                 ordered.push(OrderedItem {
                     line,
                     section: SECTION_BROADCAST_GROUP,
+                    type_name: None,
                     description: format!("broadcast group {}", bg.ident),
                 });
             }
@@ -1924,16 +1976,116 @@ fn collect_definition_order(content: &str, structure: &FileStructure) -> Vec<Ord
     ordered
 }
 
-/// Check that ordered items appear in non-decreasing section order.
+/// Check that ordered items appear in correct section order, respecting per-type-group cycling.
+///
+/// The APAS-VERUS standard orders items as:
+///   Global (sections 1-2) < TypeGroup_a (4-10) < TypeGroup_b (4-10) < ... < Post (11-14)
+///
+/// Within a type group, sections must be non-decreasing: 3 < 4 < 5 < 6 < 7 < 8 < 9.
+/// Across type groups, any section in group N+1 may follow any section in group N.
+///
 /// Returns list of (line, message) for each violation.
 fn check_order_violations(ordered: &[OrderedItem]) -> Vec<(usize, String)> {
-    let mut violations = Vec::new();
-    let mut max_section_seen: u32 = 0;
-    let mut max_section_item: Option<&OrderedItem> = None;
-    
+    if ordered.is_empty() {
+        return Vec::new();
+    }
+
+    // Phase 1: Build type registry — ordered by first appearance of struct/enum definitions.
+    // Only structs and enums start new type groups. Type aliases and consts don't.
+    let mut type_order: Vec<String> = Vec::new();
     for item in ordered {
-        if item.section < max_section_seen {
-            if let Some(prev) = max_section_item {
+        if item.section == SECTION_TYPE_DEF {
+            if let Some(ref name) = item.type_name {
+                // Only register structs and enums as group starters
+                if (item.description.starts_with("struct ") || item.description.starts_with("enum "))
+                    && !type_order.contains(name)
+                {
+                    type_order.push(name.clone());
+                }
+            }
+        }
+    }
+
+    // Phase 2: Resolve each item's type group index.
+    // - Items with type_name matching a known type get that type's group index.
+    // - Items with type_name not in the registry try suffix stripping (FooIter→Foo, FooTrait→Foo).
+    // - Items with no type_name (free fns, consts) get associated with the nearest preceding type.
+    let resolve_group = |type_name: &Option<String>, fallback_group: Option<usize>| -> Option<usize> {
+        if let Some(name) = type_name {
+            // Direct match
+            if let Some(idx) = type_order.iter().position(|t| t == name) {
+                return Some(idx);
+            }
+            // Strip Iter/Iterator suffix
+            for suffix in &["Iter", "Iterator", "GhostIterator", "GhostIter", "Inv"] {
+                if let Some(base) = name.strip_suffix(suffix) {
+                    if let Some(idx) = type_order.iter().position(|t| t == base) {
+                        return Some(idx);
+                    }
+                }
+            }
+            // Strip Trait suffix
+            if let Some(base) = name.strip_suffix("Trait") {
+                if let Some(idx) = type_order.iter().position(|t| t == base) {
+                    return Some(idx);
+                }
+            }
+            // Prefix match (e.g. "ArraySeqStEphS" matches "ArraySeqStEph" type)
+            for (idx, t) in type_order.iter().enumerate() {
+                if name.starts_with(t.as_str()) || t.starts_with(name.as_str()) {
+                    return Some(idx);
+                }
+            }
+        }
+        fallback_group
+    };
+
+    // Sections 1-2 are global (before all type groups).
+    // Sections 3-10 are per-type-group.
+    // Sections 11+ are post-group (after all type groups).
+    let is_global = |s: u32| s <= SECTION_BROADCAST_USE;
+    let is_post = |s: u32| s >= SECTION_TOP_LEVEL_COARSE_LOCKING;
+    let is_per_type = |s: u32| !is_global(s) && !is_post(s);
+
+    // Phase 3: Assign composite sort keys: (phase, group_index, section)
+    // Phase 0 = global, Phase 1 = per-type, Phase 2 = post-type
+    let mut sort_keys: Vec<(u32, usize, u32)> = Vec::new();
+    let mut last_type_def_group: Option<usize> = None; // group of most recent SECTION_TYPE_DEF
+
+    for item in ordered {
+        let key = if is_global(item.section) {
+            (0, 0, item.section)
+        } else if is_post(item.section) {
+            let group = resolve_group(&item.type_name, last_type_def_group).unwrap_or(0);
+            (2, group, item.section)
+        } else {
+            // Per-type section (3-9)
+            let group = resolve_group(&item.type_name, last_type_def_group).unwrap_or(
+                last_type_def_group.unwrap_or(0)
+            );
+            // Update last_type_def_group only when we see a type definition —
+            // this is the anchor for positional fallback.
+            if item.section == SECTION_TYPE_DEF {
+                if let Some(ref name) = item.type_name {
+                    if let Some(idx) = type_order.iter().position(|t| t == name) {
+                        last_type_def_group = Some(idx);
+                    }
+                }
+            }
+            (1, group, item.section)
+        };
+        sort_keys.push(key);
+    }
+
+    // Phase 4: Check that sort keys are non-decreasing.
+    let mut violations = Vec::new();
+    let mut max_key = (0u32, 0usize, 0u32);
+    let mut max_key_item: Option<&OrderedItem> = None;
+
+    for (i, item) in ordered.iter().enumerate() {
+        let key = sort_keys[i];
+        if key < max_key {
+            if let Some(prev) = max_key_item {
                 violations.push((
                     item.line,
                     format!("{} should come before {} (expected {} before {})",
@@ -1945,12 +2097,12 @@ fn check_order_violations(ordered: &[OrderedItem]) -> Vec<(usize, String)> {
                 ));
             }
         }
-        if item.section > max_section_seen {
-            max_section_seen = item.section;
-            max_section_item = Some(item);
+        if key > max_key {
+            max_key = key;
+            max_key_item = Some(item);
         }
     }
-    
+
     violations
 }
 
@@ -2972,7 +3124,8 @@ fn collect_reorder_items(inner: &str, line_offset: usize, structure: &FileStruct
                         (sect, format!("impl View for {}", type_str), line)
                     } else {
                         let is_derive = matches!(trait_name.as_str(),
-                            "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord");
+                            "PartialEq" | "Eq" | "Hash" | "Clone" | "PartialOrd" | "Ord"
+                            | "PartialEqSpecImpl" | "Default");
                         let is_iter = matches!(trait_name.as_str(),
                             "Iterator" | "IntoIterator" | "ForLoopGhostIterator" | "ForLoopGhostIteratorNew");
                         let sect = if trait_name == "RwLockPredicate" {

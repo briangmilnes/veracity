@@ -19,6 +19,7 @@
 //! Binary: veracity-fix-import-order
 
 use anyhow::Result;
+use quote::ToTokens;
 use ra_ap_syntax::{ast::AstNode, SyntaxKind, SyntaxToken};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -64,7 +65,6 @@ fn parse_args() -> Result<FixArgs> {
         i += 1;
     }
 
-    // If codebase given, default target is src/
     if let Some(ref cb) = codebase {
         if targets.is_empty() {
             let src = cb.join("src");
@@ -74,7 +74,6 @@ fn parse_args() -> Result<FixArgs> {
                 targets.push(cb.clone());
             }
         } else {
-            // Make targets relative to codebase
             targets = targets.iter().map(|t| {
                 if t.is_relative() { cb.join(t) } else { t.clone() }
             }).collect();
@@ -94,19 +93,14 @@ fn print_help() {
     eprintln!("  -d, --dir DIR        Fix all .rs files in directory");
     eprintln!("  -n, --dry-run        Show what would change without modifying files");
     eprintln!("  -h, --help           Show this help message");
-    eprintln!();
-    eprintln!("Examples:");
-    eprintln!("  veracity-fix-import-order -c ~/projects/APAS-VERUS");
-    eprintln!("  veracity-fix-import-order -c ~/projects/APAS-VERUS --dry-run");
-    eprintln!("  veracity-fix-import-order ~/projects/APAS-VERUS/src/Chap37/BSTPlainStEph.rs");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// verus! block detection (token-based, from ra_ap_syntax)
+// verus! block detection (ra_ap_syntax token-based)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Find the verus! macro block boundaries.
-/// Returns (open_brace_offset, close_brace_offset) — byte offsets into the content string.
+/// Returns (open_brace_offset, close_brace_offset) — byte offsets into content.
 fn find_verus_block(content: &str) -> Option<(usize, usize)> {
     let parse = ra_ap_syntax::SourceFile::parse(content, ra_ap_syntax::Edition::Edition2021);
     let tree = parse.tree();
@@ -118,7 +112,6 @@ fn find_verus_block(content: &str) -> Option<(usize, usize)> {
     for (i, token) in tokens.iter().enumerate() {
         if token.kind() == SyntaxKind::IDENT && token.text() == "verus" {
             if i + 1 < tokens.len() && tokens[i + 1].kind() == SyntaxKind::BANG {
-                // Find the opening brace after the !
                 if let Some((open, close)) = find_matching_brace(&tokens, i + 2) {
                     return Some((open, close));
                 }
@@ -128,8 +121,6 @@ fn find_verus_block(content: &str) -> Option<(usize, usize)> {
     None
 }
 
-/// Find matching braces in token stream starting from start_idx.
-/// Returns (open_offset, close_offset).
 fn find_matching_brace(tokens: &[SyntaxToken], start_idx: usize) -> Option<(usize, usize)> {
     let mut depth: i32 = 0;
     let mut open_offset = None;
@@ -155,249 +146,222 @@ fn find_matching_brace(tokens: &[SyntaxToken], start_idx: usize) -> Option<(usiz
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Import classification and reordering
+// AST-based import classification and reordering
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Classification of a line inside verus!
+/// Classification of an import item from the verus_syn AST.
 #[derive(Debug, Clone, PartialEq)]
-enum LineKind {
-    /// `use crate::...` (section 2 import)
+enum ImportKind {
+    /// `use std::...` or `use vstd::...` (section 2, early imports)
+    UseStdVstd,
+    /// `use crate::...` or `use super::...` (section 2, crate imports)
     UseCrate,
     /// `broadcast use ...` (section 3)
     BroadcastUse,
-    /// `use std::...` or `use vstd::...` (section 1-2, leave in place)
-    UseStdVstd,
-    /// `#[cfg(verus_keep_ghost)]` or similar attribute
-    CfgAttr,
-    /// Blank line
-    Blank,
-    /// Comment line
-    Comment,
-    /// Anything else
-    Other,
 }
 
-/// A logical import entry: an optional preceding #[cfg] attr + one or more lines.
+/// A top-level import item with its source location (line range in the verus! interior).
 #[derive(Debug, Clone)]
-struct ImportEntry {
-    /// Lines that precede this import (cfg attrs, comments attached to it)
-    prefix_lines: Vec<String>,
-    /// The import lines (single line for `use x;`, multiple for `broadcast use { ... };`)
-    lines: Vec<String>,
-    /// Classification
-    kind: LineKind,
-    /// Original line index of the first line (0-based within verus! interior)
-    orig_line_idx: usize,
+struct ImportItem {
+    kind: ImportKind,
+    /// Start line (0-based) within the verus! interior
+    start_line: usize,
+    /// End line (0-based, inclusive) within the verus! interior
+    end_line: usize,
 }
 
-/// Classify a trimmed line inside verus!
-fn classify_line(trimmed: &str) -> LineKind {
-    if trimmed.is_empty() {
-        return LineKind::Blank;
-    }
-    if trimmed.starts_with("//") {
-        return LineKind::Comment;
-    }
-    if trimmed.starts_with("#[cfg") || trimmed.starts_with("#![") {
-        return LineKind::CfgAttr;
-    }
-    if trimmed.starts_with("broadcast use ") {
-        return LineKind::BroadcastUse;
-    }
-    if trimmed.starts_with("use std::") || trimmed.starts_with("use vstd::") {
-        return LineKind::UseStdVstd;
-    }
-    if trimmed.starts_with("use crate::") || trimmed.starts_with("use super::") {
-        return LineKind::UseCrate;
-    }
-    // "broadcast use" can also appear as "broadcast use group_..." with crate prefix
-    if trimmed.starts_with("broadcast use") {
-        return LineKind::BroadcastUse;
-    }
-    LineKind::Other
-}
-
-/// Analyze the import/broadcast region inside verus! and compute a reordered version.
-/// Returns None if no reordering is needed.
-///
-/// Handles both single-line `broadcast use x;` and multi-line `broadcast use { ... };` blocks.
-/// Also finds stray `use` statements anywhere in the verus! block and moves them to the
-/// import region at the top.
-fn reorder_imports(verus_interior: &str) -> Option<String> {
-    let lines: Vec<&str> = verus_interior.lines().collect();
-
-    // Phase 1: Scan ALL lines to find use/broadcast entries and the initial import region.
-    // The "import region" is the contiguous block of use/broadcast lines at the top.
-    // Stray use lines later in the file are collected separately and will be moved up.
-
-    let mut entries: Vec<ImportEntry> = Vec::new();
-    let mut stray_entries: Vec<ImportEntry> = Vec::new();
-    let mut region_start: Option<usize> = None;
-    let mut region_end: usize = 0;
-    let mut past_initial_region = false;
-    let mut pending_prefix: Vec<String> = Vec::new();
-    // Lines to delete from their original position (for strays)
-    let mut lines_to_delete: Vec<std::ops::Range<usize>> = Vec::new();
-
-    let mut i = 0;
-    while i < lines.len() {
-        let trimmed = lines[i].trim();
-        let kind = classify_line(trimmed);
-
-        let is_import = matches!(kind, LineKind::UseCrate | LineKind::UseStdVstd | LineKind::BroadcastUse);
-
-        if !past_initial_region {
-            // Still scanning the initial import region at the top
-            match kind {
-                LineKind::BroadcastUse => {
-                    if region_start.is_none() { region_start = Some(i); }
-                    let entry = collect_broadcast_entry(&lines, &mut i, &mut pending_prefix);
-                    region_end = i + 1;
-                    entries.push(entry);
-                }
-                LineKind::UseCrate | LineKind::UseStdVstd => {
-                    if region_start.is_none() { region_start = Some(i); }
-                    region_end = i + 1;
-                    entries.push(ImportEntry {
-                        prefix_lines: std::mem::take(&mut pending_prefix),
-                        lines: vec![lines[i].to_string()],
-                        kind,
-                        orig_line_idx: i,
-                    });
-                }
-                LineKind::CfgAttr | LineKind::Comment => {
-                    if region_start.is_some() {
-                        pending_prefix.push(lines[i].to_string());
-                    }
-                }
-                LineKind::Blank => {
-                    if region_start.is_some() {
-                        if !pending_prefix.is_empty() {
-                            pending_prefix.push(lines[i].to_string());
-                        }
-                        // Check if there are more imports nearby
-                        let has_more = lines.get(i + 1..i + 4).map_or(false, |window| {
-                            window.iter().any(|l| {
-                                matches!(classify_line(l.trim()),
-                                    LineKind::UseCrate | LineKind::UseStdVstd | LineKind::BroadcastUse)
-                            })
-                        });
-                        if has_more {
-                            region_end = i + 1;
-                        }
-                    }
-                }
-                LineKind::Other => {
-                    if region_start.is_some() {
-                        past_initial_region = true;
-                        pending_prefix.clear();
-                    }
-                }
-            }
-        } else if is_import {
-            // Found a stray import outside the initial region
-            let start_line = i;
-            if kind == LineKind::BroadcastUse {
-                let entry = collect_broadcast_entry(&lines, &mut i, &mut Vec::new());
-                lines_to_delete.push(start_line..i + 1);
-                stray_entries.push(entry);
+/// Classify a `use` item's first path segment to determine if it's std/vstd or crate.
+fn classify_use_tree(tree: &verus_syn::UseTree) -> ImportKind {
+    match tree {
+        verus_syn::UseTree::Path(p) => {
+            let seg = p.ident.to_string();
+            if seg == "std" || seg == "vstd" || seg == "core" || seg == "alloc" {
+                ImportKind::UseStdVstd
             } else {
-                stray_entries.push(ImportEntry {
-                    prefix_lines: Vec::new(),
-                    lines: vec![lines[i].to_string()],
-                    kind,
-                    orig_line_idx: i,
-                });
-                lines_to_delete.push(i..i + 1);
+                ImportKind::UseCrate
             }
         }
-        i += 1;
+        verus_syn::UseTree::Group(g) => {
+            // `use { crate::..., vstd::... }` — classify by first entry
+            if let Some(first) = g.items.first() {
+                classify_use_tree(first)
+            } else {
+                ImportKind::UseCrate
+            }
+        }
+        verus_syn::UseTree::Name(_) | verus_syn::UseTree::Rename(_) | verus_syn::UseTree::Glob(_) => {
+            ImportKind::UseCrate
+        }
+    }
+}
+
+/// Get the line span of a verus_syn item using its token stream.
+/// Returns (start_line, end_line) as 0-based line numbers within the interior.
+fn item_line_span(item_tokens: proc_macro2::TokenStream) -> (usize, usize) {
+    let mut min_line = usize::MAX;
+    let mut max_line = 0usize;
+    for token in item_tokens {
+        let span = token.span();
+        let start = span.start().line.saturating_sub(1); // proc_macro2 lines are 1-based
+        let end = span.end().line.saturating_sub(1);
+        if start < min_line { min_line = start; }
+        if end > max_line { max_line = end; }
+    }
+    if min_line == usize::MAX { min_line = 0; }
+    (min_line, max_line)
+}
+
+/// Walk the verus_syn AST to find all top-level Use and BroadcastUse items.
+/// Also captures preceding `#[cfg(...)]` attribute lines.
+fn collect_import_items(file: &verus_syn::File) -> Vec<ImportItem> {
+    let mut items = Vec::new();
+
+    for item in &file.items {
+        match item {
+            verus_syn::Item::Use(u) => {
+                let kind = classify_use_tree(&u.tree);
+                let (mut start, end) = item_line_span(u.to_token_stream());
+                // Include preceding attributes (e.g. #[cfg(verus_keep_ghost)])
+                for attr in &u.attrs {
+                    let (attr_start, _) = item_line_span(attr.to_token_stream());
+                    if attr_start < start { start = attr_start; }
+                }
+                items.push(ImportItem { kind, start_line: start, end_line: end });
+            }
+            verus_syn::Item::BroadcastUse(bu) => {
+                let (mut start, end) = item_line_span(bu.to_token_stream());
+                for attr in &bu.attrs {
+                    let (attr_start, _) = item_line_span(attr.to_token_stream());
+                    if attr_start < start { start = attr_start; }
+                }
+                items.push(ImportItem { kind: ImportKind::BroadcastUse, start_line: start, end_line: end });
+            }
+            _ => {
+                // Not an import — stop collecting once we hit non-import items
+                // (imports are always at the top of the verus! block)
+                if !items.is_empty() {
+                    break;
+                }
+            }
+        }
     }
 
-    // If no initial import region found and no stray imports, nothing to do
-    if region_start.is_none() && stray_entries.is_empty() {
+    items
+}
+
+/// Check if imports need reordering and compute the new interior.
+/// Returns None if no reordering needed.
+fn reorder_imports(verus_interior: &str) -> Option<(String, usize, usize)> {
+    let file = verus_syn::parse_file(verus_interior).ok()?;
+    let import_items = collect_import_items(&file);
+
+    if import_items.is_empty() {
         return None;
     }
-    let region_start = region_start.unwrap_or(0);
 
-    // Merge stray entries into the main entries list
-    entries.extend(stray_entries);
+    // Check: is any Use after any BroadcastUse?
+    let first_broadcast = import_items.iter().position(|i| i.kind == ImportKind::BroadcastUse);
+    let last_use = import_items.iter().rposition(|i| i.kind == ImportKind::UseCrate || i.kind == ImportKind::UseStdVstd);
 
-    // Phase 2: Check if reordering is needed.
-    // We only fix files that have both use statements and broadcast use — the core ordering issue.
-    let has_any_use = entries.iter().any(|e| e.kind == LineKind::UseCrate || e.kind == LineKind::UseStdVstd);
-    let has_broadcast = entries.iter().any(|e| e.kind == LineKind::BroadcastUse);
-    if !has_any_use || !has_broadcast {
-        return None;
-    }
-
-    // Check if any use appears after any broadcast in the entry list
-    let first_broadcast_pos = entries.iter().position(|e| e.kind == LineKind::BroadcastUse);
-    let last_use_pos = entries.iter().rposition(|e| e.kind == LineKind::UseCrate || e.kind == LineKind::UseStdVstd);
-
-    let needs_reorder = match (first_broadcast_pos, last_use_pos) {
+    let needs_reorder = match (first_broadcast, last_use) {
         (Some(fb), Some(lu)) => lu > fb,
         _ => false,
     };
 
-    if !needs_reorder && lines_to_delete.is_empty() {
+    if !needs_reorder {
         return None;
     }
 
-    // Phase 3: Partition entries into groups and reconstruct.
-    let mut std_vstd: Vec<&ImportEntry> = Vec::new();
-    let mut crate_imports: Vec<&ImportEntry> = Vec::new();
-    let mut broadcast: Vec<&ImportEntry> = Vec::new();
+    let lines: Vec<&str> = verus_interior.lines().collect();
 
-    for entry in &entries {
-        match entry.kind {
-            LineKind::UseStdVstd => std_vstd.push(entry),
-            LineKind::UseCrate => crate_imports.push(entry),
-            LineKind::BroadcastUse => broadcast.push(entry),
-            _ => {}
+    // Determine the import region: from first import to last import
+    let region_start = import_items.iter().map(|i| i.start_line).min().unwrap();
+    let region_end = import_items.iter().map(|i| i.end_line).max().unwrap();
+
+    // Partition into groups
+    let mut std_vstd: Vec<&ImportItem> = Vec::new();
+    let mut crate_imports: Vec<&ImportItem> = Vec::new();
+    let mut broadcast: Vec<&ImportItem> = Vec::new();
+
+    for item in &import_items {
+        match item.kind {
+            ImportKind::UseStdVstd => std_vstd.push(item),
+            ImportKind::UseCrate => crate_imports.push(item),
+            ImportKind::BroadcastUse => broadcast.push(item),
         }
     }
 
-    // Reconstruct the import region: std/vstd, then crate, blank, then broadcast
+    // Count how many use items are being moved
+    let use_count = crate_imports.len() + std_vstd.len();
+    let broadcast_count = broadcast.len();
+
+    // Extract source lines for each item group, preserving internal order
+    let extract_lines = |items: &[&ImportItem]| -> Vec<String> {
+        let mut result = Vec::new();
+        for item in items {
+            let start = item.start_line.min(lines.len());
+            let end = (item.end_line + 1).min(lines.len());
+            for line in &lines[start..end] {
+                result.push(line.to_string());
+            }
+        }
+        result
+    };
+
+    let std_vstd_lines = extract_lines(&std_vstd);
+    let crate_lines = extract_lines(&crate_imports);
+    let broadcast_lines = extract_lines(&broadcast);
+
+    // Collect any non-import lines in the region (comments, section headers, blanks
+    // that are between import items but not part of any item)
+    let mut import_line_set = std::collections::HashSet::new();
+    for item in &import_items {
+        for l in item.start_line..=item.end_line {
+            import_line_set.insert(l);
+        }
+    }
+
+    // Interstitial lines: lines in the region that aren't part of any import item
+    // We'll collect them but not include standalone blanks (we regenerate separators)
+    let mut interstitial_comments: Vec<String> = Vec::new();
+    for l in region_start..=region_end {
+        if !import_line_set.contains(&l) && l < lines.len() {
+            let trimmed = lines[l].trim();
+            if trimmed.starts_with("//") && !trimmed.starts_with("//\t") {
+                // Keep non-section-header comments
+                interstitial_comments.push(lines[l].to_string());
+            }
+        }
+    }
+
+    // Reconstruct: std/vstd, blank, crate, blank, broadcast
     let mut new_region: Vec<String> = Vec::new();
 
-    for entry in &std_vstd {
-        new_region.extend(entry.prefix_lines.clone());
-        new_region.extend(entry.lines.clone());
+    if !interstitial_comments.is_empty() {
+        new_region.extend(interstitial_comments);
     }
+
+    new_region.extend(std_vstd_lines);
 
     if !std_vstd.is_empty() && !crate_imports.is_empty() {
         new_region.push(String::new());
     }
 
-    for entry in &crate_imports {
-        new_region.extend(entry.prefix_lines.clone());
-        new_region.extend(entry.lines.clone());
-    }
+    new_region.extend(crate_lines);
 
     if (!crate_imports.is_empty() || !std_vstd.is_empty()) && !broadcast.is_empty() {
         new_region.push(String::new());
     }
 
-    for entry in &broadcast {
-        new_region.extend(entry.prefix_lines.clone());
-        new_region.extend(entry.lines.clone());
-    }
+    new_region.extend(broadcast_lines);
 
-    // Rebuild full verus interior:
-    // 1. Lines before the region
-    // 2. New import region
-    // 3. Lines after the region, with stray lines deleted
+    // Rebuild the full interior
     let mut result: Vec<String> = Vec::new();
     for line in &lines[..region_start] {
         result.push(line.to_string());
     }
     result.extend(new_region);
-    for (line_idx, line) in lines[region_end..].iter().enumerate() {
-        let abs_idx = region_end + line_idx;
-        if lines_to_delete.iter().any(|r| r.contains(&abs_idx)) {
-            continue; // Skip stray lines that were moved to the top
-        }
+    for line in &lines[region_end + 1..] {
         result.push(line.to_string());
     }
 
@@ -406,113 +370,46 @@ fn reorder_imports(verus_interior: &str) -> Option<String> {
         return None;
     }
 
-    Some(new_interior)
-}
-
-/// Collect a broadcast use entry (handles single-line and multi-line { ... } blocks).
-/// Advances `i` past the end of the block.
-fn collect_broadcast_entry(
-    lines: &[&str],
-    i: &mut usize,
-    pending_prefix: &mut Vec<String>,
-) -> ImportEntry {
-    let trimmed = lines[*i].trim();
-    let start_i = *i;
-
-    if trimmed.contains('{') && !trimmed.contains('}') {
-        // Multi-line broadcast block
-        let mut block_lines = vec![lines[*i].to_string()];
-        *i += 1;
-        while *i < lines.len() {
-            block_lines.push(lines[*i].to_string());
-            if lines[*i].trim().starts_with('}') || lines[*i].trim().ends_with("};") {
-                break;
-            }
-            *i += 1;
-        }
-        ImportEntry {
-            prefix_lines: std::mem::take(pending_prefix),
-            lines: block_lines,
-            kind: LineKind::BroadcastUse,
-            orig_line_idx: start_i,
-        }
-    } else {
-        // Single-line broadcast use
-        ImportEntry {
-            prefix_lines: std::mem::take(pending_prefix),
-            lines: vec![lines[*i].to_string()],
-            kind: LineKind::BroadcastUse,
-            orig_line_idx: start_i,
-        }
-    }
+    Some((new_interior, use_count, broadcast_count))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // File processing
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Result of processing a single file
 struct FileResult {
     changed: bool,
-    crate_imports_moved: usize,
+    imports_moved: usize,
     broadcast_uses: usize,
 }
 
-/// Process a single file. Returns the result and optionally the new content.
 fn process_file(content: &str) -> (FileResult, Option<String>) {
-    let no_change = FileResult { changed: false, crate_imports_moved: 0, broadcast_uses: 0 };
+    let no_change = FileResult { changed: false, imports_moved: 0, broadcast_uses: 0 };
 
     let (open, close) = match find_verus_block(content) {
         Some(b) => b,
         None => return (no_change, None),
     };
 
-    // Extract verus! interior (between { and })
     let interior = &content[open + 1..close];
 
-    // Try to reorder
-    let new_interior = match reorder_imports(interior) {
-        Some(ni) => ni,
+    let (new_interior, use_count, broadcast_count) = match reorder_imports(interior) {
+        Some(r) => r,
         None => return (no_change, None),
     };
 
-    // Count what changed
-    let old_lines: Vec<&str> = interior.lines().collect();
-    let new_lines: Vec<&str> = new_interior.lines().collect();
-
-    // Count crate imports and broadcast uses in the reordered output
-    let crate_count = new_lines.iter()
-        .filter(|l| classify_line(l.trim()) == LineKind::UseCrate)
-        .count();
-    let broadcast_count = new_lines.iter()
-        .filter(|l| classify_line(l.trim()) == LineKind::BroadcastUse)
-        .count();
-
-    // Only count as "moved" if the order actually changed
-    let moved = if old_lines.join("\n") != new_lines.join("\n") {
-        crate_count
-    } else {
-        0
-    };
-
-    if moved == 0 {
-        return (no_change, None);
-    }
-
-    // Reconstruct the full file
     let new_content = format!("{}{}{}", &content[..open + 1], new_interior, &content[close..]);
 
     (
         FileResult {
             changed: true,
-            crate_imports_moved: moved,
+            imports_moved: use_count,
             broadcast_uses: broadcast_count,
         },
         Some(new_content),
     )
 }
 
-/// Find all .rs files under a directory
 fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
@@ -535,7 +432,6 @@ fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
 fn main() -> Result<()> {
     let args = parse_args()?;
 
-    // Collect files to process
     let mut files: Vec<PathBuf> = Vec::new();
     for target in &args.targets {
         if target.is_file() {
@@ -573,9 +469,8 @@ fn main() -> Result<()> {
 
         if result.changed {
             total_files_changed += 1;
-            total_imports_moved += result.crate_imports_moved;
+            total_imports_moved += result.imports_moved;
 
-            // Display path relative to codebase if available
             let display_path = if let Some(ref cb) = args.codebase {
                 file.strip_prefix(cb).unwrap_or(file).display().to_string()
             } else {
@@ -584,12 +479,12 @@ fn main() -> Result<()> {
 
             if args.dry_run {
                 println!("{}: would move {} imports before {} broadcast uses",
-                    display_path, result.crate_imports_moved, result.broadcast_uses);
+                    display_path, result.imports_moved, result.broadcast_uses);
             } else {
                 if let Some(new_content) = new_content {
                     std::fs::write(file, &new_content)?;
                     println!("{}: moved {} imports before {} broadcast uses",
-                        display_path, result.crate_imports_moved, result.broadcast_uses);
+                        display_path, result.imports_moved, result.broadcast_uses);
                 }
             }
         }
