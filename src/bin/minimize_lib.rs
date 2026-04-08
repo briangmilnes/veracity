@@ -26,7 +26,7 @@ use walkdir::WalkDir;
 use std::cell::RefCell;
 
 thread_local! {
-    static LOG_FILE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    static LOG_FILE: RefCell<Option<std::fs::File>> = const { RefCell::new(None) };
     static ISOLATE_CHAPTER: RefCell<Option<String>> = const { RefCell::new(None) };
     static APAS_PROJECT: RefCell<bool> = const { RefCell::new(false) };
 }
@@ -56,12 +56,20 @@ fn init_logging(codebase: &Path) -> (PathBuf, bool) {
     let _ = std::fs::create_dir_all(&analyses_dir);
     let now = Local::now();
     let log_name = format!("veracity-minimize-lib.{}.log", now.format("%Y%m%d-%H%M%S"));
-    let log_path = analyses_dir.join(log_name);
-    // Start with an empty log file
-    let _ = std::fs::write(&log_path, "");
-    LOG_FILE_PATH.with(|p| {
-        *p.borrow_mut() = Some(log_path.clone());
-    });
+    // Resolve to absolute path so log writes survive any cwd change and stay
+    // valid even if the fixture directory is deleted and re-created while the
+    // process is running. A persistent file handle keeps the inode alive after
+    // the directory entry is removed (Linux), so no writes are lost.
+    let log_path = std::fs::canonicalize(&analyses_dir)
+        .unwrap_or_else(|_| analyses_dir.clone())
+        .join(&log_name);
+    if let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        LOG_FILE.with(|f| { *f.borrow_mut() = Some(file); });
+    }
     (log_path, created_dir)
 }
 
@@ -73,20 +81,14 @@ fn log_impl(msg: &str, newline: bool) {
         print!("{}", msg);
     }
     let _ = std::io::stdout().flush();
-    LOG_FILE_PATH.with(|p| {
-        if let Some(ref log_path) = *p.borrow() {
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(log_path)
-            {
-                if newline {
-                    let _ = writeln!(file, "{}", msg);
-                } else {
-                    let _ = write!(file, "{}", msg);
-                }
-                let _ = file.flush();
+    LOG_FILE.with(|f| {
+        if let Some(ref mut file) = *f.borrow_mut() {
+            if newline {
+                let _ = writeln!(file, "{}", msg);
+            } else {
+                let _ = write!(file, "{}", msg);
             }
+            let _ = file.flush();
         }
     });
 }
@@ -600,7 +602,8 @@ fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
         let path = entry.path();
         if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
             let path_str = path.to_string_lossy();
-            if !path_str.contains("/attic/") && !path_str.contains("/target/") {
+            if !path_str.contains("/attic/") && !path_str.contains("/target/")
+                && !path_str.contains("/experiments/") {
                 files.push(path.to_path_buf());
             }
         }
@@ -620,8 +623,9 @@ fn find_rust_files_excluding(dir: &Path, exclude_path: &Path, exclude_dirs: &[St
         if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
             let path_str = path.to_string_lossy();
             
-            // Skip attic and target
-            if path_str.contains("/attic/") || path_str.contains("/target/") {
+            // Skip attic, target, and experiments
+            if path_str.contains("/attic/") || path_str.contains("/target/")
+                || path_str.contains("/experiments/") {
                 continue;
             }
             
@@ -1316,10 +1320,16 @@ fn count_loc(codebase: &Path) -> Result<LocCounts> {
     let current_exe = std::env::current_exe()?;
     let bin_dir = current_exe.parent().ok_or_else(|| anyhow::anyhow!("Cannot find binary directory"))?;
     let count_loc_bin = bin_dir.join("veracity-count-loc");
-    
+
     let mut cmd = Command::new(&count_loc_bin);
     cmd.current_dir(codebase);
-    cmd.args(["-c", "-l", "Verus"]); // Analyze codebase with Verus language mode
+    // In chapter mode, scope LOC count to just that chapter's src dir.
+    // Always exclude experiments (cfg-gated, not part of chapter work).
+    if let Some(chapter) = get_isolate_chapter() {
+        cmd.args(["-d", &format!("src/{}", chapter), "-l", "Verus", "-e", "experiments"]);
+    } else {
+        cmd.args(["-c", "-l", "Verus", "-e", "experiments"]);
+    }
     
     let output = cmd.output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
