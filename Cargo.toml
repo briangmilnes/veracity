@@ -79,6 +79,10 @@ name = "veracity-minimize-lib"
 path = "src/bin/minimize_lib.rs"
 
 [[bin]]
+name = "veracity-minimize-proofs"
+path = "src/bin/minimize_proofs.rs"
+
+[[bin]]
 name = "veracity-search"
 path = "src/bin/search.rs"
 
