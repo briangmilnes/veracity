@@ -1,0 +1,93 @@
+
+Style Review Summary
+=====================
+
+Warnings by rule:
+|   # | Rule       | Count | Description                                           |
+| --- | ---------- | ----- | ----------------------------------------------------- |
+|   1 | [18]       |   477 | Definition order inside verus!                        |
+|   2 | [14]       |   338 | Debug/Display impl outside verus!                     |
+|   3 | [22:spec]  |   253 | Free spec fn should be trait signature with impl body |
+|   4 | [24]       |   227 | Copyright line at top of file                         |
+|   5 | [19]       |   206 | Meaningful return value names                         |
+|   6 | [22:exec]  |   157 | Free exec fn should be trait method                   |
+|   7 | [17]       |    89 | Iterator/IntoIterator inside verus!                   |
+|   8 | [22:proof] |    80 | Free proof fn should be trait method                  |
+|   9 | [13]       |    64 | Trait impl inside verus!                              |
+|  10 | [12]       |    60 | Trait fns have specs                                  |
+|  11 | [23b]      |    51 | Free fn stricter/incompatible bounds vs trait         |
+|  12 | [11]       |    46 | Set/Seq broadcast groups                              |
+|  13 | [15]       |    44 | PartialEq/Eq/Clone/Hash/Ord inside verus!             |
+|  14 | [20]       |    42 | Every trait has at least one impl                     |
+|  15 | [3]        |    14 | File has verus! macro                                 |
+|  16 | [4]        |     4 | std imports grouped                                   |
+|  17 | [5]        |     3 | vstd imports grouped                                  |
+|  18 | [2]        |     2 | vstd::prelude::* before verus!                        |
+
+Total: 2157 warnings, 484 files checked.
+Note: 1947 free functions correctly placed per Standard 19 ([22a] info, not shown).
+
+Warnings by chapter:
+|   # | Chapter | Warnings | Top rules                                |
+| --- | ------- | -------- | ---------------------------------------- |
+|   1 | other   |     1326 | [18] 366, [14] 338, [24] 223             |
+|   2 | Chap06  |      101 | [22:spec] 83, [18] 10, [11] 8            |
+|   3 | Chap37  |       83 | [22:spec] 42, [22:proof] 25, [18] 13     |
+|   4 | Chap50  |       70 | [17] 20, [13] 20, [18] 16                |
+|   5 | Chap49  |       57 | [13] 14, [15] 12, [17] 10                |
+|   6 | Chap65  |       55 | [22:proof] 21, [22:spec] 18, [22:exec] 6 |
+|   7 | Chap18  |       52 | [18] 21, [22:spec] 10, [22:exec] 9       |
+|   8 | Chap39  |       49 | [22:exec] 29, [23b] 13, [11] 3           |
+|   9 | Chap43  |       41 | [17] 10, [15] 6, [22:spec] 5             |
+|  10 | Chap26  |       30 | [22:exec] 18, [22:spec] 5, [22:proof] 4  |
+|  11 | Chap40  |       28 | [18] 14, [23b] 9, [12] 3                 |
+|  12 | Chap47  |       28 | [22:spec] 7, [11] 6, [22:exec] 5         |
+|  13 | Chap38  |       22 | [22:exec] 18, [13] 2, [11] 1             |
+|  14 | Chap35  |       16 | [23b] 10, [22:exec] 6                    |
+|  15 | Chap41  |       15 | [13] 4, [17] 3, [12] 3                   |
+|  16 | Chap05  |       14 | [22:spec] 9, [18] 5                      |
+|  17 | Chap19  |       13 | [22:spec] 6, [22:exec] 6, [22:proof] 1   |
+|  18 | Chap30  |       12 | [18] 8, [12] 4                           |
+|  19 | Chap51  |       12 | [18] 12                                  |
+|  20 | Chap52  |       12 | [18] 4, [22:spec] 4, [15] 2              |
+|  21 | Chap62  |       11 | [22:spec] 4, [20] 4, [11] 3              |
+|  22 | Chap45  |       10 | [12] 8, [22:proof] 2                     |
+|  23 | Chap66  |       10 | [15] 6, [22:spec] 2, [20] 1              |
+|  24 | Chap23  |        9 | [22:spec] 4, [22:proof] 2, [23b] 1       |
+|  25 | Chap56  |        9 | [12] 9                                   |
+|  26 | Chap57  |        9 | [18] 4, [17] 3, [20] 2                   |
+|  27 | Chap21  |        8 | [24] 4, [11] 2, [19] 2                   |
+|  28 | Chap61  |        8 | [20] 4, [22:spec] 4                      |
+|  29 | Chap64  |        7 | [22:spec] 3, [20] 3, [12] 1              |
+|  30 | Chap28  |        6 | [22:exec] 6                              |
+|  31 | Chap55  |        6 | [11] 6                                   |
+|  32 | Chap44  |        5 | [17] 3, [13] 1, [22:spec] 1              |
+|  33 | Chap59  |        4 | [20] 4                                   |
+|  34 | Chap63  |        4 | [20] 2, [22:spec] 2                      |
+|  35 | Chap12  |        3 | [12] 2, [22:spec] 1                      |
+|  36 | Chap36  |        3 | [22:spec] 1, [23b] 1, [22:exec] 1        |
+|  37 | Chap17  |        2 | [22:spec] 1, [13] 1                      |
+|  38 | Chap42  |        2 | [20] 1, [23b] 1                          |
+|  39 | Chap53  |        2 | [22:spec] 2                              |
+|  40 | Chap58  |        2 | [20] 2                                   |
+|  41 | Chap27  |        1 | [22:exec] 1                              |
+
+[23b] bound mismatch patterns:
+|   # | Gap (fn has, trait lacks)                                     | Count | Example files |
+| --- | ------------------------------------------------------------- | ----- | ------------- |
+|   1 | Copy                                                          |    10 | Chap35/OrderStatSelectMtEph, Chap35/OrderStatSelectMtPer, ... (4 files) |
+|   2 | TotalOrder                                                    |     9 | Chap40/BSTKeyValueStEph |
+|   3 | (empty)                                                       |     8 | Chap36/QuickSortMtEphSlice, Chap38/BSTParaStEph, ... (5 files) |
+|   4 | IsLtTransitive                                                |     6 | Chap39/BSTTreapMtEph |
+|   5 | Copy+Into < i32 >                                             |     4 | Chap49/SubsetSumMtEph, Chap49/SubsetSumMtPer, ... (4 files) |
+|   6 | Clone+Eq+View                                                 |     3 | Chap47/StructChainedHashTable |
+|   7 | Clone+Eq                                                      |     2 | Chap18/ArraySeq, Chap47/StructChainedHashTable |
+|   8 | Clone+Fn (& V , & V) -> V                                     |     2 | Chap43/AugOrderedTableStEph, Chap43/AugOrderedTableStPer |
+|   9 | ClonePreservesView                                            |     2 | Chap39/BSTSetTreapMtEph |
+|  10 | 'static+Clone+Debug+Display+Eq+PartialEq+Send+Sized+Sync+View |     1 | Chap18/ArraySeqMtEph |
+|  11 | Clone                                                         |     1 | Chap23/BalBinTreeStEph |
+|  12 | DeepView                                                      |     1 | Chap18/ArraySeq |
+|  13 | DeepView < V = T >                                            |     1 | Chap18/ArraySeq |
+|  14 | PartialEq                                                     |     1 | Chap18/ArraySeq |
+
+Summary log: tests/fixtures/APAS-VERUS/analyses/veracity-review-verus-style-summary.log
