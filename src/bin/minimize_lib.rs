@@ -71,8 +71,8 @@ fn log_impl(msg: &str, newline: bool) {
         println!("{}", msg);
     } else {
         print!("{}", msg);
-        let _ = std::io::stdout().flush();
     }
+    let _ = std::io::stdout().flush();
     LOG_FILE_PATH.with(|p| {
         if let Some(ref log_path) = *p.borrow() {
             if let Ok(mut file) = std::fs::OpenOptions::new()
@@ -85,6 +85,7 @@ fn log_impl(msg: &str, newline: bool) {
                 } else {
                     let _ = write!(file, "{}", msg);
                 }
+                let _ = file.flush();
             }
         }
     });
