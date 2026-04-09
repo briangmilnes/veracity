@@ -59,7 +59,7 @@ fn init_logging(codebase: &Path, chapter: Option<&str>) -> (PathBuf, bool) {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
     let log_name = match chapter {
-        Some(ch) => format!("veracity-minimize-proofs.{}.chap{}.{}.log", agent_name, ch, now.format("%Y%m%d-%H%M%S")),
+        Some(ch) => format!("veracity-minimize-proofs.{}.{}.{}.log", agent_name, ch, now.format("%Y%m%d-%H%M%S")),
         None => format!("veracity-minimize-proofs.{}.{}.log", agent_name, now.format("%Y%m%d-%H%M%S")),
     };
     // Resolve to absolute path so log writes survive any cwd change and stay
@@ -133,6 +133,176 @@ struct MinimizeArgs {
     no_lib_min: bool,
     fn_filter: Option<String>,
     fresh: bool,  // --fresh: strip all markers and start from scratch
+    timeout_factor: f64,       // --timeout-factor: kill verification if wall-clock > baseline * factor (0 = disabled)
+    max_incremental: f64,      // --max-incremental: reject if CPU increased > fraction of baseline (0 = disabled)
+    max_memory_increase: f64,  // --max-memory-increase: reject if Z3 RSS increased > fraction of baseline (0 = disabled)
+}
+
+/// Metrics from a single verification run, parsed from validate.sh output.
+/// All times are CPU seconds (immune to lock contention), not wall-clock.
+#[derive(Debug, Clone, Copy)]
+struct VerifyMetrics {
+    wall_secs: f64,              // Elapsed: Ns
+    rust_verify_cpu_secs: f64,   // rust_verify: Ns (from Sampled CPU Usage)
+    z3_cpu_secs: f64,            // z3 children: Ns (from Sampled CPU Usage)
+    rust_verify_rss_mb: u64,     // peak rust_verify RSS: NMB
+    z3_rss_mb: u64,              // peak z3 RSS: NMB
+}
+
+impl VerifyMetrics {
+    /// Total verification CPU time (rust_verify + Z3), excluding lock wait.
+    fn verification_cpu_secs(&self) -> f64 {
+        self.rust_verify_cpu_secs + self.z3_cpu_secs
+    }
+
+    /// Format verification CPU time for display.
+    fn format_cpu(&self) -> String {
+        format_duration_secs(self.verification_cpu_secs())
+    }
+
+    /// Format Z3 RSS for display.
+    fn format_z3_rss(&self) -> String {
+        format!("{} MB", self.z3_rss_mb)
+    }
+}
+
+/// Parse VerifyMetrics from validate.sh output.
+///
+/// Looks for three lines:
+///   Elapsed: 25s
+///   Sampled Memory Usage: peak rust_verify RSS: 1842MB, peak z3 RSS: 901MB, min free: 12340MB
+///   Sampled CPU Usage: rust_verify: 18s, z3 children: 6s
+///
+/// Falls back to /usr/bin/time -v output if validate.sh lines not found
+/// (for non-APAS projects that run their own memory monitor).
+fn parse_validate_metrics(output: &str) -> VerifyMetrics {
+    let mut wall_secs = 0.0;
+    let mut rv_cpu = 0.0;
+    let mut z3_cpu = 0.0;
+    let mut rv_rss_mb = 0u64;
+    let mut z3_rss_mb = 0u64;
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+
+        // Elapsed: 25s
+        if trimmed.starts_with("Elapsed: ") {
+            if let Some(s) = trimmed.strip_prefix("Elapsed: ").and_then(|s| s.strip_suffix('s')) {
+                wall_secs = s.parse().unwrap_or(0.0);
+            }
+        }
+
+        // Sampled Memory Usage: peak rust_verify RSS: 1842MB, peak z3 RSS: 901MB, min free: 12340MB
+        if trimmed.starts_with("Sampled Memory Usage:") {
+            if let Some(pos) = trimmed.find("peak rust_verify RSS: ") {
+                let after = &trimmed[pos + "peak rust_verify RSS: ".len()..];
+                if let Some(mb_end) = after.find("MB") {
+                    rv_rss_mb = after[..mb_end].trim().parse().unwrap_or(0);
+                }
+            }
+            if let Some(pos) = trimmed.find("peak z3 RSS: ") {
+                let after = &trimmed[pos + "peak z3 RSS: ".len()..];
+                if let Some(mb_end) = after.find("MB") {
+                    z3_rss_mb = after[..mb_end].trim().parse().unwrap_or(0);
+                }
+            }
+        }
+
+        // Sampled CPU Usage: rust_verify: 18s, z3 children: 6s
+        if trimmed.starts_with("Sampled CPU Usage:") {
+            if let Some(pos) = trimmed.find("rust_verify: ") {
+                let after = &trimmed[pos + "rust_verify: ".len()..];
+                if let Some(s_end) = after.find('s') {
+                    rv_cpu = after[..s_end].trim().parse().unwrap_or(0.0);
+                }
+            }
+            if let Some(pos) = trimmed.find("z3 children: ") {
+                let after = &trimmed[pos + "z3 children: ".len()..];
+                if let Some(s_end) = after.find('s') {
+                    z3_cpu = after[..s_end].trim().parse().unwrap_or(0.0);
+                }
+            }
+        }
+
+        // Fallback: /usr/bin/time -v output for non-validate.sh runs
+        // "Maximum resident set size (kbytes): 1234567"
+        if wall_secs == 0.0 && trimmed.contains("Maximum resident set size") {
+            if let Some(kb_str) = trimmed.split(':').last() {
+                if let Ok(kb) = kb_str.trim().parse::<u64>() {
+                    // Put in z3_rss_mb as best approximation (total process RSS)
+                    z3_rss_mb = kb / 1024;
+                }
+            }
+        }
+    }
+
+    VerifyMetrics { wall_secs, rust_verify_cpu_secs: rv_cpu, z3_cpu_secs: z3_cpu, rust_verify_rss_mb: rv_rss_mb, z3_rss_mb }
+}
+
+/// Format a duration in seconds for display. Shows seconds, with minutes if >= 60.
+fn format_duration_secs(secs: f64) -> String {
+    let s = secs as u64;
+    if s >= 60 {
+        format!("{}s ({}m {}s)", s, s / 60, s % 60)
+    } else {
+        format!("{}s", s)
+    }
+}
+
+/// Format metrics for NEEDED (restored) — no baseline comparison, just raw numbers.
+fn format_metrics_needed(metrics: &VerifyMetrics) -> String {
+    format!("[cpu: {}s, mem: {}MB, wall: {}s]",
+        metrics.verification_cpu_secs() as u64,
+        metrics.z3_rss_mb,
+        metrics.wall_secs as u64)
+}
+
+/// Format metrics for UNNEEDED or speed hint — show value/delta.
+fn format_metrics_delta(metrics: &VerifyMetrics, baseline: &VerifyMetrics) -> String {
+    let cpu = metrics.verification_cpu_secs() as i64;
+    let cpu_delta = cpu - baseline.verification_cpu_secs() as i64;
+    let rss = metrics.z3_rss_mb as i64;
+    let rss_delta = rss - baseline.z3_rss_mb as i64;
+
+    format!("[cpu: {}s/{:+}s, mem: {}MB/{:+}MB, wall: {}s]",
+        cpu, cpu_delta,
+        rss, rss_delta,
+        metrics.wall_secs as u64)
+}
+
+/// Check if removing an assert/proof block caused a speed regression.
+/// Returns Some("reason") if it's a speed hint (should be kept), None if OK to remove.
+/// Memory threshold is proportional: max_memory_increase is a fraction (like max_incremental),
+/// e.g., 0.10 = 10% of baseline RSS.
+fn check_speed_hint(
+    metrics: &VerifyMetrics,
+    baseline: &VerifyMetrics,
+    max_incremental: f64,
+    max_memory_increase: f64,
+) -> Option<String> {
+    // CPU check: did verification CPU increase by more than max_incremental fraction?
+    if max_incremental > 0.0 {
+        let cpu = metrics.verification_cpu_secs();
+        let base_cpu = baseline.verification_cpu_secs();
+        if base_cpu > 0.0 {
+            let ratio = (cpu - base_cpu) / base_cpu;
+            if ratio > max_incremental {
+                return Some(format!("cpu hint: +{:.0}%", ratio * 100.0));
+            }
+        }
+    }
+    // Memory check: did Z3 RSS increase by more than max_memory_increase fraction?
+    if max_memory_increase > 0.0 {
+        let rss = metrics.z3_rss_mb as f64;
+        let base_rss = baseline.z3_rss_mb as f64;
+        if base_rss > 0.0 {
+            let ratio = (rss - base_rss) / base_rss;
+            if ratio > max_memory_increase {
+                return Some(format!("mem hint: +{:.0}%", ratio * 100.0));
+            }
+        }
+    }
+    None
 }
 
 /// A discovered broadcast group from vstd
@@ -290,6 +460,9 @@ impl MinimizeArgs {
         let mut no_lib_min = false;
         let mut fn_filter: Option<String> = None;
         let mut fresh = false;
+        let mut timeout_factor: f64 = 1.5;
+        let mut max_incremental: f64 = 0.05;
+        let mut max_memory_increase: f64 = 0.10;
 
         let mut i = 1;
         while i < args.len() {
@@ -474,8 +647,34 @@ impl MinimizeArgs {
                     i += 1;
                 }
                 "--resume" => {
-                    // Resume is the default, but accept the flag explicitly
                     fresh = false;
+                    i += 1;
+                }
+                "--timeout-factor" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--timeout-factor requires a number"));
+                    }
+                    timeout_factor = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid timeout factor: {}", args[i]))?;
+                    i += 1;
+                }
+                "--max-incremental" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--max-incremental requires a number"));
+                    }
+                    max_incremental = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid max incremental: {}", args[i]))?;
+                    i += 1;
+                }
+                "--max-memory-increase" => {
+                    i += 1;
+                    if i >= args.len() {
+                        return Err(anyhow::anyhow!("--max-memory-increase requires a number (MB)"));
+                    }
+                    max_memory_increase = args[i].parse()
+                        .map_err(|_| anyhow::anyhow!("Invalid max memory increase: {}", args[i]))?;
                     i += 1;
                 }
                 "--fn" => {
@@ -537,6 +736,9 @@ impl MinimizeArgs {
             no_lib_min,
             fn_filter,
             fresh,
+            timeout_factor,
+            max_incremental,
+            max_memory_increase,
         })
     }
     
@@ -574,6 +776,9 @@ impl MinimizeArgs {
         log!("  --resume                    Resume from existing markers (default)");
         log!("  --fresh                     Strip all markers and start from scratch");
         log!("  --danger                    Run even with uncommitted changes (DANGEROUS!)");
+        log!("  --timeout-factor F          Kill verification if wall-clock > baseline * F (default: 1.5, 0 = off)");
+        log!("  --max-incremental F         Reject removal if CPU increased > F fraction of baseline (default: 0.05, 0 = off)");
+        log!("  --max-memory-increase F     Reject removal if Z3 RSS increased > F fraction of baseline (default: 0.10, 0 = off)");
         log!("  -h, --help                  Show this help message");
         log!();
         log!("Examples:");
@@ -1253,41 +1458,28 @@ fn find_call_sites(lemma_name: &str, codebase: &Path, library: &Path) -> Result<
 }
 
 /// Parse peak RSS in KB from `/usr/bin/time -v` output
-fn parse_peak_rss_kb(output: &str) -> Option<u64> {
-    for line in output.lines() {
-        if line.contains("Maximum resident set size") {
-            return line.split(':').last()?.trim().parse().ok();
-        }
-    }
-    None
-}
-
-/// Format memory in MB from KB value
-fn format_memory_mb(kb: u64) -> String {
-    format!("{} MB", kb / 1024)
-}
-
-/// Run verus verification and return (success, output, peak_rss_kb)
-fn run_verus(codebase: &Path) -> Result<(bool, String, Option<u64>)> {
+/// Run verus verification and return (success, output, metrics).
+/// For APAS projects, metrics are parsed from validate.sh output.
+/// For other projects, wall-clock is measured with Instant::now() and
+/// /usr/bin/time -v provides RSS (no lock contention in non-APAS mode).
+fn run_verus(codebase: &Path) -> Result<(bool, String, VerifyMetrics)> {
     // APAS project mode: always use scripts/validate.sh (isolate or full)
     if is_apas_project() {
         let mut cmd = Command::new("bash");
         cmd.current_dir(codebase);
         let script = if let Some(chapter) = get_isolate_chapter() {
-            format!("/usr/bin/time -v ./scripts/validate.sh isolate {}", chapter)
+            format!("./scripts/validate.sh isolate {}", chapter)
         } else {
-            "/usr/bin/time -v ./scripts/validate.sh".to_string()
+            "./scripts/validate.sh".to_string()
         };
         cmd.arg("-c").arg(&script);
-        // /usr/bin/time -v writes to stderr, so merge stderr for both
-        // verus output and time output
         let output = cmd.output()?;
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let combined = format!("{}\n{}", stdout, stderr);
         let success = combined.contains("0 errors");
-        let peak_rss = parse_peak_rss_kb(&combined);
-        return Ok((success, combined, peak_rss));
+        let metrics = parse_validate_metrics(&combined);
+        return Ok((success, combined, metrics));
     }
 
     // Check if this is a cargo-verus project (has Cargo.toml with verus metadata)
@@ -1295,17 +1487,18 @@ fn run_verus(codebase: &Path) -> Result<(bool, String, Option<u64>)> {
     if cargo_toml.exists() {
         let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
         if content.contains("[package.metadata.verus]") || content.contains("vstd") {
-            // Use cargo verus build for cargo-verus projects
             let mut cmd = Command::new("bash");
             cmd.current_dir(codebase);
             cmd.arg("-c").arg("/usr/bin/time -v cargo verus build");
-
+            let start = Instant::now();
             let output = cmd.output()?;
+            let wall_secs = start.elapsed().as_secs_f64();
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
             let stdout = String::from_utf8_lossy(&output.stdout).to_string();
             let combined = format!("{}\n{}", stdout, stderr);
-            let peak_rss = parse_peak_rss_kb(&combined);
-            return Ok((output.status.success(), combined, peak_rss));
+            let mut metrics = parse_validate_metrics(&combined);
+            metrics.wall_secs = wall_secs;
+            return Ok((output.status.success(), combined, metrics));
         }
     }
 
@@ -1313,19 +1506,19 @@ fn run_verus(codebase: &Path) -> Result<(bool, String, Option<u64>)> {
     let mut cmd = Command::new("bash");
     cmd.current_dir(codebase);
     cmd.arg("-c").arg("/usr/bin/time -v verus --crate-type=lib src/lib.rs --multiple-errors 20 --expand-errors");
-
+    let start = Instant::now();
     let output = cmd.output()?;
+    let wall_secs = start.elapsed().as_secs_f64();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let combined = format!("{}\n{}", stdout, stderr);
-    let peak_rss = parse_peak_rss_kb(&combined);
-    Ok((output.status.success(), combined, peak_rss))
+    let mut metrics = parse_validate_metrics(&combined);
+    metrics.wall_secs = wall_secs;
+    Ok((output.status.success(), combined, metrics))
 }
 
-fn run_verus_timed(codebase: &Path) -> Result<(bool, String, Duration, Option<u64>)> {
-    let start = Instant::now();
-    let (success, output, peak_rss) = run_verus(codebase)?;
-    Ok((success, output, start.elapsed(), peak_rss))
+fn run_verus_timed(codebase: &Path) -> Result<(bool, String, VerifyMetrics)> {
+    run_verus(codebase)
 }
 
 fn format_duration(d: Duration) -> String {
@@ -1376,19 +1569,18 @@ fn count_loc(codebase: &Path) -> Result<LocCounts> {
     
     let mut counts = LocCounts::default();
     
-    // Parse the output - find the "total" line
-    // Format: "   1,940/  16,870/   8,560 total"
+    // Parse the output - find the "Total" line
+    // Format: "  31,077/  38,216/  65,793/  11,803 Total"
+    // Fields: spec / proof / exec / comments Total
     for line in stdout.lines() {
         let trimmed = line.trim();
-        if trimmed.ends_with(" total") && !trimmed.contains("total lines") {
-            // Parse: "   1,940/  16,870/   8,560 total"
-            // split_whitespace gives: ["1,940/", "16,870/", "8,560", "total"]
+        if trimmed.ends_with(" Total") {
             let parts: Vec<&str> = trimmed.split_whitespace().collect();
-            if parts.len() >= 4 {
-                // parts[0] = "1,940/", parts[1] = "16,870/", parts[2] = "8,560"
+            // parts: ["31,077/", "38,216/", "65,793/", "11,803", "Total"]
+            if parts.len() >= 5 {
                 counts.spec = parts[0].trim_end_matches('/').replace(',', "").parse().unwrap_or(0);
                 counts.proof = parts[1].trim_end_matches('/').replace(',', "").parse().unwrap_or(0);
-                counts.exec = parts[2].replace(',', "").parse().unwrap_or(0);
+                counts.exec = parts[2].trim_end_matches('/').replace(',', "").parse().unwrap_or(0);
                 counts.total = counts.spec + counts.proof + counts.exec;
             }
             break;
@@ -2249,17 +2441,15 @@ fn restore_file(file: &Path, original: &str) -> Result<()> {
 }
 
 /// Run verus and check for Z3 errors
-/// Returns (success, has_z3_errors, output, duration, peak_rss_kb)
-fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, Duration, Option<u64>)> {
-    let start = Instant::now();
-    let (success, combined, peak_rss) = run_verus(codebase)?;
-    let duration = start.elapsed();
+/// Returns (success, has_z3_errors, output, metrics)
+fn run_verus_check_z3(codebase: &Path) -> Result<(bool, bool, String, VerifyMetrics)> {
+    let (success, combined, metrics) = run_verus(codebase)?;
 
     // Check for Z3 errors in output
     let has_z3_errors = combined.contains("Z3") &&
                         (combined.contains("error") || combined.contains("timeout") || combined.contains("unknown"));
 
-    Ok((success, has_z3_errors, combined, duration, peak_rss))
+    Ok((success, has_z3_errors, combined, metrics))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2584,19 +2774,25 @@ fn has_necessity_marker(file: &Path, start_line: usize) -> bool {
 
 /// Check if an assert/admit/proof block already has a NEEDED or UNNEEDED marker
 fn has_item_marker(file: &Path, start_line: usize, kind: &str) -> bool {
-    let markers = get_markers_above(file, start_line);
-    let needed = format!("NEEDED {}", kind);
-    if markers.iter().any(|m| m == &needed) { return true; }
-    // Check if the line itself has an UNNEEDED prefix
     let content = match std::fs::read_to_string(file) {
         Ok(c) => c,
         Err(_) => return false,
     };
     let lines: Vec<&str> = content.lines().collect();
-    if start_line > 0 && start_line <= lines.len() {
-        let trimmed = lines[start_line - 1].trim();
-        let unneeded = format!("// Veracity: UNNEEDED {} ", kind);
-        return trimmed.starts_with(&unneeded);
+    let needed = format!("NEEDED {}", kind);
+    let unneeded = format!("// Veracity: UNNEEDED {} ", kind);
+    let needed_prefix = format!("// Veracity: {}", needed);
+
+    // Scan start_line and the 3 lines above it for a NEEDED or UNNEEDED marker.
+    // The marker may land on start_line itself (if the finder included it),
+    // one line above (normal case), or a few lines above (if other markers
+    // were inserted between).
+    let first = if start_line > 3 { start_line - 3 } else { 1 };
+    for line_num in first..=start_line {
+        if line_num == 0 || line_num > lines.len() { continue; }
+        let trimmed = lines[line_num - 1].trim();
+        if trimmed.starts_with(&needed_prefix) { return true; }
+        if trimmed.starts_with(&unneeded) { return true; }
     }
     false
 }
@@ -2707,27 +2903,23 @@ fn restore_file_content(file: &Path, original_content: &str) -> Result<()> {
 }
 
 /// Test if a lemma's proof is dependent on vstd broadcast groups
-/// Returns (is_dependent, duration) where is_dependent=true means vstd can prove it
+/// Returns (is_dependent, metrics) where is_dependent=true means vstd can prove it
 #[allow(dead_code)]
 fn test_dependence(
     lemma: &ProofFn,
     codebase: &Path,
-) -> Result<(bool, Duration, Option<u64>)> {
-    let start = Instant::now();
-
+) -> Result<(bool, VerifyMetrics)> {
     // Step 1: Replace lemma body with empty {}
     let original_content = replace_body_with_empty(&lemma.file, lemma.start_line, lemma.end_line)?;
 
     // Step 2: Run verification
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-
-    let duration = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     // Step 3: Restore original file content
     restore_file_content(&lemma.file, &original_content)?;
 
     // is_dependent = verification passed with empty body (vstd can prove it)
-    Ok((success, duration, peak_rss))
+    Ok((success, metrics))
 }
 
 /// Test if a GROUP of lemmas (type variants) is dependent on vstd.
@@ -2736,28 +2928,20 @@ fn test_dependence_group(
     lemmas: &[&ProofFn],
     codebase: &Path,
     line_shifts: &mut LineShiftTracker,
-) -> Result<(bool, Duration, Option<u64>)> {
-    let start = Instant::now();
-
+) -> Result<(bool, VerifyMetrics)> {
     // Step 1: Replace ALL lemma bodies with empty {}
-    // Track original file contents by file path (multiple lemmas may be in same file)
     let mut file_originals: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
 
     for lemma in lemmas {
-        // Save original content before first modification to each file
         if !file_originals.contains_key(&lemma.file) {
             let content = std::fs::read_to_string(&lemma.file)?;
             file_originals.insert(lemma.file.clone(), content);
         }
-
-        // Now modify the file (replace body with empty)
         replace_body_with_empty(&lemma.file, lemma.start_line, lemma.end_line)?;
     }
 
     // Step 2: Run verification
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-
-    let duration = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     // Step 3: Restore ALL original file contents
     for (file, original_content) in &file_originals {
@@ -2767,7 +2951,6 @@ fn test_dependence_group(
     // Step 4: Insert DEPENDENT/INDEPENDENT markers before each lemma
     let marker = if success { "DEPENDENT" } else { "INDEPENDENT" };
 
-    // Group lemmas by file, process in reverse line order to avoid shift issues
     let mut by_file: std::collections::HashMap<&Path, Vec<usize>> =
         std::collections::HashMap::new();
     for lemma in lemmas {
@@ -2783,8 +2966,7 @@ fn test_dependence_group(
         }
     }
 
-    // is_dependent = verification passed with empty bodies (vstd can prove them)
-    Ok((success, duration, peak_rss))
+    Ok((success, metrics))
 }
 
 /// Test if a lemma is needed by commenting it out and verifying
@@ -2794,9 +2976,7 @@ fn test_lemma(
     codebase_calls: &[CallSite],
     codebase: &Path,
     line_shifts: &mut LineShiftTracker,
-) -> Result<(bool, Duration, Option<u64>)> {
-    let start = Instant::now();
-
+) -> Result<(bool, VerifyMetrics)> {
     // Adjust line numbers for any previous insertions in this file
     let adjusted_start = line_shifts.adjust_line(&lemma.file, lemma.start_line);
     let adjusted_end = line_shifts.adjust_line(&lemma.file, lemma.end_line);
@@ -2820,13 +3000,10 @@ fn test_lemma(
     }
 
     // Step 3: Run verification
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-
-    let duration = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
         // Verification passed - lemma is NOT needed
-        // Update markers to permanent
         restore_lines(&lemma.file, adjusted_start, &original_lemma)?;
         comment_out_lines(&lemma.file, adjusted_start, adjusted_end, "UNUSED")?;
 
@@ -2835,13 +3012,11 @@ fn test_lemma(
             comment_out_line(file, *line, &format!("UNNEEDED call to {}", lemma.name))?;
         }
 
-        Ok((false, duration, peak_rss)) // false = not needed
+        Ok((false, metrics))
     } else {
         // Verification failed - lemma IS needed
-        // Restore everything
         restore_lines(&lemma.file, adjusted_start, &original_lemma)?;
 
-        // Add USED marker as a comment before the lemma
         let content = std::fs::read_to_string(&lemma.file)?;
         let lines: Vec<&str> = content.lines().collect();
         let mut new_lines: Vec<String> = Vec::new();
@@ -2854,14 +3029,13 @@ fn test_lemma(
         }
         std::fs::write(&lemma.file, new_lines.join("\n") + "\n")?;
 
-        // Record the insertion so subsequent operations adjust correctly
         line_shifts.record_insertion(&lemma.file, adjusted_start);
 
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
         }
 
-        Ok((true, duration, peak_rss)) // true = needed
+        Ok((true, metrics))
     }
 }
 
@@ -2871,20 +3045,14 @@ fn test_lemma_group(
     codebase_calls: &[CallSite],
     codebase: &Path,
     line_shifts: &mut LineShiftTracker,
-) -> Result<(bool, Duration, Option<u64>)> {
-    let start = Instant::now();
-
+) -> Result<(bool, VerifyMetrics)> {
     // Step 1: Comment out ALL lemma definitions in the group
-    // Track adjusted line numbers for each lemma
     let mut original_lemmas: Vec<(&ProofFn, Vec<String>, usize, usize)> = Vec::new();
     for lemma in lemmas {
         let adjusted_start = line_shifts.adjust_line(&lemma.file, lemma.start_line);
         let adjusted_end = line_shifts.adjust_line(&lemma.file, lemma.end_line);
         let orig = comment_out_lines(
-            &lemma.file,
-            adjusted_start,
-            adjusted_end,
-            "TESTING"
+            &lemma.file, adjusted_start, adjusted_end, "TESTING"
         )?;
         original_lemmas.push((*lemma, orig, adjusted_start, adjusted_end));
     }
@@ -2900,13 +3068,9 @@ fn test_lemma_group(
     }
 
     // Step 3: Run verification
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-
-    let duration = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
-        // Verification passed - NO lemma in the group is needed
-        // Update markers to permanent for ALL variants
         for (lemma, orig, adjusted_start, adjusted_end) in &original_lemmas {
             restore_lines(&lemma.file, *adjusted_start, orig)?;
             comment_out_lines(&lemma.file, *adjusted_start, *adjusted_end, "UNUSED")?;
@@ -2917,41 +3081,33 @@ fn test_lemma_group(
             comment_out_line(file, *line, "UNNEEDED call")?;
         }
 
-        Ok((false, duration, peak_rss)) // false = not needed
+        Ok((false, metrics))
     } else {
-        // Verification failed - at least ONE lemma in the group IS needed
-        // Restore ALL variants and mark them ALL as USED
-        
-        // First, restore all lemma definitions
         for (lemma, orig, adjusted_start, _) in &original_lemmas {
             restore_lines(&lemma.file, *adjusted_start, orig)?;
         }
-        
-        // Restore call sites
+
         for (file, line, orig) in &call_originals {
             restore_line(file, *line, orig)?;
         }
-        
-        // Group lemmas by file to handle line number shifts correctly
-        let mut by_file: std::collections::HashMap<&Path, Vec<usize>> = 
+
+        let mut by_file: std::collections::HashMap<&Path, Vec<usize>> =
             std::collections::HashMap::new();
         for (lemma, _, adjusted_start, _) in &original_lemmas {
             by_file.entry(lemma.file.as_path())
                 .or_default()
                 .push(*adjusted_start);
         }
-        
-        // For each file, add "// USED" markers in REVERSE order (highest line first)
-        // so that earlier insertions don't shift later line numbers within this group
+
         for (file, mut lines) in by_file {
             lines.sort();
-            lines.reverse(); // Process highest line numbers first
-            
+            lines.reverse();
+
             for target_line in lines {
                 let content = std::fs::read_to_string(file)?;
                 let file_lines: Vec<&str> = content.lines().collect();
                 let mut new_lines: Vec<String> = Vec::new();
-                
+
                 for (i, line) in file_lines.iter().enumerate() {
                     if i + 1 == target_line {
                         new_lines.push("// Veracity: USED".to_string());
@@ -2959,13 +3115,12 @@ fn test_lemma_group(
                     new_lines.push(line.to_string());
                 }
                 std::fs::write(file, new_lines.join("\n") + "\n")?;
-                
-                // Record the insertion for subsequent lemma groups
+
                 line_shifts.record_insertion(file, target_line);
             }
         }
-        
-        Ok((true, duration, peak_rss)) // true = needed
+
+        Ok((true, metrics))
     }
 }
 
@@ -3050,13 +3205,17 @@ fn find_asserts_in_file(file: &Path) -> Result<Vec<AssertInfo>> {
     Ok(asserts)
 }
 
-/// Comment out an assert and run verification
-/// Returns (needed, time_saved) where needed=true means verification failed
+/// Comment out an assert and run verification.
+/// Returns (needed, speed_hint_reason, metrics).
+/// needed=true if verification failed or speed regression detected.
+/// speed_hint_reason is Some("reason") if it's a speed hint.
 fn test_assert(
     assert_info: &AssertInfo,
     codebase: &Path,
-    baseline_time: Duration,
-) -> Result<(bool, Duration, Duration, Option<u64>)> {
+    baseline: &VerifyMetrics,
+    max_incremental: f64,
+    max_memory_increase: f64,
+) -> Result<(bool, Option<String>, VerifyMetrics)> {
     // Read the file
     let content = std::fs::read_to_string(&assert_info.file)?;
     let lines: Vec<&str> = content.lines().collect();
@@ -3130,29 +3289,27 @@ fn test_assert(
     // Comment out the assert
     let original = comment_out_lines(&assert_info.file, start_line, end_line, "TESTING assert")?;
 
-    // Run verification with timing
-    let start = Instant::now();
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-    let verify_time = start.elapsed();
+    // Run verification
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
-        // Verification passed without this assert - it's unneeded
-        restore_lines(&assert_info.file, start_line, &original)?;
-        comment_out_lines(&assert_info.file, start_line, end_line, "UNNEEDED assert")?;
-
-        let time_saved = if baseline_time > verify_time {
-            baseline_time - verify_time
+        // Check for speed regression before marking as unneeded
+        if let Some(reason) = check_speed_hint(&metrics, baseline, max_incremental, max_memory_increase) {
+            // Speed hint: verification passed but too slow/heavy — keep the assert
+            restore_lines(&assert_info.file, start_line, &original)?;
+            insert_marker_before(&assert_info.file, start_line, "NEEDED assert (speed hint)")?;
+            Ok((true, Some(reason), metrics))
         } else {
-            Duration::ZERO
-        };
-
-        Ok((false, verify_time, time_saved, peak_rss)) // false = not needed
+            // Truly unneeded
+            restore_lines(&assert_info.file, start_line, &original)?;
+            comment_out_lines(&assert_info.file, start_line, end_line, "UNNEEDED assert")?;
+            Ok((false, None, metrics))
+        }
     } else {
         // Verification failed - assert is needed
         restore_lines(&assert_info.file, start_line, &original)?;
         insert_marker_before(&assert_info.file, start_line, "NEEDED assert")?;
-
-        Ok((true, verify_time, Duration::ZERO, peak_rss)) // true = needed
+        Ok((true, None, metrics))
     }
 }
 
@@ -3224,23 +3381,22 @@ fn find_admits_in_file(file: &Path) -> Result<Vec<AdmitInfo>> {
     Ok(admits)
 }
 
-/// Comment out an admit and run verification
-/// Returns (needed, verify_time, time_saved) where needed=true means verification failed
+/// Comment out an admit and run verification.
 fn test_admit(
     admit_info: &AdmitInfo,
     codebase: &Path,
-    baseline_time: Duration,
-) -> Result<(bool, Duration, Duration, Option<u64>)> {
-    // Read the file
+    baseline: &VerifyMetrics,
+    max_incremental: f64,
+    max_memory_increase: f64,
+) -> Result<(bool, Option<String>, VerifyMetrics)> {
     let content = std::fs::read_to_string(&admit_info.file)?;
     let lines: Vec<&str> = content.lines().collect();
-    
-    // Find the full extent of the admit (may span multiple lines with parentheses)
+
     let start_line = admit_info.line;
     let mut end_line = start_line;
     let mut paren_depth = 0;
     let mut found_open_paren = false;
-    
+
     for i in (start_line - 1)..lines.len() {
         let line = lines[i];
         for ch in line.chars() {
@@ -3256,33 +3412,25 @@ fn test_admit(
             break;
         }
     }
-    
-    // Comment out the admit
+
     let original = comment_out_lines(&admit_info.file, start_line, end_line, "TESTING admit")?;
-    
-    // Run verification with timing
-    let start = Instant::now();
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-    let verify_time = start.elapsed();
+
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
-        // Verification passed without this admit - proof is now complete!
-        restore_lines(&admit_info.file, start_line, &original)?;
-        comment_out_lines(&admit_info.file, start_line, end_line, "UNNEEDED admit")?;
-
-        let time_saved = if baseline_time > verify_time {
-            baseline_time - verify_time
+        if let Some(reason) = check_speed_hint(&metrics, baseline, max_incremental, max_memory_increase) {
+            restore_lines(&admit_info.file, start_line, &original)?;
+            insert_marker_before(&admit_info.file, start_line, "NEEDED admit (speed hint)")?;
+            Ok((true, Some(reason), metrics))
         } else {
-            Duration::ZERO
-        };
-
-        Ok((false, verify_time, time_saved, peak_rss)) // false = not needed (proof complete!)
+            restore_lines(&admit_info.file, start_line, &original)?;
+            comment_out_lines(&admit_info.file, start_line, end_line, "UNNEEDED admit")?;
+            Ok((false, None, metrics))
+        }
     } else {
-        // Verification failed - admit is still needed (proof hole remains)
         restore_lines(&admit_info.file, start_line, &original)?;
         insert_marker_before(&admit_info.file, start_line, "NEEDED admit")?;
-
-        Ok((true, verify_time, Duration::ZERO, peak_rss)) // true = needed (still a proof hole)
+        Ok((true, None, metrics))
     }
 }
 
@@ -3426,38 +3574,31 @@ fn find_proof_blocks_in_file(file: &Path) -> Result<Vec<ProofBlock>> {
 }
 
 /// Test if a proof block is necessary by commenting it out
-/// Returns (needed, verify_time, time_saved)
 fn test_proof_block(
     block: &ProofBlock,
     codebase: &Path,
-    baseline_time: Duration,
-) -> Result<(bool, Duration, Duration, Option<u64>)> {
-    // Comment out the proof block
+    baseline: &VerifyMetrics,
+    max_incremental: f64,
+    max_memory_increase: f64,
+) -> Result<(bool, Option<String>, VerifyMetrics)> {
     let original = comment_out_lines(&block.file, block.start_line, block.end_line, "TESTING proof block")?;
 
-    // Run verification with timing
-    let start = Instant::now();
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-    let verify_time = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
-        // Verification passed without this proof block - it's unneeded
-        restore_lines(&block.file, block.start_line, &original)?;
-        comment_out_lines(&block.file, block.start_line, block.end_line, "UNNEEDED proof block")?;
-
-        let time_saved = if baseline_time > verify_time {
-            baseline_time - verify_time
+        if let Some(reason) = check_speed_hint(&metrics, baseline, max_incremental, max_memory_increase) {
+            restore_lines(&block.file, block.start_line, &original)?;
+            insert_marker_before(&block.file, block.start_line, "NEEDED proof block (speed hint)")?;
+            Ok((true, Some(reason), metrics))
         } else {
-            Duration::ZERO
-        };
-
-        Ok((false, verify_time, time_saved, peak_rss)) // false = not needed
+            restore_lines(&block.file, block.start_line, &original)?;
+            comment_out_lines(&block.file, block.start_line, block.end_line, "UNNEEDED proof block")?;
+            Ok((false, None, metrics))
+        }
     } else {
-        // Verification failed - proof block is needed
         restore_lines(&block.file, block.start_line, &original)?;
         insert_marker_before(&block.file, block.start_line, "NEEDED proof block")?;
-
-        Ok((true, verify_time, Duration::ZERO, peak_rss)) // true = needed
+        Ok((true, None, metrics))
     }
 }
 
@@ -3587,25 +3728,19 @@ fn find_types_in_file(file: &Path) -> Result<Vec<TypeInfo>> {
 }
 
 /// Test if a type is used by commenting it out and running verification
-/// Returns (used, verify_time)
 fn test_type(
     type_info: &TypeInfo,
     codebase: &Path,
-) -> Result<(bool, Duration, Option<u64>)> {
-    // Comment out the type definition
+) -> Result<(bool, VerifyMetrics)> {
     let original = comment_out_lines(&type_info.file, type_info.start_line, type_info.end_line, "TESTING type")?;
 
-    // Run verification with timing
-    let start = Instant::now();
-    let (success, _stderr, peak_rss) = run_verus(codebase)?;
-    let verify_time = start.elapsed();
+    let (success, _stderr, metrics) = run_verus(codebase)?;
 
     if success {
-        // Verification passed without this type - it's unused
         restore_lines(&type_info.file, type_info.start_line, &original)?;
         comment_out_lines(&type_info.file, type_info.start_line, type_info.end_line, "TYPE UNUSED")?;
 
-        Ok((false, verify_time, peak_rss)) // false = not used
+        Ok((false, metrics))
     } else {
         // Verification failed - type is used
         restore_lines(&type_info.file, type_info.start_line, &original)?;
@@ -3613,7 +3748,7 @@ fn test_type(
         // Add a marker indicating it's used (on the line before the type)
         mark_type_used(type_info)?;
 
-        Ok((true, verify_time, peak_rss)) // true = used
+        Ok((true, metrics))
     }
 }
 
@@ -3645,7 +3780,7 @@ fn mark_type_used(type_info: &TypeInfo) -> Result<()> {
 
 /// Run single-file mode: just test asserts and proof blocks in one file
 /// Skips all library analysis (phases 2-8)
-fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
+fn run_single_file_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result<()> {
     let start_time = Instant::now();
     let file = args.single_file.as_ref().unwrap();
     let rel_path = file.strip_prefix(&args.codebase).unwrap_or(file);
@@ -3684,7 +3819,6 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
         
         let mut tested = 0;
         let mut removed = 0;
-        let mut time_saved = Duration::ZERO;
         
         for (i, assert_info) in asserts.iter().take(test_count).enumerate() {
             // Resume mode: skip if already has NEEDED/UNNEEDED marker
@@ -3705,28 +3839,30 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
                 continue;
             }
 
-            let (needed, verify_time, saved, _peak_rss) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_assert(assert_info, &args.codebase, baseline, args.max_incremental, args.max_memory_increase)?;
             tested += 1;
-            
+
             if needed {
-                log!("NEEDED [{}]", format_duration(verify_time));
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 removed += 1;
-                time_saved += saved;
-                log!("UNNEEDED [{}]", format_duration(verify_time));
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, baseline));
             }
-            
+
             if args.fail_fast && !needed {
                 break;
             }
         }
-        
+
         log!();
-        log!("Assert summary: {} tested, {} removed, {} time saved",
-            tested, removed, format_duration(time_saved));
+        log!("Assert summary: {} tested, {} removed", tested, removed);
         log!();
     }
-    
+
     // Test proof blocks if enabled
     if args.proof_block_minimization && !proof_blocks.is_empty() {
         log!("═══════════════════════════════════════════════════════════════");
@@ -3751,7 +3887,6 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
         
         let mut tested = 0;
         let mut removed = 0;
-        let mut time_saved = Duration::ZERO;
         
         for (i, block) in proof_blocks.iter().take(test_count).enumerate() {
             // Resume mode: skip if already has NEEDED/UNNEEDED marker
@@ -3772,25 +3907,27 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
                 continue;
             }
 
-            let (needed, verify_time, saved, _peak_rss) = test_proof_block(block, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_proof_block(block, &args.codebase, baseline, args.max_incremental, args.max_memory_increase)?;
             tested += 1;
-            
+
             if needed {
-                log!("NEEDED [{}]", format_duration(verify_time));
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 removed += 1;
-                time_saved += saved;
-                log!("UNNEEDED [{}]", format_duration(verify_time));
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, baseline));
             }
-            
+
             if args.fail_fast && !needed {
                 break;
             }
         }
-        
+
         log!();
-        log!("Proof block summary: {} tested, {} removed, {} time saved",
-            tested, removed, format_duration(time_saved));
+        log!("Proof block summary: {} tested, {} removed", tested, removed);
     }
     
     log!();
@@ -3802,7 +3939,7 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<
 /// Run single-function mode: test asserts and proof blocks in one named function.
 /// Scans: -F file if given, else src/ChapNN/ if --chapter given, else whole codebase.
 /// Filters all items to those whose context contains the fn_filter string.
-fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()> {
+fn run_fn_filter_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result<()> {
     let start_time = Instant::now();
     let fn_name = args.fn_filter.as_deref().unwrap();
 
@@ -3854,8 +3991,8 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()
 
     // Estimate
     let total = asserts.len() + proof_blocks.len();
-    let est = baseline_time * total as u32;
-    log!("Estimated time: {} ({} × {})", format_duration(est), total, format_duration(baseline_time));
+    let est_secs = baseline.wall_secs * total as f64;
+    log!("Estimated time: {} ({} × {})", format_duration_secs(est_secs), total, format_duration_secs(baseline.wall_secs));
     log!();
 
     // Test asserts
@@ -3868,7 +4005,6 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()
         let test_count = args.max_asserts.unwrap_or(asserts.len()).min(asserts.len());
         let mut tested = 0;
         let mut removed = 0;
-        let mut time_saved = Duration::ZERO;
 
         for (i, assert_info) in asserts.iter().take(test_count).enumerate() {
             let rel = assert_info.file.strip_prefix(&args.codebase).unwrap_or(&assert_info.file);
@@ -3887,21 +4023,23 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()
 
             if args.dry_run { log!("(dry-run, skipped)"); continue; }
 
-            let (needed, verify_time, saved, _peak_rss) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_assert(assert_info, &args.codebase, baseline, args.max_incremental, args.max_memory_increase)?;
             tested += 1;
             if needed {
-                log!("NEEDED [{}]", format_duration(verify_time));
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 removed += 1;
-                time_saved += saved;
-                log!("UNNEEDED [{}]", format_duration(verify_time));
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, baseline));
             }
             if args.fail_fast && !needed { break; }
         }
 
         log!();
-        log!("Assert summary: {} tested, {} removed, {} time saved",
-            tested, removed, format_duration(time_saved));
+        log!("Assert summary: {} tested, {} removed", tested, removed);
         log!();
     }
 
@@ -3915,7 +4053,6 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()
         let test_count = args.max_proof_blocks.unwrap_or(proof_blocks.len()).min(proof_blocks.len());
         let mut tested = 0;
         let mut removed = 0;
-        let mut time_saved = Duration::ZERO;
 
         for (i, block) in proof_blocks.iter().take(test_count).enumerate() {
             let rel = block.file.strip_prefix(&args.codebase).unwrap_or(&block.file);
@@ -3933,21 +4070,23 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline_time: Duration) -> Result<()
 
             if args.dry_run { log!("(dry-run, skipped)"); continue; }
 
-            let (needed, verify_time, saved, _peak_rss) = test_proof_block(block, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_proof_block(block, &args.codebase, baseline, args.max_incremental, args.max_memory_increase)?;
             tested += 1;
             if needed {
-                log!("NEEDED [{}]", format_duration(verify_time));
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 removed += 1;
-                time_saved += saved;
-                log!("UNNEEDED [{}]", format_duration(verify_time));
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, baseline));
             }
             if args.fail_fast && !needed { break; }
         }
 
         log!();
-        log!("Proof block summary: {} tested, {} removed, {} time saved",
-            tested, removed, format_duration(time_saved));
+        log!("Proof block summary: {} tested, {} removed", tested, removed);
         log!();
     }
 
@@ -3993,39 +4132,6 @@ fn check_git_status(codebase: &Path) -> GitStatus {
         }
         _ => GitStatus::Unknown,
     }
-}
-
-fn git_commit_chapter(codebase: &Path, chapter: &str) -> Result<()> {
-    log!();
-    log!("Auto-committing {} results...", chapter);
-
-    let add_out = Command::new("git")
-        .args(["add", "-A"])
-        .current_dir(codebase)
-        .output()?;
-    if !add_out.status.success() {
-        log!("  ⚠ git add failed: {}", String::from_utf8_lossy(&add_out.stderr));
-        return Ok(());
-    }
-
-    let commit_msg = format!("Veracity: {} complete", chapter);
-    let commit_out = Command::new("git")
-        .args(["commit", "-m", &commit_msg])
-        .current_dir(codebase)
-        .output()?;
-
-    if commit_out.status.success() {
-        log!("  ✓ Committed: {}", commit_msg);
-    } else {
-        let stderr = String::from_utf8_lossy(&commit_out.stderr);
-        if stderr.contains("nothing to commit") {
-            log!("  (nothing to commit for {})", chapter);
-        } else {
-            log!("  ⚠ git commit failed: {}", stderr.trim());
-        }
-    }
-
-    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -4076,6 +4182,18 @@ fn main() -> Result<()> {
     }
     if let Some(ref fn_name) = args.fn_filter {
         log!("  --fn:               {}", fn_name);
+    }
+    log!("  --timeout-factor:   {} {}", args.timeout_factor,
+        if args.timeout_factor == 0.0 { "(disabled)" } else { "" });
+    if args.max_incremental == 0.0 {
+        log!("  --max-incremental:  0 (disabled)");
+    } else {
+        log!("  --max-incremental:  {} ({}%)", args.max_incremental, (args.max_incremental * 100.0) as u32);
+    }
+    if args.max_memory_increase == 0.0 {
+        log!("  --max-memory-increase: 0 (disabled)");
+    } else {
+        log!("  --max-memory-increase: {} ({}%)", args.max_memory_increase, (args.max_memory_increase * 100.0) as u32);
     }
     log!();
 
@@ -4216,7 +4334,16 @@ fn main() -> Result<()> {
                 let _ = std::io::stdin().read_line(&mut String::new());
             }
             log!("  Cleaning up for fresh analysis...");
-            let removed = strip_veracity_markers(&args.codebase)?;
+            // In chapter mode, only strip markers in the chapter directory
+            let strip_dir = match get_isolate_chapter() {
+                Some(ref ch) => {
+                    let chapter_dir = args.codebase.join("src").join(ch);
+                    log!("  (chapter mode: stripping only in src/{})", ch);
+                    chapter_dir
+                }
+                None => args.codebase.clone(),
+            };
+            let removed = strip_veracity_markers(&strip_dir)?;
             log!("  ✓ Removed {} markers", removed);
         } else {
             // Resume mode: clean up transient markers, preserve result markers
@@ -4366,10 +4493,12 @@ fn main() -> Result<()> {
     log!();
     
     log!("  Verifying...");
-    let (initial_success, initial_stderr, initial_duration, initial_peak_rss) = run_verus_timed(&args.codebase)?;
+    let (initial_success, initial_stderr, initial_metrics) = run_verus_timed(&args.codebase)?;
     if initial_success {
-        let mem_str = initial_peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
-        log!("  ✓ Verification passed in {}{}. Continuing.", format_duration(initial_duration), mem_str);
+        log!("  ✓ Verification passed. cpu: {}, z3 RSS: {} MB, wall: {}. Continuing.",
+            format_duration_secs(initial_metrics.verification_cpu_secs()),
+            initial_metrics.z3_rss_mb,
+            format_duration_secs(initial_metrics.wall_secs));
     } else {
         log!("  ✗ Verification failed. Exiting.");
         log!("  Fix verification errors before running Veracity.");
@@ -4392,13 +4521,13 @@ fn main() -> Result<()> {
         log!();
         
         // Jump directly to single-file assert and proof block testing
-        return run_single_file_mode(&args, initial_duration);
+        return run_single_file_mode(&args, &initial_metrics);
     }
 
     // Function-filter mode: skip all library phases, test only asserts/proof-blocks
     // in the named function.
     if args.fn_filter.is_some() {
-        return run_fn_filter_mode(&args, initial_duration);
+        return run_fn_filter_mode(&args, &initial_metrics);
     }
 
     // Phase 2: Analyze library structure
@@ -4501,22 +4630,11 @@ fn main() -> Result<()> {
         .count();
     
     // Estimate each phase
-    let estimated_phase1 = initial_duration; // already done
-    let estimated_phase2 = Duration::from_secs(0); // no verification
-    let estimated_phase3 = Duration::from_secs(0); // no verification
-    let estimated_phase4 = Duration::from_secs(0); // no verification
-    let estimated_phase5 = if args.apply_lib_broadcasts { 
-        initial_duration * (lib_file_count as u32) 
-    } else { 
-        Duration::from_secs(0) 
-    };
-    let estimated_phase6 = if args.update_broadcasts { 
-        initial_duration * (codebase_file_count as u32) 
-    } else { 
-        Duration::from_secs(0) 
-    };
-    let estimated_phase7 = initial_duration * (actual_to_test as u32);
-    let estimated_phase8 = initial_duration * (actual_to_test as u32);
+    let vt = initial_metrics.wall_secs;
+    let estimated_phase5 = if args.apply_lib_broadcasts { vt * lib_file_count as f64 } else { 0.0 };
+    let estimated_phase6 = if args.update_broadcasts { vt * codebase_file_count as f64 } else { 0.0 };
+    let estimated_phase7 = if args.no_lib_min { 0.0 } else { vt * actual_to_test as f64 };
+    let estimated_phase8 = if args.no_lib_min { 0.0 } else { vt * actual_to_test as f64 };
     
     // Count asserts for Phase 9/10 estimate (rough estimate: ~10 asserts per file).
     // Phase 10 scans only the chapter dir when --chapter is set, so use that for estimate.
@@ -4538,22 +4656,17 @@ fn main() -> Result<()> {
     let actual_codebase_asserts_to_test = args.max_asserts.unwrap_or(estimated_codebase_asserts).min(estimated_codebase_asserts);
     
     let estimated_phase9 = if args.assert_minimization && !args.no_lib_min {
-        initial_duration * (actual_lib_asserts_to_test as u32)
-    } else {
-        Duration::from_secs(0)
-    };
+        vt * actual_lib_asserts_to_test as f64
+    } else { 0.0 };
     let estimated_phase10 = if args.assert_minimization {
-        initial_duration * (actual_codebase_asserts_to_test as u32)
-    } else {
-        Duration::from_secs(0)
-    };
-    
-    let estimated_total = estimated_phase1 + estimated_phase2 + estimated_phase3 + 
-                          estimated_phase4 + estimated_phase5 + estimated_phase6 + 
+        vt * actual_codebase_asserts_to_test as f64
+    } else { 0.0 };
+
+    let estimated_total = vt + estimated_phase5 + estimated_phase6 +
                           estimated_phase7 + estimated_phase8 + estimated_phase9 + estimated_phase10;
     
     log!("Phase 4: Estimating time...");
-    log!("  Time per verification:           {}", format_duration(initial_duration));
+    log!("  Time per verification:           {}", format_duration_secs(initial_metrics.wall_secs));
     log!("  Lemmas to test:                  {}", actual_to_test);
     if num_module_unused > 0 {
         log!("  Lemmas to skip (unused modules): {}", num_module_unused);
@@ -4569,31 +4682,43 @@ fn main() -> Result<()> {
     log!("    Phase 8:   verification_time × num_lemmas (comment out test)");
     log!("    Phase 9/10: verification_time × num_asserts (comment out test)");
     log!();
-    log!("  Phase 1 (verify codebase):       {} (done)", format_duration(estimated_phase1));
+    log!("  Phase 1 (verify codebase):       {} (done)", format_duration_secs(vt));
     log!("  Phase 2 (analyze library):       ~0s (no verification)");
     log!("  Phase 3 (discover broadcasts):   ~0s (no verification)");
     log!("  Phase 4 (estimate time):         ~0s (no verification)");
     if args.apply_lib_broadcasts {
-        log!("  Phase 5 (library broadcasts):    ~{} ({} × {} files)", format_duration(estimated_phase5), format_duration(initial_duration), lib_file_count);
+        log!("  Phase 5 (library broadcasts):    ~{} ({} × {} files)", format_duration_secs(estimated_phase5), format_duration_secs(initial_metrics.wall_secs), lib_file_count);
     } else {
         log!("  Phase 5 (library broadcasts):    skipped (no -L flag)");
     }
     if args.update_broadcasts {
-        log!("  Phase 6 (codebase broadcasts):   ~{} ({} × {} files)", format_duration(estimated_phase6), format_duration(initial_duration), codebase_file_count);
+        log!("  Phase 6 (codebase broadcasts):   ~{} ({} × {} files)", format_duration_secs(estimated_phase6), format_duration_secs(initial_metrics.wall_secs), codebase_file_count);
     } else {
         log!("  Phase 6 (codebase broadcasts):   skipped (no -b flag)");
     }
-    log!("  Phase 7 (dependence test):       ~{} ({} × {} lemmas)", format_duration(estimated_phase7), format_duration(initial_duration), actual_to_test);
-    log!("  Phase 8 (necessity test):        ~{} ({} × {} lemmas)", format_duration(estimated_phase8), format_duration(initial_duration), actual_to_test);
+    if args.no_lib_min {
+        log!("  Phase 7 (dependence test):       skipped (--no-lib-min)");
+        log!("  Phase 8 (necessity test):        skipped (--no-lib-min)");
+    } else {
+        log!("  Phase 7 (dependence test):       ~{} ({} × {} lemmas)", format_duration_secs(estimated_phase7), format_duration_secs(initial_metrics.wall_secs), actual_to_test);
+        log!("  Phase 8 (necessity test):        ~{} ({} × {} lemmas)", format_duration_secs(estimated_phase8), format_duration_secs(initial_metrics.wall_secs), actual_to_test);
+    }
     if args.assert_minimization {
-        log!("  Phase 9 (library asserts):       ~{} ({} × ~{} asserts)", format_duration(estimated_phase9), format_duration(initial_duration), actual_lib_asserts_to_test);
-        log!("  Phase 10 (codebase asserts):     ~{} ({} × ~{} asserts)", format_duration(estimated_phase10), format_duration(initial_duration), actual_codebase_asserts_to_test);
+        if args.no_lib_min {
+            log!("  Phase 9 (library asserts):       skipped (--no-lib-min)");
+        } else {
+            log!("  Phase 9 (library asserts):       ~{} ({} × ~{} asserts)", format_duration_secs(estimated_phase9), format_duration_secs(initial_metrics.wall_secs), actual_lib_asserts_to_test);
+        }
+        log!("  Phase 10 (codebase asserts):     ~{} ({} × ~{} asserts)", format_duration_secs(estimated_phase10), format_duration_secs(initial_metrics.wall_secs), actual_codebase_asserts_to_test);
     } else {
         log!("  Phase 9 (library asserts):       skipped (no -a flag)");
         log!("  Phase 10 (codebase asserts):     skipped (no -a flag)");
     }
     log!("  ─────────────────────────────────────────");
-    log!("  TOTAL ESTIMATED TIME:            ~{}", format_duration(estimated_total));
+    log!("  TOTAL ESTIMATED TIME:            ~{}", format_duration_secs(estimated_total));
+    if !args.fresh {
+        log!("  (resume mode: items with existing markers will be skipped, actual time may be much less)");
+    }
     log!();
     
     // Phase 5: Apply broadcast groups to library
@@ -4661,7 +4786,7 @@ fn main() -> Result<()> {
         
         // First, get baseline verification time
         log!("  Getting baseline verification time...");
-        let (baseline_success, baseline_z3_errors, _baseline_stderr, baseline_time, _baseline_rss) = run_verus_check_z3(&args.codebase)?;
+        let (baseline_success, baseline_z3_errors, _baseline_stderr, baseline_metrics) = run_verus_check_z3(&args.codebase)?;
         
         if !baseline_success {
             log!("  ✗ Baseline verification FAILED! Cannot apply broadcast groups.");
@@ -4670,12 +4795,12 @@ fn main() -> Result<()> {
             log!("  ✗ Baseline has Z3 errors! Cannot apply broadcast groups.");
             log!();
         } else {
-            log!("  ✓ Baseline verification PASSED in {} (no Z3 errors)", format_duration(baseline_time));
+            log!("  ✓ Baseline verification PASSED in {} (no Z3 errors)", format_duration_secs(baseline_metrics.wall_secs));
             log!();
             
             let mut applied_count = 0;
             let mut _reverted_count = 0;  // Prefixed with _ since we exit early on first revert for debugging
-            let mut total_time_saved = Duration::ZERO;
+            let mut _total_time_saved = 0.0f64;
             
             for (i, rec) in broadcast_recommendations.iter().enumerate() {
                 let rel_path = rec.file.strip_prefix(&args.codebase).unwrap_or(&rec.file);
@@ -4693,7 +4818,7 @@ fn main() -> Result<()> {
                 
                 // Run verification and check for Z3 errors
                 log_no_newline!("verifying... ");
-                let (success, has_z3_errors, stderr, new_time, _peak_rss) = run_verus_check_z3(&args.codebase)?;
+                let (success, has_z3_errors, stderr, new_metrics) = run_verus_check_z3(&args.codebase)?;
                 
                 if !success || has_z3_errors {
                     // Revert the changes
@@ -4719,14 +4844,13 @@ fn main() -> Result<()> {
                 } else {
                     // Keep the changes
                     applied_count += 1;
-                    let time_diff = if new_time < baseline_time {
-                        let saved = baseline_time - new_time;
-                        total_time_saved += saved;
-                        format!("-{}", format_duration(saved))
-                    } else if new_time > baseline_time {
-                        format!("+{}", format_duration(new_time - baseline_time))
-                    } else {
+                    let delta = new_metrics.wall_secs - baseline_metrics.wall_secs;
+                    let time_diff = if delta.abs() < 0.05 {
                         "~0s".to_string()
+                    } else if delta < 0.0 {
+                        format!("-{}", format_duration_secs(-delta))
+                    } else {
+                        format!("+{}", format_duration_secs(delta))
                     };
                     log!("KEPT {} ({})", 
                         group_names.join(", "),
@@ -4738,8 +4862,8 @@ fn main() -> Result<()> {
             log!("  Broadcast update summary:");
             log!("    Applied: {} files", applied_count);
             log!("    Reverted: {} files", _reverted_count);
-            if total_time_saved > Duration::ZERO {
-                log!("    Time saved: {}", format_duration(total_time_saved));
+            if _total_time_saved > 0.0 {
+                log!("    Time saved: {}", format_duration_secs(_total_time_saved));
             }
             log!();
         }
@@ -5021,26 +5145,14 @@ fn main() -> Result<()> {
         log_no_newline!("verifying... ");
 
         // Test if vstd can prove this lemma with an empty body
-        let (is_dependent, test_duration, _peak_rss) = test_dependence_group(&group_lemmas, &args.codebase, &mut line_shifts)?;
-        
-        // Format: [initial N -> now N (incremental N)]
-        let delta_str = if test_duration < initial_duration {
-            format!("incremental -{}", format_duration(initial_duration - test_duration))
-        } else if test_duration > initial_duration {
-            format!("incremental +{}", format_duration(test_duration - initial_duration))
-        } else {
-            "incremental ~0s".to_string()
-        };
-        
-        let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+        let (is_dependent, test_metrics) = test_dependence_group(&group_lemmas, &args.codebase, &mut line_shifts)?;
+
         if is_dependent {
-            log!("PASSED → DEPENDENT [initial {} -> now {} ({}{})]",
-                format_duration(initial_duration), format_duration(test_duration), delta_str, mem_str);
+            log!("PASSED → DEPENDENT {}", format_metrics_delta(&test_metrics, &initial_metrics));
             dependent_count += variant_count;
             dependent_lemmas.push((name.clone(), file.clone(), type_info.clone()));
         } else {
-            log!("FAILED → INDEPENDENT [initial {} -> now {} ({}{})]",
-                format_duration(initial_duration), format_duration(test_duration), delta_str, mem_str);
+            log!("FAILED → INDEPENDENT {}", format_metrics_delta(&test_metrics, &initial_metrics));
             independent_count += variant_count;
         }
     }
@@ -5104,38 +5216,25 @@ fn main() -> Result<()> {
         log_no_newline!("verifying... ");
 
         // Test the entire group together
-        let (needed, test_duration, _peak_rss) = test_lemma_group(
+        let (needed, test_metrics) = test_lemma_group(
             &group_lemmas,
             &all_call_sites,
             &args.codebase,
             &mut line_shifts,
         )?;
-        
+
         stats.lemmas_tested += variant_count;
         let is_dependent = dependent_names.contains(name);
-        
-        // Format: [initial N -> now N (incremental N)]
-        let delta_str = if test_duration < initial_duration {
-            format!("incremental -{}", format_duration(initial_duration - test_duration))
-        } else if test_duration > initial_duration {
-            format!("incremental +{}", format_duration(test_duration - initial_duration))
-        } else {
-            "incremental ~0s".to_string()
-        };
-        
-        let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
         if needed {
-            log!("FAILED → USED (restored) [initial {} -> now {} ({}{})]",
-                format_duration(initial_duration), format_duration(test_duration), delta_str, mem_str);
+            log!("FAILED → USED (restored) {}", format_metrics_needed(&test_metrics));
             stats.lemmas_used += variant_count;
 
-            // If this lemma was DEPENDENT but still USED, track it
             if is_dependent {
                 dependent_but_used.push((name.clone(), file.clone(), type_info.clone()));
             }
         } else {
-            log!("PASSED → UNUSED (kept commented) [initial {} -> now {} ({}{})]",
-                format_duration(initial_duration), format_duration(test_duration), delta_str, mem_str);
+            log!("PASSED → UNUSED (kept commented) {}", format_metrics_delta(&test_metrics, &initial_metrics));
             stats.lemmas_unused += variant_count;
             stats.call_sites_commented += all_call_sites.len();
             
@@ -5166,7 +5265,6 @@ fn main() -> Result<()> {
     // ═══════════════════════════════════════════════════════════════════════
     let mut lib_asserts_tested = 0;
     let mut lib_asserts_removed = 0;
-    let mut lib_time_saved = Duration::ZERO;
     
     if args.assert_minimization && !args.no_lib_min {
         log!();
@@ -5177,9 +5275,14 @@ fn main() -> Result<()> {
         log!("For each assert: comment out, verify. NEEDED=restored, UNNEEDED=left commented.");
         log!();
         
-        // Get baseline verification time for comparison
-        let (_, _, baseline_time, _baseline_rss) = run_verus_timed(&args.codebase)?;
-        
+        // Get baseline for this phase
+        let (_, _, baseline) = run_verus_timed(&args.codebase)?;
+        log!("[Baseline] verification CPU: {}, z3 RSS: {} MB, wall: {}",
+            format_duration_secs(baseline.verification_cpu_secs()),
+            baseline.z3_rss_mb,
+            format_duration_secs(baseline.wall_secs));
+        log!();
+
         // Find all asserts in library files
         let lib_files = find_rust_files(&args.library);
         let mut lib_asserts: Vec<AssertInfo> = Vec::new();
@@ -5212,33 +5315,27 @@ fn main() -> Result<()> {
                 assert_info.line,
                 assert_info.context);
 
-            let (needed, verify_time, time_saved, _peak_rss) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_assert(assert_info, &args.codebase, &baseline, args.max_incremental, args.max_memory_increase)?;
             lib_asserts_tested += 1;
-            
-            // Format: [initial N -> now N (incremental N)]
-            let delta_str = if time_saved > Duration::ZERO {
-                format!("incremental -{}", format_duration(time_saved))
-            } else if verify_time > baseline_time {
-                format!("incremental +{}", format_duration(verify_time - baseline_time))
-            } else {
-                "incremental ~0s".to_string()
-            };
-            
-            let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
             if needed {
-                log!("NEEDED (restored) [initial {} -> now {} ({}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), delta_str, mem_str);
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 lib_asserts_removed += 1;
-                lib_time_saved += time_saved;
-                log!("UNNEEDED (commented) [initial {} -> now {} ({}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), delta_str, mem_str);
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, &baseline));
             }
         }
 
         log!();
-        log!("Phase 9 Summary: {} tested, {} removed (commented), {} time saved",
-            lib_asserts_tested, lib_asserts_removed, format_duration(lib_time_saved));
+        log!("Phase 9 Summary: {} tested, {} removed (commented)",
+            lib_asserts_tested, lib_asserts_removed);
+    } else if args.no_lib_min {
+        log!();
+        log!("Phase 9: Skipped (--no-lib-min)");
     } else {
         log!();
         log!("Phase 9: Skipped (use -a flag to enable assert minimization)");
@@ -5249,7 +5346,6 @@ fn main() -> Result<()> {
     // ═══════════════════════════════════════════════════════════════════════
     let mut codebase_asserts_tested = 0;
     let mut codebase_asserts_removed = 0;
-    let mut codebase_time_saved = Duration::ZERO;
     
     if args.assert_minimization {
         log!();
@@ -5260,9 +5356,14 @@ fn main() -> Result<()> {
         log!("For each assert: comment out, verify. NEEDED=restored, UNNEEDED=left commented.");
         log!();
         
-        // Get updated baseline after Phase 9 changes
-        let (_, _, baseline_time, _baseline_rss) = run_verus_timed(&args.codebase)?;
-        
+        // Get baseline for this phase
+        let (_, _, baseline) = run_verus_timed(&args.codebase)?;
+        log!("[Baseline] verification CPU: {}, z3 RSS: {} MB, wall: {}",
+            format_duration_secs(baseline.verification_cpu_secs()),
+            baseline.z3_rss_mb,
+            format_duration_secs(baseline.wall_secs));
+        log!();
+
         // Find all asserts in codebase files: chapter dir if in chapter mode, else full codebase
         let codebase_files = match get_isolate_chapter() {
             Some(ref ch) => {
@@ -5304,33 +5405,24 @@ fn main() -> Result<()> {
                 assert_info.context,
                 rel_path.display());
 
-            let (needed, verify_time, time_saved, _peak_rss) = test_assert(assert_info, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_assert(assert_info, &args.codebase, &baseline, args.max_incremental, args.max_memory_increase)?;
             codebase_asserts_tested += 1;
-            
-            // Format: [initial N -> now N (incremental N)]
-            let delta_str = if time_saved > Duration::ZERO {
-                format!("incremental -{}", format_duration(time_saved))
-            } else if verify_time > baseline_time {
-                format!("incremental +{}", format_duration(verify_time - baseline_time))
-            } else {
-                "incremental ~0s".to_string()
-            };
-            
-            let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
             if needed {
-                log!("NEEDED (restored) [initial {} -> now {} ({}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), delta_str, mem_str);
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
+                } else {
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 codebase_asserts_removed += 1;
-                codebase_time_saved += time_saved;
-                log!("UNNEEDED (commented) [initial {} -> now {} ({}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), delta_str, mem_str);
+                log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, &baseline));
             }
         }
-        
+
         log!();
-        log!("Phase 10 Summary: {} tested, {} removed (commented), {} time saved", 
-            codebase_asserts_tested, codebase_asserts_removed, format_duration(codebase_time_saved));
+        log!("Phase 10 Summary: {} tested, {} removed (commented)",
+            codebase_asserts_tested, codebase_asserts_removed);
     } else {
         log!();
         log!("Phase 10: Skipped (use -a flag to enable assert minimization)");
@@ -5349,9 +5441,14 @@ fn main() -> Result<()> {
         log!("For each admit: comment out, verify. If passes → proof is complete!");
         log!();
         
-        // Get updated baseline
-        let (_, _, baseline_time, _baseline_rss) = run_verus_timed(&args.codebase)?;
-        
+        // Get baseline for this phase
+        let (_, _, baseline) = run_verus_timed(&args.codebase)?;
+        log!("[Baseline] verification CPU: {}, z3 RSS: {} MB, wall: {}",
+            format_duration_secs(baseline.verification_cpu_secs()),
+            baseline.z3_rss_mb,
+            format_duration_secs(baseline.wall_secs));
+        log!();
+
         // Determine which files to scan for admits
         let files_to_scan: Vec<PathBuf> = if let Some(ref single_file) = args.single_file {
             vec![single_file.clone()]
@@ -5391,7 +5488,6 @@ fn main() -> Result<()> {
         
         let mut admits_tested = 0;
         let mut admits_removed = 0;
-        let mut time_saved = Duration::ZERO;
         
         for (i, admit_info) in all_admits.iter().take(test_count).enumerate() {
             let rel_path = admit_info.file.strip_prefix(&args.codebase).unwrap_or(&admit_info.file);
@@ -5414,38 +5510,29 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            let (needed, verify_time, saved, _peak_rss) = test_admit(admit_info, &args.codebase, baseline_time)?;
+            let (needed, speed_hint, metrics) = test_admit(admit_info, &args.codebase, &baseline, args.max_incremental, args.max_memory_increase)?;
             admits_tested += 1;
-            
-            let time_diff = verify_time.as_secs_f64() - baseline_time.as_secs_f64();
-            let time_note = if time_diff.abs() < 0.05 {
-                "~0s".to_string()
-            } else if time_diff > 0.0 {
-                format!("+{:.1}s", time_diff)
-            } else {
-                format!("{:.1}s", time_diff)
-            };
-            
-            let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
             if needed {
-                log!("NEEDED (proof hole remains) [initial {} -> now {} (incremental {}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), time_note, mem_str);
+                if let Some(ref reason) = speed_hint {
+                    log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
+                } else {
+                    log!("NEEDED (proof hole remains) {}", format_metrics_needed(&metrics));
+                }
             } else {
                 admits_removed += 1;
-                time_saved += saved;
-                log!("UNNEEDED (proof complete!) [initial {} -> now {} (incremental {}{})]",
-                    format_duration(baseline_time), format_duration(verify_time), time_note, mem_str);
+                log!("UNNEEDED (proof complete!) {}", format_metrics_delta(&metrics, &baseline));
             }
-            
+
             if args.fail_fast && !needed {
                 log!("  (fail-fast: stopping after first removable admit)");
                 break;
             }
         }
-        
+
         log!();
-        log!("Phase 11 Summary: {} tested, {} removed (proof holes closed!), {} time saved", 
-            admits_tested, admits_removed, format_duration(time_saved));
+        log!("Phase 11 Summary: {} tested, {} removed (proof holes closed!)",
+            admits_tested, admits_removed);
     } else {
         log!();
         log!("Phase 11: Skipped (use -m flag to enable admit minimization)");
@@ -5514,15 +5601,20 @@ fn main() -> Result<()> {
                 });
             log!();
             
-            let baseline_time = initial_duration;
+            // Take baseline for this phase
+            let (_, _, phase12_baseline) = run_verus_timed(&args.codebase)?;
+            log!("[Baseline] verification CPU: {}, z3 RSS: {} MB, wall: {}",
+                format_duration_secs(phase12_baseline.verification_cpu_secs()),
+                phase12_baseline.z3_rss_mb,
+                format_duration_secs(phase12_baseline.wall_secs));
+            log!();
+
             let mut blocks_tested = 0;
             let mut blocks_removed = 0;
-            let mut time_saved = Duration::ZERO;
-            
+
             for (i, block) in all_proof_blocks.iter().take(test_count).enumerate() {
                 let rel_path = block.file.strip_prefix(&args.codebase).unwrap_or(&block.file);
 
-                // Resume mode: skip if already has NEEDED/UNNEEDED marker
                 if !args.fresh && has_item_marker(&block.file, block.start_line, "proof block") {
                     log!("  [{}/{}] proof block at {}:{}-{} in fn {}... (from prior run, skipping)",
                         i + 1, test_count, rel_path.display(), block.start_line, block.end_line, block.context);
@@ -5541,27 +5633,29 @@ fn main() -> Result<()> {
                     continue;
                 }
 
-                let (needed, verify_time, saved, _peak_rss) = test_proof_block(block, &args.codebase, baseline_time)?;
+                let (needed, speed_hint, metrics) = test_proof_block(block, &args.codebase, &phase12_baseline, args.max_incremental, args.max_memory_increase)?;
                 blocks_tested += 1;
-                
-                let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
                 if needed {
-                    log!("NEEDED (restored) [{}{mem_str}]", format_duration(verify_time));
+                    if let Some(ref reason) = speed_hint {
+                        log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &phase12_baseline));
+                    } else {
+                        log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    }
                 } else {
                     blocks_removed += 1;
-                    time_saved += saved;
-                    log!("UNNEEDED (commented) [{}{mem_str}]", format_duration(verify_time));
+                    log!("UNNEEDED (commented) {}", format_metrics_delta(&metrics, &phase12_baseline));
                 }
-                
+
                 if args.fail_fast && !needed {
                     log!("  (fail-fast: stopping after first unneeded proof block)");
                     break;
                 }
             }
-            
+
             log!();
-            log!("Phase 12 Summary: {} tested, {} removed (commented), {} time saved", 
-                blocks_tested, blocks_removed, format_duration(time_saved));
+            log!("Phase 12 Summary: {} tested, {} removed (commented)",
+                blocks_tested, blocks_removed);
         }
     } else {
         log!();
@@ -5644,16 +5738,17 @@ fn main() -> Result<()> {
                     continue;
                 }
 
-                let (used, verify_time, _peak_rss) = test_type(type_info, &args.codebase)?;
+                let (used, metrics) = test_type(type_info, &args.codebase)?;
                 types_tested += 1;
-                
-                let mem_str = _peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
+
                 if used {
                     types_used += 1;
-                    log!("TYPE USED [{}{mem_str}]", format_duration(verify_time));
+                    log!("TYPE USED [wall: {}, z3 RSS: {} MB]",
+                        format_duration_secs(metrics.wall_secs), metrics.z3_rss_mb);
                 } else {
                     types_unused += 1;
-                    log!("TYPE UNUSED (commented) [{}{mem_str}]", format_duration(verify_time));
+                    log!("TYPE UNUSED (commented) [wall: {}, z3 RSS: {} MB]",
+                        format_duration_secs(metrics.wall_secs), metrics.z3_rss_mb);
                 }
                 
                 if args.fail_fast && !used {
@@ -5716,28 +5811,30 @@ fn main() -> Result<()> {
     log!();
     
     log!("  Verifying...");
-    let (final_success, final_stderr, final_duration, final_peak_rss) = run_verus_timed(&args.codebase)?;
+    let (final_success, final_stderr, final_metrics) = run_verus_timed(&args.codebase)?;
     
-    // Calculate time difference
-    let time_diff = if final_duration < initial_duration {
-        let saved = initial_duration - final_duration;
-        let pct = (saved.as_secs_f64() / initial_duration.as_secs_f64()) * 100.0;
-        format!("-{} ({:.1}% faster)", format_duration(saved), pct)
-    } else if final_duration > initial_duration {
-        let added = final_duration - initial_duration;
-        let pct = (added.as_secs_f64() / initial_duration.as_secs_f64()) * 100.0;
-        format!("+{} ({:.1}% slower)", format_duration(added), pct)
+    // Calculate CPU time difference (not wall-clock)
+    let final_cpu = final_metrics.verification_cpu_secs();
+    let initial_cpu = initial_metrics.verification_cpu_secs();
+    let cpu_delta = final_cpu - initial_cpu;
+    let cpu_diff = if initial_cpu > 0.0 && cpu_delta.abs() / initial_cpu > 0.005 {
+        let pct = (cpu_delta / initial_cpu) * 100.0;
+        if cpu_delta < 0.0 {
+            format!("{:.1}% faster", -pct)
+        } else {
+            format!("{:.1}% slower", pct)
+        }
     } else {
         "no change".to_string()
     };
-    
+
     if final_success {
-        let mem_str = final_peak_rss.map(|kb| format!(", {}", format_memory_mb(kb))).unwrap_or_default();
-        log!("✓ Final verification: {}{} (was {}, {})",
-            format_duration(final_duration),
-            mem_str,
-            format_duration(initial_duration),
-            time_diff);
+        log!("✓ Final verification: cpu {} (was {}, {}), z3 RSS: {} MB, wall: {}",
+            format_duration_secs(final_cpu),
+            format_duration_secs(initial_cpu),
+            cpu_diff,
+            final_metrics.z3_rss_mb,
+            format_duration_secs(final_metrics.wall_secs));
     } else {
         log!("✗ Final verification FAILED - something went wrong!");
         log!();
@@ -5757,7 +5854,7 @@ fn main() -> Result<()> {
     log!();
     // Calculate estimation error
     let actual_secs = stats.total_time.as_secs_f64();
-    let estimated_secs = estimated_total.as_secs_f64();
+    let estimated_secs = estimated_total;
     let error_secs = actual_secs - estimated_secs;
     let error_pct = if estimated_secs > 0.0 {
         ((actual_secs - estimated_secs) / estimated_secs) * 100.0
@@ -5768,14 +5865,14 @@ fn main() -> Result<()> {
     
     log!("Time:");
     log!("  Actual time:             {}", format_duration(stats.total_time));
-    log!("  Estimated time:          {}", format_duration(estimated_total));
+    log!("  Estimated time:          {}", format_duration_secs(estimated_total));
     log!("  Estimation error:        {}{:.1}s ({}{:.1}%)", 
          error_sign, error_secs, error_sign, error_pct);
     log!();
-    log!("Verification:");
-    log!("  Initial: {} ({})", format_duration(initial_duration), if initial_success { "passed" } else { "failed" });
-    log!("  Final:   {} ({})", format_duration(final_duration), if final_success { "passed" } else { "failed" });
-    log!("  Change:  {}", time_diff);
+    log!("Verification (CPU time):");
+    log!("  Initial: {} ({})", format_duration_secs(initial_cpu), if initial_success { "passed" } else { "failed" });
+    log!("  Final:   {} ({})", format_duration_secs(final_cpu), if final_success { "passed" } else { "failed" });
+    log!("  Change:  {}", cpu_diff);
     log!();
     log!("Lines of Code (comments not counted):");
     log!("  Initial: {:>6} (spec: {}, proof: {}, exec: {})", 
@@ -5927,13 +6024,6 @@ fn main() -> Result<()> {
     } else {
         log!("⚠ Minimization complete but final verification failed.");
         log!("  You may need to restore some lemmas manually.");
-    }
-
-    // Auto-commit chapter results in multi-chapter mode
-    if multi_chapter && !args.dry_run {
-        if let Some(ch) = current_chapter {
-            git_commit_chapter(&args.codebase, ch)?;
-        }
     }
 
     } // end for chapter loop
