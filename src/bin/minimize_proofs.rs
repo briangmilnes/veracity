@@ -5869,10 +5869,27 @@ fn main() -> Result<()> {
     log!("  Estimation error:        {}{:.1}s ({}{:.1}%)", 
          error_sign, error_secs, error_sign, error_pct);
     log!();
+    let wall_delta = final_metrics.wall_secs - initial_metrics.wall_secs;
+    let wall_diff = if initial_metrics.wall_secs > 0.0 && wall_delta.abs() / initial_metrics.wall_secs > 0.005 {
+        let pct = (wall_delta / initial_metrics.wall_secs) * 100.0;
+        if wall_delta < 0.0 {
+            format!("{:.1}% faster", -pct)
+        } else {
+            format!("{:.1}% slower", pct)
+        }
+    } else {
+        "no change".to_string()
+    };
+
     log!("Verification (CPU time):");
     log!("  Initial: {} ({})", format_duration_secs(initial_cpu), if initial_success { "passed" } else { "failed" });
     log!("  Final:   {} ({})", format_duration_secs(final_cpu), if final_success { "passed" } else { "failed" });
     log!("  Change:  {}", cpu_diff);
+    log!();
+    log!("Verification (wall-clock):");
+    log!("  Initial: {} ({})", format_duration_secs(initial_metrics.wall_secs), if initial_success { "passed" } else { "failed" });
+    log!("  Final:   {} ({})", format_duration_secs(final_metrics.wall_secs), if final_success { "passed" } else { "failed" });
+    log!("  Change:  {}", wall_diff);
     log!();
     log!("Lines of Code (comments not counted):");
     log!("  Initial: {:>6} (spec: {}, proof: {}, exec: {})", 
