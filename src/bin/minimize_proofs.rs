@@ -249,59 +249,67 @@ fn format_duration_secs(secs: f64) -> String {
     }
 }
 
-/// Format metrics for NEEDED (restored) — no baseline comparison, just raw numbers.
-fn format_metrics_needed(metrics: &VerifyMetrics) -> String {
-    format!("[cpu: {}s, mem: {}MB, wall: {}s]",
+/// Format metrics for NEEDED (restored) — baseline + raw numbers, no deltas.
+fn format_metrics_needed(metrics: &VerifyMetrics, baseline: &VerifyMetrics) -> String {
+    format!("[baseline cpu: {}s, mem: {}MB, real: {}s | cpu: {}s, mem: {}MB, real: {}s]",
+        baseline.verification_cpu_secs() as u64,
+        baseline.z3_rss_mb,
+        baseline.wall_secs as u64,
         metrics.verification_cpu_secs() as u64,
         metrics.z3_rss_mb,
         metrics.wall_secs as u64)
 }
 
-/// Format metrics for UNNEEDED or speed hint — show value/delta.
+/// Format metrics for UNNEEDED or speed hint — baseline + deltas.
 fn format_metrics_delta(metrics: &VerifyMetrics, baseline: &VerifyMetrics) -> String {
-    let cpu = metrics.verification_cpu_secs() as i64;
-    let cpu_delta = cpu - baseline.verification_cpu_secs() as i64;
-    let rss = metrics.z3_rss_mb as i64;
-    let rss_delta = rss - baseline.z3_rss_mb as i64;
+    let cpu_delta = metrics.verification_cpu_secs() as i64 - baseline.verification_cpu_secs() as i64;
+    let rss_delta = metrics.z3_rss_mb as i64 - baseline.z3_rss_mb as i64;
 
-    format!("[cpu: {}s/{:+}s, mem: {}MB/{:+}MB, wall: {}s]",
-        cpu, cpu_delta,
-        rss, rss_delta,
+    format!("[baseline cpu: {}s, mem: {}MB, real: {}s | cpu: {:+}s, mem: {:+}MB, real: {}s]",
+        baseline.verification_cpu_secs() as u64,
+        baseline.z3_rss_mb,
+        baseline.wall_secs as u64,
+        cpu_delta,
+        rss_delta,
         metrics.wall_secs as u64)
 }
 
 /// Check if removing an assert/proof block caused a speed regression.
 /// Returns Some("reason") if it's a speed hint (should be kept), None if OK to remove.
-/// Memory threshold is proportional: max_memory_increase is a fraction (like max_incremental),
-/// e.g., 0.10 = 10% of baseline RSS.
+///
+/// With default thresholds of 0.0, any increase in CPU or memory means the
+/// item is a Z3 hint and must be kept. Only items whose removal is strictly
+/// no worse on both metrics are classified as UNNEEDED.
 fn check_speed_hint(
     metrics: &VerifyMetrics,
     baseline: &VerifyMetrics,
     max_incremental: f64,
     max_memory_increase: f64,
 ) -> Option<String> {
-    // CPU check: did verification CPU increase by more than max_incremental fraction?
-    if max_incremental > 0.0 {
-        let cpu = metrics.verification_cpu_secs();
-        let base_cpu = baseline.verification_cpu_secs();
-        if base_cpu > 0.0 {
-            let ratio = (cpu - base_cpu) / base_cpu;
-            if ratio > max_incremental {
-                return Some(format!("cpu hint: +{:.0}%", ratio * 100.0));
-            }
+    let cpu = metrics.verification_cpu_secs();
+    let base_cpu = baseline.verification_cpu_secs();
+    let cpu_delta = cpu - base_cpu;
+
+    let rss = metrics.z3_rss_mb as i64;
+    let base_rss = baseline.z3_rss_mb as i64;
+    let rss_delta = rss - base_rss;
+
+    // CPU check: did verification CPU increase beyond threshold?
+    if base_cpu > 0.0 && cpu_delta > 0.0 {
+        let ratio = cpu_delta / base_cpu;
+        if ratio > max_incremental {
+            return Some(format!("cpu hint: +{:.0}%", ratio * 100.0));
         }
     }
-    // Memory check: did Z3 RSS increase by more than max_memory_increase fraction?
-    if max_memory_increase > 0.0 {
-        let rss = metrics.z3_rss_mb as f64;
-        let base_rss = baseline.z3_rss_mb as f64;
-        if base_rss > 0.0 {
-            let ratio = (rss - base_rss) / base_rss;
-            if ratio > max_memory_increase {
-                return Some(format!("mem hint: +{:.0}%", ratio * 100.0));
-            }
+
+    // Memory check: did Z3 RSS increase beyond threshold?
+    if base_rss > 0 && rss_delta > 0 {
+        let ratio = rss_delta as f64 / base_rss as f64;
+        if ratio > max_memory_increase {
+            return Some(format!("mem hint: +{:.0}%", ratio * 100.0));
         }
     }
+
     None
 }
 
@@ -461,8 +469,8 @@ impl MinimizeArgs {
         let mut fn_filter: Option<String> = None;
         let mut fresh = false;
         let mut timeout_factor: f64 = 1.5;
-        let mut max_incremental: f64 = 0.05;
-        let mut max_memory_increase: f64 = 0.10;
+        let mut max_incremental: f64 = 0.0;
+        let mut max_memory_increase: f64 = 0.0;
 
         let mut i = 1;
         while i < args.len() {
@@ -777,8 +785,8 @@ impl MinimizeArgs {
         log!("  --fresh                     Strip all markers and start from scratch");
         log!("  --danger                    Run even with uncommitted changes (DANGEROUS!)");
         log!("  --timeout-factor F          Kill verification if wall-clock > baseline * F (default: 1.5, 0 = off)");
-        log!("  --max-incremental F         Reject removal if CPU increased > F fraction of baseline (default: 0.05, 0 = off)");
-        log!("  --max-memory-increase F     Reject removal if Z3 RSS increased > F fraction of baseline (default: 0.10, 0 = off)");
+        log!("  --max-incremental F         Reject removal if CPU increased > F fraction of baseline (default: 0.0 = any increase)");
+        log!("  --max-memory-increase F     Reject removal if Z3 RSS increased > F fraction of baseline (default: 0.0 = any increase)");
         log!("  -h, --help                  Show this help message");
         log!();
         log!("Examples:");
@@ -3846,7 +3854,7 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 removed += 1;
@@ -3914,7 +3922,7 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 removed += 1;
@@ -4029,7 +4037,7 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result<(
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 removed += 1;
@@ -4076,7 +4084,7 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result<(
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 removed += 1;
@@ -5227,7 +5235,7 @@ fn main() -> Result<()> {
         let is_dependent = dependent_names.contains(name);
 
         if needed {
-            log!("FAILED → USED (restored) {}", format_metrics_needed(&test_metrics));
+            log!("FAILED → USED (restored) {}", format_metrics_needed(&test_metrics, &initial_metrics));
             stats.lemmas_used += variant_count;
 
             if is_dependent {
@@ -5322,7 +5330,7 @@ fn main() -> Result<()> {
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 lib_asserts_removed += 1;
@@ -5412,7 +5420,7 @@ fn main() -> Result<()> {
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
                 } else {
-                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 codebase_asserts_removed += 1;
@@ -5517,7 +5525,7 @@ fn main() -> Result<()> {
                 if let Some(ref reason) = speed_hint {
                     log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &baseline));
                 } else {
-                    log!("NEEDED (proof hole remains) {}", format_metrics_needed(&metrics));
+                    log!("NEEDED (proof hole remains) {}", format_metrics_needed(&metrics, &baseline));
                 }
             } else {
                 admits_removed += 1;
@@ -5640,7 +5648,7 @@ fn main() -> Result<()> {
                     if let Some(ref reason) = speed_hint {
                         log!("NEEDED ({}) {}", reason, format_metrics_delta(&metrics, &phase12_baseline));
                     } else {
-                        log!("NEEDED (restored) {}", format_metrics_needed(&metrics));
+                        log!("NEEDED (restored) {}", format_metrics_needed(&metrics, &phase12_baseline));
                     }
                 } else {
                     blocks_removed += 1;

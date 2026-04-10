@@ -389,8 +389,8 @@ All markers use the prefix `// Veracity:` followed by the classification.
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--timeout-factor F` | 1.5 | Kill verification if wall-clock time > baseline * F. Set 0 to disable. |
-| `--max-incremental F` | 0.05 | Reject removal if verification CPU increased > F fraction of baseline (0.05 = 5%). Set 0 to disable. |
-| `--max-memory-increase F` | 0.10 | Reject removal if Z3 peak RSS increased > F fraction of baseline (0.10 = 10%). Set 0 to disable. |
+| `--max-incremental F` | 0.0 | Reject removal if verification CPU increased > F fraction of baseline. Default 0.0 = any increase rejects. |
+| `--max-memory-increase F` | 0.0 | Reject removal if Z3 peak RSS increased > F fraction of baseline. Default 0.0 = any increase rejects. |
 
 ### Broadcast group flags
 
