@@ -1,4 +1,14 @@
 
- on lemma-search
-   Trigger search also
-   
+1) On minimize proofs with multiple chapters get a total estimate.
+
+2) These should commit after a chapter and it's logs.
+
+3) PTT tests enusure disappeared.
+ plans/veracity-bug-ensures-as-proof-block.md.
+
+4) plans/veracity-bug-minimize-proofs-not-ast-aware.md)  
+
+5) plans/veracity-feature-count-loc-markers.md
+
+  and put the summary in one line, not headers above, so I can cut and paste it.
+
