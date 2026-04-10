@@ -2828,8 +2828,22 @@ fn insert_marker_before(file: &Path, line_num: usize, marker: &str) -> Result<()
     let lines: Vec<&str> = content.lines().collect();
     let mut new_lines: Vec<String> = Vec::new();
 
+    // Find the actual insertion point: skip backward past `let ghost` bindings
+    // that belong to the proof block but are not part of it syntactically.
+    let mut insert_at = line_num;
+    while insert_at > 1 {
+        let prev = lines[insert_at - 2].trim();
+        if prev.starts_with("let ghost ") || prev.starts_with("let ghost\t")
+            || prev.starts_with("let tracked ")
+            || prev.starts_with("// Veracity:") {
+            insert_at -= 1;
+        } else {
+            break;
+        }
+    }
+
     for (i, line) in lines.iter().enumerate() {
-        if i + 1 == line_num {
+        if i + 1 == insert_at {
             let trimmed = line.trim_start();
             let indent = &line[..line.len() - trimmed.len()];
             new_lines.push(format!("{}// Veracity: {}", indent, marker));
@@ -3456,128 +3470,151 @@ struct ProofBlock {
     content_preview: String, // First line of content for display
 }
 
-/// Find all proof { } blocks in a file using AST parsing
-/// These are inline proof blocks inside exec/spec functions, NOT proof fn declarations
+/// Find all proof { } blocks in a file using ra_ap_syntax token analysis.
+/// Only finds inline `proof { }` blocks inside verus! macro calls.
+/// Skips: proof fn declarations, blocks inside ensures/requires/invariant/decreases,
+/// and blocks preceded by #[cfg(...)].
 fn find_proof_blocks_in_file(file: &Path) -> Result<Vec<ProofBlock>> {
     let content = std::fs::read_to_string(file)?;
     let lines: Vec<&str> = content.lines().collect();
+    let parse = ra_ap_syntax::SourceFile::parse(&content, ra_ap_syntax::Edition::Edition2021);
+    let root = parse.tree();
     let mut proof_blocks = Vec::new();
-    
-    let mut current_context = String::from("unknown");
-    let mut i = 0;
-    
-    while i < lines.len() {
-        let line_num = i + 1;
-        let trimmed = lines[i].trim();
-        
-        // Track context (function we're in)
-        if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") ||
-           trimmed.starts_with("exec fn ") || trimmed.starts_with("pub exec fn ") ||
-           trimmed.starts_with("spec fn ") || trimmed.starts_with("pub spec fn ") ||
-           trimmed.starts_with("open spec fn ") || trimmed.starts_with("pub open spec fn ") ||
-           trimmed.contains(" fn ") {
-            // Extract function name
-            if let Some(fn_start) = trimmed.find("fn ") {
-                let after_fn = &trimmed[fn_start + 3..];
-                if let Some(paren) = after_fn.find('(') {
-                    current_context = after_fn[..paren].trim().to_string();
-                } else if let Some(lt) = after_fn.find('<') {
-                    current_context = after_fn[..lt].trim().to_string();
-                }
-            }
-        }
-        
-        // Skip comments
-        if trimmed.starts_with("//") {
-            i += 1;
-            continue;
-        }
-        
-        // Skip "proof fn" declarations - we only want inline "proof { }" blocks
-        if trimmed.starts_with("proof fn ") || trimmed.starts_with("pub proof fn ") ||
-           trimmed.contains(" proof fn ") {
-            i += 1;
-            continue;
-        }
-        
-        // Look for "proof {" or "proof{" pattern (inline proof block)
-        let proof_patterns = ["proof {", "proof{"];
-        let mut found_proof = false;
-        
-        for pattern in &proof_patterns {
-            if let Some(pos) = trimmed.find(pattern) {
-                // Make sure it's at word boundary (not part of longer identifier)
-                let before_ok = pos == 0 || !trimmed.chars().nth(pos - 1).map_or(false, |c| c.is_alphanumeric() || c == '_');
-                
-                if before_ok {
-                    // Found a proof block start, now find its end
-                    let start_line = line_num;
-                    let mut brace_depth = 0;
-                    let mut end_line = start_line;
-                    let mut content_preview = String::new();
-                    
-                    // Count braces from this line forward
-                    for j in i..lines.len() {
-                        let check_line = lines[j];
-                        for ch in check_line.chars() {
-                            if ch == '{' {
-                                brace_depth += 1;
-                            } else if ch == '}' {
-                                brace_depth -= 1;
-                                if brace_depth == 0 {
-                                    end_line = j + 1;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Capture first non-proof line as preview
-                        if content_preview.is_empty() && j > i {
-                            let preview_trimmed = lines[j].trim();
-                            if !preview_trimmed.is_empty() && !preview_trimmed.starts_with("//") {
-                                content_preview = if preview_trimmed.len() > 50 {
-                                    format!("{}...", &preview_trimmed[..50])
-                                } else {
-                                    preview_trimmed.to_string()
-                                };
-                            }
-                        }
-                        
-                        if brace_depth == 0 {
-                            break;
-                        }
+
+    // Helper: 0-indexed line from byte offset
+    let line_of = |offset: usize| -> usize {
+        content[..offset.min(content.len())].bytes().filter(|&b| b == b'\n').count()
+    };
+
+    // Find verus! macro calls and walk their token trees
+    for node in root.syntax().descendants() {
+        if node.kind() != SyntaxKind::MACRO_CALL { continue; }
+        let macro_call = match ast::MacroCall::cast(node.clone()) {
+            Some(m) => m, None => continue,
+        };
+        if macro_call.path().map_or(true, |p| p.to_string() != "verus") { continue; }
+        let token_tree = match macro_call.token_tree() {
+            Some(t) => t, None => continue,
+        };
+
+        let tokens: Vec<ra_ap_syntax::SyntaxToken> = token_tree.syntax()
+            .descendants_with_tokens()
+            .filter_map(|n| n.into_token())
+            .collect();
+
+        let mut current_context = String::from("unknown");
+        let mut ti = 0;
+        while ti < tokens.len() {
+            let tok = &tokens[ti];
+            let text = tok.text();
+
+            // Track function context
+            if tok.kind() == SyntaxKind::FN_KW || (tok.kind() == SyntaxKind::IDENT && text == "fn") {
+                for j in (ti + 1)..tokens.len() {
+                    if tokens[j].kind() == SyntaxKind::WHITESPACE { continue; }
+                    if tokens[j].kind() == SyntaxKind::IDENT {
+                        current_context = tokens[j].text().to_string();
                     }
-                    
-                    if content_preview.is_empty() {
-                        content_preview = "(empty or single-line)".to_string();
-                    }
-                    
-                    proof_blocks.push(ProofBlock {
-                        file: file.to_path_buf(),
-                        start_line,
-                        end_line,
-                        context: current_context.clone(),
-                        content_preview,
-                    });
-                    
-                    found_proof = true;
                     break;
                 }
             }
-        }
-        
-        if !found_proof {
-            i += 1;
-        } else {
-            // Skip to end of this proof block
-            if let Some(last) = proof_blocks.last() {
-                i = last.end_line;
-            } else {
-                i += 1;
+
+            // Look for `proof` ident token
+            if tok.kind() == SyntaxKind::IDENT && text == "proof" {
+                // Find next non-whitespace token
+                let mut next_ti = ti + 1;
+                while next_ti < tokens.len() && tokens[next_ti].kind() == SyntaxKind::WHITESPACE {
+                    next_ti += 1;
+                }
+
+                // Must be followed by `{`
+                if next_ti >= tokens.len() || tokens[next_ti].kind() != SyntaxKind::L_CURLY {
+                    ti += 1; continue;
+                }
+
+                // Skip `proof fn` declarations
+                if next_ti < tokens.len() && (tokens[next_ti].kind() == SyntaxKind::FN_KW ||
+                    (tokens[next_ti].kind() == SyntaxKind::IDENT && tokens[next_ti].text() == "fn")) {
+                    ti += 1; continue;
+                }
+
+                // Skip proof blocks inside contract clauses (ensures/requires/invariant/decreases).
+                // Walk backward from `proof` looking for these keywords before hitting `{`, `}`, `;`, or `fn`.
+                let mut in_contract = false;
+                for j in (0..ti).rev() {
+                    let pt = tokens[j].text();
+                    if tokens[j].kind() == SyntaxKind::WHITESPACE { continue; }
+                    if pt == "ensures" || pt == "requires" || pt == "invariant"
+                        || pt == "decreases" || pt == "recommends" {
+                        in_contract = true;
+                        break;
+                    }
+                    if tokens[j].kind() == SyntaxKind::L_CURLY
+                        || tokens[j].kind() == SyntaxKind::R_CURLY
+                        || tokens[j].kind() == SyntaxKind::SEMICOLON
+                        || tokens[j].kind() == SyntaxKind::FN_KW
+                        || pt == "fn" {
+                        break;
+                    }
+                }
+                if in_contract { ti += 1; continue; }
+
+                // Find the matching `}` using token-level brace counting
+                let proof_start_offset: usize = tok.text_range().start().into();
+                let start_line_0 = line_of(proof_start_offset);
+                let start_line = start_line_0 + 1;
+
+                let mut brace_depth = 0;
+                let mut end_offset = proof_start_offset;
+                for j in next_ti..tokens.len() {
+                    if tokens[j].kind() == SyntaxKind::L_CURLY {
+                        brace_depth += 1;
+                    } else if tokens[j].kind() == SyntaxKind::R_CURLY {
+                        brace_depth -= 1;
+                        if brace_depth == 0 {
+                            end_offset = tokens[j].text_range().end().into();
+                            ti = j;
+                            break;
+                        }
+                    }
+                }
+                let end_line = line_of(end_offset.saturating_sub(1)) + 1;
+
+                // Skip if preceded by #[cfg(...)]
+                if start_line > 1 {
+                    let prev = lines[start_line_0.saturating_sub(1)].trim();
+                    if prev.starts_with("#[cfg(") { ti += 1; continue; }
+                }
+
+                // Content preview
+                let mut content_preview = String::new();
+                for li in (start_line_0 + 1)..end_line.min(lines.len()) {
+                    let pt = lines[li].trim();
+                    if !pt.is_empty() && !pt.starts_with("//") && pt != "}" {
+                        content_preview = if pt.len() > 50 {
+                            format!("{}...", &pt[..50])
+                        } else { pt.to_string() };
+                        break;
+                    }
+                }
+                if content_preview.is_empty() {
+                    content_preview = "(empty or single-line)".to_string();
+                }
+
+                proof_blocks.push(ProofBlock {
+                    file: file.to_path_buf(),
+                    start_line,
+                    end_line,
+                    context: current_context.clone(),
+                    content_preview,
+                });
             }
+
+            ti += 1;
         }
     }
-    
+
+    proof_blocks.sort_by_key(|b| b.start_line);
     Ok(proof_blocks)
 }
 
