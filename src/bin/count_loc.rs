@@ -752,6 +752,122 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
     log!("{} files analyzed", format_number(rust_files.len()));
     log!("{}ms", start.elapsed().as_millis());
 
+    // ── Veracity markers and alg analysis comments ─────────────────
+    {
+        let mut needed_assert = 0usize;
+        let mut needed_proof_block = 0usize;
+        let mut needed_cpu_hint = 0usize;
+        let mut needed_mem_hint = 0usize;
+        let mut unneeded_assert = 0usize;
+        let mut unneeded_proof_block = 0usize;
+        let mut unneeded_other = 0usize;
+        let mut other_markers = 0usize;
+        let mut alg_apas = 0usize;
+        let mut alg_code_review = 0usize;
+
+        // Per-chapter marker counts: (chapter_name, total_markers, unneeded_markers)
+        let mut chapter_markers: std::collections::BTreeMap<String, (usize, usize)> =
+            std::collections::BTreeMap::new();
+
+        for file in &rust_files {
+            let content = match fs::read_to_string(file) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+
+            let chapter = file.strip_prefix(base_dir).ok()
+                .and_then(|p| p.components().find_map(|c| {
+                    let s = c.as_os_str().to_str()?;
+                    if s.starts_with("Chap") { Some(s.to_string()) } else { None }
+                }))
+                .unwrap_or_else(|| "other".to_string());
+
+            let mut file_total = 0usize;
+            let mut file_unneeded = 0usize;
+
+            for line in content.lines() {
+                let trimmed = line.trim();
+
+                // Veracity markers
+                if let Some(rest) = trimmed.strip_prefix("// Veracity:") {
+                    let marker = rest.trim();
+                    file_total += 1;
+                    if marker.starts_with("NEEDED assert (cpu hint") || marker.starts_with("NEEDED assert (speed hint") && marker.contains("cpu") {
+                        needed_cpu_hint += 1;
+                    } else if marker.starts_with("NEEDED assert (mem hint") || marker.starts_with("NEEDED assert (speed hint") && marker.contains("mem") {
+                        needed_mem_hint += 1;
+                    } else if marker.starts_with("NEEDED proof block (cpu hint") || marker.starts_with("NEEDED proof block (speed hint") && marker.contains("cpu") {
+                        needed_cpu_hint += 1;
+                    } else if marker.starts_with("NEEDED proof block (mem hint") || marker.starts_with("NEEDED proof block (speed hint") && marker.contains("mem") {
+                        needed_mem_hint += 1;
+                    } else if marker == "NEEDED assert" {
+                        needed_assert += 1;
+                    } else if marker == "NEEDED proof block" {
+                        needed_proof_block += 1;
+                    } else if marker.starts_with("UNNEEDED assert ") {
+                        unneeded_assert += 1;
+                        file_unneeded += 1;
+                    } else if marker.starts_with("UNNEEDED proof block ") {
+                        unneeded_proof_block += 1;
+                        file_unneeded += 1;
+                    } else if marker.starts_with("UNNEEDED ") {
+                        unneeded_other += 1;
+                        file_unneeded += 1;
+                    } else {
+                        other_markers += 1;
+                    }
+                }
+
+                // Algorithm analysis annotations
+                if trimmed.starts_with("/// - Alg Analysis: APAS") {
+                    alg_apas += 1;
+                } else if trimmed.starts_with("/// - Alg Analysis: Code review") {
+                    alg_code_review += 1;
+                }
+            }
+
+            if file_total > 0 {
+                let entry = chapter_markers.entry(chapter).or_insert((0, 0));
+                entry.0 += file_total;
+                entry.1 += file_unneeded;
+            }
+        }
+
+        let total_markers = needed_assert + needed_proof_block + needed_cpu_hint + needed_mem_hint
+            + unneeded_assert + unneeded_proof_block + unneeded_other + other_markers;
+
+        if total_markers > 0 {
+            log!();
+            log!("Veracity Markers: {} total ({:.1}% of lines), {} NEEDED assert, {} NEEDED proof block, {} cpu hint, {} mem hint, {} UNNEEDED assert, {} UNNEEDED proof block, {} UNNEEDED other, {} other",
+                format_number(total_markers),
+                total_markers as f64 / total_lines as f64 * 100.0,
+                format_number(needed_assert),
+                format_number(needed_proof_block),
+                format_number(needed_cpu_hint),
+                format_number(needed_mem_hint),
+                format_number(unneeded_assert),
+                format_number(unneeded_proof_block),
+                format_number(unneeded_other),
+                format_number(other_markers));
+
+            log!();
+            log!("  {:>8}  {:>10}  Chapter", "markers", "unneeded");
+            for (chapter, (total, unneeded)) in &chapter_markers {
+                log!("  {:>8}  {:>10}  {}", total, unneeded, chapter);
+            }
+        }
+
+        let total_alg = alg_apas + alg_code_review;
+        if total_alg > 0 {
+            log!();
+            log!("Algorithm Analysis Comments: {} total ({:.1}% of lines), {} APAS, {} Code review",
+                format_number(total_alg),
+                total_alg as f64 / total_lines as f64 * 100.0,
+                format_number(alg_apas),
+                format_number(alg_code_review));
+        }
+    }
+
     // ── Proof lines per function report ─────────────────────────────
     if !all_fn_data.is_empty() {
         log!();
