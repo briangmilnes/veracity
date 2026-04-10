@@ -3468,6 +3468,7 @@ struct ProofBlock {
     end_line: usize,
     context: String,      // Function name it's in
     content_preview: String, // First line of content for display
+    in_lock_section: bool, // Between acquire_read/write and release_read/write
 }
 
 /// Find all proof { } blocks in a file using ra_ap_syntax token analysis.
@@ -3601,12 +3602,59 @@ fn find_proof_blocks_in_file(file: &Path) -> Result<Vec<ProofBlock>> {
                     content_preview = "(empty or single-line)".to_string();
                 }
 
+                // Detect if this proof block is inside a lock critical section.
+                // Use line-based detection: scan lines above for acquire_read/acquire_write,
+                // scan lines below for release_read/release_write. If we find an acquire
+                // above (before hitting a release) and a release below (before hitting an
+                // acquire), the proof block is between lock acquire and release.
+                let lock_acquire = ["acquire_read", "acquire_write"];
+                let lock_release = ["release_read", "release_write"];
+
+                let mut has_acquire_before = false;
+                for line_idx in (0..start_line_0).rev() {
+                    let lt = lines[line_idx].trim();
+                    if lt.starts_with("//") { continue; }
+                    if lock_acquire.iter().any(|&f| lt.contains(f)) {
+                        has_acquire_before = true;
+                        break;
+                    }
+                    if lock_release.iter().any(|&f| lt.contains(f)) {
+                        break; // Hit a release first — outside critical section
+                    }
+                    // Stop at function boundary
+                    if lt.starts_with("fn ") || lt.starts_with("pub fn ")
+                        || lt.starts_with("exec fn ") || lt.starts_with("pub exec fn ") {
+                        break;
+                    }
+                }
+
+                let mut has_release_after = false;
+                let end_line_0 = end_line.saturating_sub(1);
+                for line_idx in (end_line_0 + 1)..lines.len() {
+                    let lt = lines[line_idx].trim();
+                    if lt.starts_with("//") { continue; }
+                    if lock_release.iter().any(|&f| lt.contains(f)) {
+                        has_release_after = true;
+                        break;
+                    }
+                    if lock_acquire.iter().any(|&f| lt.contains(f)) {
+                        break; // Hit another acquire — outside this critical section
+                    }
+                    if lt.starts_with("fn ") || lt.starts_with("pub fn ")
+                        || lt.starts_with("exec fn ") || lt.starts_with("pub exec fn ") {
+                        break;
+                    }
+                }
+
+                let in_lock_section = has_acquire_before && has_release_after;
+
                 proof_blocks.push(ProofBlock {
                     file: file.to_path_buf(),
                     start_line,
                     end_line,
                     context: current_context.clone(),
                     content_preview,
+                    in_lock_section,
                 });
             }
 
@@ -3840,9 +3888,12 @@ fn run_single_file_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result
     log!("Found {} assert statements", asserts.len());
 
     // Find proof blocks in the file, sorted by descending line
-    let mut proof_blocks = find_proof_blocks_in_file(file)?;
+    let all_proof_blocks = find_proof_blocks_in_file(file)?;
+    let lock_protected = all_proof_blocks.iter().filter(|b| b.in_lock_section).count();
+    let mut proof_blocks: Vec<_> = all_proof_blocks.into_iter().filter(|b| !b.in_lock_section).collect();
     proof_blocks.sort_by(|a, b| b.start_line.cmp(&a.start_line));
-    log!("Found {} proof {{}} blocks", proof_blocks.len());
+    log!("Found {} proof {{}} blocks{}", proof_blocks.len(),
+        if lock_protected > 0 { format!(" ({} in lock sections, skipped)", lock_protected) } else { String::new() });
     log!();
     
     if asserts.is_empty() && proof_blocks.is_empty() {
@@ -4017,7 +4068,7 @@ fn run_fn_filter_mode(args: &MinimizeArgs, baseline: &VerifyMetrics) -> Result<(
             );
         }
         if let Ok(b) = find_proof_blocks_in_file(file) {
-            proof_blocks.extend(b.into_iter().filter(|b| b.context.contains(fn_name)));
+            proof_blocks.extend(b.into_iter().filter(|b| !b.in_lock_section && b.context.contains(fn_name)));
         }
     }
 
@@ -5605,15 +5656,23 @@ fn main() -> Result<()> {
             }
         };
 
-        // Find all proof blocks
+        // Find all proof blocks, filtering out those in lock critical sections
         let mut all_proof_blocks: Vec<ProofBlock> = Vec::new();
+        let mut lock_protected_total = 0;
         for file in &files_to_scan {
             if let Ok(blocks) = find_proof_blocks_in_file(file) {
-                all_proof_blocks.extend(blocks);
+                for block in blocks {
+                    if block.in_lock_section {
+                        lock_protected_total += 1;
+                    } else {
+                        all_proof_blocks.push(block);
+                    }
+                }
             }
         }
-        
-        log!("  Found {} proof {{}} blocks in {} files", all_proof_blocks.len(), files_to_scan.len());
+
+        log!("  Found {} proof {{}} blocks in {} files{}", all_proof_blocks.len(), files_to_scan.len(),
+            if lock_protected_total > 0 { format!(" ({} in lock sections, skipped)", lock_protected_total) } else { String::new() });
         
         // List the proof blocks found
         if !all_proof_blocks.is_empty() && all_proof_blocks.len() <= 20 {
