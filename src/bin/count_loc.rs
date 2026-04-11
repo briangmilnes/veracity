@@ -49,7 +49,8 @@ fn init_logging(base_dir: &Path) {
     let project_root = find_project_root(base_dir);
     let analyses_dir = project_root.join("analyses");
     let _ = std::fs::create_dir_all(&analyses_dir);
-    let log_path = analyses_dir.join("veracity-count-loc.log");
+    let now = Local::now();
+    let log_path = analyses_dir.join(format!("veracity-count-loc.{}.log", now.format("%Y%m%d-%H%M%S")));
     let _ = std::fs::write(&log_path, "");
     LOG_FILE_PATH.with(|p| {
         *p.borrow_mut() = Some(log_path);
