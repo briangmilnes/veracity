@@ -835,23 +835,53 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
         + unneeded_assert + unneeded_proof_block + unneeded_other + other_markers;
     let total_alg = alg_apas + alg_code_review;
 
-    // ── One-line summary ───────────────────────────────────────────
+    // ── Test and bench LOC ─────────────────────────────────────────
+    let mut test_loc = 0usize;
+    for test_name in &_args.test_dirs {
+        let dir = base_dir.join(test_name);
+        if dir.exists() && dir.is_dir() {
+            let test_files = find_rust_files(&[dir]);
+            let test_files = filter_excludes(test_files, &_args.exclude_dirs);
+            for f in &test_files {
+                if let Ok(n) = count_lines_in_file(f) { test_loc += n; }
+            }
+        }
+    }
+    let mut bench_loc = 0usize;
+    for bench_name in &_args.bench_dirs {
+        let dir = base_dir.join(bench_name);
+        if dir.exists() && dir.is_dir() {
+            let bench_files = find_rust_files(&[dir]);
+            let bench_files = filter_excludes(bench_files, &_args.exclude_dirs);
+            for f in &bench_files {
+                if let Ok(n) = count_lines_in_file(f) { bench_loc += n; }
+            }
+        }
+    }
+
+    // ── Four-line summary ──────────────────────────────────────────
     let date = Local::now().format("%Y-%m-%d");
     log!();
-    log!("Summary [{}]: {} total lines, {} files, spec {}, proof {}, exec {}, rust {}, comments {} (veracity {}, alg-APAS {}, alg-Claude {}, other {}), {}ms",
-        date,
+    log!("Summary {}", date);
+    log!("  {} lines (with comments), {} without comments, {} files, elapsed {}ms",
         format_number(total_lines),
+        format_number(total_code),
         format_number(rust_files.len()),
+        start.elapsed().as_millis());
+    log!("  spec {}, proof {}, exec {}, rust {}",
         format_number(total_spec),
         format_number(total_proof),
         format_number(total_exec),
-        format_number(total_rust),
+        format_number(total_rust));
+    log!("  comments {}, veracity {}, alg-APAS {}, alg-Claude {}, other {}",
         format_number(total_comments),
         format_number(total_markers),
         format_number(alg_apas),
         format_number(alg_code_review),
-        format_number(total_comments - total_markers - total_alg),
-        start.elapsed().as_millis());
+        format_number(total_comments - total_markers - total_alg));
+    log!("  test code {}, bench code {}",
+        format_number(test_loc),
+        format_number(bench_loc));
 
     // ── Veracity marker detail ─────────────────────────────────────
     if total_markers > 0 {
