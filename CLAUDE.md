@@ -80,6 +80,42 @@ Fixture path: `tests/fixtures/APAS-VERUS`
 - `cargo build --release` or `cargo build --release --bin <name>`
 - Never use `cargo build` (debug) or `./target/debug/veracity-*`.
 
+## Review-Burden Terminology — LOPC2R / LOC0R
+
+`veracity-count-lines-of-review` partitions every line of proven code into
+two buckets. The 12 categories and their abbreviations live in
+`docs/veracity-count-lines-of-review.md` (a glossary table is at the top of
+that file). Short summary:
+
+- **LOPC2R — Lines Of Proven Code to Review.** `LODT`, `FnTySig`, `FnReqEns`,
+  `LoAA`, `LoRTT`, `LoBT`, `LoPTT`. Tests, benchmarks, and proof-time tests
+  all count as review (every non-comment line).
+- **LOC0R — Lines Of Code 0 Review.** `LoEC`, `LoLC`, `LOP`, `Spec`. Trusted
+  once Verus has verified.
+
+Always use these full acronyms in output, tables, and docs. Do not use the
+provisional `LoR` / `LoI` or `LOPCNR` short forms that predated them.
+
+`src/standards/` and `src/experiments/` are excluded by default;
+`src/vstdplus/` is always counted.
+
+## Commands & Interaction
+
+### Mode Commands
+
+| Command | Behavior |
+|---------|----------|
+| **"TIMESTAMP"** | Checkpoint marker for later timing analysis. `git add -A && git commit -m "TIMESTAMP <ISO-8601 UTC>" && git push`. If there is nothing to stage, create an empty commit with `--allow-empty` using the same message — the purpose is the timestamped log entry, not the diff. TIMESTAMP is pre-authorized: do NOT ask for commit or push approval. Do NOT pause to write a body or summary — a one-line commit message is sufficient. |
+| **"TIMESTAMP START"** | Marks the beginning of a timed task or session. Same `git add -A && git commit && git push` mechanics as TIMESTAMP; commit message is `TIMESTAMP START <ISO-8601 UTC>`. Pre-authorized. Use when kicking off a task you want to measure. |
+| **"TIMESTAMP STOP"** | Marks the end of a timed task or session. Same mechanics; commit message is `TIMESTAMP STOP <ISO-8601 UTC>`. Pair with a preceding TIMESTAMP START to bracket elapsed time. |
+
+## Output Formatting
+
+- **Numbered tables.** Every table in responses and docs must have a `#`
+  column in column zero indexing the rows (1, 2, 3, …). No exceptions.
+- **Tables referencing source files** must also carry a `Chap` column (just
+  the number, e.g. `18`) placed right after the `#` index column.
+
 ## Path Table
 
 The **path table** is the combined ratios and timing for `veracity-read-paths`:
