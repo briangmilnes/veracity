@@ -43,6 +43,10 @@ name = "veracity-count-loc"
 path = "src/bin/count_loc.rs"
 
 [[bin]]
+name = "veracity-count-lines-of-review"
+path = "src/bin/count_lines_of_review.rs"
+
+[[bin]]
 name = "veracity-run-experiments"
 path = "src/bin/run_experiments.rs"
 

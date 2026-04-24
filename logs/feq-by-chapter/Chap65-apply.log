@@ -1,0 +1,9 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap65 | UnionFindStEph.rs              |    V |    +0 |     +0 |      +0 |     +0 |      +0 |    +0 |
+|     |  TOTAL |                                |      |    +0 |     +0 |      +0 |     +0 |      +0 |    +0 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap65/KruskalStEph.rs: no spec_*_wf predicate found
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap65/PrimStEph.rs: no spec_*_wf predicate found

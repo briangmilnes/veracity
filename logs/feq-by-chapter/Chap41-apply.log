@@ -1,0 +1,13 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap41 | AVLTreeSetStEph.rs             |    T |    +1 |    -14 |      -9 |     -2 |     +10 |   -14 |
+|   2 | Chap41 | AVLTreeSetStPer.rs             |    T |    +0 |     +0 |      +0 |     +0 |      +0 |    +0 |
+|   3 | Chap41 | ArraySetStEph.rs               |    T |    +0 |     -8 |      +0 |     +0 |      +7 |    -1 |
+|     |  TOTAL |                                |      |    +1 |    -22 |      -9 |     -2 |     +17 |   -15 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap41/AVLTreeSetMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap41/AVLTreeSetMtPer.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap41/ArraySetEnumMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap41/Example41_3.rs: no obeys_feq_full usage

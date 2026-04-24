@@ -1,0 +1,17 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap43 | AugOrderedTableMtEph.rs        |  K,V |    +2 |     +0 |      +0 |     -4 |      +0 |    -2 |
+|   2 | Chap43 | AugOrderedTableStEph.rs        |  K,V |    +2 |     +0 |      +0 |    -10 |      +0 |    -8 |
+|   3 | Chap43 | AugOrderedTableStPer.rs        |  K,V |    +2 |     +0 |      +0 |    -11 |      +0 |    -9 |
+|   4 | Chap43 | OrderedSetMtEph.rs             |    T |    +1 |     -1 |      +0 |     +0 |      +1 |    +1 |
+|   5 | Chap43 | OrderedSetStEph.rs             |    T |    +1 |     -9 |      -9 |     +0 |      +9 |    -8 |
+|   6 | Chap43 | OrderedSetStPer.rs             |    T |    +1 |     -7 |      -9 |     +0 |      +7 |    -8 |
+|   7 | Chap43 | OrderedTableMtEph.rs           |  K,V |    +2 |     +0 |      +0 |     -4 |      +0 |    -2 |
+|   8 | Chap43 | OrderedTableStEph.rs           |  K,V |    +2 |    -28 |     -15 |    -10 |     +21 |   -30 |
+|   9 | Chap43 | OrderedTableStPer.rs           |  K,V |    +2 |    -22 |      -4 |    -11 |     +16 |   -19 |
+|     |  TOTAL |                                |      |   +15 |    -67 |     -37 |    -50 |     +54 |   -85 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap43/Example43_1.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap43/OrderedTableMtPer.rs: unusual feq type params (["Pair<K, V>"]), needs human review

@@ -1,0 +1,38 @@
+
+
+ We need to make a new tool along the lines of veracity-count-loc
+ called veracity-count-lines-of-review. It will have to either get
+ veracity-count-loc's log for some of this data or regenerate it.
+
+ We want to get an understanding of the lines of specification and proof
+that have to be reviewed by the proofgrammer.
+
+ And get the ratio of this to all lines of executable code and proof that
+the user can ignore because this code is specified, proven, tested and benchmarked.
+We don't want to count lines of code in tests and benchmarks for this.
+
+ It's a bit tricky in a bunch of ways. But as you AIs generate (poor) code and (verbose)
+proofs, the time bottleneck becomes the proofgrammers time to review the following:
+
+ 1) Data structures
+
+ 2) The lemmas pre and post conditions, not their proof lines.
+
+ 3) spec functions at the top level, in the traits and those that are
+   abstract in the impls. Lots of spec_X_wf are abstract.
+   Some spec functions have only recommends which should be counted as losp to review.
+
+ 4) The lines of functions/methods within the trait which should be split into typing (fn
+  ..) and fn requires/ensures.
+
+ 5) Some top level functions can not be represented in the weak typeclass system (traits)
+  and so are at the module top level. We need their fn typing lines (fn signature) count
+  and their fn specification lines of requires and ensures.
+
+ 6) We also need their algorithmic analysis lines. Should be two for the functions specified
+  in APAS as each should have a claude algorithmic analysis. Should be one for just the
+  functions with Claude
+
+Make a plan for this including what the summary table would look like and discuss it with the
+user.
+

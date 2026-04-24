@@ -6,3 +6,7 @@ tests/fixtures/APAS-VERUS
 # Keep emacs backup files out
 \#*\#
 .#*
+
+# count-lines-of-review — hold close to the chest for a few days
+docs/veracity-count-lines-of-review.md
+analyses/veracity-count-lines-of-review.*.log

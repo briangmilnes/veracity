@@ -1,0 +1,203 @@
+# repo: /home/milnes/projects/veracity
+# generated: 2026-04-23T17:20:14-07:00
+2025-11-11 16:38:13 -0800 dbf0acee0a2c366f2ccb886ed615f946d3180b11 Initial commit: Veracity - Verus code analysis and verification tools
+2025-11-11 17:04:36 -0800 d94f21aca7c8e7cd6737be8fc588bc886c6b221a Add veracity-count-default-trait-fns tool and update README
+2025-12-05 15:57:33 -0800 6df055b61c1cfd6e6271468edd02b74998063f46 veracity-minimize-lib: add library broadcast group application and empty body lemma detection
+2025-12-05 16:11:07 -0800 99e5a15e077fc5ede5be73ff661f0ea71c2306d5 veracity-minimize-lib: fix string hacking with proper AST traversal
+2025-12-05 16:18:42 -0800 e97f89462e1d63887d7310fe9637a1057a6a96bf veracity-minimize-lib: use 'Veracity:' prefix for all inserted comments
+2025-12-05 16:22:18 -0800 d7231ebf84bae6346652c02db34fdc90eff419d9 veracity-minimize-lib: clarify three-phase workflow in dry-run
+2025-12-05 16:23:16 -0800 fdc830e0d0b86e50a8d04426ae5925e302b3c4b5 veracity-minimize-lib: use 'commenting out' not 'removal' terminology
+2025-12-05 16:34:25 -0800 331b6d95112040b854f2dc9c51f28ed48880a24e veracity-minimize-lib: improve user messaging
+2025-12-05 16:36:28 -0800 0a276565665c5cc53ea25a7a6cc921eb995773ee veracity-minimize-lib: No code will be harmed in the making of this production!
+2025-12-05 16:43:26 -0800 fc333304272cbc00e4b09ce206804c65a427edb0 Add git status check and cleaner phase descriptions
+2025-12-05 16:57:41 -0800 8b2266a3efaa0b6720e5ab906358be60e82d852b Improve phase labeling and git status checking
+2025-12-05 16:58:21 -0800 aa58c01672d702661b1d5b191476b5458e3c1037 More humorous IMPORTANT message
+2025-12-05 17:08:07 -0800 7bd0bdc34d6558c36a344a31b3be9ee8e3412016 Restructure phases: verify first, estimate time in Phase 4
+2025-12-05 17:15:49 -0800 286740a0eed97eaefa666d1ae4e477468c76a91e Add per-phase time estimates in Phase 4
+2025-12-05 17:31:59 -0800 a43ccb0e6337a9e11b918ba6193f34606000c449 Add detailed summary listing UNUSED lemmas and Phase 7/8 results
+2025-12-05 17:42:57 -0800 595caa0a552b80c887214ede6ea36f253284010d Implement Phase 7 dependence testing
+2025-12-05 18:17:10 -0800 8737c68dc857a72d6271ce0565cd8c071bc94eca Improve summary format: single-line tables, add DEPENDENT BUT NEEDED count
+2025-12-05 18:41:59 -0800 5ded93f6422f499b2077b99271c51a8a246c42d3 Add argument logging, estimation formula, and error reporting
+2025-12-05 18:45:38 -0800 939eeac97675f2b4bf406daef12a9fee32607868 Add box formatting to spec functions and modules tables
+2025-12-05 19:10:30 -0800 b3281bbfcb5d2744653a96e59f69ab92f646e503 Add veracity-minimize-lib documentation to README
+2025-12-05 19:22:24 -0800 1d92e44fa84c7bbbeb291afe301156db47521701 Fix broadcast group recommendations and add full verus output on failure
+2025-12-05 19:45:15 -0800 c5b2719ceb7c04333a5954e0311e62e4545acddc Replace string-hacking broadcast group matching with AST-based type extraction
+2025-12-05 19:52:09 -0800 478b5c7c1f2344d826dc01e57d362e493c2372e4 Add --danger flag to run with uncommitted changes
+2025-12-05 19:54:33 -0800 e6cdbe46824f5fe1034431caca6fb5678a7df9fa Fix --danger flag: add to arguments list, align warning box
+2025-12-05 19:56:13 -0800 cd7a0c57925839c7fcc2abfd1d9445c910063578 Fix danger warning box: use ASCII instead of emojis for compatibility
+2025-12-05 19:58:23 -0800 5457239cc99ca80d1e5b80a3d5b89d4306a9db32 Log to codebase/analyses/ directory instead of veracity's
+2025-12-05 20:09:43 -0800 5d0a1086090194cfe12e36a88372d0169fe11d6e Add --fail-fast flag, check git before creating log file
+2025-12-05 20:13:21 -0800 2f43ada4afd15b7dc7184082abfe72ec0bf7d201 Fix git status check to ignore veracity log file
+2025-12-05 20:35:50 -0800 4c4e2e31b26250383a264a8b139015c8ece81c12 Add Phase 9 & 10: test library and codebase asserts
+2025-12-05 21:01:33 -0800 30994ed1b9399bb24d1a337890750193c5b628e7 Add -a/--assert-minimization and -A/--max-asserts flags
+2025-12-05 21:05:31 -0800 0de80318e25d84f47a3f58b722c9302ca4c1b5cb Fix assert time output: [initial N -> now N (incremental N)]
+2025-12-05 21:10:56 -0800 7218ebb9a3cb3e8b4e7a2bcee85d13bded9f476f Make -A/--max-asserts imply -a/--assert-minimization
+2025-12-05 21:13:13 -0800 14044fff1771cfc92a69ab9e44896bcdebdd4f87 Update Phase 7 & 8 timing to use [initial N -> now N (incremental N)] format
+2025-12-05 21:19:45 -0800 fa8ab698f8ab67b431e332382f08cf0d3c13ae15 Add LOC counting in Phase 1 and Phase 11, show before/after difference
+2025-12-05 21:24:03 -0800 2b12681fc66232322f39013efaa26824be7b8234 Fix LOC counting parse logic for veracity-count-loc output format
+2025-12-05 21:34:04 -0800 f3f2d759237430fabfc40133adc8842b00dac866 Update help and README with minimize-lib as featured tool
+2025-12-05 21:36:11 -0800 f485a996ec4861aab756de8dd4ed936424625650 Remove slang from help text
+2025-12-05 21:48:14 -0800 95bc40b7f8dbb77d5148f80420a9f67b9153764f Add veracity-lemma-search: type-based lemma search tool (intentional string-based parsing)
+2025-12-05 21:52:52 -0800 bbfe0f7f29b5f97786bc123f1a6401bf9cfcf403 Add MIT LICENSE file, update copyright headers with SPDX identifier
+2025-12-05 21:54:42 -0800 a7bf2891dcf8c3046edd333b88635330c81c4d5c Add lemma_search test cases (11 tests), fix pattern parsing for new syntax
+2025-12-05 22:20:14 -0800 333b0e346bd80d61527083d5b8b5fb40d8b61d06 Fix: exclude tests/ and benches/ directories from codebase assert scanning
+2025-12-05 22:25:32 -0800 01f27f6aa6c1781eaf2dbb34ec148d0f02260d3d Fix: properly exit when uncommitted and not in danger_mode
+2025-12-06 07:46:00 -0800 6c11540530f927469abfafa5a4915b7a5c94c145 Add veracity-lemma-search: type-based lemma search tool
+2025-12-06 18:04:46 -0800 a308e4fa8816c5bceefe42ce15cb4b699dc26154 Add veracity-search tool with trait/impl body matching
+2025-12-06 18:38:05 -0800 323478fd2573440a423c09add8e7372d99b29663 Add transitive trait bound resolution to veracity-search
+2025-12-06 18:52:53 -0800 0585a2a9b170f4ab8434b5c3f00539a73d8b254d Add type alias transitive resolution + wire up struct/enum search
+2025-12-06 19:06:42 -0800 7f48589bcf5fc70a40079b0c5f32214dfc6a37dd Add -b/--builtin switch and reorganize documentation
+2025-12-06 19:18:35 -0800 1fdcf6ce757f47e66526c23c6d12daa6cce8d4e9 README: Make doc links more obvious with 'full docs' labels
+2025-12-06 19:34:32 -0800 07953acc3d9250217ef69fab4282ae21ccf8a9f5 Add tuple types, struct fields, and pragma/attribute pattern matching
+2025-12-07 06:18:01 -0800 bf4a2d634da539673f4f7f71e1f1d59dde84d9d2 Add struct/enum full body display, proof block and assert patterns
+2025-12-07 06:23:18 -0800 35ac9987d895c6f885e0d7dff6b2b6cbd0e8046e Add comma-separated type patterns for structs, enums, and function args
+2025-12-07 06:32:29 -0800 67925d21da7f52bf7ac6169b82cefd625031e6f4 Add complex struct pattern tests
+2025-12-07 06:34:52 -0800 277ba0ffe7c62d4c94863332e581d8eb153c2be7 Acknowledge Jeannette Wing's foundational work on type-based search
+2025-12-07 06:45:10 -0800 2fed162d31336e9bff7166b85a297ead6a0d7d9f Add body pattern searching for impl and trait blocks
+2025-12-07 06:54:18 -0800 1ae86c94159c778fcbd36663cd7c9e5de597706f Simplify impl/trait body pattern syntax
+2025-12-07 06:57:10 -0800 c3537aad271d2ef0d3bd15ef65a2babc941fca1f Normalize spacing around { } ; in pattern parsing
+2025-12-07 07:09:16 -0800 df101d6d8cc6b4b2cce6b1beffdd3c9d8e97a934 Document optional spacing around { } ; in patterns
+2025-12-07 07:18:59 -0800 47326a50ad30a468f8e52160b85849fdb0399430 Fix unicode byte boundary bug in find_matching_bracket
+2025-12-07 17:27:51 -0800 64060d89d5b72e8cbe48ac37138c2a08dcd3a208 Fix: detect plain 'fn' (not just proof/spec/exec/axiom fn)
+2025-12-07 17:51:14 -0800 dbb4de379c6ba4889c1fa4c954b85246e5dd18de Add 'def NAME' pattern to search all type definitions
+2025-12-07 17:58:52 -0800 c20850a5e0f7197b2ef2c0785f459becbc7f41eb Fix panic when parsing enum variants with } before {
+2025-12-09 05:22:33 -0800 32f5b14e3cd01305e94e066c62b99d272057c900 veracity-search: fail fast on unknown command line flags
+2025-12-09 06:22:24 -0800 68f44e2cbd84d024ba493209e8c6fd7600466178 veracity-search: add proof holes detection
+2025-12-09 08:41:42 -0800 b6bd812c92f7e54884727b54f0e3b8f628f25b3d veracity-review-proof-holes: add unsafe fn/impl, unsafe blocks, and Tracked::assume_new() detection
+2025-12-10 06:54:46 -0800 75c4a4dab15cf5235f7ee63fd36c3bf2baef4949 Add veracity-review-verus-wrapping tool
+2025-12-10 07:14:36 -0800 0c1a194d81a6cb729105b1a7d4b4d46ead4cebe4 veracity-review-verus-wrapping: filter out macro templates
+2025-12-10 16:12:10 -0800 b5fe379307baed10f5de185fb1147d0c87a949e2 Add Emacs-compatible output to veracity-review-proof-holes
+2025-12-11 03:25:38 -0800 9767c37fa25e5369492e657924399e7ccb67f443 Document .* wildcard support in veracity-search
+2025-12-11 03:53:26 -0800 f85e1e99d82773f09c31ec0a6791aca8236bb2a4 Document word boundary matching and type alias patterns
+2025-12-11 09:08:12 -0800 c14655bf71859a5b93d8230553e441f50c3beb03 Add assume_specification detection to proof holes report
+2025-12-11 11:49:50 -0800 be5a1aba9bd3d3cf7e7cf331ba6ff33de1ce0825 Add vstd coverage analysis and MIR generation tools
+2025-12-11 12:30:11 -0800 a945c8ddc003aa8540ea80dd078fbd3813df3f35 Add veracity-analyze-modules-mir and VerusCodeBases documentation
+2025-12-11 12:39:26 -0800 ebca860ab983d1f477a7038e1c9eb0eb2620804d Improve analyze_modules_mir to track vstd-wrapped stdlib types
+2025-12-12 07:07:14 -0800 635ec273ca9cba0b6f707e21da8b3f2686c68727 VIR-based analysis: 9/15 Verus projects (60%)
+2025-12-12 07:33:58 -0800 df22f9156e7d4630658895b483aa210f3fcfb76c verified-ironkv: TIME TRAVEL works! 10/15 (67%) VIRified
+2025-12-12 08:10:17 -0800 a96e668ce32a2bb81e1170c5fe6ef94f8dc96bca Add note about RwLock's 91 methods being from vstd itself
+2025-12-12 08:16:51 -0800 83868b8914c9157f18a1601036059352e214c0cb Exclude vstd from analysis, show all methods, change 'called' to 'used'
+2025-12-12 08:31:51 -0800 048911d23d068f79fc799f983fec97d23ce4e70b Add veracity-analyze-rust-wrapping-needs-in-verus tool
+2025-12-12 17:13:05 -0800 c9807775ffa85c16c4a67884ae7bef89dcfba330 Fix vstd parsing: filter macros/functions, detect spec/proof fn methods
+2025-12-12 17:23:02 -0800 a2ffb0656c3232482560c76f79bcbcfe6cf9df75 Separate types from traits in wrapping analysis
+2025-12-12 17:28:36 -0800 e7245140d7e85309affda13d92da28aaa8c364c7 Add separate tracking for types AND traits in wrapping analysis
+2025-12-16 07:44:37 -0800 015e323d75710013ca02e87e38579869222e26b8 Update analyze_rust_wrapping_needs to read from JSON
+2025-12-16 08:14:45 -0800 d267bc42e208c80b980f44549351198470216d00 Add methods per type/trait sections to gap analysis report
+2025-12-16 08:23:10 -0800 1c307d6623a9a6005bfaeb4f59476bcb5b9a103c Fix: Use Verus parser output (vstd_inventory.json) instead of regex
+2025-12-16 08:30:07 -0800 fae85421a0296ffac615cb3cf3d43a06ed3b549c Add Methods Summary subsection to introduction
+2025-12-16 08:41:19 -0800 6d67f9781bffdef01cdf3ae9c6a9094bb4d32d69 Fix report formatting issues
+2025-12-16 08:43:09 -0800 f8491ac2a8901d06f20da2a4c3fd66750e6836c4 Section 4 & 13: Show full spec status and all percentiles
+2025-12-16 08:47:00 -0800 5967fc4371f48bf38b7c549a235526188f58402f Section 13: Add numbered subsections with === formatting
+2025-12-16 08:50:40 -0800 4703acbff810368463805144b375af71abd8e372 Section 13: Show [WRAPPED] vs [NEEDS WRAPPING] status
+2025-12-16 08:55:28 -0800 12c32cfc15cac3df39954dcc087908647d9f032b Section 4: Document assume_specification parsing bug
+2025-12-16 09:03:24 -0800 7787a9f544e72ca934d0261b42a47bb325d438b7 Fix stdlib method wrapping analysis
+2025-12-16 09:19:36 -0800 16e32289d8e4a644742841ac8eba9c8f71c43143 Add [PARTIAL] coverage indicators and method counts for modules
+2025-12-16 12:50:00 -0800 7c07cc57702275d59ae2d39cb55492e0e6b6b5c7 Fix vec.rs parsing and add spec primitives section
+2025-12-16 13:21:30 -0800 28999b0e807cc64d8f5c5c4f849d82c70cadd2a7 Add enum and type alias parsing to vstd inventory
+2025-12-16 13:27:51 -0800 836434dd30ad07f7fb460b4c2f7e55ac84a32f6a Parse compiler builtins from Verus source instead of hardcoding
+2025-12-16 13:31:59 -0800 a56f3deee9cc1928574ef4b23b2b2e0e1160f18f Renumber report sections properly (no more 1b)
+2025-12-16 14:09:46 -0800 7ffbe9f0adfa17dc614f1272c04ef72c8b5e5b89 Fix wrapped type detection to capture all stdlib View impls
+2025-12-16 16:07:35 -0800 f2ddf978e14549839b15ea8b99aeb89ad5988846 Add Verus wrapping status to greedy cover tables
+2025-12-16 16:16:19 -0800 a6b47ad42d225fd75a4cbad59e843ac06c5b83b9 Show wrapped/total method counts in greedy cover tables
+2025-12-16 16:25:41 -0800 e64440fb97d4955d20c0a6019fcb5effe6b39d50 Add GitHub source links and caveats to report
+2025-12-16 16:32:37 -0800 723e8f1d00794299b90dfeb40c283653d9d07c75 Add section on vstd's two approaches to stdlib support
+2025-12-16 16:37:59 -0800 54fffdca16efbe5bee9d2fcfa40ff65af8d058cd Add conclusion section with key findings and timing
+2025-12-16 16:42:55 -0800 c3d4c6e3fcc1b9b1e70d1ee085eae53562b526ab Add stdlib gap analysis tools and results to README
+2025-12-16 16:46:49 -0800 e416936d9b34f94d3494b32e42802c01f3b747b9 Make stdlib gap analysis the featured tool in README
+2025-12-17 14:39:04 -0800 d14208cd937b334152c0bfcb2275ee56214136a9 Add PART IV: Proposed New Verus Wrappings to gap analysis
+2025-12-17 15:20:35 -0800 9eea33e11a1c0771d32127ecdf9baf18c448b5bc docs: update veracity-search docs - vstd is now ON by default
+2026-01-15 13:12:11 -0800 514c605e1e2e50652e6a9326ff30be9b68eb49a3 Update gap analysis with Iterator method fix from rusticate
+2026-01-15 13:19:19 -0800 b23304b7275add1fd32e44a0a615bf9c880b5946 Add fixed reference copy of gap analysis log (.saved)
+2026-01-28 14:48:37 -0800 f5da4bf59300614d9eb829cac33ea7f72d5fff12 Add single-file mode and proof block minimization to veracity-minimize-lib
+2026-01-28 14:52:45 -0800 e006d12ab7220321374499aad417fcd6f2d32eaf Add tests/fixtures/APAS-VERUS to .gitignore
+2026-02-02 10:06:45 -0800 e282b42594ea4b56c5fcfaa5950eacc26a9e28c8 Fix line-shift bug in minimize-lib, improve git status check, fix proof-holes logging
+2026-02-05 08:50:56 -0800 1a0d56c6884c716427c26e779cf0da08931dc818 Add -e/--exclude option to veracity-review-proof-holes
+2026-02-05 09:56:12 -0800 fdf55bdea2d53cb0be1b973e962334b0ce8f7426 Configure Cargo to build with release optimizations by default
+2026-02-05 09:59:27 -0800 ed3ac2cd75c9a39dbdfd810f5e3dd3f963ce708f Add admit minimization to veracity-minimize-lib
+2026-02-05 10:04:16 -0800 e36425a8f1b9c5f43f926cfa4b982c9bec6b8551 Add Makefile for default release builds to target/release/
+2026-02-07 14:07:09 -0800 54a62d7fdfa3761c7522590a9d80f73bc2a178a3 Add veracity-review-verus-style: 19-rule Verus style checker with auto-reorder and ToC
+2026-02-07 16:13:25 -0800 af60bdf0482f100d9a131dd8c5fc06e787bfd066 Add Rule 20: every trait defined in a file must have at least one impl
+2026-02-07 19:32:40 -0800 ebcb3ec2680d6bf01549bb27b2a02fe7e50449c2 Add Rule 21: broadcast use entries must have vstd:: before crate::
+2026-02-12 11:02:01 -0800 76fa640efa5b2099b635ed6bbbb596e459d435e8 Add veracity-review-module-fn-impls: module function review with AI spec classification workflow
+2026-02-12 11:42:45 -0800 debd7ee4ce3d3fa32b9d08472fdd87ecb61d875f Fix spec-brace tracking for match/if in ensures, remove dispatcher, add tool docs and classify rule
+2026-02-16 09:53:21 -0800 759db4461c85f63b6b07045567321988247f92e4 Add rich context to proof-holes output and default ignore list to review-module-fn-impls
+2026-02-16 10:27:57 -0800 dc25c541f23f5878875ee7edbc8c8960e87eca23 Log the command line at the top of proof-holes log for reproducibility
+2026-02-20 05:06:09 -0800 5324eed06f96bf9f9f0a5914130dbe0c88e77d47 proof-holes: bare_impl detection, assume(false);diverge() info, iter* ignores
+2026-02-20 05:49:38 -0800 24fbf27705c3c83d1a1cc895fcda1699249a7619 proof-holes: struct/enum outside verus!, spec-only bare impl ignore, iter_mut text fallback
+2026-02-20 08:07:21 -0800 00f62b5eaecdec999577ba4a9b853f076ad6f598 veracity-review-proof-holes: verus_syn parsing, eq/clone workaround, RwLock checks, not_verusified
+2026-02-20 14:49:14 -0800 2a417c22c3a8db0192130b613db28dc5e91133e3 Add docs/VeracityProofHolesSummary.md — proof holes reference table
+2026-02-20 18:11:27 -0800 d7b1449ce5e5111d2836abf5d939f1e540feef93 Add accept() and #[verifier::external_body] // accept hole to proof hole detector
+2026-02-21 04:33:53 -0800 04a35db639143e39cd4587486748267e27cb38b7 Add veracity-run-experiments: run commented experiments one at a time
+2026-02-21 06:16:15 -0800 4a9a2b9b7b5f0f132a0910a762d138ec75e3564a Treat all #[verifier::external_*] with // accept hole as info
+2026-02-21 08:16:51 -0800 5d4550b6e55e2293d871f9678300440622d7a26b Proof holes: interactive fix (assume->proof{accept}, -a/--accept, s/d skip), count-loc summary header
+2026-02-22 20:14:44 -0800 7bf8f2efd53bbaa43b867a88b5c0f374e5a35bd5 Add veracity-paths-read and veracity-paths-write
+2026-02-22 20:24:56 -0800 be2d6fb0d4e7870e27f693cbfa16adffb7677435 paths-write: use byte offsets for verus block slicing
+2026-02-24 19:22:30 -0800 636a08e6b160235f37c0b7b7340bd396ce2e9315 Add veracity-paths-edit and path tools pipeline
+2026-02-26 11:55:17 -0800 1dc1db4762ab85d5d57c3b6ad26b082c2880fbc2 Proof holes: accept hole for unsafe, accurate summary, infos with lines
+2026-02-26 14:12:54 -0800 e3838da55bd6c56a1e7614f37c77eb6fd5750915 Support // accept hole on struct/enum outside verus!
+2026-03-01 18:19:11 -0800 a21de37695065363dccb1791fc8f6917389266cc Fix review-verus-style: log per-file results to log file
+2026-03-01 20:49:03 -0800 3e3b7810ddb11e70a722cb005505cbbeb733400b Fix minimize-lib Phase 0 corrupting broadcast use blocks in feq.rs
+2026-03-02 04:41:59 -0800 19f9174268cf204958530c88afdceb75e0bcd097 Fix minimize-lib assert extent finder to include by { ... } blocks
+2026-03-03 10:49:54 -0800 6ff02ef43e44dc94ba78542e9ffdaf0314b3c363 Style checker: STYLE ACCEPTED, missing Debug/Display warnings, fix string hacking; add docs
+2026-03-03 10:57:04 -0800 9f7f1aa25b354cf4e588aadce3f7117278aaceaf Clarify vstd vs vstdplus in FloatingPointInVerus.md
+2026-03-03 10:58:43 -0800 917e2d99721d3f19ac37fd8e53d6a6de8f971fac Fix FloatingPointInVerus.md: vstd float.rs provides FloatBitsProperties
+2026-03-03 18:41:35 -0800 3f24af0953ee97489d9452b1394cb9600581b5a4 Add veracity-update-to-style with -s spec migration and -C collection detection
+2026-03-03 18:52:46 -0800 e54d4c66939d8ae2becf523f92fccc1cc7e1032a Add free spec fn migration to -s flag: classify and auto-migrate
+2026-03-11 10:40:18 -0700 f2f1a06b5953c135fa1ef129b98c1638e8a292b6 Styler: 14-section TOC standard, RwLockPredicate, double-tab format
+2026-03-11 14:48:22 -0700 3652ed8db7fc7acaa8add9871c1027222b38e1dd update_to_style: add -t/--types mode, improve spec migration
+2026-03-11 15:23:00 -0700 93b83fc739d47bf76b46250357dc993dc8209163 Proof holes: fn spec, trait impl skip, totals, Emacs-selectable
+2026-03-11 17:03:55 -0700 8c243b0a606ad93790c774fee123cf3b035062fb Add 5.4/5.5 Not Verusified sections to proof-holes report
+2026-03-12 10:31:04 -0700 e37727096de578955765cf307d62465cbed510ff proof-holes: trivial spec*wf needs accept hole, no-params exempt, requires true warn, iter_mut exempt
+2026-03-13 08:50:38 -0700 7d9e15d5831a08a71ab6998d8cf3ace5d8207dad Add section 4.6 Chapter by Chapter Proof Targeting to proof-holes tool
+2026-03-17 09:58:04 -0700 944de35a1b337fb31eb697535a81130c031e17f3 proof-holes: detect and classify structural false positive proof holes
+2026-03-17 10:22:51 -0700 661daf334688c0698d68a7d846da0ddeb71b9153 proof-holes: fix structural FP review issues (UNSAFE_SEND_SYNC generics, Section 4.1 inflation, actionable holes)
+2026-03-17 11:01:54 -0700 1d5d0ecfb45e248603fa5e24c86f3d6f13bf6d12 proof-holes: separate Warnings/Accepted sections, accept() is never a hole or structural FP
+2026-03-17 12:02:33 -0700 4cf8cc0564cde4c82e74ab5fa1b9263a9bc1c7f4 proof-holes: fix overcounting by adding accept_hole checks and reclassifying trivial_spec_wf
+2026-03-17 12:04:24 -0700 2de9a58691924294eef983325b6944582646883e Revert fixture submodule pointer to dfbc3f5
+2026-03-17 12:06:02 -0700 f6f1ff493b556de22a8960b32f3933ed050a4cdf Remove tests/fixtures/APAS-VERUS from git tracking
+2026-03-17 13:55:33 -0700 adecc21842387f3be3fd54b227fa45e5eef6a80a proof-holes: 9-item improvement — default excludes, assume subcategories, per-chapter tables
+2026-03-18 08:57:17 -0700 e9e86aab18ea931055d6e043eb665c4fe7035598 proof-holes: downgrade structural false positives from error to info
+2026-03-19 10:05:12 -0700 1740af944fa60d1f397bccce14db4d8e1b4fbef4 proof-holes: detect cfg-hidden exec functions as proof holes
+2026-03-19 20:22:36 -0700 be20b743f232368e01ee62c298b096d1df3fe818 proof-holes: reclassify cfg_hidden_fn from hole to warning
+2026-03-19 20:49:21 -0700 82e9c232cb77be947b11bdf9bf73bef4a1128821 proof-holes: distinguish root-cause vs downstream external_body holes
+2026-03-23 19:04:40 -0700 11f6588fcd933d54d8f391181390033345e4906a Add fix-redundant-finites, full-generic-feq, iter-vs-rec binaries; AST rule in CLAUDE.md
+2026-03-24 14:59:54 -0700 4c627ad846c098bb1895b31ef8ab7fd049828815 Add veracity-review-status binary for tracking human review annotations
+2026-03-28 12:34:09 -0700 cde63aa53512684eb861926e9383dc4b0f6c90bb Add compare-par-mut and tocify binaries; type-subst N→usize/B→bool plan
+2026-03-28 13:35:44 -0700 75afaa701528b5a5bc99c9ed7484dd0d398925ad tocify: add sections 1/2 headers, fix excess blank lines after section headers
+2026-03-28 13:42:31 -0700 ad2f419c7b1385b5f3623529a22debcac823c614 tocify: collapse excess blank lines (3+ consecutive → max 2)
+2026-03-28 14:07:03 -0700 897da1cd3b1abd6846f9b23e8baea03a5acef595 tocify: recognize non-standard section header names (impl, bare impl, spec functions)
+2026-03-28 14:38:15 -0700 2c6aea82334837e9c2b45c94cd8fce758674762c tocify: fix section 14 duplicate at verus! boundary and macro_rules detection
+2026-03-28 17:25:05 -0700 7c6cfdbdc4b2cba03314e0df9ed78b382f2a766f tocify: fix section 1/2 headers lost when no items outside verus!
+2026-03-28 17:28:29 -0700 4aa2597051a3e84ee66c7c80d224c89b65bf6d3a tocify: fix iterator type classification and type group detection
+2026-03-28 17:30:58 -0700 5bfda4a6271e55b0564d017c9c01b9a54851a601 tocify: fix false type group on preamble items before first struct
+2026-03-28 17:48:20 -0700 d4dce3944316d774ce4e7dde7baeceb96c4ef83a tocify: fix false multi-type splits from type aliases and PartialEqSpecImpl
+2026-03-29 17:30:59 -0700 b869871e64b9dfaf1755fdecbec4329e8617d418 tocify: simplify type group detection — no more orphan tail groups
+2026-03-29 20:36:39 -0700 375be9b32e4ff03066258dbc50aee502d74bc5f4 compare-par-mut: fix 7 false-positive View type mismatches
+2026-03-29 20:59:55 -0700 b3b18c7b13548c02f0019ef48bd90ed658f7ae32 compare-par-mut: downgrade 4 false-positive return type errors to info
+2026-03-29 21:20:36 -0700 6f1b1d0b1170677b77b83330723e965750118472 Add session report: tocify fixes, compare-par-mut false positive reduction
+2026-03-30 06:18:08 -0700 58cf03c866b60516302c11febab8f37d8a9936d8 Fix false positives: proof-holes wf detection (10 FPs) and compare-par-mut generic bounds (29 FPs)
+2026-03-30 08:06:06 -0700 34726fb73544ecfe9519aa71731e959e7a067d59 compare-par-mut: use lattice-based variant pairing instead of global strongest reference
+2026-03-30 12:32:17 -0700 62717750c58ed8ad8af1ab67d40ab5030b803a8b Add annotate-alg-analysis tool, compare-par-mut Eph/Per normalization, tocify TOC placement fix
+2026-03-30 16:10:02 -0700 082ce3cf6d12288b83b982079ce704832815efc3 compare-par-mut: reduce false positives via wf subsumption, spec_root/@ normalization, match-arm extraction
+2026-03-30 19:13:30 -0700 298e9f40e897a53ede48b746fabf4eb72143357a Add TOML-driven annotate-alg-analysis, fix proof-holes type-predicate suppression
+2026-04-06 14:33:15 -0700 77bab57cda81c7df7ef8f8d65ca287ddb46db9ea tocify: line-based reorder, type-based suffixes, Section prefix, vstdplus support
+2026-04-06 14:34:06 -0700 b70897d1d3545e868bb63b55f29ee5bdc72f5a64 Add tocify rewrite report
+2026-04-06 14:36:37 -0700 db98efd5d28a1fb089499aba48b39921dd7198c3 Style rules 22/23/14/17 false-positive fixes, summary tables, count-loc proof report, fix-import-order tool
+2026-04-06 14:36:43 -0700 313de9e2e1096f6594c059c5588f585e2fad3f65 Merge branch 'veracity-agent1'
+2026-04-06 15:24:26 -0700 d59e6fef721b23f91e4ad7b3c1bfe473ee8b5a1b count-loc: proof/exec ratio tables, ExecLOC columns, outlier report, project-root logging
+2026-04-07 12:45:31 -0700 21a08c0eefcab47c77d9cf4626aa4fdc3d3eb5f1 minimize-lib: --chapter, --fn, --no-lib-min, timestamped logs, Phase 4/9 fixes
+2026-04-07 12:47:36 -0700 28387863e99655cb6ac9afa0536edbddf63bd5ad Rule [18] type-group cycling, iterator/derive classification, AST-based import fixer
+2026-04-07 17:05:46 -0700 46540c2745e1d41c0861e349af4743548e91d8d8 minimize-lib: flush log file and stdout after every log! call
+2026-04-07 18:49:11 -0700 7e72908ed318b87197880dd2f404b7c298aebc23 Save analysis logs from Apr 6-7 runs (style review, count-loc, minimize-lib)
+2026-04-07 22:01:23 -0700 dd958fccb0d313eede984f8c00ea18a98187d65e minimize-lib: persistent log file handle, absolute log path
+2026-04-08 11:14:48 -0700 39757747cab860f0ba5d9096c38840bc00865f7c veracity-minimize-proofs: new binary with resume, NEEDED markers, memory logging
+2026-04-09 16:36:14 -0700 98a5492f7727755f2f317f6a5ccefc8771ce9f0f minimize-proofs: CPU/memory thresholds, validate.sh metrics parsing, log format
+2026-04-09 17:40:17 -0700 c98f7e34cc7337180de724a5cd6fbb55184e8893 minimize-proofs: wall-clock summary, batch run plan for 4 agents
+2026-04-09 19:57:39 -0700 ca4ccb626ed2ac8b4cfc327d3d70f8d160329208 minimize-proofs: strict improvement thresholds (0.0 defaults), baseline in log
+2026-04-10 12:24:52 -0700 9436a1b34e8135452d19584424d0a254f357fa8d count-loc: report Veracity marker stats and alg analysis comment counts
+2026-04-10 12:38:52 -0700 37f11a55eb46ba547e3e279fb1b8aa0aff230ff0 Add TODO for AST-aware proof block detector, threshold fix plan
+2026-04-10 13:16:08 -0700 7879fb9f714554d4e2595e26abef38634d766bce minimize-proofs: AST-aware proof block detector, ghost binding marker fix
+2026-04-10 16:27:37 -0700 e68db98dacfcd80fc8d65558bb8cb9bca2afab10 minimize-proofs: protect proof blocks inside lock critical sections
+2026-04-11 10:01:55 -0700 01260234d300a4757477d40d4504fd65f686fa0f count-loc: one-line summary with comments breakdown and date
+2026-04-11 10:34:21 -0700 dfdb3fbb090930b918b8a5ac814c253827a201e9 count-loc: dated log filenames (veracity-count-loc.YYYYMMDD-HHMMSS.log)
+2026-04-12 07:28:01 -0700 c26622829ed91d90d6416a266b3f7c3aa71f7daf count-loc: four-line summary with test/bench LOC, elapsed label, date without brackets

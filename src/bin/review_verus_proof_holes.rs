@@ -2707,12 +2707,12 @@ fn analyze_attributes_with_ra_syntax(root: &SyntaxNode, content: &str, stats: &m
                         }
                     }
                     VerifierAttribute::Opaque => {
-                        stats.holes.opaque_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
+                        // opaque is a Z3 performance hint — the body is fully verified.
+                        // It is not a proof gap; demote to info.
+                        stats.infos.push(DetectedHole {
                             line,
                             hole_type: "opaque".to_string(),
-                            context, ..Default::default()
+                            context: "opaque — solver performance hint, body is fully verified".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::Axiom => {
@@ -4095,9 +4095,13 @@ impl<'a> Visit<'a> for ProofHoleVisitor<'a> {
                     }
                 }
                 VerifierAttribute::Opaque => {
-                    self.stats.holes.opaque_count += 1;
-                    self.stats.holes.total_holes += 1;
-                    self.stats.holes.holes.push(DetectedHole { line, hole_type: "opaque".to_string(), context, ..Default::default() });
+                    // opaque is a Z3 performance hint — the body is fully verified.
+                    // It is not a proof gap; demote to info.
+                    self.stats.infos.push(DetectedHole {
+                        line,
+                        hole_type: "opaque".to_string(),
+                        context: "opaque — solver performance hint, body is fully verified".to_string(), ..Default::default()
+                    });
                 }
                 VerifierAttribute::Axiom => {
                     self.stats.holes.axiom_count += 1;
@@ -4495,12 +4499,12 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                         }
                     }
                     VerifierAttribute::Opaque => {
-                        stats.holes.opaque_count += 1;
-                        stats.holes.total_holes += 1;
-                        stats.holes.holes.push(DetectedHole {
+                        // opaque is a Z3 performance hint — the body is fully verified.
+                        // It is not a proof gap; demote to info.
+                        stats.infos.push(DetectedHole {
                             line,
                             hole_type: "opaque".to_string(),
-                            context, ..Default::default()
+                            context: "opaque — solver performance hint, body is fully verified".to_string(), ..Default::default()
                         });
                     }
                     VerifierAttribute::Axiom => {
@@ -4511,7 +4515,7 @@ fn analyze_verus_macro_tokens(tree: &SyntaxNode, content: &str, stats: &mut File
                 }
             }
         }
-        
+
         i += 1;
     }
 }

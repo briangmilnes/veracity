@@ -1,0 +1,8 @@
+baseline      rc=1    errors=2    total=127499 ms  smt=166469 ms  wall=128s
+Chap05        rc=1    errors=2    total=194370 ms  smt=143235 ms  wall=195s
+Chap37        rc=1    errors=3    total=20088 ms  smt=0 ms  wall=20s
+Chap41        rc=1    errors=3    total=19708 ms  smt=0 ms  wall=20s
+Chap42        rc=1    errors=3    total=20041 ms  smt=0 ms  wall=20s
+Chap43        rc=1    errors=8    total=26874 ms  smt=0 ms  wall=27s
+Chap45        rc=1    errors=9    total=30584 ms  smt=0 ms  wall=31s
+Chap65        rc=1    errors=9    total=26489 ms  smt=0 ms  wall=27s

@@ -1,0 +1,10 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap42 | TableMtEph.rs                  |  K,V |    +2 |    -11 |      +0 |     -3 |      +9 |    -3 |
+|   2 | Chap42 | TableStEph.rs                  |  K,V |    +2 |    -10 |      +0 |     -8 |      +9 |    -7 |
+|     |  TOTAL |                                |      |    +4 |    -21 |      +0 |    -11 |     +18 |   -10 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap42/Example42_1.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap42/TableStPer.rs: unusual feq type params (["ArraySeqStPerS<V>", "K", "Pair<K, ArraySeqStPerS<V>>", "Pair<K, V>", "V"]), needs human review

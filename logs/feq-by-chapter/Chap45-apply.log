@@ -1,0 +1,13 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap45 | BalancedTreePQ.rs              |    T |    +1 |     -1 |      +0 |     -1 |      +1 |    +0 |
+|     |  TOTAL |                                |      |    +1 |     -1 |      +0 |     -1 |      +1 |    +0 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/BinaryHeapPQ.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/Example45_2.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/HeapsortExample.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/LeftistHeapPQ.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/SortedListPQ.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap45/UnsortedListPQ.rs: no obeys_feq_full usage

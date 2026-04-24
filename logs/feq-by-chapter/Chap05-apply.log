@@ -1,0 +1,11 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap05 | SetMtEph.rs                    |    T |    +1 |     +0 |      +0 |     +0 |      +0 |    +1 |
+|   2 | Chap05 | SetStEph.rs                    |    T |    +1 |     +0 |      +0 |     +0 |      +0 |    +1 |
+|     |  TOTAL |                                |      |    +2 |     +0 |      +0 |     +0 |      +0 |    +2 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap05/KleeneStPer.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap05/MappingStEph.rs: no obeys_feq_full calls in AST
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap05/RelationStEph.rs: no obeys_feq_full usage

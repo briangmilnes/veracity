@@ -1,13 +1,13 @@
 veracity-analyze-libs
 ======================
 
-Started at: 2025-12-16 14:09:24 -08:00
-vstd path: /home/milnes/projects/veracity/tests/fixtures/verus-lang/source/vstd
-Verus version: main@d3fefb4
+Started at: 2026-04-14 12:37:48 -07:00
+vstd path: /home/milnes/projects/verus/source/vstd
+Verus version: main@fc697a7f4
 Using: verus_syn AST parser
 
-Parsed 6 builtin types and 2 builtin traits from verus_items.rs
-Found 87 source files
+Parsed 6 builtin types and 3 builtin traits from verus_items.rs
+Found 105 source files
 
 === TABLE OF CONTENTS ===
 
@@ -64,7 +64,7 @@ This helps us answer:
 Note: Compiler builtins (int, nat, etc.) are defined in the Verus compiler,
 not in vstd source. They are listed separately in section 3.
 
-=== 2. MODULES (87) ===
+=== 2. MODULES (105) ===
 
 vstd::arithmetic
 vstd::arithmetic::div_mod
@@ -89,11 +89,22 @@ vstd::build
 vstd::bytes
 vstd::calc_macro
 vstd::cell
+vstd::cell::invcell
+vstd::cell::pcell
+vstd::cell::pcell_maybe_uninit
 vstd::compute
 vstd::contrib
 vstd::contrib::exec_spec
+vstd::contrib::exec_spec::map
+vstd::contrib::exec_spec::multiset
+vstd::contrib::exec_spec::option
+vstd::contrib::exec_spec::seq
+vstd::contrib::exec_spec::set
+vstd::contrib::exec_spec::string
+vstd::endian
 vstd::float
 vstd::function
+vstd::future
 vstd::hash_map
 vstd::hash_set
 vstd::invariant
@@ -110,6 +121,7 @@ vstd::multiset_lib
 vstd::pcm
 vstd::pcm_lib
 vstd::pervasive
+vstd::predicate
 vstd::prelude
 vstd::proph
 vstd::raw_ptr
@@ -128,12 +140,16 @@ vstd::std_specs::alloc
 vstd::std_specs::atomic
 vstd::std_specs::bits
 vstd::std_specs::borrow
+vstd::std_specs::btree
 vstd::std_specs::clone
 vstd::std_specs::cmp
 vstd::std_specs::control_flow
 vstd::std_specs::convert
 vstd::std_specs::core
+vstd::std_specs::default
 vstd::std_specs::hash
+vstd::std_specs::manually_drop
+vstd::std_specs::maybe_uninit
 vstd::std_specs::num
 vstd::std_specs::ops
 vstd::std_specs::option
@@ -151,8 +167,10 @@ vstd::tokens::frac
 vstd::tokens::map
 vstd::tokens::seq
 vstd::tokens::set
+vstd::utf8
 vstd::view
 vstd::vstd
+vstd::wrapping
 
 === 3. COMPILER BUILTIN TYPES ===
 
@@ -172,6 +190,7 @@ Function Types:
 
 Builtin Traits:
   Integer - Marker trait for integer types (int, nat, u8..u128, i8..i128)
+  Chainable - Verus builtin trait
   Sealed - Sealed trait pattern - prevents external implementations
 
 === 4. PRIMITIVE TYPE SPECS (vstd/std_specs/) ===
@@ -227,7 +246,7 @@ vstd provides specs for Rust std::sync::atomic types:
   AtomicBool (bool) - 10 methods
     new, load, store, swap, compare_exchange, compare_exchange_weak, fetch_and, fetch_or, fetch_xor, fetch_nand
 
-=== 5. GHOST TYPES (44 total) ===
+=== 5. GHOST TYPES (54 total) ===
 
 --- 5.1 Mathematical Types (4) ---
 Core specification collection types (purely mathematical, no runtime representation)
@@ -304,11 +323,13 @@ Set<A> (Rust: HashSet) - 23 methods
     spec: disjoint [open]
     spec: fold
 
---- 5.2 Ex* Ghost Wrappers (26) ---
+--- 5.2 Ex* Ghost Wrappers (35) ---
 Ghost views of Rust exec types for use in specifications
 
 ExAssertParamIsClone<T> - 0 methods
 ExAssertParamIsEq<T> - 0 methods
+ExBTreeMap<Key, Value, A> - 0 methods
+ExBTreeSet<Key, A> - 0 methods
 ExChars - 0 methods
 ExDefaultHasher - 0 methods
 ExDuration - 0 methods
@@ -317,24 +338,31 @@ ExFnProofOptionReqEns<R> - 0 methods
 ExFnProofOptionTracked - 0 methods
 ExFnProofOptions<ReqEns> - 0 methods
 ExGlobal - 0 methods
-ExHashMap<Key, Value, S> - 0 methods
-ExHashSet<Key, S> - 0 methods
+ExHashMap<Key, Value, S, A> - 0 methods
+ExHashSet<Key, S, A> - 0 methods
 ExInfallible - 0 methods
 ExIntoIter<T, A> - 0 methods
 ExIter<T> - 0 methods
 ExIter<T> - 0 methods
 ExKeys<Key, Value> - 0 methods
+ExKeys<Key, Value> - 0 methods
 ExManuallyDrop<V> - 0 methods
 ExMapIter<Key, Value> - 0 methods
+ExMapIter<K, V> - 0 methods
+ExMaybeUninit<T> - 0 methods
 ExRandomState - 0 methods
 ExRangeInclusive<Idx> - 0 methods
 ExSetIter<Key> - 0 methods
+ExSetIter<K> - 0 methods
 ExString - 0 methods
+ExTryFromIntError - 0 methods
+ExTryReserveError - 0 methods
+ExValues<Key, Value> - 0 methods
 ExValues<Key, Value> - 0 methods
 ExVec<T, A> - 0 methods
 ExVecDeque<T, A> - 0 methods
 
---- 5.3 Permission/Token Types (14) ---
+--- 5.3 Permission/Token Types (15) ---
 Ghost types for tracking permissions, ownership, and linear resources
 
 CellId - 0 methods
@@ -356,6 +384,8 @@ JoinHandle<Ret> - 1 methods
 OpenInvariantCredit - 0 methods
 PCell<V> - 1 methods
     spec: id [uninterp]
+PCell<T> - 1 methods
+    spec: id [uninterp]
 Provenance - 1 methods
     spec: null [uninterp]
 Resource<P> - 2 methods
@@ -372,10 +402,25 @@ ThreadShareable<V> - 2 methods
     spec: view [uninterp]
     spec: id [uninterp]
 
-=== 6. TRACKED TYPES (8) ===
+=== 6. TRACKED TYPES (23) ===
 
+Empty - modes: proof, exec
+Frac - modes: proof, exec
+FracGhost - modes: proof, exec
+GhostMapAuth - modes: proof, exec
+GhostPersistentPointsTo - modes: proof, exec
+GhostPersistentSubmap - modes: proof, exec
+GhostPointsTo - modes: proof, exec
+GhostSeqAuth - modes: proof, exec
+GhostSubmap - modes: proof, exec
+GhostSubseq - modes: proof, exec
+GhostVar - modes: proof, exec
+GhostVarAuth - modes: proof, exec
+MapCarrier - modes: proof, exec
 MapToken - modes: proof, exec
 MultisetToken - modes: proof, exec
+PointsTo - modes: proof, exec
+PointsTo - modes: proof, exec
 PointsTo - modes: proof, exec
 PointsTo - modes: proof, exec
 PointsTo - modes: proof, exec
@@ -392,7 +437,7 @@ Shared - modes: proof, exec
 Arc (alloc::sync) - 2 methods
     view
     deep_view
-AssertParamIsEq (core::cmp) - 8 methods
+AssertParamIsEq (core::cmp) - 12 methods
     is_eq
     is_ne
     is_lt
@@ -401,6 +446,10 @@ AssertParamIsEq (core::cmp) - 8 methods
     is_ge
     obeys_eq_spec
     eq_spec
+    obeys_partial_cmp_spec
+    partial_cmp_spec
+    obeys_cmp_spec
+    cmp_spec
 Box (alloc::boxed) - 2 methods
     view
     deep_view
@@ -429,10 +478,8 @@ HashMap (std::collections::hash_map) - 8 methods
     ghost_advance
     view
     ghost_iter
-HashMap (std::collections) - 3 methods
+HashMap (std::collections) - 1 methods
     spec_index
-    view
-    deep_view
 HashSet (std::collections::hash_set) - 7 methods
     exec_invariant
     ghost_invariant
@@ -441,9 +488,6 @@ HashSet (std::collections::hash_set) - 7 methods
     ghost_peek_next
     ghost_advance
     view
-HashSet (std::collections) - 2 methods
-    view
-    deep_view
 IntoIter (alloc::vec) - 2 methods
     view
     ghost_iter
@@ -454,6 +498,9 @@ Iter (core::slice) - 3 methods
 Keys (std::collections::hash_map) - 2 methods
     view
     ghost_iter
+ManuallyDrop (core::mem) - 2 methods
+    view_ref
+    view
 Option (core::option) - 13 methods
     is_Some
     get_Some_0
@@ -479,7 +526,7 @@ PointsTo (vstd::raw_ptr) - 10 methods
     dom
     is_range
     contains_range
-Range (core::ops) - 10 methods
+Range (core::ops) - 11 methods
     obeys_contains
     contains_spec
     ghost_iter
@@ -490,6 +537,7 @@ Range (core::ops) - 10 methods
     ghost_peek_next
     ghost_advance
     view
+    index_req
 RangeInclusive (core::ops) - 3 methods
     obeys_contains
     contains_spec
@@ -507,14 +555,17 @@ Result (core::result) - 6 methods
 String (alloc::string) - 2 methods
     view
     deep_view
-TryFromIntError (core::num) - 2 methods
+TryFromIntError (core::num) - 4 methods
     obeys_into_spec
     into_spec
+    obeys_try_into_spec
+    try_into_spec
 Values (std::collections::hash_map) - 2 methods
     view
     ghost_iter
-Vec (alloc::vec) - 13 methods
+Vec (alloc::vec) - 14 methods
     spec_index
+    index_req
     spec_index_set_requires
     spec_index_set_ensures
     obeys_eq_spec
@@ -527,25 +578,28 @@ Vec (alloc::vec) - 13 methods
     ghost_advance
     view
     deep_view
-VecDeque (alloc::collections) - 9 methods
+VecDeque (alloc::collections) - 10 methods
     view
     deep_view
     spec_index
+    index_req
     exec_invariant
     ghost_invariant
     ghost_ensures
     ghost_decrease
     ghost_peek_next
     ghost_advance
-array (core::array) - 5 methods
+array (core::array) - 6 methods
     spec_index_set_requires
     spec_index_set_ensures
+    index_req
     view
     deep_view
     spec_index
-slice (core::slice) - 11 methods
+slice (core::slice) - 12 methods
     spec_index_set_requires
     spec_index_set_ensures
+    index_req
     exec_invariant
     ghost_invariant
     ghost_ensures
@@ -555,11 +609,12 @@ slice (core::slice) - 11 methods
     view
     deep_view
     spec_index
-str (core::str) - 2 methods
+str (core::str) - 3 methods
     view
     deep_view
+    spec_bytes
 
-=== 8. TRAITS (91) ===
+=== 8. TRAITS (147) ===
 
 ArrayAdditionalExecFns - 0 spec, 0 proof, 1 exec methods
     exec: set
@@ -567,6 +622,16 @@ ArrayAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec method
     spec: spec_index
 AtomicInvariantPredicate - 1 spec, 0 proof, 0 exec methods
     spec: atomic_inv
+BTreeMapAdditionalSpecFns : View < V = Map < Key , Value > > - 1 spec, 0 proof, 0 exec methods
+    spec: spec_index
+Base - 1 spec, 1 proof, 0 exec methods
+    spec: base
+    proof: base_min
+BasePow2 : Base - 1 spec, 1 proof, 0 exec methods
+    spec: bits
+    proof: bits_to_base
+CompatibleSmallerBaseFor : BasePow2 - 0 spec, 1 proof, 0 exec methods
+    proof: compatible
 ContainsSpec - 2 spec, 0 proof, 0 exec methods
     spec: obeys_contains
     spec: contains_spec
@@ -592,19 +657,30 @@ ExBorrow - 0 spec, 0 proof, 0 exec methods
 ExBuildHasher - 0 spec, 0 proof, 0 exec methods
 ExClone : Sized - 0 spec, 0 proof, 1 exec methods
     exec: clone
+ExCopy : Clone - 0 spec, 0 proof, 0 exec methods
 ExDebug : PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExDefault : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: default
 ExDeref : PointeeSized - 0 spec, 0 proof, 1 exec methods
     exec: deref
+ExDestruct : PointeeSized - 0 spec, 0 proof, 0 exec methods
 ExDisplay : PointeeSized - 0 spec, 0 proof, 0 exec methods
 ExEq : PartialEq + PointeeSized - 0 spec, 0 proof, 0 exec methods
+ExFn : FnMut < Args > - 0 spec, 0 proof, 0 exec methods
+ExFnMut : FnOnce < Args > - 0 spec, 0 proof, 0 exec methods
+ExFnOnce - 0 spec, 0 proof, 0 exec methods
 ExFreeze : PointeeSized - 0 spec, 0 proof, 0 exec methods
 ExFrom : Sized - 2 spec, 0 proof, 1 exec methods
     spec: obeys_from_spec
     spec: from_spec
     exec: from
+ExFuture - 0 spec, 0 proof, 0 exec methods
 ExHash : PointeeSized - 0 spec, 0 proof, 0 exec methods
 ExHasher - 0 spec, 0 proof, 0 exec methods
-ExIndex - 0 spec, 0 proof, 0 exec methods
+ExIeeeFloatCast - 0 spec, 0 proof, 0 exec methods
+ExIndex - 1 spec, 0 proof, 1 exec methods
+    spec: index_req
+    exec: index
 ExIndexMut : core :: ops :: Index < Idx > - 0 spec, 0 proof, 0 exec methods
 ExInteger : Copy - 0 spec, 0 proof, 0 exec methods
 ExInto : Sized - 2 spec, 0 proof, 1 exec methods
@@ -645,17 +721,109 @@ ExProofFnSpecification - 2 spec, 0 proof, 0 exec methods
     spec: req
     spec: ens
 ExPtrPointee : PointeeSized - 0 spec, 0 proof, 0 exec methods
-ExSliceIndex - 0 spec, 0 proof, 0 exec methods
+ExSliceIndex - 1 spec, 0 proof, 1 exec methods
+    spec: index_req
+    exec: index
 ExSpecOrd - 0 spec, 0 proof, 0 exec methods
 ExStructural - 0 spec, 0 proof, 0 exec methods
 ExToOwned - 0 spec, 0 proof, 0 exec methods
+ExTryFrom : Sized - 2 spec, 0 proof, 1 exec methods
+    spec: obeys_try_from_spec
+    spec: try_from_spec
+    exec: try_from
+ExTryInto : Sized - 2 spec, 0 proof, 1 exec methods
+    spec: obeys_try_into_spec
+    spec: try_into_spec
+    exec: try_into
+ExTuple - 0 spec, 0 proof, 0 exec methods
 ExecSpecEq : DeepView + Sized - 0 spec, 0 proof, 1 exec methods
     exec: exec_eq
 ExecSpecIndex : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
     exec: exec_index
 ExecSpecLen - 0 spec, 0 proof, 1 exec methods
     exec: exec_len
+ExecSpecMapDom : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_dom
+ExecSpecMapEmpty : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_empty
+ExecSpecMapGet : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_get
+ExecSpecMapIndex : Sized + DeepView < V = Map < < Self :: Key as DeepView > :: V , < Self :: Value as DeepView > :: V > , > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_index
+ExecSpecMapInsert : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_insert
+ExecSpecMapRemove : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_remove
+ExecSpecMultisetAdd : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_add
+ExecSpecMultisetCount : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_count
+ExecSpecMultisetEmpty : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_empty
+ExecSpecMultisetSingleton : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_singleton
+ExecSpecMultisetSub : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_sub
+ExecSpecOptionUnwrap : Sized + DeepView - 1 spec, 0 proof, 1 exec methods
+    spec: is_some_spec
+    exec: exec_unwrap
+ExecSpecSeqAdd : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_add
+ExecSpecSeqContains : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_contains
+ExecSpecSeqDropFirst : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_drop_first
+ExecSpecSeqDropLast : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_drop_last
+ExecSpecSeqEmpty : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_empty
+ExecSpecSeqFirst : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_first
+ExecSpecSeqIndexOf : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_index_of
+ExecSpecSeqIndexOfFirst : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_index_of_first
+ExecSpecSeqIndexOfLast : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_index_of_last
+ExecSpecSeqIsPrefixOf : DeepView + Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_is_prefix_of
+ExecSpecSeqIsSuffixOf : DeepView + Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_is_suffix_of
+ExecSpecSeqLast : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_last
+ExecSpecSeqPush : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_push
+ExecSpecSeqSkip : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_skip
+ExecSpecSeqSubrange : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_subrange
+ExecSpecSeqTake : Sized + DeepView < V = Seq < < Self :: Elem as DeepView > :: V > > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_take
+ExecSpecSeqToMultiset : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_to_multiset
+ExecSpecSeqUpdate : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_update
+ExecSpecSetContains : Sized + DeepView - 0 spec, 0 proof, 1 exec methods
+    exec: exec_contains
+ExecSpecSetDifference : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_difference
+ExecSpecSetEmpty : Sized - 0 spec, 0 proof, 1 exec methods
+    exec: exec_empty
+ExecSpecSetInsert : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_insert
+ExecSpecSetIntersect : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_intersect
+ExecSpecSetRemove : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_remove
+ExecSpecSetUnion : Sized + DeepView + ToOwned < Out > - 0 spec, 0 proof, 1 exec methods
+    exec: exec_union
 ExecSpecType - 0 spec, 0 proof, 0 exec methods
+FiniteFull : Sized - 0 spec, 1 proof, 0 exec methods
+    proof: full_properties
+FiniteRange : Sized - 2 spec, 1 proof, 0 exec methods
+    spec: range_set
+    spec: range_len
+    proof: range_properties
 FloatBitsProperties - 6 spec, 0 proof, 0 exec methods
     spec: to_bits_spec
     spec: to_bits_abs_spec
@@ -675,6 +843,9 @@ ForLoopGhostIterator - 6 spec, 0 proof, 0 exec methods
     spec: ghost_advance
 ForLoopGhostIteratorNew - 1 spec, 0 proof, 0 exec methods
     spec: ghost_iter
+FutureAdditionalSpecFns : Future < Output = T > - 2 spec, 0 proof, 0 exec methods
+    spec: view
+    spec: awaited
 HashMapAdditionalSpecFns : View < V = Map < Key , Value > > - 1 spec, 0 proof, 0 exec methods
     spec: spec_index
 IndexSetTrustedSpec : core :: ops :: IndexMut < Idx > + TrustedSpecSealed - 2 spec, 0 proof, 0 exec methods
@@ -688,10 +859,13 @@ KeyValueToken : Sized - 3 spec, 2 proof, 0 exec methods
     spec: value
     proof: agree
     proof: arbitrary
-KeysAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
-    spec: view
+ManuallyDropAdditionalFns - 1 spec, 0 proof, 0 exec methods
+    spec: view_ref
 MapIterAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
     spec: view
+MaybeUninitAdditionalSpecFns - 2 spec, 0 proof, 0 exec methods
+    spec: mem_contents
+    spec: as_option
 MonotonicCountToken : Sized - 2 spec, 2 proof, 0 exec methods
     spec: instance_id
     spec: count
@@ -735,6 +909,8 @@ PartialOrdIs : PartialOrd < Rhs > + PointeeSized - 4 spec, 0 proof, 0 exec metho
     spec: is_le
     spec: is_gt
     spec: is_ge
+Predicate - 1 spec, 0 proof, 0 exec methods
+    spec: predicate
 Protocol : Sized - 3 spec, 3 proof, 0 exec methods
     spec: op
     spec: rel
@@ -767,8 +943,6 @@ ResultAdditionalSpecFns - 6 spec, 4 proof, 0 exec methods
     proof: tracked_expect_err
 RwLockPredicate : Sized - 1 spec, 0 proof, 0 exec methods
     spec: inv
-SetIterAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
-    spec: view
 SimpleToken : Sized - 1 spec, 1 proof, 0 exec methods
     spec: instance_id
     proof: arbitrary
@@ -797,6 +971,8 @@ StringExecFns : Sized - 0 spec, 0 proof, 3 exec methods
     exec: concat
 StringExecFnsIsAscii : Sized - 0 spec, 0 proof, 1 exec methods
     exec: is_ascii
+StringSliceAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
+    spec: spec_bytes
 ToOwned : Sized + DeepView < V = T :: V > - 0 spec, 0 proof, 1 exec methods
     exec: get_owned
 ToRef : Sized + DeepView < V = T :: V > - 0 spec, 0 proof, 1 exec methods
@@ -815,8 +991,6 @@ ValueToken : Sized - 2 spec, 2 proof, 0 exec methods
     spec: value
     proof: agree
     proof: arbitrary
-ValuesAdditionalSpecFns - 1 spec, 0 proof, 0 exec methods
-    spec: view
 VecAdditionalExecFns - 0 spec, 0 proof, 2 exec methods
     exec: set
     exec: set_and_swap
@@ -827,7 +1001,7 @@ VecDequeAdditionalSpecFns : View < V = Seq < T > > - 1 spec, 0 proof, 0 exec met
 View - 1 spec, 0 proof, 0 exec methods
     spec: view
 
-=== 9. SPEC FUNCTIONS (203) ===
+=== 9. SPEC FUNCTIONS (276) ===
 
 vstd::arithmetic::div_mod::is_mod_equivalent [open]
 vstd::arithmetic::internals::div_internals::div_auto [open]
@@ -845,11 +1019,14 @@ vstd::arithmetic::internals_internals::mod_auto_plus [open]
 vstd::arithmetic::internals_internals::mod_recursive [open]
 vstd::arithmetic::internals_internals_nonlinear::modulus [open]
 vstd::arithmetic::logarithm::log [open]
+vstd::arithmetic::power2::is_pow2 [open]
+vstd::arithmetic::power2::is_pow2_exists [open]
 vstd::arithmetic::power2::pow2 [open]
 vstd::arithmetic::power::pow [open]
 vstd::array::array_view [open]
 vstd::array::spec_array_as_slice [uninterp]
 vstd::array::spec_array_fill_for_copy_type [uninterp]
+vstd::array::spec_array_update [uninterp]
 vstd::bits::low_bits_mask [open]
 vstd::bytes::spec_u128_from_le_bytes
 vstd::bytes::spec_u128_to_le_bytes
@@ -860,8 +1037,12 @@ vstd::bytes::spec_u32_to_le_bytes
 vstd::bytes::spec_u64_from_le_bytes
 vstd::bytes::spec_u64_to_le_bytes
 vstd::bytes::spec_u64_to_le_bytes_open [open]
-vstd::cell::option_from_mem_contents [open]
 vstd::compute::range_all_spec_rec [open]
+vstd::endian::base_upper_bound_excl [open]
+vstd::endian::endianness [uninterp]
+vstd::endian::to_big_from_digits [open]
+vstd::float::float_cast_spec [uninterp]
+vstd::float::ieee_float_cast [open]
 vstd::laws_cmp::obeys_cmp_ord [open]
 vstd::laws_cmp::obeys_cmp_partial_ord [open]
 vstd::laws_cmp::obeys_cmp_spec [open]
@@ -873,10 +1054,13 @@ vstd::laws_eq::obeys_eq_spec_properties [open]
 vstd::laws_eq::obeys_view_eq [open]
 vstd::layout::align_of [uninterp]
 vstd::layout::align_of_as_usize [open]
-vstd::layout::is_power_2 [open]
+vstd::layout::align_of_val_as_usize [open]
 vstd::layout::is_sized [uninterp]
 vstd::layout::size_of [uninterp]
 vstd::layout::size_of_as_usize [open]
+vstd::layout::size_of_val_as_usize [open]
+vstd::layout::spec_align_of_val [uninterp]
+vstd::layout::spec_size_of_val [uninterp]
 vstd::layout::valid_layout [open]
 vstd::map::check_argument_is_map [open]
 vstd::math::abs [open]
@@ -906,6 +1090,9 @@ vstd::raw_ptr::ptr_null_mut [open]
 vstd::raw_ptr::spec_cast_array_ptr_to_slice_ptr [open]
 vstd::raw_ptr::spec_cast_ptr_to_thin_ptr [open]
 vstd::raw_ptr::spec_cast_ptr_to_usize [open]
+vstd::raw_ptr::spec_cast_slice_ptr_to_slice_ptr [open]
+vstd::raw_ptr::spec_cast_slice_ptr_to_str_ptr [open]
+vstd::raw_ptr::spec_cast_str_ptr_to_slice_ptr [open]
 vstd::raw_ptr::view_reverse_for_eq [uninterp]
 vstd::raw_ptr::view_reverse_for_eq_sized
 vstd::relations::antisymmetric [open]
@@ -943,7 +1130,10 @@ vstd::set::trigger_fold_graph
 vstd::set_lib::check_argument_is_set [open]
 vstd::set_lib::set_int_range [open]
 vstd::slice::spec_slice_get [uninterp]
+vstd::slice::spec_slice_index [uninterp]
+vstd::slice::spec_slice_is_empty [open]
 vstd::slice::spec_slice_len [uninterp]
+vstd::slice::spec_slice_update [uninterp]
 vstd::state_machine_internal::nat_max [open]
 vstd::state_machine_internal::opt_add [open]
 vstd::state_machine_internal::opt_agree [open]
@@ -966,6 +1156,18 @@ vstd::std_specs::bits::u8_leading_ones [open]
 vstd::std_specs::bits::u8_leading_zeros
 vstd::std_specs::bits::u8_trailing_ones [open]
 vstd::std_specs::bits::u8_trailing_zeros
+vstd::std_specs::btree::borrowed_key_removed [uninterp]
+vstd::std_specs::btree::btree_map_deep_view_impl [open]
+vstd::std_specs::btree::contains_borrowed_key [uninterp]
+vstd::std_specs::btree::increasing_seq [uninterp]
+vstd::std_specs::btree::key_obeys_cmp_spec [uninterp]
+vstd::std_specs::btree::maps_borrowed_key_to_value [uninterp]
+vstd::std_specs::btree::set_contains_borrowed_key [uninterp]
+vstd::std_specs::btree::sets_borrowed_key_to_key [uninterp]
+vstd::std_specs::btree::sets_differ_by_borrowed_key [uninterp]
+vstd::std_specs::btree::spec_btree_map_iter [uninterp]
+vstd::std_specs::btree::spec_btree_map_len [uninterp]
+vstd::std_specs::btree::spec_btree_set_len [uninterp]
 vstd::std_specs::cmp::eq_ensures [uninterp]
 vstd::std_specs::cmp::ge_ensures [uninterp]
 vstd::std_specs::cmp::gt_ensures [uninterp]
@@ -1021,9 +1223,8 @@ vstd::storage_protocol::incl [open]
 vstd::storage_protocol::set_op [open]
 vstd::storage_protocol::updates [open]
 vstd::storage_protocol::withdraws [open]
-vstd::string::new_strlit_spec [open]
-vstd::string::str_slice_is_ascii [uninterp]
-vstd::string::string_is_ascii [uninterp]
+vstd::string::is_ascii [open]
+vstd::string::string_is_ascii [open]
 vstd::string::to_string_from_display_ensures [uninterp]
 vstd::tokens::bool_value_eq_option_token [open]
 vstd::tokens::bool_value_le_option_token [open]
@@ -1032,10 +1233,56 @@ vstd::tokens::map_values
 vstd::tokens::option_value_eq_option_token [open]
 vstd::tokens::option_value_le_option_token [open]
 vstd::tokens::seq::seq_to_map [open]
+vstd::utf8::codepoint_width_1 [open]
+vstd::utf8::codepoint_width_2 [open]
+vstd::utf8::codepoint_width_3 [open]
+vstd::utf8::codepoint_width_4 [open]
+vstd::utf8::continuation_bits [open]
+vstd::utf8::decode_first_codepoint [open]
+vstd::utf8::decode_first_scalar [open]
+vstd::utf8::decode_last_scalar [open]
+vstd::utf8::decode_utf8 [open]
+vstd::utf8::encode_scalar [open]
+vstd::utf8::encode_utf8 [open]
+vstd::utf8::has_width_1_encoding [open]
+vstd::utf8::has_width_2_encoding [open]
+vstd::utf8::has_width_3_encoding [open]
+vstd::utf8::has_width_4_encoding [open]
+vstd::utf8::is_ascii_chars [open]
+vstd::utf8::is_char_boundary [open]
+vstd::utf8::is_continuation_byte [open]
+vstd::utf8::is_leading_byte_width_1 [open]
+vstd::utf8::is_leading_byte_width_2 [open]
+vstd::utf8::is_leading_byte_width_3 [open]
+vstd::utf8::is_leading_byte_width_4 [open]
+vstd::utf8::is_scalar [open]
+vstd::utf8::last_continuation_byte [open]
+vstd::utf8::leading_bits_width_1 [open]
+vstd::utf8::leading_bits_width_2 [open]
+vstd::utf8::leading_bits_width_3 [open]
+vstd::utf8::leading_bits_width_4 [open]
+vstd::utf8::leading_byte_width_1 [open]
+vstd::utf8::leading_byte_width_2 [open]
+vstd::utf8::leading_byte_width_3 [open]
+vstd::utf8::leading_byte_width_4 [open]
+vstd::utf8::length_of_first_codepoint [open]
+vstd::utf8::length_of_first_scalar [open]
+vstd::utf8::length_of_last_scalar [open]
+vstd::utf8::not_overlong_encoding [open]
+vstd::utf8::not_surrogate [open]
+vstd::utf8::partial_valid_utf8 [open]
+vstd::utf8::pop_first_scalar [open]
+vstd::utf8::second_last_continuation_byte [open]
+vstd::utf8::take_first_scalar [open]
+vstd::utf8::take_last_scalar [open]
+vstd::utf8::third_last_continuation_byte [open]
+vstd::utf8::valid_first_scalar [open]
+vstd::utf8::valid_leading_and_continuation_bytes_first_codepoint [open]
+vstd::utf8::valid_utf8 [open]
 
-=== 10. PROOF FUNCTIONS (515) ===
+=== 10. PROOF FUNCTIONS (608) ===
 
-Lemmas: 313, Broadcast: 367
+Lemmas: 327, Broadcast: 442
 
 vstd::arithmetic::div_mod::lemma_add_mod_noop [broadcast, lemma]
 vstd::arithmetic::div_mod::lemma_add_mod_noop_right [broadcast, lemma]
@@ -1193,6 +1440,9 @@ vstd::arithmetic::mul::lemma_mul_strictly_increases [broadcast, lemma]
 vstd::arithmetic::mul::lemma_mul_strictly_positive [broadcast, lemma]
 vstd::arithmetic::mul::lemma_mul_unary_negation [broadcast, lemma]
 vstd::arithmetic::mul::lemma_mul_upper_bound [broadcast, lemma]
+vstd::arithmetic::power2::is_pow2_equiv [broadcast]
+vstd::arithmetic::power2::is_pow2_equiv_forward
+vstd::arithmetic::power2::is_pow2_equiv_reverse
 vstd::arithmetic::power2::lemma2_to64 [lemma]
 vstd::arithmetic::power2::lemma2_to64_rest [lemma]
 vstd::arithmetic::power2::lemma_pow2 [broadcast, lemma]
@@ -1223,8 +1473,10 @@ vstd::arithmetic::power::lemma_pull_out_pows [broadcast, lemma]
 vstd::arithmetic::power::lemma_square_is_pow2 [broadcast, lemma]
 vstd::array::array_len_matches_n [broadcast]
 vstd::array::axiom_array_ext_equal [broadcast]
+vstd::array::axiom_array_has_resolved [broadcast]
 vstd::array::axiom_spec_array_as_slice [broadcast]
 vstd::array::axiom_spec_array_fill_for_copy_type [broadcast]
+vstd::array::axiom_spec_array_update [broadcast]
 vstd::array::lemma_array_index [broadcast, lemma]
 vstd::bits::lemma_low_bits_mask_div2 [broadcast, lemma]
 vstd::bits::lemma_low_bits_mask_is_odd [broadcast, lemma]
@@ -1236,6 +1488,8 @@ vstd::bytes::lemma_auto_spec_u32_to_from_le_bytes [lemma]
 vstd::bytes::lemma_auto_spec_u64_to_from_le_bytes [lemma]
 vstd::bytes::spec_u64_to_le_bytes_to_open
 vstd::compute::all_spec_ensures [broadcast]
+vstd::function::axiom_fn_mut_call_ensures [broadcast]
+vstd::function::axiom_fn_mut_call_requires [broadcast]
 vstd::function::axiom_proof_fn_ensures [broadcast]
 vstd::function::axiom_proof_fn_requires [broadcast]
 vstd::function::proof_fn_as_req_ens
@@ -1245,15 +1499,30 @@ vstd::hash_set::axiom_hash_set_with_view_spec_len [broadcast]
 vstd::hash_set::axiom_string_hash_set_spec_len [broadcast]
 vstd::invariant::spend_open_invariant_credit_in_proof
 vstd::laws_cmp::lemma_option_obeys_cmp_spec [broadcast, lemma]
+vstd::laws_cmp::lemma_ref_obeys_cmp_spec [broadcast, lemma]
 vstd::laws_eq::axiom_structural_obeys_concrete_eq [broadcast]
 vstd::laws_eq::lemma_option_obeys_concrete_eq [broadcast, lemma]
 vstd::laws_eq::lemma_option_obeys_deep_eq [broadcast, lemma]
 vstd::laws_eq::lemma_option_obeys_eq_spec [broadcast, lemma]
 vstd::laws_eq::lemma_option_obeys_view_eq [broadcast, lemma]
+vstd::laws_eq::lemma_ref_obeys_concrete_eq [broadcast, lemma]
+vstd::laws_eq::lemma_ref_obeys_deep_eq [broadcast, lemma]
+vstd::laws_eq::lemma_ref_obeys_eq_spec [broadcast, lemma]
+vstd::laws_eq::lemma_ref_obeys_view_eq [broadcast, lemma]
+vstd::layout::align_nonzero [broadcast]
+vstd::layout::align_of_u8 [broadcast]
+vstd::layout::align_properties [broadcast]
+vstd::layout::layout_of_maybe_uninit [broadcast]
 vstd::layout::layout_of_primitives [broadcast]
 vstd::layout::layout_of_references_and_pointers [broadcast]
 vstd::layout::layout_of_references_and_pointers_for_sized_types [broadcast]
+vstd::layout::layout_of_references_and_pointers_for_unsized_types [broadcast]
+vstd::layout::layout_of_slices [broadcast]
+vstd::layout::layout_of_str [broadcast]
 vstd::layout::layout_of_unit_tuple [broadcast]
+vstd::layout::signed_int_min_max_values
+vstd::layout::unsigned_int_max_values
+vstd::layout::usize_size_pow2
 vstd::map::axiom_map_empty [broadcast]
 vstd::map::axiom_map_ext_equal [broadcast]
 vstd::map::axiom_map_ext_equal_deep [broadcast]
@@ -1267,7 +1536,6 @@ vstd::map::axiom_map_remove_domain [broadcast]
 vstd::map_lib::lemma_disjoint_union_size [broadcast, lemma]
 vstd::map_lib::lemma_map_new_domain [broadcast, lemma]
 vstd::map_lib::lemma_map_new_values [broadcast, lemma]
-vstd::map_lib::lemma_map_properties [lemma]
 vstd::map_lib::lemma_submap_of_trans [broadcast, lemma]
 vstd::map_lib::lemma_union_dom [broadcast, lemma]
 vstd::map_lib::lemma_union_insert_left [broadcast, lemma]
@@ -1304,7 +1572,6 @@ vstd::multiset::lemma_insert_other_elements_unchanged [broadcast, lemma]
 vstd::multiset::lemma_intersection_count [broadcast, lemma]
 vstd::multiset::lemma_left_pseudo_idempotence [broadcast, lemma]
 vstd::multiset::lemma_multiset_empty_len [broadcast, lemma]
-vstd::multiset::lemma_multiset_properties [lemma]
 vstd::multiset::lemma_right_pseudo_idempotence [broadcast, lemma]
 vstd::multiset::lemma_update_different [broadcast, lemma]
 vstd::multiset::lemma_update_same [broadcast, lemma]
@@ -1331,6 +1598,7 @@ vstd::pervasive::proof_nonstatic_call
 vstd::raw_ptr::axiom_ptr_mut_from_data [broadcast]
 vstd::raw_ptr::ptrs_mut_eq [broadcast]
 vstd::raw_ptr::ptrs_mut_eq_sized [broadcast]
+vstd::relations::lemma_injective_on_subset [lemma]
 vstd::relations::lemma_new_first_element_still_sorted_by [lemma]
 vstd::seq::axiom_seq_add_index1 [broadcast]
 vstd::seq::axiom_seq_add_index2 [broadcast]
@@ -1351,6 +1619,13 @@ vstd::seq::axiom_seq_subrange_len [broadcast]
 vstd::seq::axiom_seq_update_different [broadcast]
 vstd::seq::axiom_seq_update_len [broadcast]
 vstd::seq::axiom_seq_update_same [broadcast]
+vstd::seq::lemma_seq_add_index1_alt [broadcast, lemma]
+vstd::seq::lemma_seq_add_index2_alt [broadcast, lemma]
+vstd::seq::lemma_seq_push_index_different_alt [broadcast, lemma]
+vstd::seq::lemma_seq_subrange_index_alt [broadcast, lemma]
+vstd::seq::lemma_seq_two_subranges_index [broadcast, lemma]
+vstd::seq::lemma_seq_update_different_alt [broadcast, lemma]
+vstd::seq::lemma_seq_update_same_alt [broadcast, lemma]
 vstd::seq_lib::lemma_append_last [lemma]
 vstd::seq_lib::lemma_concat_associative [lemma]
 vstd::seq_lib::lemma_exactly_one_view [lemma]
@@ -1370,7 +1645,6 @@ vstd::seq_lib::lemma_seq_contains [broadcast, lemma]
 vstd::seq_lib::lemma_seq_contains_after_push [broadcast, lemma]
 vstd::seq_lib::lemma_seq_empty_contains_nothing [broadcast, lemma]
 vstd::seq_lib::lemma_seq_empty_equality [broadcast, lemma]
-vstd::seq_lib::lemma_seq_properties [lemma]
 vstd::seq_lib::lemma_seq_skip_build_commut [broadcast, lemma]
 vstd::seq_lib::lemma_seq_skip_contains [broadcast, lemma]
 vstd::seq_lib::lemma_seq_skip_index [broadcast, lemma]
@@ -1445,6 +1719,7 @@ vstd::set::lemma_fold_insert [broadcast, lemma]
 vstd::set::lemma_fold_is_fold_graph [lemma]
 vstd::set_lib::axiom_is_empty [broadcast]
 vstd::set_lib::axiom_is_empty_len0 [broadcast]
+vstd::set_lib::full_set_properties [broadcast]
 vstd::set_lib::lemma_disjoint_iff_empty_intersection [lemma]
 vstd::set_lib::lemma_int_range [lemma]
 vstd::set_lib::lemma_len_difference [lemma]
@@ -1463,7 +1738,6 @@ vstd::set_lib::lemma_set_insert_finite_iff [broadcast, lemma]
 vstd::set_lib::lemma_set_intersect_again1 [broadcast, lemma]
 vstd::set_lib::lemma_set_intersect_again2 [broadcast, lemma]
 vstd::set_lib::lemma_set_intersect_union_lens [broadcast, lemma]
-vstd::set_lib::lemma_set_properties [lemma]
 vstd::set_lib::lemma_set_remove_finite_iff [broadcast, lemma]
 vstd::set_lib::lemma_set_subset_finite [broadcast, lemma]
 vstd::set_lib::lemma_set_union_again1 [broadcast, lemma]
@@ -1471,10 +1745,15 @@ vstd::set_lib::lemma_set_union_again2 [broadcast, lemma]
 vstd::set_lib::lemma_set_union_finite_iff [broadcast, lemma]
 vstd::set_lib::lemma_set_union_finite_implies_sets_finite [lemma]
 vstd::set_lib::lemma_sets_eq_iff_injective_map_eq [lemma]
+vstd::set_lib::lemma_sets_eq_iff_injective_map_on_eq [lemma]
 vstd::set_lib::lemma_subset_equality [lemma]
+vstd::set_lib::range_set_properties [broadcast]
 vstd::slice::axiom_slice_ext_equal [broadcast]
 vstd::slice::axiom_slice_get_usize [broadcast]
+vstd::slice::axiom_slice_has_resolved [broadcast]
 vstd::slice::axiom_spec_len [broadcast]
+vstd::slice::axiom_spec_slice_index [broadcast]
+vstd::slice::axiom_spec_slice_update [broadcast]
 vstd::std_specs::bits::axiom_u16_leading_ones [broadcast]
 vstd::std_specs::bits::axiom_u16_leading_zeros [broadcast]
 vstd::std_specs::bits::axiom_u16_trailing_ones [broadcast]
@@ -1491,6 +1770,30 @@ vstd::std_specs::bits::axiom_u8_leading_ones [broadcast]
 vstd::std_specs::bits::axiom_u8_leading_zeros [broadcast]
 vstd::std_specs::bits::axiom_u8_trailing_ones [broadcast]
 vstd::std_specs::bits::axiom_u8_trailing_zeros [broadcast]
+vstd::std_specs::btree::axiom_box_key_removed [broadcast]
+vstd::std_specs::btree::axiom_btree_map_decreases [broadcast]
+vstd::std_specs::btree::axiom_btree_map_deepview_borrow [broadcast]
+vstd::std_specs::btree::axiom_btree_map_view_finite_dom [broadcast]
+vstd::std_specs::btree::axiom_btree_set_decreases [broadcast]
+vstd::std_specs::btree::axiom_contains_box [broadcast]
+vstd::std_specs::btree::axiom_contains_deref_key [broadcast]
+vstd::std_specs::btree::axiom_deref_key_removed [broadcast]
+vstd::std_specs::btree::axiom_increasing_seq_meaning [broadcast]
+vstd::std_specs::btree::axiom_key_obeys_cmp_spec_meaning [broadcast]
+vstd::std_specs::btree::axiom_maps_box_key_to_value [broadcast]
+vstd::std_specs::btree::axiom_maps_deref_key_to_value [broadcast]
+vstd::std_specs::btree::axiom_set_box_key_removed [broadcast]
+vstd::std_specs::btree::axiom_set_box_key_to_value [broadcast]
+vstd::std_specs::btree::axiom_set_contains_box [broadcast]
+vstd::std_specs::btree::axiom_set_contains_deref_key [broadcast]
+vstd::std_specs::btree::axiom_set_deref_key_removed [broadcast]
+vstd::std_specs::btree::axiom_set_deref_key_to_value [broadcast]
+vstd::std_specs::btree::axiom_spec_btree_map_iter [broadcast]
+vstd::std_specs::btree::axiom_spec_btree_map_len [broadcast]
+vstd::std_specs::btree::axiom_spec_btree_set_len [broadcast]
+vstd::std_specs::btree::lemma_btree_map_deepview_dom [broadcast, lemma]
+vstd::std_specs::btree::lemma_btree_map_deepview_properties [broadcast, lemma]
+vstd::std_specs::btree::lemma_btree_map_deepview_values [broadcast, lemma]
 vstd::std_specs::control_flow::spec_from_blanket_identity [broadcast]
 vstd::std_specs::hash::axiom_bool_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_box_bool_obeys_hash_table_key_model [broadcast]
@@ -1504,9 +1807,9 @@ vstd::std_specs::hash::axiom_hashmap_deepview_borrow [broadcast]
 vstd::std_specs::hash::axiom_hashmap_view_finite_dom [broadcast]
 vstd::std_specs::hash::axiom_hashset_decreases [broadcast]
 vstd::std_specs::hash::axiom_i128_obeys_hash_table_key_model [broadcast]
-vstd::std_specs::hash::axiom_i164_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_i16_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_i32_obeys_hash_table_key_model [broadcast]
+vstd::std_specs::hash::axiom_i64_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_i8_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_isize_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::axiom_maps_box_key_to_value [broadcast]
@@ -1530,9 +1833,12 @@ vstd::std_specs::hash::axiom_usize_obeys_hash_table_key_model [broadcast]
 vstd::std_specs::hash::lemma_hashmap_deepview_dom [broadcast, lemma]
 vstd::std_specs::hash::lemma_hashmap_deepview_properties [broadcast, lemma]
 vstd::std_specs::hash::lemma_hashmap_deepview_values [broadcast, lemma]
+vstd::std_specs::manually_drop::axiom_manually_drop_has_resolved [broadcast]
 vstd::std_specs::slice::axiom_spec_slice_iter [broadcast]
 vstd::std_specs::vec::axiom_spec_into_iter [broadcast]
 vstd::std_specs::vec::axiom_spec_len [broadcast]
+vstd::std_specs::vec::axiom_vec_decreases_to_view [broadcast]
+vstd::std_specs::vec::axiom_vec_has_resolved [broadcast]
 vstd::std_specs::vec::axiom_vec_index_decreases [broadcast]
 vstd::std_specs::vec::lemma_vec_obeys_deep_eq [broadcast, lemma]
 vstd::std_specs::vec::lemma_vec_obeys_eq_spec [broadcast, lemma]
@@ -1542,8 +1848,9 @@ vstd::std_specs::vecdeque::axiom_spec_iter [broadcast]
 vstd::std_specs::vecdeque::axiom_spec_len [broadcast]
 vstd::std_specs::vecdeque::axiom_vec_dequeue_index_decreases [broadcast]
 vstd::string::axiom_str_literal_get_char [broadcast]
-vstd::string::axiom_str_literal_is_ascii [broadcast]
 vstd::string::axiom_str_literal_len [broadcast]
+vstd::string::is_ascii_concat [broadcast]
+vstd::string::is_ascii_spec_bytes [broadcast]
 vstd::string::to_string_from_display_ensures_for_str [broadcast]
 vstd::thread::ghost_thread_id
 vstd::tokens::fresh_is_fresh
@@ -1552,10 +1859,43 @@ vstd::tokens::map::lemma_submap_of_op [broadcast, lemma]
 vstd::tokens::map::lemma_submap_of_op_frac [lemma]
 vstd::tokens::map_values_insert_not_in
 vstd::tokens::map_values_remove
+vstd::utf8::char_is_scalar [broadcast]
+vstd::utf8::char_u32_cast [broadcast]
+vstd::utf8::decode_encode_width_1
+vstd::utf8::decode_encode_width_2
+vstd::utf8::decode_encode_width_3
+vstd::utf8::decode_encode_width_4
+vstd::utf8::decode_utf8_encode_utf8 [broadcast]
+vstd::utf8::decode_utf8_first_scalar
+vstd::utf8::decode_utf8_split [broadcast]
+vstd::utf8::encode_decode_width_1
+vstd::utf8::encode_decode_width_2
+vstd::utf8::encode_decode_width_3
+vstd::utf8::encode_decode_width_4
+vstd::utf8::encode_utf8_decode_utf8 [broadcast]
+vstd::utf8::encode_utf8_first_scalar
+vstd::utf8::encode_utf8_valid_utf8 [broadcast]
+vstd::utf8::is_ascii_chars_concat [broadcast]
+vstd::utf8::is_ascii_chars_encode_utf8 [broadcast]
+vstd::utf8::is_ascii_chars_nat_bound [broadcast]
+vstd::utf8::is_char_boundary_iff_is_leading_byte [broadcast]
+vstd::utf8::is_char_boundary_iff_not_is_continuation_byte [broadcast]
+vstd::utf8::is_char_boundary_len_first_scalar
+vstd::utf8::is_char_boundary_start_end_of_seq [broadcast]
+vstd::utf8::lemma_pop_first_scalar_decreases [lemma]
+vstd::utf8::partial_valid_partial_invalid_utf8
+vstd::utf8::partial_valid_utf8_extend [broadcast]
+vstd::utf8::partial_valid_utf8_extend_ascii_block [broadcast]
+vstd::utf8::partial_valid_utf8_invalid_subrange_helper
+vstd::utf8::take_first_scalar_valid_utf8
+vstd::utf8::utf8_byte_ranges_bitwise [broadcast]
+vstd::utf8::valid_utf8_concat [broadcast]
+vstd::utf8::valid_utf8_last [broadcast]
+vstd::utf8::valid_utf8_split [broadcast]
 
-=== 11. AXIOMS (161) ===
+=== 11. AXIOMS (196) ===
 
-Auto-broadcast: 155 (REVIEW!)
+Auto-broadcast: 190 (REVIEW!)
 
 Category: arithmetic (25 axioms)
     axiom_multiset_add [AUTO-BROADCAST]
@@ -1572,9 +1912,9 @@ Category: arithmetic (25 axioms)
     axiom_box_bool_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_box_integer_type_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_i128_obeys_hash_table_key_model [AUTO-BROADCAST]
-    axiom_i164_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_i16_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_i32_obeys_hash_table_key_model [AUTO-BROADCAST]
+    axiom_i64_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_i8_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_isize_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_u128_obeys_hash_table_key_model [AUTO-BROADCAST]
@@ -1583,7 +1923,7 @@ Category: arithmetic (25 axioms)
     axiom_u64_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_u8_obeys_hash_table_key_model [AUTO-BROADCAST]
     axiom_usize_obeys_hash_table_key_model [AUTO-BROADCAST]
-Category: map (21 axioms)
+Category: map (28 axioms)
     axiom_hash_map_with_view_spec_len [AUTO-BROADCAST]
     axiom_string_hash_map_spec_len [AUTO-BROADCAST]
     axiom_map_empty [AUTO-BROADCAST]
@@ -1598,6 +1938,13 @@ Category: map (21 axioms)
     axiom_map_remove_domain [AUTO-BROADCAST]
     axiom_mk_map_domain [AUTO-BROADCAST]
     axiom_mk_map_index [AUTO-BROADCAST]
+    axiom_btree_map_decreases [AUTO-BROADCAST]
+    axiom_btree_map_deepview_borrow [AUTO-BROADCAST]
+    axiom_btree_map_view_finite_dom [AUTO-BROADCAST]
+    axiom_maps_box_key_to_value [AUTO-BROADCAST]
+    axiom_maps_deref_key_to_value [AUTO-BROADCAST]
+    axiom_spec_btree_map_iter [AUTO-BROADCAST]
+    axiom_spec_btree_map_len [AUTO-BROADCAST]
     axiom_hashmap_decreases [AUTO-BROADCAST]
     axiom_hashmap_deepview_borrow [AUTO-BROADCAST]
     axiom_hashmap_view_finite_dom [AUTO-BROADCAST]
@@ -1608,18 +1955,27 @@ Category: map (21 axioms)
 Category: memory (2 axioms)
     axiom_ptr_mut_from_data [AUTO-BROADCAST]
     ptrs_mut_eq [AUTO-BROADCAST]
-Category: other (31 axioms)
+Category: other (42 axioms)
     array_len_matches_n [AUTO-BROADCAST]
     axiom_array_ext_equal [AUTO-BROADCAST]
+    axiom_array_has_resolved [AUTO-BROADCAST]
     axiom_spec_array_as_slice [AUTO-BROADCAST]
     axiom_spec_array_fill_for_copy_type [AUTO-BROADCAST]
+    axiom_spec_array_update [AUTO-BROADCAST]
+    axiom_fn_mut_call_ensures [AUTO-BROADCAST]
+    axiom_fn_mut_call_requires [AUTO-BROADCAST]
     axiom_proof_fn_ensures [AUTO-BROADCAST]
     axiom_proof_fn_requires [AUTO-BROADCAST]
     proof_fn_as_req_ens
     axiom_structural_obeys_concrete_eq [AUTO-BROADCAST]
+    align_properties [AUTO-BROADCAST]
+    layout_of_maybe_uninit [AUTO-BROADCAST]
     layout_of_primitives [AUTO-BROADCAST]
     layout_of_references_and_pointers [AUTO-BROADCAST]
     layout_of_references_and_pointers_for_sized_types [AUTO-BROADCAST]
+    layout_of_references_and_pointers_for_unsized_types [AUTO-BROADCAST]
+    layout_of_slices [AUTO-BROADCAST]
+    layout_of_str [AUTO-BROADCAST]
     layout_of_unit_tuple [AUTO-BROADCAST]
     tracked_static_ref
     tracked_swap
@@ -1635,12 +1991,14 @@ Category: other (31 axioms)
     axiom_is_empty_len0 [AUTO-BROADCAST]
     axiom_slice_ext_equal [AUTO-BROADCAST]
     axiom_slice_get_usize [AUTO-BROADCAST]
+    axiom_slice_has_resolved [AUTO-BROADCAST]
     axiom_spec_len [AUTO-BROADCAST]
+    axiom_spec_slice_index [AUTO-BROADCAST]
+    axiom_spec_slice_update [AUTO-BROADCAST]
     axiom_str_literal_get_char [AUTO-BROADCAST]
-    axiom_str_literal_is_ascii [AUTO-BROADCAST]
     axiom_str_literal_len [AUTO-BROADCAST]
     ghost_thread_id
-Category: rust_semantics (28 axioms)
+Category: rust_semantics (36 axioms)
     axiom_u16_leading_ones [AUTO-BROADCAST]
     axiom_u16_leading_zeros [AUTO-BROADCAST]
     axiom_u16_trailing_ones [AUTO-BROADCAST]
@@ -1661,15 +2019,23 @@ Category: rust_semantics (28 axioms)
     axiom_contains_box [AUTO-BROADCAST]
     axiom_contains_deref_key [AUTO-BROADCAST]
     axiom_deref_key_removed [AUTO-BROADCAST]
+    axiom_key_obeys_cmp_spec_meaning [AUTO-BROADCAST]
+    axiom_box_key_removed [AUTO-BROADCAST]
+    axiom_contains_box [AUTO-BROADCAST]
+    axiom_contains_deref_key [AUTO-BROADCAST]
+    axiom_deref_key_removed [AUTO-BROADCAST]
     axiom_random_state_builds_valid_hashers [AUTO-BROADCAST]
+    axiom_manually_drop_has_resolved [AUTO-BROADCAST]
     axiom_spec_slice_iter [AUTO-BROADCAST]
     axiom_spec_into_iter [AUTO-BROADCAST]
     axiom_spec_len [AUTO-BROADCAST]
+    axiom_vec_decreases_to_view [AUTO-BROADCAST]
+    axiom_vec_has_resolved [AUTO-BROADCAST]
     axiom_vec_index_decreases [AUTO-BROADCAST]
     axiom_spec_iter [AUTO-BROADCAST]
     axiom_spec_len [AUTO-BROADCAST]
     axiom_vec_dequeue_index_decreases [AUTO-BROADCAST]
-Category: sequence (19 axioms)
+Category: sequence (20 axioms)
     axiom_seq_add_index1 [AUTO-BROADCAST]
     axiom_seq_add_index2 [AUTO-BROADCAST]
     axiom_seq_add_len [AUTO-BROADCAST]
@@ -1689,7 +2055,8 @@ Category: sequence (19 axioms)
     axiom_seq_update_different [AUTO-BROADCAST]
     axiom_seq_update_len [AUTO-BROADCAST]
     axiom_seq_update_same [AUTO-BROADCAST]
-Category: set (35 axioms)
+    axiom_increasing_seq_meaning [AUTO-BROADCAST]
+Category: set (43 axioms)
     axiom_hash_set_with_view_spec_len [AUTO-BROADCAST]
     axiom_string_hash_set_spec_len [AUTO-BROADCAST]
     axiom_set_choose_infinite [AUTO-BROADCAST]
@@ -1717,6 +2084,14 @@ Category: set (35 axioms)
     axiom_set_remove_same [AUTO-BROADCAST]
     axiom_set_union [AUTO-BROADCAST]
     axiom_set_union_finite [AUTO-BROADCAST]
+    axiom_btree_set_decreases [AUTO-BROADCAST]
+    axiom_set_box_key_removed [AUTO-BROADCAST]
+    axiom_set_box_key_to_value [AUTO-BROADCAST]
+    axiom_set_contains_box [AUTO-BROADCAST]
+    axiom_set_contains_deref_key [AUTO-BROADCAST]
+    axiom_set_deref_key_removed [AUTO-BROADCAST]
+    axiom_set_deref_key_to_value [AUTO-BROADCAST]
+    axiom_spec_btree_set_len [AUTO-BROADCAST]
     axiom_hashset_decreases [AUTO-BROADCAST]
     axiom_set_box_key_removed [AUTO-BROADCAST]
     axiom_set_box_key_to_value [AUTO-BROADCAST]
@@ -1726,7 +2101,7 @@ Category: set (35 axioms)
     axiom_set_deref_key_to_value [AUTO-BROADCAST]
     axiom_spec_hash_set_len [AUTO-BROADCAST]
 
-=== 12. BROADCAST GROUPS (46) ===
+=== 12. BROADCAST GROUPS (52) ===
 
 group_div_basics (5 members)
     lemma_div_basics_1
@@ -1780,22 +2155,41 @@ group_pow_properties (8 members)
     group_mul_properties_internal
     lemma_mul_increases
     lemma_mul_strictly_increases
-group_array_axioms (5 members)
+group_array_axioms (7 members)
     array_len_matches_n
     lemma_array_index
     axiom_spec_array_as_slice
     axiom_spec_array_fill_for_copy_type
     axiom_array_ext_equal
-group_function_axioms (2 members)
+    axiom_spec_array_update
+    axiom_array_has_resolved
+group_endian_nat_axioms (14 members)
+    EndianNat :: from_nat_properties
+    EndianNat :: to_nat_properties
+    EndianNat :: from_nat_to_nat
+    EndianNat :: to_nat_from_nat
+    EndianNat :: to_nat_injective
+    EndianNat :: from_nat_injective
+    EndianNat :: to_nat_eq_to_nat_most
+    EndianNat :: exp_properties
+    EndianNat :: to_big_properties
+    EndianNat :: from_big_properties
+    EndianNat :: from_big_to_big
+    EndianNat :: to_big_from_big
+    EndianNat :: to_big_injective
+    EndianNat :: from_big_injective
+group_function_axioms (4 members)
     axiom_proof_fn_requires
     axiom_proof_fn_ensures
+    axiom_fn_mut_call_requires
+    axiom_fn_mut_call_ensures
 group_hash_map_axioms (2 members)
     axiom_hash_map_with_view_spec_len
     axiom_string_hash_map_spec_len
 group_hash_set_axioms (2 members)
     axiom_hash_set_with_view_spec_len
     axiom_string_hash_set_spec_len
-group_laws_cmp (13 members)
+group_laws_cmp (14 members)
     u8_laws :: lemma_obeys_cmp_spec
     i8_laws :: lemma_obeys_cmp_spec
     u16_laws :: lemma_obeys_cmp_spec
@@ -1808,8 +2202,9 @@ group_laws_cmp (13 members)
     i128_laws :: lemma_obeys_cmp_spec
     usize_laws :: lemma_obeys_cmp_spec
     isize_laws :: lemma_obeys_cmp_spec
+    lemma_ref_obeys_cmp_spec
     lemma_option_obeys_cmp_spec
-group_laws_eq (18 members)
+group_laws_eq (22 members)
     axiom_structural_obeys_concrete_eq
     bool_laws :: group_laws_eq
     u8_laws :: group_laws_eq
@@ -1824,15 +2219,27 @@ group_laws_eq (18 members)
     i128_laws :: group_laws_eq
     usize_laws :: group_laws_eq
     isize_laws :: group_laws_eq
+    lemma_ref_obeys_eq_spec
+    lemma_ref_obeys_concrete_eq
+    lemma_ref_obeys_view_eq
+    lemma_ref_obeys_deep_eq
     lemma_option_obeys_eq_spec
     lemma_option_obeys_concrete_eq
     lemma_option_obeys_view_eq
     lemma_option_obeys_deep_eq
-group_layout_axioms (4 members)
+group_align_properties (2 members)
+    align_properties
+    align_nonzero
+group_layout_axioms (9 members)
     layout_of_primitives
     layout_of_unit_tuple
     layout_of_references_and_pointers
     layout_of_references_and_pointers_for_sized_types
+    layout_of_references_and_pointers_for_unsized_types
+    layout_of_slices
+    layout_of_str
+    layout_of_maybe_uninit
+    group_align_properties
 group_map_axioms (10 members)
     axiom_map_index_decreases_finite
     axiom_map_index_decreases_infinite
@@ -1898,7 +2305,7 @@ group_raw_ptr_axioms (3 members)
     axiom_ptr_mut_from_data
     ptrs_mut_eq
     ptrs_mut_eq_sized
-group_seq_axioms (18 members)
+group_seq_axioms (19 members)
     axiom_seq_index_decreases
     axiom_seq_subrange_decreases
     axiom_seq_empty
@@ -1914,9 +2321,17 @@ group_seq_axioms (18 members)
     axiom_seq_ext_equal_deep
     axiom_seq_subrange_len
     axiom_seq_subrange_index
+    lemma_seq_two_subranges_index
     axiom_seq_add_len
     axiom_seq_add_index1
     axiom_seq_add_index2
+group_seq_lemmas_expensive (6 members)
+    lemma_seq_push_index_different_alt
+    lemma_seq_update_same_alt
+    lemma_seq_update_different_alt
+    lemma_seq_subrange_index_alt
+    lemma_seq_add_index1_alt
+    lemma_seq_add_index2_alt
 group_filter_ensures (3 members)
     Seq :: lemma_filter_len
     Seq :: lemma_filter_pred
@@ -2028,10 +2443,14 @@ group_set_axioms_early (16 members)
     axiom_set_empty_finite
     axiom_set_insert_finite
     axiom_set_remove_finite
-group_set_lib_default (3 members)
+group_set_lib_default (7 members)
     axiom_is_empty
     axiom_is_empty_len0
     lemma_set_subset_finite
+    Set :: lemma_map_by_finite
+    Set :: lemma_map_flatten_by_finite
+    range_set_properties
+    full_set_properties
 group_set_properties (10 members)
     lemma_set_union_again1
     lemma_set_union_again2
@@ -2043,10 +2462,13 @@ group_set_properties (10 members)
     lemma_set_intersect_union_lens
     lemma_set_difference_len
     lemma_set_empty_equivalency_len
-group_slice_axioms (3 members)
+group_slice_axioms (6 members)
     axiom_spec_len
     axiom_slice_get_usize
     axiom_slice_ext_equal
+    axiom_spec_slice_update
+    axiom_spec_slice_index
+    axiom_slice_has_resolved
 group_bits_axioms (16 members)
     axiom_u8_trailing_zeros
     axiom_u8_trailing_ones
@@ -2064,6 +2486,28 @@ group_bits_axioms (16 members)
     axiom_u64_trailing_ones
     axiom_u64_leading_zeros
     axiom_u64_leading_ones
+group_btree_axioms (21 members)
+    axiom_key_obeys_cmp_spec_meaning
+    axiom_increasing_seq_meaning
+    axiom_box_key_removed
+    axiom_contains_deref_key
+    axiom_contains_box
+    axiom_deref_key_removed
+    axiom_maps_deref_key_to_value
+    axiom_maps_box_key_to_value
+    axiom_btree_map_deepview_borrow
+    axiom_btree_map_view_finite_dom
+    axiom_spec_btree_map_len
+    axiom_set_box_key_removed
+    axiom_set_contains_deref_key
+    axiom_set_contains_box
+    axiom_set_deref_key_removed
+    axiom_set_deref_key_to_value
+    axiom_set_box_key_to_value
+    axiom_spec_btree_set_len
+    axiom_spec_btree_map_iter
+    axiom_btree_map_decreases
+    axiom_btree_set_decreases
 group_control_flow_axioms (1 members)
     spec_from_blanket_identity
 group_hash_axioms (35 members)
@@ -2085,7 +2529,7 @@ group_hash_axioms (35 members)
     axiom_i8_obeys_hash_table_key_model
     axiom_i16_obeys_hash_table_key_model
     axiom_i32_obeys_hash_table_key_model
-    axiom_i164_obeys_hash_table_key_model
+    axiom_i64_obeys_hash_table_key_model
     axiom_i128_obeys_hash_table_key_model
     axiom_isize_obeys_hash_table_key_model
     axiom_box_bool_obeys_hash_table_key_model
@@ -2102,6 +2546,8 @@ group_hash_axioms (35 members)
     axiom_spec_hash_map_iter
     axiom_hashmap_decreases
     axiom_hashset_decreases
+group_manually_drop_axioms (1 members)
+    axiom_manually_drop_has_resolved
 group_range_axioms (12 members)
     axiom_spec_range_next_u8
     axiom_spec_range_next_u16
@@ -2117,25 +2563,48 @@ group_range_axioms (12 members)
     axiom_spec_range_next_isize
 group_slice_axioms (1 members)
     axiom_spec_slice_iter
-group_vec_axioms (4 members)
+group_vec_axioms (6 members)
     axiom_spec_len
     axiom_vec_index_decreases
     vec_clone_deep_view_proof
     axiom_spec_into_iter
+    axiom_vec_has_resolved
+    axiom_vec_decreases_to_view
 group_vec_dequeue_axioms (3 members)
     axiom_spec_len
     axiom_vec_dequeue_index_decreases
     axiom_spec_iter
-group_string_axioms (3 members)
-    axiom_str_literal_is_ascii
+group_string_axioms (4 members)
     axiom_str_literal_len
     axiom_str_literal_get_char
-group_string_axioms (4 members)
-    axiom_str_literal_is_ascii
+    is_ascii_spec_bytes
+    is_ascii_concat
+group_string_axioms (5 members)
     axiom_str_literal_len
     axiom_str_literal_get_char
     to_string_from_display_ensures_for_str
-group_vstd_default [DEFAULT] (22 members)
+    is_ascii_spec_bytes
+    is_ascii_concat
+group_utf8_lib (18 members)
+    encode_utf8_valid_utf8
+    encode_utf8_decode_utf8
+    decode_utf8_encode_utf8
+    char_is_scalar
+    char_u32_cast
+    valid_utf8_concat
+    partial_valid_utf8_extend
+    partial_valid_utf8_extend_ascii_block
+    valid_utf8_split
+    decode_utf8_split
+    is_char_boundary_start_end_of_seq
+    is_char_boundary_iff_not_is_continuation_byte
+    is_char_boundary_iff_is_leading_byte
+    valid_utf8_last
+    utf8_byte_ranges_bitwise
+    is_ascii_chars_encode_utf8
+    is_ascii_chars_nat_bound
+    is_ascii_chars_concat
+group_vstd_default [DEFAULT] (24 members)
     seq :: group_seq_axioms
     seq_lib :: group_seq_lib_default
     map :: group_map_axioms
@@ -2148,41 +2617,43 @@ group_vstd_default [DEFAULT] (22 members)
     laws_cmp :: group_laws_cmp
     slice :: group_slice_axioms
     array :: group_array_axioms
-    string :: group_string_axioms
+    # [cfg (not (verus_verify_core))] string :: group_string_axioms
     raw_ptr :: group_raw_ptr_axioms
     layout :: group_layout_axioms
     std_specs :: range :: group_range_axioms
     std_specs :: bits :: group_bits_axioms
     std_specs :: control_flow :: group_control_flow_axioms
     std_specs :: slice :: group_slice_axioms
+    std_specs :: manually_drop :: group_manually_drop_axioms
     # [cfg (feature = "alloc")] std_specs :: vec :: group_vec_axioms
     # [cfg (feature = "alloc")] std_specs :: vecdeque :: group_vec_dequeue_axioms
     # [cfg (all (feature = "alloc" , feature = "std"))] std_specs :: hash :: group_hash_axioms
+    # [cfg (all (feature = "alloc" , feature = "std"))] std_specs :: btree :: group_btree_axioms
 
 === 13. SUMMARY ===
 
-Compiler builtins:           6 types, 2 traits
+Compiler builtins:           6 types, 3 traits
 Primitive type specs (vstd):
   Primitive integers:        6 pairs (114 methods total)
   Atomic types:              11 types (130 methods total)
-Modules:                     87
-Ghost types:                 44
-  Ghost type methods:        87
-Tracked types:               8
+Modules:                     105
+Ghost types:                 54
+  Ghost type methods:        88
+Tracked types:               23
 Wrapped Rust types:          29
-  Wrapped methods:           144
-Traits:                      91
-Spec functions:              203
-Proof functions:             515
-  Lemmas:                    313
-  Broadcast:                 367
-Axioms:                      161
-  Auto-broadcast:            155
-Broadcast groups:            46
-Macros:                      81
-External specs (stdlib):     195
+  Wrapped methods:           154
+Traits:                      147
+Spec functions:              276
+Proof functions:             608
+  Lemmas:                    327
+  Broadcast:                 442
+Axioms:                      196
+  Auto-broadcast:            190
+Broadcast groups:            52
+Macros:                      85
+External specs (stdlib):     284
 
-=== 14. EXTERNAL SPECS (STDLIB WRAPPERS) (195) ===
+=== 14. EXTERNAL SPECS (STDLIB WRAPPERS) (284) ===
 
 These are Rust stdlib methods that vstd wraps via assume_specification.
 
@@ -2193,11 +2664,18 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   bool::then [ensures]
   ::into_vec [ensures]
   Box::<T>::new [ensures]
+  core::default::Default::default [ensures]
   Rc::<T>::new [ensures]
+  core::default::Default::default [ensures]
   Arc::<T>::new [ensures]
+  core::default::Default::default [ensures]
   Clone::clone [ensures]
   Rc::<T,A>::try_unwrap [ensures]
   Rc::<T,A>::into_inner [ensures]
+  ManuallyDrop::<T>::new [ensures]
+  ManuallyDrop::<T>::into_inner []
+  Clone::clone [ensures]
+  Deref::deref []
   Option::<T>::is_some [ensures]
   Option::<T>::is_none [ensures]
   Option::<T>::as_ref [ensures]
@@ -2206,44 +2684,67 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   Option::<T>::expect [requires, ensures]
   Option::<T>::take [ensures]
   Option::<T>::map [requires, ensures]
+  Option::<&'aT>::cloned [ensures]
+  Option::<T>::and_then [requires, ensures]
+  Option::<T>::ok_or_else [requires, ensures]
+  Option::<T>::unwrap_or_default [ensures]
+  Option::<T>::unwrap_or_else [requires, ensures]
   Clone::clone [ensures]
   PartialEq::eq []
   PartialOrd::partial_cmp []
   Ord::cmp []
   Option::ok_or [ensures]
+  Option::as_mut [ensures]
+  Option::as_slice [ensures]
+  Option::as_mut_slice [ensures]
+  Option::insert [ensures]
+  Option::get_or_insert [ensures]
   Into<U>::into [ensures]
+  TryInto<U>::try_into [ensures]
+  TryFrom<U>::try_from [ensures]
   DefaultHasher::new [ensures]
   DefaultHasher::write [ensures]
   DefaultHasher::finish [ensures]
   Keys::<'a,Key,Value>::next [ensures]
   Values::<'a,Key,Value>::next [ensures]
   hash_map::Iter::<'a,Key,Value>::next [ensures]
-  HashMap::<Key,Value,S>::iter [ensures]
-  HashMap::<Key,Value,S>::len [ensures]
-  HashMap::<Key,Value,S>::is_empty [ensures]
+  HashMap::<Key,Value,S,A>::iter [ensures]
+  HashMap::<Key,Value,S,A>::len [ensures]
+  HashMap::<Key,Value,S,A>::is_empty [ensures]
   Clone::clone [ensures]
   HashMap::<Key,Value>::new [ensures]
+  core::default::Default::default [ensures]
   HashMap::<Key,Value>::with_capacity [ensures]
-  HashMap::<Key,Value,S,>::reserve [ensures]
-  HashMap::<Key,Value,S>::insert [ensures]
-  HashMap::<Key,Value,S>::contains_key::<Q> [ensures]
-  HashMap::<Key,Value,S>::get::<Q> [ensures]
-  HashMap::<Key,Value,S>::remove::<Q> [ensures]
-  HashMap::<Key,Value,S>::clear [ensures]
-  HashMap::<Key,Value,S>::keys [ensures]
-  HashMap::<Key,Value,S>::values [ensures]
+  HashMap::<Key,Value,S,A,>::reserve [ensures]
+  HashMap::<Key,Value,S,A,>::insert [ensures]
+  HashMap::<Key,Value,S,A>::contains_key::<Q> [ensures]
+  HashMap::<Key,Value,S,A>::get::<Q> [ensures]
+  HashMap::<Key,Value,S,A>::remove::<Q> [ensures]
+  HashMap::<Key,Value,S,A>::clear [ensures]
+  HashMap::<Key,Value,S,A>::keys [ensures]
+  HashMap::<Key,Value,S,A>::values [ensures]
   hash_set::Iter::<'a,Key>::next [ensures]
-  HashSet::<Key,S>::len [ensures]
-  HashSet::<Key,S>::is_empty [ensures]
+  HashSet::<Key,S,A>::len [ensures]
+  HashSet::<Key,S,A>::is_empty [ensures]
   HashSet::<Key>::new [ensures]
+  core::default::Default::default [ensures]
   HashSet::<Key>::with_capacity [ensures]
-  HashSet::<Key,S>::reserve [ensures]
-  HashSet::<Key,S>::insert [ensures]
-  HashSet::<Key,S>::contains [ensures]
-  HashSet::<Key,S>::get::<Q> [ensures]
-  HashSet::<Key,S>::remove::<Q> [ensures]
-  HashSet::<Key,S>::clear [ensures]
-  HashSet::<Key,S>::iter [ensures]
+  HashSet::<Key,S,A,>::reserve [ensures]
+  HashSet::<Key,S,A,>::insert [ensures]
+  HashSet::<Key,S,A>::contains [ensures]
+  HashSet::<Key,S,A>::get::<Q> [ensures]
+  HashSet::<Key,S,A>::remove::<Q> [ensures]
+  HashSet::<Key,S,A>::clear [ensures]
+  HashSet::<Key,S,A>::iter [ensures]
+  MaybeUninit::<T>::new [ensures]
+  MaybeUninit::<T>::uninit [ensures]
+  MaybeUninit::<T>::assume_init [requires]
+  MaybeUninit::<T>::assume_init_ref [requires, ensures]
+  core::default::Default::default [ensures]
+  core::default::Default::default [ensures]
+  core::default::Default::default [ensures]
+  core::default::Default::default [ensures]
+  core::default::Default::default [ensures]
   Range::<A>::next [ensures]
   Range::<Idx>::contains [ensures]
   RangeInclusive::<Idx>::contains [ensures]
@@ -2253,10 +2754,12 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   Clone::clone [ensures]
   Clone::clone [ensures]
   Clone::clone [ensures]
+  Clone::clone [ensures]
   alloc::boxed::box_new [ensures]
-  VecDeque::<T,A>::index [requires, ensures]
+  VecDeque::<T,A>::index [ensures]
   VecDeque::<T,A>::len [ensures]
   VecDeque::<T>::new [ensures]
+  core::default::Default::default [ensures]
   VecDeque::<T>::with_capacity [ensures]
   VecDeque::<T,A>::reserve [ensures]
   VecDeque::<T,A>::push_back [ensures]
@@ -2299,6 +2802,14 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   PartialOrd<f64>::le [ensures]
   PartialOrd<f64>::gt [ensures]
   PartialOrd<f64>::ge [ensures]
+  PartialEq<&B>::eq []
+  PartialEq<&B>::ne []
+  PartialOrd<&B>::partial_cmp []
+  PartialOrd<&B>::lt []
+  PartialOrd<&B>::le []
+  PartialOrd<&B>::gt []
+  PartialOrd<&B>::ge []
+  Ord::cmp []
   u8::trailing_zeros [ensures]
   u8::trailing_ones [ensures]
   u8::leading_zeros [ensures]
@@ -2315,9 +2826,19 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   u64::trailing_ones [ensures]
   u64::leading_zeros [ensures]
   u64::leading_ones [ensures]
+  SliceIndex<[T]>::index []
+  SliceIndex<[T]>::index [ensures]
+  Index<I>::index [ensures]
+  Index<I>::index [ensures]
   core::hint::unreachable_unchecked [requires]
   Iter::<'a,T>::next [ensures]
   ::iter [ensures]
+  ::first [ensures]
+  ::last [ensures]
+  ::first_mut [ensures]
+  ::last_mut [ensures]
+  ::split_at [requires, ensures]
+  ::split_at_mut [requires, ensures]
   Result::<T,E>::is_ok [ensures]
   Result::<T,E>::is_err [ensures]
   Result::<T,E>::as_ref [ensures]
@@ -2328,28 +2849,26 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   Result::<T,E>::map_err [requires, ensures]
   Result::<T,E>::ok [ensures]
   Result::<T,E>::err [ensures]
-  u32::checked_rem [ensures]
-  u32::checked_rem_euclid [ensures]
-  i32::checked_div [ensures]
-  i32::checked_div_euclid [ensures]
-  i32::checked_rem [ensures]
-  i32::checked_rem_euclid [ensures]
   Vec::<T,A>::len [ensures]
   Vec::<T>::new [ensures]
+  core::default::Default::default [ensures]
   Vec::<T,A>::new_in [ensures]
   Vec::<T>::with_capacity [ensures]
   Vec::<T,A>::with_capacity_in [ensures]
   Vec::<T,A>::reserve [ensures]
+  Vec::<T,A>::try_reserve [ensures]
   Vec::<T,A>::push [ensures]
   Vec::<T,A>::pop [ensures]
   Vec::<T,A>::append [ensures]
   Vec::<T,A>::extend_from_slice [ensures]
+  Vec::<T,A>::index [ensures]
   Vec::<T,A>::swap_remove [requires, ensures]
   Vec::<T,A>::insert [requires, ensures]
   ::is_empty [ensures]
   Vec::<T,A>::remove [requires, ensures]
   Vec::<T,A>::clear [ensures]
   Vec::<T,A>::as_slice [ensures]
+  Vec::<T,A>::as_mut_slice [ensures]
   core::ops::Deref::deref [ensures]
   Vec::<T,A>::split_off [requires, ensures]
   Clone::clone [ensures]
@@ -2363,26 +2882,67 @@ These are Rust stdlib methods that vstd wraps via assume_specification.
   Option::<T>::branch [ensures]
   Option::<T>::from_residual [ensures]
   Result::<T,F>::from_residual [ensures]
+  Keys::<'a,Key,Value>::next [ensures]
+  Values::<'a,Key,Value>::next [ensures]
+  btree_map::Iter::<'a,K,V>::next [ensures]
+  BTreeMap::<Key,Value,A>::iter [ensures]
+  BTreeMap::<Key,Value,A>::len [ensures]
+  BTreeMap::<Key,Value,A>::is_empty [ensures]
+  Clone::clone [ensures]
+  BTreeMap::<Key,Value>::new [ensures]
+  core::default::Default::default [ensures]
+  BTreeMap::<Key,Value,A,>::insert [ensures]
+  BTreeMap::<Key,Value,A>::contains_key::<Q> [ensures]
+  BTreeMap::<Key,Value,A>::get::<Q> [ensures]
+  BTreeMap::<Key,Value,A>::remove::<Q> [ensures]
+  BTreeMap::<Key,Value,A>::clear [ensures]
+  BTreeMap::<Key,Value,A>::keys [ensures]
+  BTreeMap::<Key,Value,A>::values [ensures]
+  btree_set::Iter::<'a,Key>::next [ensures]
+  BTreeSet::<Key,A>::len [ensures]
+  BTreeSet::<Key,A>::is_empty [ensures]
+  Clone::clone [ensures]
+  BTreeSet::<Key>::new [ensures]
+  core::default::Default::default [ensures]
+  BTreeSet::<Key,A>::insert [ensures]
+  BTreeSet::<Key,A,>::contains [ensures]
+  BTreeSet::<Key,A>::get::<Q> [ensures]
+  BTreeSet::<Key,A,>::remove::<Q> [ensures]
+  BTreeSet::<Key,A>::clear [ensures]
+  BTreeSet::<Key,A>::iter [ensures]
   PartialEq<*mutT>::eq [ensures]
   PartialEq<*constT>::eq [ensures]
   core::ptr::null [ensures]
   core::ptr::null_mut [ensures]
   str::is_ascii [ensures]
   str::to_owned [ensures]
+  str::as_bytes [ensures]
+  str::len []
+  str::is_empty []
+  str::is_char_boundary []
+  str::split_at [requires, ensures]
+  str::from_utf8_unchecked [requires, ensures]
   ToString::to_string [ensures]
-  String::is_ascii [ensures]
   String::as_str [ensures]
+  core::ops::Deref::deref [ensures]
   Clone::clone [ensures]
   PartialEq::eq [ensures]
+  String::new [ensures]
+  core::default::Default::default [ensures]
   str::chars [ensures]
   Chars::<'a>::next [ensures]
   core::mem::size_of::<V> [ensures]
   core::mem::align_of::<V> [ensures]
+  core::mem::size_of_val::<V> [ensures]
+  core::mem::align_of_val::<V> [ensures]
   ::as_slice [ensures]
-  ::len [ensures]
+  Clone::clone [ensures]
+  Clone::clone [ensures]
+  ::len []
+  ::is_empty [ensures]
   ::get::<I> []
 
 
-Completed in 899 ms.
+Completed in 181 ms.
 JSON output: analyses/vstd_inventory.json
 Log output: analyses/vstd_inventory.log

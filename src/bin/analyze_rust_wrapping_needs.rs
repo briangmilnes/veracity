@@ -567,8 +567,12 @@ fn main() -> Result<()> {
     
     // Set up log output
     fs::create_dir_all("analyses")?;
-    let log_path = PathBuf::from("analyses/analyze_rust_wrapping_needs.log");
+    let now = chrono::Local::now();
+    let timestamp_file = now.format("%Y%m%d-%H%M%S");
+    let log_path = PathBuf::from(format!("analyses/analyze_rust_wrapping_needs-{}.log", timestamp_file));
     let mut log = fs::File::create(&log_path)?;
+    let invocation: Vec<String> = std::env::args().collect();
+    writeln!(log, "Command: {}", invocation.join(" "))?;
     
     // Write the full report
     write_report(&mut log, &vstd, &rusticate)?;

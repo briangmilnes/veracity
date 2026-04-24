@@ -1,0 +1,25 @@
+
+|   # |   Chap | File                           | Type |  WF + |  Inv - |  Trig - |  Req - |   Iso + |   Net |
+|-----|--------|--------------------------------|------|-------|--------|---------|--------|---------|-------|
+|   1 | Chap37 | AVLTreeSeq.rs                  |    T |    +1 |     -5 |      +0 |     -7 |      +3 |    -8 |
+|   2 | Chap37 | AVLTreeSeqMtPer.rs             |    T |    +1 |     -1 |      +0 |     -1 |      +1 |    +0 |
+|   3 | Chap37 | AVLTreeSeqStEph.rs             |    T |    +1 |     -7 |      +0 |     -5 |      +5 |    -6 |
+|   4 | Chap37 | AVLTreeSeqStPer.rs             |    T |    +1 |     -1 |      +0 |     -1 |      +1 |    +0 |
+|     |  TOTAL |                                |      |    +4 |    -14 |      +0 |    -14 |     +10 |   -14 |
+
+Skipped files:
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTAVLMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTAVLStEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTBBAlphaMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTBBAlphaStEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTPlainMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTPlainStEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTRBMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTRBStEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSetAVLMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSetBBAlphaMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSetPlainMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSetRBMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSetSplayMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSplayMtEph.rs: no obeys_feq_full usage
+  SKIP /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS/src/Chap37/BSTSplayStEph.rs: no obeys_feq_full usage

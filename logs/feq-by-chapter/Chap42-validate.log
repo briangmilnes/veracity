@@ -1,0 +1,881 @@
+error: expected curly braces or `;`
+   --> src/Chap37/AVLTreeSeq.rs:266:48
+    |
+266 |             requires self.spec_avltreeseq_wf(),,
+    |                                                ^
+
+error: expected curly braces or `;`
+   --> src/Chap37/AVLTreeSeqStEph.rs:246:53
+    |
+246 |             requires self.spec_avltreeseqsteph_wf(),, self.spec_seq().len() < usize::MAX,
+    |                                                     ^
+
+error[E0252]: the name `obeys_feq_full_trigger` is defined multiple times
+  --> src/Chap37/AVLTreeSeqStPer.rs:31:92
+   |
+29 |     use crate::vstdplus::feq::feq::{feq, obeys_feq_full_trigger};
+   |                                          ---------------------- previous import of the value `obeys_feq_full_trigger` here
+30 |     #[cfg(verus_keep_ghost)]
+31 |     use crate::vstdplus::feq::feq::{lemma_cloned_view_eq, obeys_feq_clone, obeys_feq_full, obeys_feq_full_trigger};
+   |                                                                                            ^^^^^^^^^^^^^^^^^^^^^^ `obeys_feq_full_trigger` reimported here
+   |
+   = note: `obeys_feq_full_trigger` must be defined only once in the value namespace of this module
+
+error[E0252]: the name `obeys_feq_full_trigger` is defined multiple times
+  --> src/Chap41/ArraySetStEph.rs:38:53
+   |
+36 |     use crate::vstdplus::feq::feq::{feq, obeys_feq_full_trigger};
+   |                                          ---------------------- previous import of the value `obeys_feq_full_trigger` here
+37 |     #[cfg(verus_keep_ghost)]
+38 |     use crate::vstdplus::feq::feq::{obeys_feq_full, obeys_feq_full_trigger, obeys_feq_clone, lemma_cloned_view_eq, lemma_seq_map_clo...
+   |                                                     ^^^^^^^^^^^^^^^^^^^^^^ `obeys_feq_full_trigger` reimported here
+   |
+   = note: `obeys_feq_full_trigger` must be defined only once in the value namespace of this module
+
+error[E0252]: the name `obeys_feq_full_trigger` is defined multiple times
+  --> src/Chap41/AVLTreeSetStEph.rs:34:53
+   |
+32 |     use crate::vstdplus::feq::feq::{feq, obeys_feq_full_trigger};
+   |                                          ---------------------- previous import of the value `obeys_feq_full_trigger` here
+33 |     #[cfg(verus_keep_ghost)]
+34 |     use crate::vstdplus::feq::feq::{obeys_feq_full, obeys_feq_full_trigger, lemma_cloned_view_eq};
+   |                                                     ^^^^^^^^^^^^^^^^^^^^^^ `obeys_feq_full_trigger` reimported here
+   |
+   = note: `obeys_feq_full_trigger` must be defined only once in the value namespace of this module
+
+error[E0252]: the name `obeys_feq_full_trigger` is defined multiple times
+  --> src/Chap41/AVLTreeSetStPer.rs:29:53
+   |
+27 |     use crate::vstdplus::feq::feq::{feq, obeys_feq_full_trigger};
+   |                                          ---------------------- previous import of the value `obeys_feq_full_trigger` here
+28 |     #[cfg(verus_keep_ghost)]
+29 |     use crate::vstdplus::feq::feq::{obeys_feq_full, obeys_feq_full_trigger, lemma_cloned_view_eq};
+   |                                                     ^^^^^^^^^^^^^^^^^^^^^^ `obeys_feq_full_trigger` reimported here
+   |
+   = note: `obeys_feq_full_trigger` must be defined only once in the value namespace of this module
+
+error[E0432]: unresolved import `crate::Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph::AVLTreeSeqStEphTrait`
+ --> src/Chap53/PQMinStEph.rs:7:9
+  |
+7 |     use crate::Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph::AVLTreeSeqStEphTrait;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------
+  |         |                                                |
+  |         |                                                help: a similar name exists in the module: `ArraySeqStEphTrait`
+  |         no `AVLTreeSeqStEphTrait` in `Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph`
+
+error[E0432]: unresolved import `crate::Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph::AVLTreeSeqStEphTrait`
+ --> src/Chap53/GraphSearchStEph.rs:7:9
+  |
+7 |     use crate::Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph::AVLTreeSeqStEphTrait;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------
+  |         |                                                |
+  |         |                                                help: a similar name exists in the module: `ArraySeqStEphTrait`
+  |         no `AVLTreeSeqStEphTrait` in `Chap37::AVLTreeSeqStEph::AVLTreeSeqStEph`
+
+error[E0425]: cannot find type `AVLTreeNode` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1260:28
+     |
+1260 |     impl<T: StT> Debug for AVLTreeNode<T> {
+     |                            ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeNode` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1271:30
+     |
+1271 |     impl<T: StT> Display for AVLTreeNode<T> {
+     |                              ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqIter` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1277:32
+     |
+1277 |     impl<'a, T: StT> Debug for AVLTreeSeqIter<'a, T> {
+     |                                ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqIter` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1286:34
+     |
+1286 |     impl<'a, T: StT> Display for AVLTreeSeqIter<'a, T> {
+     |                                  ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqGhostIterator` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1292:32
+     |
+1292 |     impl<'a, T: StT> Debug for AVLTreeSeqGhostIterator<'a, T> {
+     |                                ^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqGhostIterator` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1298:34
+     |
+1298 |     impl<'a, T: StT> Display for AVLTreeSeqGhostIterator<'a, T> {
+     |                                  ^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeS` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1304:28
+     |
+1304 |     impl<T: StT> Debug for AVLTreeS<T> {
+     |                            ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeS` in this scope
+    --> src/Chap37/AVLTreeSeq.rs:1311:30
+     |
+1311 |     impl<T: StT> Display for AVLTreeS<T> {
+     |                              ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeNode` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1128:28
+     |
+1128 |     impl<T: StT> Debug for AVLTreeNode<T> {
+     |                            ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeNode` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1139:30
+     |
+1139 |     impl<T: StT> Display for AVLTreeNode<T> {
+     |                              ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1145:28
+     |
+1145 |     impl<T: StT> Debug for AVLTreeSeqStEphS<T> {
+     |                            ^^^^^^^^^^^^^^^^
+     |
+    ::: src/Chap19/ArraySeqStEph.rs:77:5
+     |
+  77 |     pub struct ArraySeqStEphS<T> {
+     |     ---------------------------- similarly named struct `ArraySeqStEphS` defined here
+     |
+help: a struct with a similar name exists
+     |
+1145 -     impl<T: StT> Debug for AVLTreeSeqStEphS<T> {
+1145 +     impl<T: StT> Debug for ArraySeqStEphS<T> {
+     |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1153:30
+     |
+1153 |     impl<T: StT> Display for AVLTreeSeqStEphS<T> {
+     |                              ^^^^^^^^^^^^^^^^
+     |
+    ::: src/Chap19/ArraySeqStEph.rs:77:5
+     |
+  77 |     pub struct ArraySeqStEphS<T> {
+     |     ---------------------------- similarly named struct `ArraySeqStEphS` defined here
+     |
+help: a struct with a similar name exists
+     |
+1153 -     impl<T: StT> Display for AVLTreeSeqStEphS<T> {
+1153 +     impl<T: StT> Display for ArraySeqStEphS<T> {
+     |
+
+error[E0425]: cannot find type `AVLTreeSeqIterStEph` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1165:32
+     |
+1165 |     impl<'a, T: StT> Debug for AVLTreeSeqIterStEph<'a, T> {
+     |                                ^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqIterStEph` in this scope
+    --> src/Chap37/AVLTreeSeqStEph.rs:1171:34
+     |
+1171 |     impl<'a, T: StT> Display for AVLTreeSeqIterStEph<'a, T> {
+     |                                  ^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:52:23
+   |
+52 |         pub elements: AVLTreeSeqStEphS<T>,
+   |                       ^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `Link` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:67:56
+   |
+67 |     pub open spec fn spec_inorder_values<T: StT>(link: Link<T>) -> Seq<T>
+   |                                                        ^^^^ not found in this scope
+   |
+note: these type aliases exist but are inaccessible
+  --> src/Chap37/BSTSplayStEph.rs:37:5
+   |
+37 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap37::BSTSplayStEph::BSTSplayStEph::Link`: not accessible
+   |
+  ::: src/Chap39/BSTTreapMtEph.rs:51:5
+   |
+51 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapMtEph::BSTTreapMtEph::Link`: not accessible
+   |
+  ::: src/Chap39/BSTTreapStEph.rs:36:5
+   |
+36 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapStEph::BSTTreapStEph::Link`: not accessible
+help: consider importing one of these type aliases
+   |
+25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::Link;
+   |
+25 +     use crate::Chap40::BSTKeyValueStEph::BSTKeyValueStEph::Link;
+   |
+25 +     use crate::Chap40::BSTReducedStEph::BSTReducedStEph::Link;
+   |
+25 +     use crate::Chap40::BSTSizeStEph::BSTSizeStEph::Link;
+   |
+
+error[E0425]: cannot find type `Link` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:85:60
+   |
+85 |     pub proof fn lemma_wf_implies_len_bound<T: StT>(link: &Link<T>)
+   |                                                            ^^^^ not found in this scope
+   |
+note: these type aliases exist but are inaccessible
+  --> src/Chap37/BSTSplayStEph.rs:37:5
+   |
+37 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap37::BSTSplayStEph::BSTSplayStEph::Link`: not accessible
+   |
+  ::: src/Chap39/BSTTreapMtEph.rs:51:5
+   |
+51 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapMtEph::BSTTreapMtEph::Link`: not accessible
+   |
+  ::: src/Chap39/BSTTreapStEph.rs:36:5
+   |
+36 |     type Link<T> = Option<Box<Node<T>>>;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapStEph::BSTTreapStEph::Link`: not accessible
+help: consider importing one of these type aliases
+   |
+25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::Link;
+   |
+25 +     use crate::Chap40::BSTKeyValueStEph::BSTKeyValueStEph::Link;
+   |
+25 +     use crate::Chap40::BSTReducedStEph::BSTReducedStEph::Link;
+   |
+25 +     use crate::Chap40::BSTSizeStEph::BSTSizeStEph::Link;
+   |
+
+error[E0425]: cannot find function `spec_cached_size` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:88:13
+   |
+88 |             spec_cached_size(link) == spec_inorder(*link).len(),
+   |             ^^^^^^^^^^^^^^^^ not found in this scope
+   |
+help: consider importing this function
+   |
+25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::spec_cached_size;
+   |
+
+error[E0425]: cannot find function `spec_inorder` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:88:39
+   |
+88 |             spec_cached_size(link) == spec_inorder(*link).len(),
+   |                                       ^^^^^^^^^^^^ not found in this scope
+   |
+help: consider importing this function
+   |
+25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::spec_inorder;
+   |
+
+error[E0425]: cannot find function `spec_inorder` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:89:13
+   |
+89 |             spec_inorder(*link).len() < usize::MAX,
+   |             ^^^^^^^^^^^^ not found in this scope
+   |
+help: consider importing this function
+   |
+25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::spec_inorder;
+   |
+
+error[E0425]: cannot find type `Link` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:102:67
+    |
+102 |     pub proof fn lemma_inorder_values_maps_to_views<T: StT>(link: Link<T>)
+    |                                                                   ^^^^ not found in this scope
+    |
+note: these type aliases exist but are inaccessible
+   --> src/Chap37/BSTSplayStEph.rs:37:5
+    |
+ 37 |     type Link<T> = Option<Box<Node<T>>>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap37::BSTSplayStEph::BSTSplayStEph::Link`: not accessible
+    |
+   ::: src/Chap39/BSTTreapMtEph.rs:51:5
+    |
+ 51 |     type Link<T> = Option<Box<Node<T>>>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapMtEph::BSTTreapMtEph::Link`: not accessible
+    |
+   ::: src/Chap39/BSTTreapStEph.rs:36:5
+    |
+ 36 |     type Link<T> = Option<Box<Node<T>>>;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crate::Chap39::BSTTreapStEph::BSTTreapStEph::Link`: not accessible
+help: consider importing one of these type aliases
+    |
+ 25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::Link;
+    |
+ 25 +     use crate::Chap40::BSTKeyValueStEph::BSTKeyValueStEph::Link;
+    |
+ 25 +     use crate::Chap40::BSTReducedStEph::BSTReducedStEph::Link;
+    |
+ 25 +     use crate::Chap40::BSTSizeStEph::BSTSizeStEph::Link;
+    |
+
+error[E0425]: cannot find function `spec_inorder` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:103:69
+    |
+103 |         ensures spec_inorder_values(link).map_values(|t: T| t@) =~= spec_inorder(link),
+    |                                                                     ^^^^^^^^^^^^ not found in this scope
+    |
+help: consider importing this function
+    |
+ 25 +     use crate::Chap37::AVLTreeSeqStPer::AVLTreeSeqStPer::spec_inorder;
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:183:35
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+...
+183 |         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+    |                                   ^^^^^^^^^^^^^^^^
+    |
+help: a struct with a similar name exists
+    |
+183 -         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+183 +         fn to_seq(&self) -> (seq: AVLTreeSetStEph<T>)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:202:26
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+...
+202 |         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+    |                          ^^^^^^^^^^^^^^^^
+    |
+help: a struct with a similar name exists
+    |
+202 -         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+202 +         fn from_seq(seq: AVLTreeSetStEph<T>) -> (constructed: Self)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:325:35
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+...
+325 |         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+    |                                   ^^^^^^^^^^^^^^^^
+    |
+help: a struct with a similar name exists
+    |
+325 -         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+325 +         fn to_seq(&self) -> (seq: AVLTreeSetStEph<T>)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetStEph.rs:366:26
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+...
+366 |         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+    |                          ^^^^^^^^^^^^^^^^
+    |
+help: a struct with a similar name exists
+    |
+366 -         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+366 +         fn from_seq(seq: AVLTreeSetStEph<T>) -> (constructed: Self)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetMtEph.rs:119:35
+    |
+119 |         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+    |                                   ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap41/AVLTreeSetStEph.rs:51:5
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+    |
+help: a struct with a similar name exists
+    |
+119 -         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+119 +         fn to_seq(&self) -> (seq: AVLTreeSetStEph<T>)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetMtEph.rs:139:26
+    |
+139 |         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+    |                          ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap41/AVLTreeSetStEph.rs:51:5
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+    |
+help: a struct with a similar name exists
+    |
+139 -         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+139 +         fn from_seq(seq: AVLTreeSetStEph<T>) -> (constructed: Self)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetMtEph.rs:250:35
+    |
+250 |         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+    |                                   ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap41/AVLTreeSetStEph.rs:51:5
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+    |
+help: a struct with a similar name exists
+    |
+250 -         fn to_seq(&self) -> (seq: AVLTreeSeqStEphS<T>)
+250 +         fn to_seq(&self) -> (seq: AVLTreeSetStEph<T>)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap41/AVLTreeSetMtEph.rs:286:26
+    |
+286 |         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+    |                          ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap41/AVLTreeSetStEph.rs:51:5
+    |
+ 51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+    |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+    |
+help: a struct with a similar name exists
+    |
+286 -         fn from_seq(seq: AVLTreeSeqStEphS<T>) -> (constructed: Self)
+286 +         fn from_seq(seq: AVLTreeSetStEph<T>) -> (constructed: Self)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+  --> src/Chap43/OrderedTableStEph.rs:48:23
+   |
+48 |         pub base_seq: AVLTreeSeqStEphS<Pair<K, V>>,
+   |                       ^^^^^^^^^^^^^^^^
+   |
+  ::: src/Chap37/AVLTreeSeqStPer.rs:64:5
+   |
+64 |     pub struct AVLTreeSeqStPerS<T: StT> {
+   |     ----------------------------------- similarly named struct `AVLTreeSeqStPerS` defined here
+   |
+help: a struct with a similar name exists
+   |
+48 -         pub base_seq: AVLTreeSeqStEphS<Pair<K, V>>,
+48 +         pub base_seq: AVLTreeSeqStPerS<Pair<K, V>>,
+   |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap43/OrderedTableStEph.rs:412:51
+    |
+412 |     fn avl_seq_length<K: StT + Ord, V: StT>(seq: &AVLTreeSeqStEphS<Pair<K, V>>) -> (len: usize)
+    |                                                   ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap37/AVLTreeSeqStPer.rs:64:5
+    |
+ 64 |     pub struct AVLTreeSeqStPerS<T: StT> {
+    |     ----------------------------------- similarly named struct `AVLTreeSeqStPerS` defined here
+    |
+help: a struct with a similar name exists
+    |
+412 -     fn avl_seq_length<K: StT + Ord, V: StT>(seq: &AVLTreeSeqStEphS<Pair<K, V>>) -> (len: usize)
+412 +     fn avl_seq_length<K: StT + Ord, V: StT>(seq: &AVLTreeSeqStPerS<Pair<K, V>>) -> (len: usize)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap43/OrderedTableStEph.rs:420:55
+    |
+420 |     fn avl_seq_nth<'a, K: StT + Ord, V: StT>(seq: &'a AVLTreeSeqStEphS<Pair<K, V>>, index: usize) -> (elem: &'a Pair<K, V>)
+    |                                                       ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap37/AVLTreeSeqStPer.rs:64:5
+    |
+ 64 |     pub struct AVLTreeSeqStPerS<T: StT> {
+    |     ----------------------------------- similarly named struct `AVLTreeSeqStPerS` defined here
+    |
+help: a struct with a similar name exists
+    |
+420 -     fn avl_seq_nth<'a, K: StT + Ord, V: StT>(seq: &'a AVLTreeSeqStEphS<Pair<K, V>>, index: usize) -> (elem: &'a Pair<K, V>)
+420 +     fn avl_seq_nth<'a, K: StT + Ord, V: StT>(seq: &'a AVLTreeSeqStPerS<Pair<K, V>>, index: usize) -> (elem: &'a Pair<K, V>)
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+   --> src/Chap43/OrderedTableStEph.rs:430:17
+    |
+430 |         other: &AVLTreeSeqStEphS<Pair<K, V>>,
+    |                 ^^^^^^^^^^^^^^^^
+    |
+   ::: src/Chap37/AVLTreeSeqStPer.rs:64:5
+    |
+ 64 |     pub struct AVLTreeSeqStPerS<T: StT> {
+    |     ----------------------------------- similarly named struct `AVLTreeSeqStPerS` defined here
+    |
+help: a struct with a similar name exists
+    |
+430 -         other: &AVLTreeSeqStEphS<Pair<K, V>>,
+430 +         other: &AVLTreeSeqStPerS<Pair<K, V>>,
+    |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+    --> src/Chap43/OrderedTableStEph.rs:3099:22
+     |
+3099 |         pub seq: &'a AVLTreeSeqStEphS<Pair<K, V>>,
+     |                      ^^^^^^^^^^^^^^^^
+     |
+    ::: src/Chap37/AVLTreeSeqStPer.rs:64:5
+     |
+  64 |     pub struct AVLTreeSeqStPerS<T: StT> {
+     |     ----------------------------------- similarly named struct `AVLTreeSeqStPerS` defined here
+     |
+help: a struct with a similar name exists
+     |
+3099 -         pub seq: &'a AVLTreeSeqStEphS<Pair<K, V>>,
+3099 +         pub seq: &'a AVLTreeSeqStPerS<Pair<K, V>>,
+     |
+
+error[E0425]: cannot find type `AVLTreeSeqStEphS` in this scope
+    --> src/Chap43/OrderedSetStEph.rs:1277:22
+     |
+1277 |         pub seq: &'a AVLTreeSeqStEphS<T>,
+     |                      ^^^^^^^^^^^^^^^^
+     |
+    ::: src/Chap41/AVLTreeSetStEph.rs:51:5
+     |
+  51 |     pub struct AVLTreeSetStEph<T: StT + Ord> {
+     |     ---------------------------------------- similarly named struct `AVLTreeSetStEph` defined here
+     |
+help: a struct with a similar name exists
+     |
+1277 -         pub seq: &'a AVLTreeSeqStEphS<T>,
+1277 +         pub seq: &'a AVLTreeSetStEph<T>,
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap41/AVLTreeSetStEph.rs:338:42
+    |
+338 |  let empty = AVLTreeSetStEph { elements: AVLTreeSeqStEphS::empty() };
+    |                                          ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+338 -  let empty = AVLTreeSetStEph { elements: AVLTreeSeqStEphS::empty() };
+338 +  let empty = AVLTreeSetStEph { elements: AVLTreeSetStEph::empty() };
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap41/AVLTreeSetStEph.rs:352:52
+    |
+352 |             let tree = AVLTreeSetStEph { elements: AVLTreeSeqStEphS::from_vec(v) };
+    |                                                    ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+352 -             let tree = AVLTreeSetStEph { elements: AVLTreeSeqStEphS::from_vec(v) };
+352 +             let tree = AVLTreeSetStEph { elements: AVLTreeSetStEph::from_vec(v) };
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap41/AVLTreeSetStEph.rs:874:29
+    |
+874 |             self.elements = AVLTreeSeqStEphS::from_vec(result_vec);
+    |                             ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+874 -             self.elements = AVLTreeSeqStEphS::from_vec(result_vec);
+874 +             self.elements = AVLTreeSetStEph::from_vec(result_vec);
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap41/AVLTreeSetStEph.rs:1091:33
+     |
+1091 |                 self.elements = AVLTreeSeqStEphS::from_vec(new_vec);
+     |                                 ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1091 -                 self.elements = AVLTreeSeqStEphS::from_vec(new_vec);
+1091 +                 self.elements = AVLTreeSetStEph::from_vec(new_vec);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap41/AVLTreeSetStEph.rs:1355:33
+     |
+1355 |                 self.elements = AVLTreeSeqStEphS::from_vec(new_vec);
+     |                                 ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1355 -                 self.elements = AVLTreeSeqStEphS::from_vec(new_vec);
+1355 +                 self.elements = AVLTreeSetStEph::from_vec(new_vec);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap41/AVLTreeSetStEph.rs:1608:29
+     |
+1608 |             self.elements = AVLTreeSeqStEphS::from_vec(result_vec);
+     |                             ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1608 -             self.elements = AVLTreeSeqStEphS::from_vec(result_vec);
+1608 +             self.elements = AVLTreeSetStEph::from_vec(result_vec);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableStEph.rs:488:27
+    |
+488 |                 base_seq: AVLTreeSeqStEphS::empty(),
+    |                           ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+488 -                 base_seq: AVLTreeSeqStEphS::empty(),
+488 +                 base_seq: AVLTreeSeqStPerS::empty(),
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableStEph.rs:495:24
+    |
+495 |             let base = AVLTreeSeqStEphS::singleton(Pair(k, v));
+    |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+495 -             let base = AVLTreeSeqStEphS::singleton(Pair(k, v));
+495 +             let base = AVLTreeSeqStPerS::singleton(Pair(k, v));
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableStEph.rs:648:24
+    |
+648 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+    |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+648 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+648 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableStEph.rs:807:24
+    |
+807 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+    |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+807 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+807 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableStEph.rs:967:24
+    |
+967 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+    |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+967 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+967 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1057:24
+     |
+1057 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1057 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1057 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1140:24
+     |
+1140 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1140 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1140 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1315:24
+     |
+1315 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1315 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1315 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1582:24
+     |
+1582 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1582 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1582 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1771:24
+     |
+1771 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1771 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1771 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1880:24
+     |
+1880 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1880 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1880 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:1989:24
+     |
+1989 |             let tree = AVLTreeSeqStEphS::from_vec(all);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+1989 -             let tree = AVLTreeSeqStEphS::from_vec(all);
+1989 +             let tree = AVLTreeSeqStPerS::from_vec(all);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:2576:29
+     |
+2576 |             let left_tree = AVLTreeSeqStEphS::from_vec(left_entries);
+     |                             ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+2576 -             let left_tree = AVLTreeSeqStEphS::from_vec(left_entries);
+2576 +             let left_tree = AVLTreeSeqStPerS::from_vec(left_entries);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:2578:30
+     |
+2578 |             let right_tree = AVLTreeSeqStEphS::<Pair<K, V>>::empty();
+     |                              ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+2578 -             let right_tree = AVLTreeSeqStEphS::<Pair<K, V>>::empty();
+2578 +             let right_tree = AVLTreeSeqStPerS::<Pair<K, V>>::empty();
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:2709:24
+     |
+2709 |             let tree = AVLTreeSeqStEphS::from_vec(range_entries);
+     |                        ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+2709 -             let tree = AVLTreeSeqStEphS::from_vec(range_entries);
+2709 +             let tree = AVLTreeSeqStPerS::from_vec(range_entries);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+    --> src/Chap43/OrderedTableStEph.rs:3261:20
+     |
+3261 |         let tree = AVLTreeSeqStEphS::from_vec(elements);
+     |                    ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+     |
+help: a struct with a similar name exists
+     |
+3261 -         let tree = AVLTreeSeqStEphS::from_vec(elements);
+3261 +         let tree = AVLTreeSeqStPerS::from_vec(elements);
+     |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableMtEph.rs:607:60
+    |
+607 |             let left_inner = OrderedTableStEph { base_seq: AVLTreeSeqStEphS::from_vec(left_entries) };
+    |                                                            ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+607 -             let left_inner = OrderedTableStEph { base_seq: AVLTreeSeqStEphS::from_vec(left_entries) };
+607 +             let left_inner = OrderedTableStEph { base_seq: AVLTreeSeqStPerS::from_vec(left_entries) };
+    |
+
+error[E0433]: failed to resolve: use of undeclared type `AVLTreeSeqStEphS`
+   --> src/Chap43/OrderedTableMtEph.rs:608:61
+    |
+608 |             let right_inner = OrderedTableStEph { base_seq: AVLTreeSeqStEphS::from_vec(right_entries) };
+    |                                                             ^^^^^^^^^^^^^^^^ use of undeclared type `AVLTreeSeqStEphS`
+    |
+help: a struct with a similar name exists
+    |
+608 -             let right_inner = OrderedTableStEph { base_seq: AVLTreeSeqStEphS::from_vec(right_entries) };
+608 +             let right_inner = OrderedTableStEph { base_seq: AVLTreeSeqStPerS::from_vec(right_entries) };
+    |
+
+error[E0425]: cannot find function `spec_avltreeseqsteph_wf` in this scope
+  --> src/Chap41/AVLTreeSetStEph.rs:86:18
+   |
+86 |         requires spec_avltreeseqsteph_wf(*link),
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error: aborting due to 69 previous errors
+
+Some errors have detailed explanations: E0252, E0425, E0432, E0433.
+For more information about an error, try `rustc --explain E0252`.
+(use --output-json for machine-readable output)
+verus-build-info
+Verus
+  Version: 0.2026.03.17.a96bad0.dirty
+  Profile: release
+  Platform: linux_x86_64
+  Toolchain: 1.94.0-x86_64-unknown-linux-gnu
+
+total-time:           20041 ms
+    rust-time:               19564 ms
+        init-and-types:          19564 ms
+        trait-conflicts:             0 ms
+        compile-time:                0 ms
+    verification-time:           0 ms
+        vir-time:                    0 ms
+            hir-time:                    0 ms
+            import-time:                 0 ms
+            rust-to-vir:                 0 ms
+        verify-crate-time:           0 ms
+    unaccounted-time:          477 ms
+
+verify-crate-time-breakdown
+    total verify-time:              0 ms   (1 threads)
+        total air-time:                 0 ms   (1 threads)
+        total smt-time:                 0 ms   (1 threads)
+            total smt-init:                 0 ms,        0 rlimit (1 threads)
+            total smt-run:                  0 ms,        0 rlimit (1 threads)
