@@ -87,6 +87,241 @@ macro_rules! log {
     }};
 }
 
+// ───────── Cost analysis (AI-paired programming / proving) ─────────
+
+const WORK_DAYS_PER_YEAR: f64 = 220.0;
+const FULL_TIME_HOURS_PER_DAY: f64 = 8.0;
+const FULL_TIME_HOURS_PER_YEAR: f64 = WORK_DAYS_PER_YEAR * FULL_TIME_HOURS_PER_DAY;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CostMode { PairedProgramming, PairedProving }
+
+#[derive(Debug, Clone)]
+struct CostInputs {
+    mode: CostMode,
+    programmer_costs: f64,
+    ai_costs: f64,
+    person_days: f64,
+    avg_hours_per_day: f64,
+    projects: Option<String>,
+}
+
+/// Parse cost-analysis flags from argv. Returns:
+///   Ok(None)            — no cost flags at all (count-loc runs as usual)
+///   Ok(Some(inputs))    — all required flags present, ready to cost
+///   Err(message)        — incorrect flag combination
+fn parse_cost_flags() -> Result<Option<CostInputs>> {
+    let raw: Vec<String> = std::env::args().collect();
+    let mut programmer_costs: Option<f64> = None;
+    let mut ai_costs: Option<f64> = None;
+    let mut person_days: Option<f64> = None;
+    let mut avg_hours_per_day: Option<f64> = None;
+    let mut paired_programming = false;
+    let mut paired_proving = false;
+    let mut projects: Option<String> = None;
+
+    let mut i = 0;
+    while i < raw.len() {
+        match raw[i].as_str() {
+            "--programmer-costs" if i + 1 < raw.len() => {
+                programmer_costs = Some(raw[i + 1].parse()
+                    .map_err(|_| anyhow::anyhow!("--programmer-costs needs a number"))?);
+                i += 2;
+            }
+            "--ai-costs" if i + 1 < raw.len() => {
+                ai_costs = Some(raw[i + 1].parse()
+                    .map_err(|_| anyhow::anyhow!("--ai-costs needs a number"))?);
+                i += 2;
+            }
+            "--person-days" if i + 1 < raw.len() => {
+                person_days = Some(raw[i + 1].parse()
+                    .map_err(|_| anyhow::anyhow!("--person-days needs a number"))?);
+                i += 2;
+            }
+            "--average-hours-per-day" if i + 1 < raw.len() => {
+                avg_hours_per_day = Some(raw[i + 1].parse()
+                    .map_err(|_| anyhow::anyhow!("--average-hours-per-day needs a number"))?);
+                i += 2;
+            }
+            "--ai-paired-programming" => { paired_programming = true; i += 1; }
+            "--ai-paired-proving"     => { paired_proving = true;     i += 1; }
+            "--projects" if i + 1 < raw.len() => {
+                projects = Some(raw[i + 1].clone());
+                i += 2;
+            }
+            _ => { i += 1; }
+        }
+    }
+
+    let any_cost_input = programmer_costs.is_some() || ai_costs.is_some()
+        || person_days.is_some() || avg_hours_per_day.is_some();
+    let any_mode = paired_programming || paired_proving;
+
+    if !any_cost_input && !any_mode { return Ok(None); }
+
+    if paired_programming && paired_proving {
+        return Err(anyhow::anyhow!(
+            "--ai-paired-programming and --ai-paired-proving are mutually exclusive"));
+    }
+    if !any_mode {
+        return Err(anyhow::anyhow!(
+            "cost inputs (--programmer-costs / --ai-costs / --person-days / --average-hours-per-day) require --ai-paired-programming or --ai-paired-proving"));
+    }
+
+    let mode = if paired_programming { CostMode::PairedProgramming } else { CostMode::PairedProving };
+    let mut missing: Vec<&str> = Vec::new();
+    if programmer_costs.is_none()  { missing.push("--programmer-costs"); }
+    if ai_costs.is_none()          { missing.push("--ai-costs"); }
+    if person_days.is_none()       { missing.push("--person-days"); }
+    if avg_hours_per_day.is_none() { missing.push("--average-hours-per-day"); }
+    if !missing.is_empty() {
+        return Err(anyhow::anyhow!(
+            "--ai-paired-{{programming,proving}} requires: {}",
+            missing.join(", ")));
+    }
+
+    Ok(Some(CostInputs {
+        mode,
+        programmer_costs: programmer_costs.unwrap(),
+        ai_costs: ai_costs.unwrap(),
+        person_days: person_days.unwrap(),
+        avg_hours_per_day: avg_hours_per_day.unwrap(),
+        projects,
+    }))
+}
+
+/// Totals fetched from `veracity-count-lines-of-review` (proving mode only).
+#[derive(Debug, Clone, Copy)]
+struct ReviewTotals {
+    lopc2r: usize,
+    loc0r: usize,
+    lo_ptt: usize,
+}
+
+/// Run the sibling `veracity-count-lines-of-review` binary on `base_dir` and
+/// parse LOPC2R / LOC0R / LoPTT totals from its output. Returns None if the
+/// sibling can't be found or run.
+fn fetch_review_totals(base_dir: &Path) -> Option<ReviewTotals> {
+    let exe = std::env::current_exe().ok()?;
+    let bin_dir = exe.parent()?;
+    let clor = bin_dir.join("veracity-count-lines-of-review");
+    if !clor.exists() { return None; }
+    let output = std::process::Command::new(&clor)
+        .current_dir(base_dir)
+        .output()
+        .ok()?;
+    if !output.status.success() { return None; }
+    let out = String::from_utf8_lossy(&output.stdout);
+    let mut lopc2r: Option<usize> = None;
+    let mut loc0r: Option<usize> = None;
+    let mut lo_ptt: Option<usize> = None;
+    // Section-tracker: 1 = inside LOPC2R block, 2 = inside LOC0R block, 0 = neither.
+    let mut section: u8 = 0;
+    for line in out.lines() {
+        let t = line.trim_start();
+        if t.starts_with("LOPC2R (Lines") { section = 1; continue; }
+        if t.starts_with("LOC0R (Lines")  { section = 2; continue; }
+        if t.starts_with("Non-proof") || t.starts_with("LOPC2R /") {
+            section = 0;
+            continue;
+        }
+        // Extract number from a line by keeping digits only (strips commas).
+        let parse_num = |s: &str| -> Option<usize> {
+            let digits: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
+            if digits.is_empty() { None } else { digits.parse().ok() }
+        };
+        if section == 1 && t.starts_with("LoPTT") {
+            if let Some(n) = parse_num(t) { lo_ptt = Some(n); }
+        }
+        if t.starts_with("Total") && section != 0 {
+            if let Some(n) = parse_num(t) {
+                if section == 1 { lopc2r = Some(n); }
+                else if section == 2 { loc0r = Some(n); }
+            }
+            section = 0;
+        }
+    }
+    Some(ReviewTotals {
+        lopc2r: lopc2r?,
+        loc0r: loc0r?,
+        lo_ptt: lo_ptt.unwrap_or(0),
+    })
+}
+
+/// Emit the cost-analysis block after the regular count-loc summary.
+/// `src_loc` is spec + proof + exec + rust (non-comment src LOC).
+fn emit_cost_analysis(
+    inputs: &CostInputs,
+    src_loc: usize,
+    review: Option<ReviewTotals>,
+) {
+    let mode_label = match inputs.mode {
+        CostMode::PairedProgramming => "AI-paired programming",
+        CostMode::PairedProving     => "AI-paired proving",
+    };
+    let header = match &inputs.projects {
+        Some(p) => format!("Cost analysis — {} ({})", p, mode_label),
+        None    => format!("Cost analysis — {}", mode_label),
+    };
+
+    let total_hours = inputs.person_days * inputs.avg_hours_per_day;
+    let hourly_prog = inputs.programmer_costs / FULL_TIME_HOURS_PER_YEAR;
+    let hourly_ai   = inputs.ai_costs          / FULL_TIME_HOURS_PER_YEAR;
+    let prog_cost   = total_hours * hourly_prog;
+    let ai_cost     = total_hours * hourly_ai;
+    let total_cost  = prog_cost + ai_cost;
+
+    // LOC denominator:
+    //   programming: src only.
+    //   proving:     src + LoPTT (PTT is proof work, part of LOPC2R).
+    let (loc_denom, loc_label) = match inputs.mode {
+        CostMode::PairedProgramming => (src_loc, "src".to_string()),
+        CostMode::PairedProving => {
+            let ptt = review.map(|r| r.lo_ptt).unwrap_or(0);
+            (src_loc + ptt, format!("src {} + PTT {}", format_number(src_loc), format_number(ptt)))
+        }
+    };
+
+    log!();
+    log!("{}", header);
+    log!("  Inputs:");
+    log!("    --programmer-costs         $ {} / yr", format_number(inputs.programmer_costs as usize));
+    log!("    --ai-costs                 $ {} / yr", format_number(inputs.ai_costs as usize));
+    log!("    --person-days              {:.2}", inputs.person_days);
+    log!("    --average-hours-per-day    {:.2}", inputs.avg_hours_per_day);
+    log!("  Derived (~ approximate):");
+    log!("    total hours at task        {:.2}", total_hours);
+    log!("    hourly programmer rate   $ {:>10.2}  (= $ {} / 1,760)",
+        hourly_prog, format_number(inputs.programmer_costs as usize));
+    log!("    hourly AI rate           $ {:>10.2}  (= $ {} / 1,760)",
+        hourly_ai, format_number(inputs.ai_costs as usize));
+    log!("  LOC (excl tests/bench):      {}  ({})", format_number(loc_denom), loc_label);
+    if inputs.mode == CostMode::PairedProving {
+        if let Some(r) = review {
+            log!("  LOPC2R:                      {}", format_number(r.lopc2r));
+            log!("  LOC0R:                       {}", format_number(r.loc0r));
+        } else {
+            log!("  LOPC2R / LOC0R: <unavailable — veracity-count-lines-of-review not found>");
+        }
+    }
+    log!("  Costs (~ approximate):");
+    log!("    Programmer:              ~ $ {:>12}", format_number(prog_cost as usize));
+    log!("    AI:                      ~ $ {:>12}", format_number(ai_cost as usize));
+    log!("    Total:                   ~ $ {:>12}", format_number(total_cost as usize));
+    let dollars_per = |n: usize| -> String {
+        if n == 0 { "—".to_string() } else { format!("$ {:.3}", total_cost / n as f64) }
+    };
+    log!("    $ / LOC                    ~ {}", dollars_per(loc_denom));
+    if inputs.mode == CostMode::PairedProving {
+        if let Some(r) = review {
+            log!("    $ / LOPC2R                 ~ {}", dollars_per(r.lopc2r));
+            log!("    $ / LOC0R                  ~ {}", dollars_per(r.loc0r));
+        }
+    }
+    let ai_share = if total_cost > 0.0 { ai_cost / total_cost * 100.0 } else { 0.0 };
+    log!("    AI share of cost:          ~ {:.1} %  (AI cost billed by task-hours; may underestimate if AI runs solo)", ai_share);
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct VerusLocCounts {
     spec: usize,
@@ -643,6 +878,17 @@ fn print_line(s: &str) -> io::Result<()> {
 /// Default directory names always excluded from LOC counting.
 const DEFAULT_EXCLUDES: &[&str] = &["experiments"];
 
+/// Path components excluded only from *src* scans — test and benchmark
+/// directory names that may appear nested inside a project (e.g.,
+/// `APAS-AI/apas-ai/benches/…`). Not applied to the dedicated test-dir /
+/// bench-dir scans, which start inside such a directory and legitimately
+/// contain its name in every file path.
+const SRC_EXTRA_EXCLUDES: &[&str] = &[
+    "tests", "test", "e2e", "unit_tests", "conformance_tests",
+    "rust_verify_test", "std_test",
+    "benches", "bench", "benchmark",
+];
+
 /// Filter a file list by excluding files whose path contains any of the given directory names.
 /// Always excludes DEFAULT_EXCLUDES in addition to user-specified excludes.
 fn filter_excludes(files: Vec<PathBuf>, exclude_dirs: &[String]) -> Vec<PathBuf> {
@@ -658,9 +904,25 @@ fn filter_excludes(files: Vec<PathBuf>, exclude_dirs: &[String]) -> Vec<PathBuf>
     }).collect()
 }
 
-fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: std::time::Instant, outlier_threshold: usize) -> Result<()> {
+/// Like `filter_excludes`, but also drops files that live anywhere under a
+/// test or benchmark directory (at any depth). Use for src-only scans.
+fn filter_src_excludes(files: Vec<PathBuf>, exclude_dirs: &[String]) -> Vec<PathBuf> {
+    files.into_iter().filter(|f| {
+        !f.components().any(|c| {
+            if let Some(s) = c.as_os_str().to_str() {
+                DEFAULT_EXCLUDES.iter().any(|&e| e == s)
+                    || SRC_EXTRA_EXCLUDES.iter().any(|&e| e == s)
+                    || exclude_dirs.iter().any(|e| e == s)
+            } else {
+                false
+            }
+        })
+    }).collect()
+}
+
+fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: std::time::Instant, outlier_threshold: usize, cost_inputs: Option<&CostInputs>) -> Result<()> {
     let rust_files = find_rust_files(search_dirs);
-    let rust_files = filter_excludes(rust_files, &_args.exclude_dirs);
+    let rust_files = filter_src_excludes(rust_files, &_args.exclude_dirs);
 
     init_logging(base_dir);
 
@@ -1114,6 +1376,17 @@ fn count_verus_project(_args: &StandardArgs, base_dir: &Path, search_dirs: &[Pat
         }
     }
 
+    // ── Cost analysis (optional) ───────────────────────────────────
+    if let Some(ci) = cost_inputs {
+        let src_loc = total_spec + total_proof + total_exec + total_rust;
+        let review = if ci.mode == CostMode::PairedProving {
+            fetch_review_totals(base_dir)
+        } else {
+            None
+        };
+        emit_cost_analysis(ci, src_loc, review);
+    }
+
     Ok(())
 }
 
@@ -1335,6 +1608,9 @@ fn main() -> Result<()> {
         threshold
     };
 
+    // Parse cost-analysis flags. Errors out on incorrect combinations.
+    let cost_inputs = parse_cost_flags()?;
+
     let args = StandardArgs::parse()?;
 
     // Handle repository scanning mode
@@ -1364,7 +1640,7 @@ fn main() -> Result<()> {
 
     // If Verus mode, use different counting
     if is_verus {
-        return count_verus_project(&args, &base_dir, &search_dirs, start, outlier_threshold);
+        return count_verus_project(&args, &base_dir, &search_dirs, start, outlier_threshold, cost_inputs.as_ref());
     }
 
     // Categorize search directories

@@ -1,0 +1,267 @@
+# CPR$ — Code, Proof, Review Costs
+
+A small accounting framework for the dollar cost of producing verified
+software with AI-paired tooling. Three numbers and one ratio tell the
+story:
+
+| # | Symbol | Name           | What it measures                                                                |
+|--:|:-------|:---------------|:--------------------------------------------------------------------------------|
+| 1 | C      | Cost of Code   | Dollar cost of producing the executable code (with or without verification).    |
+| 2 | P      | Cost of Proof  | Dollar cost of producing the specifications, contracts, and proofs that verify the code. |
+| 3 | R      | Review Ratio   | Fraction of the verified deliverable that the proofgrammer must read by hand. Trustable lines (LOC0R) are excluded from the numerator. |
+| 4 | C+P    | Total          | The full bill for the verified artifact.                                        |
+
+CPR$ deliberately does not collapse C and P into one number. The two
+costs scale very differently with project size, problem domain, and
+proof tooling, and most engineering decisions hinge on which is bigger.
+
+## Inputs
+
+CPR$ is computed from the output of two veracity tools, plus four
+externally-tracked numbers:
+
+| # | Input                          | Source                                         | Used for |
+|--:|:-------------------------------|:-----------------------------------------------|:---------|
+| 1 | LOC, LoEC, LoPTT counts        | `veracity-count-loc`                           | C, P, R denominators |
+| 2 | LOPC2R, LOC0R, LoEC by category| `veracity-count-lines-of-review`               | C/P split, R |
+| 3 | `--programmer-costs` ($ / yr)  | external (HR)                                  | hourly programmer rate |
+| 4 | `--ai-costs` ($ / yr)          | external (real spend, see "AI costs" below)    | hourly AI rate |
+| 5 | `--person-days`                | external (git log committed-days)              | task-hours |
+| 6 | `--average-hours-per-day`      | external (git commit-interval avg)             | task-hours |
+
+Fixed constants: 220 work days / year, 8 hours / day → 1,760 hours / year.
+
+## How to compute C, P, and R
+
+### Per-project totals
+
+```
+hourly_programmer = programmer_costs / 1,760
+hourly_AI         = ai_costs         / 1,760
+total_hours       = person_days × average_hours_per_day
+programmer_cost   = total_hours × hourly_programmer
+AI_cost           = total_hours × hourly_AI
+total_cost        = programmer_cost + AI_cost
+```
+
+### Splitting total_cost into C and P
+
+For a project that contains both code and verification (Verus): apportion
+by line-class share. The "code share" is the LoEC fraction of total LOC.
+
+```
+LoEC_share         = LoEC / (LoEC + LoLC + LOP + Spec + LODT + FnTySig + FnContract + LoAA + LoPTT)
+C_project          = total_cost × LoEC_share
+P_project          = total_cost × (1 − LoEC_share)
+```
+
+For a project that contains only code (no verification): C = total_cost,
+P = 0.
+
+### Combining multiple projects
+
+If the verified deliverable is the result of two efforts (e.g.,
+unverified prototype followed by a verified rewrite), sum the per-project
+C and P:
+
+```
+C_combined = Σ C_project
+P_combined = Σ P_project
+```
+
+The ratio R is computed once on the **deliverable**, not on the sum:
+
+```
+R = LOPC2R / (LOPC2R + LOC0R)         on the verified deliverable
+```
+
+LOC from a discarded prototype does not appear in R because the
+proofgrammer does not review what isn't shipped.
+
+## AI costs — split actual spend, don't trust the rate
+
+The `--ai-costs` flag wants a yearly amortized rate. In practice the
+right number to give it is **derived from actual receipts**, not from a
+plan-list price. To convert real spend back into a yearly rate:
+
+```
+hourly_AI       = total_AI_spend / total_task_hours
+ai_costs_input  = hourly_AI × 1,760
+```
+
+Apply the same `--ai-costs` value to every invocation that participated
+in the same spending bucket. The `total_hours × hourly_AI` formula then
+distributes the spend proportional to task-hours across the projects.
+
+Three plausible split methods if you have multiple projects on one
+subscription:
+
+| # | Method                | When to prefer |
+|--:|:----------------------|:---------------|
+| 1 | Task-hours (default)  | Cleanest. Same denominator the cost math already uses. Yields a single shared `--ai-costs` value. |
+| 2 | Committed-days        | If AI usage was roughly steady-state per active day across projects. |
+| 3 | Output-line-count     | If AI usage tracked output volume (rare). |
+| 4 | User judgment         | Use only if you have a clear sense of where the spend went, e.g. "90 % was on the Verus project". |
+
+## Worked example — APAS-AI + Rusticate + APAS-VERUS + Veracity
+
+### Honest framing
+
+- APAS-AI started with specs in hand (algorithm specs from APAS textbook).
+- APAS-VERUS started with both specs and code from APAS-AI.
+- APAS-VERUS rewrote almost all of APAS-AI's code in Verus style (typeclass-impl pattern, `spec_*_wf` predicates). What transferred was design intent and algorithm choice, not concrete code.
+
+### Inputs
+
+| # | Project                  | Person-days | Avg hrs/day | Hours    | LOC     | LoEC   | LOPC2R | LOC0R  |
+|--:|:-------------------------|------------:|------------:|---------:|--------:|-------:|-------:|-------:|
+| 1 | APAS-AI + Rusticate      | 60          | 5.16        | 309.60   | 31,751  | 31,751 | —      | —      |
+| 2 | APAS-VERUS + Veracity    | 119         | 9.44        | 1,123.36 | 166,401 | 56,549 | 47,828 | 95,908 |
+| 3 | Combined                 | 179         | —           | 1,432.96 |         |        |        |        |
+
+### Cost rates
+
+| # | Quantity                  | Value          | Notes |
+|--:|:--------------------------|---------------:|:------|
+| 1 | `--programmer-costs`      | $ 375,000 / yr | Senior + 50 % loading (taxes, benefits, overhead) |
+| 2 | Actual AI spend (total)   | ≤ $ 7,000      | Real receipts since APAS-AI started |
+| 3 | Hourly AI from spend      | $ 4.886 / hr   | $ 7,000 / 1,432.96 hrs |
+| 4 | `--ai-costs` (annualized) | **$ 8,599 / yr** | $ 4.886 × 1,760 |
+
+### Split AI spend by task-hours
+
+| # | Project               | Hours share | AI $    |
+|--:|:----------------------|------------:|--------:|
+| 1 | APAS-AI + Rusticate   | 21.6 %      | $ 1,512 |
+| 2 | APAS-VERUS + Veracity | 78.4 %      | $ 5,488 |
+| 3 | Total                 | 100  %      | $ 7,000 |
+
+### Per-project totals (with `--ai-costs 8599`)
+
+| # | Quantity       | APAS-AI + Rusticate | APAS-VERUS + Veracity |
+|--:|:---------------|--------------------:|----------------------:|
+| 1 | Programmer cost | $  65,965           | $ 239,352             |
+| 2 | AI cost        | $   1,512           | $   5,488             |
+| 3 | **Total cost** | **$  67,477**       | **$ 244,840**         |
+| 4 | AI share       |  2.2 %              |  2.2 %                |
+
+### CPR$ — combined
+
+Apportioning APAS-VERUS by line-class share. LoEC share = 56,549 / 166,401 = **34.0 %**.
+
+| # | Quantity                                          | Calculation                                | Value           |
+|--:|:--------------------------------------------------|:-------------------------------------------|----------------:|
+| 1 | C₁ — APAS-AI all-code portion                     | (all of APAS-AI total)                     | $   67,477      |
+| 2 | C₂ — APAS-VERUS code-rewrite portion              | 0.340 × $ 244,840                          | $   83,246      |
+| 3 | **C — Cost of Code (combined)**                   | C₁ + C₂                                    | **$  150,723**  |
+| 4 | P₁ — APAS-AI                                      | 0 (no proof)                               | $        0      |
+| 5 | P₂ — APAS-VERUS proof + spec portion              | $ 244,840 − $ 83,246                       | $  161,594      |
+| 6 | **P — Cost of Proof (combined)**                  | P₁ + P₂                                    | **$  161,594**  |
+| 7 | **C + P**                                         | sum                                        | **$  312,317**  |
+| 8 | **R — Review Ratio**                              | LOPC2R / (LOPC2R + LOC0R) on the deliverable | **0.333 (33.3 %)** |
+
+### Per-line readings
+
+| # | Quantity                                       | Calculation        | Value      |
+|--:|:-----------------------------------------------|:-------------------|-----------:|
+| 1 | $ / verified deliverable line (LOC = 166,401)  | 312,317 / 166,401  | $ 1.877    |
+| 2 | C / LoEC (combined)                            | 150,723 /  56,549  | $ 2.665    |
+| 3 | P / LOPC2R                                     | 161,594 /  47,828  | $ 3.378    |
+| 4 | P / LOP                                        | 161,594 /  25,627  | $ 6.305    |
+
+### Honest disclaimer (for emails / reports)
+
+> The combined figure $312,317 includes the APAS-AI prototype that
+> APAS-VERUS subsequently rewrote in Verus style. Code lineage is partial:
+> design and algorithm choice carried over from APAS-AI, but most concrete
+> code did not. AI cost is split by task-hours across the two projects,
+> totaling ≤ $ 7,000 of real spend. The CPR$ split (C $ 150,723 / P $ 161,594 / R 33.3 %)
+> attributes APAS-VERUS proportionally by line-class share; alternative
+> attributions are possible.
+
+## Comparison anchor — seL4 (2009)
+
+seL4 is the canonical pre-AI Verus-equivalent point in the cost space.
+Numbers below use NICTA / Data61 published estimates and a 40-hour work
+week (2,080 hrs / yr). Volumes in K-units (KLOE = thousand lines of
+executable code; KLOP = thousand lines of proof + spec).
+
+| # | Quantity                     | seL4            | Notes                                              |
+|--:|:-----------------------------|----------------:|:---------------------------------------------------|
+| 1 | Person-years                 |              22 |                                                    |
+| 2 | Hours                        |          45,760 | 22 × 2,080                                         |
+| 3 | KLOE                         |              10 | C source — 10,000 LOE                              |
+| 4 | KLOP                         |             480 | Isabelle/HOL spec + proof — 480,000 LOP            |
+| 5 | KLOP / KLOE ratio            |              48 | 48 lines of proof per line of executable code      |
+| 6 | Programmer cost              |    $ 8,250,000  | 22 × $ 375,000 — programmer-only, no AI            |
+| 7 | AI cost                      |    $          0 | Pre-LLM era; Isabelle/HOL tactics are not AI cost  |
+| 8 | **C + P (total)**            | **$ 8,250,000** |                                                    |
+| 9 | $ / KLine                    |       $ 16,837  | $ 8,250,000 / 490 KLines                           |
+| 10| $ / KLOE                     |       $825,000  |                                                    |
+| 11| $ / KLOP                     |       $ 17,188  |                                                    |
+
+### Head-to-head — seL4 vs APAS-VERUS + Veracity
+
+For APAS-VERUS, KLOE and KLOP analogues are computed from the line
+classifier:
+- **KLOE** = LoEC (executable Verus bodies) ≈ 56.5
+- **KLOP** = everything else in the verified deliverable
+  (LOC0R − LoEC + LOPC2R contracts/specs + LoPTT) ≈ 110
+
+(Excluding LoAA and LoRTT/LoBT.)
+
+| # | Quantity              | seL4 (pre-AI) | APAS-VERUS + Veracity (AI-paired) | Ratio        |
+|--:|:----------------------|--------------:|----------------------------------:|:-------------|
+| 1 | Person-years          |          22   |              0.64                 | seL4  ~34 ×  |
+| 2 | Hours                 |      45,760   |              1,123                | seL4  ~41 ×  |
+| 3 | KLOE                  |          10   |              ~ 57                 | Verus ~5.7 × |
+| 4 | KLOP                  |         480   |             ~ 110                 | seL4  ~4.4 × |
+| 5 | KLOP / KLOE           |          48   |              ~ 1.9                | seL4  ~25 ×  (proof bloat) |
+| 6 | Total Klines          |         490   |             ~ 167                 | seL4  ~2.9 × |
+| 7 | Klines / hour         |       0.0107  |              0.148                | Verus ~14 ×  |
+| 8 | $ / KLine             |    $ 16,837   |          ~ $ 1,471 \*             | seL4  ~11.4 ×|
+| 9 | $ / KLOE              |    $825,000   |          ~ $ 4,300 \*             | seL4  ~192 × |
+| 10| $ / KLOP              |    $ 17,188   |          ~ $ 2,225 \*             | seL4  ~7.7 × |
+| 11| C + P total           | $ 8,250,000   |          $ 244,840 \*             | seL4  ~33.7 ×|
+
+\* using `--ai-costs 8599` (real-spend rate) — replaces the earlier $90,000 placeholder.
+
+The most striking row is **5**: Verus needs only ~ 1.9 lines of proof
+per line of executable, vs. seL4's 48. SMT automation does most of the
+heavy lifting; Isabelle/HOL needed everything tactic-spelled.
+
+### Caveats
+
+| # | Caveat |
+|--:|:-------|
+| 1 | Different problem domain: seL4 verified a concurrent kernel with refinement / memory-safety proofs; APAS-VERUS verifies textbook algorithms. Kernel proofs are harder per line. |
+| 2 | Different proof assistants: Isabelle/HOL (tactic-heavy) vs Verus (SMT-backed, more automation even without AI). |
+| 3 | AI usage is a **lower bound** — the 1,123-hour task-hour figure undercounts background proof runs that occurred while the proofgrammer was away. Actual AI cost is bounded above by total-spend receipts. |
+| 4 | seL4's hours figure includes design, review, documentation, integration with the rest of the OS; APAS-VERUS hours are largely proof engineering. |
+
+Even after the caveats, the order-of-magnitude signal stands: AI-paired
+Verus is producing verified code at roughly an order of magnitude less
+human time per line than Isabelle/HOL was producing it in 2009.
+
+## Tool support — `veracity-count-loc`
+
+`veracity-count-loc` emits the cost-analysis block when these flags are
+set together (validated; missing or extra produces an error):
+
+| # | Flag                          | Required when                      |
+|--:|:------------------------------|:-----------------------------------|
+| 1 | `--programmer-costs`          | cost mode                          |
+| 2 | `--ai-costs`                  | cost mode                          |
+| 3 | `--person-days`               | cost mode                          |
+| 4 | `--average-hours-per-day`     | cost mode                          |
+| 5 | `--ai-paired-programming`     | exclusive of (6); enables cost mode |
+| 6 | `--ai-paired-proving`         | exclusive of (5); enables cost mode |
+| 7 | `--projects`                  | optional (label only)              |
+
+For proving mode, `veracity-count-loc` invokes the sibling
+`veracity-count-lines-of-review` binary to fetch LOPC2R / LOC0R / LoPTT
+totals and reports `$ / LOC`, `$ / LOPC2R`, `$ / LOC0R`. For programming
+mode, only `$ / LOC` is reported.
+
+The cost block is appended to the regular per-file and per-chapter
+tables in `analyses/veracity-count-loc.YYYYMMDD-HHMMSS.log`.

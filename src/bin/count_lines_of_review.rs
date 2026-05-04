@@ -104,7 +104,7 @@ enum Cat {
     // LOPC2R (reviewed)
     LODT,        // record/sum-type definition lines
     FnTySig,     // function type signature (typeclass decl or top-level)
-    FnReqEns,    // requires/ensures/recommends/decreases (typeclass decl or top-level)
+    FnContract,    // requires/ensures/recommends/decreases (typeclass decl or top-level)
     LoAA,        // algorithmic-analysis doc comments (APAS or Claude)
     // LOC0R (not reviewed)
     LoEC,        // exec-fn body + typeclass-instance sig restatement (exec kind)
@@ -120,7 +120,7 @@ struct ReviewCounts {
     // Per-line, AST-classified (source files)
     lodt: usize,
     fn_ty_sig: usize,
-    fn_req_ens: usize,
+    fn_contract: usize,
     lo_aa: usize,
     lo_ec: usize,
     lo_lc: usize,
@@ -135,8 +135,9 @@ struct ReviewCounts {
 
 impl ReviewCounts {
     fn lopc2r(&self) -> usize {
-        self.lodt + self.fn_ty_sig + self.fn_req_ens + self.lo_aa
-            + self.lo_rtt + self.lo_bt + self.lo_ptt
+        // LoRTT and LoBT are not proof-level work — they exercise compiled
+        // code. LoPTT *is* proof work (rust_verify_test drives Verus).
+        self.lodt + self.fn_ty_sig + self.fn_contract + self.lo_aa + self.lo_ptt
     }
     fn loc0r(&self) -> usize {
         self.lo_ec + self.lo_lc + self.lop + self.spec
@@ -144,7 +145,7 @@ impl ReviewCounts {
     fn add(&mut self, o: &ReviewCounts) {
         self.lodt += o.lodt;
         self.fn_ty_sig += o.fn_ty_sig;
-        self.fn_req_ens += o.fn_req_ens;
+        self.fn_contract += o.fn_contract;
         self.lo_aa += o.lo_aa;
         self.lo_ec += o.lo_ec;
         self.lo_lc += o.lo_lc;
@@ -162,7 +163,7 @@ impl ReviewCounts {
             match cat {
                 Cat::LODT => c.lodt += 1,
                 Cat::FnTySig => c.fn_ty_sig += 1,
-                Cat::FnReqEns => c.fn_req_ens += 1,
+                Cat::FnContract => c.fn_contract += 1,
                 Cat::LoAA => c.lo_aa += 1,
                 Cat::LoEC => c.lo_ec += 1,
                 Cat::LoLC => c.lo_lc += 1,
@@ -382,7 +383,7 @@ fn paint_fn(
     // top level, these are the contract (reviewed). In an instance they
     // just restate the contract, so they fold into the body's category.
     let (sig_cat, prepost_cat) = match ctx {
-        Ctx::TopLevel | Ctx::Typeclass => (Cat::FnTySig, Cat::FnReqEns),
+        Ctx::TopLevel | Ctx::Typeclass => (Cat::FnTySig, Cat::FnContract),
         Ctx::Instance => (body_cat, body_cat),
     };
 
@@ -599,7 +600,7 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
 
     // ── Per-file table ──
     log!("{:>5} {:>7} {:>8} {:>5} {:>6} {:>5} {:>5} {:>5} {:>7} {:>7}  File",
-        "LODT", "FnTySig", "FnReqEns", "LoAA", "LoEC", "LoLC", "LOP", "Spec", "LOPC2R", "LOC0R");
+        "LODT", "FnTySig", "FnContract", "LoAA", "LoEC", "LoLC", "LOP", "Spec", "LOPC2R", "LOC0R");
     log!("{}", "-".repeat(92));
     for file in &files {
         let rel = file.strip_prefix(base_dir).unwrap_or(file);
@@ -610,7 +611,7 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
         log!("{:>5} {:>7} {:>8} {:>5} {:>6} {:>5} {:>5} {:>5} {:>7} {:>7}  {}",
             format_number(counts.lodt),
             format_number(counts.fn_ty_sig),
-            format_number(counts.fn_req_ens),
+            format_number(counts.fn_contract),
             format_number(counts.lo_aa),
             format_number(counts.lo_ec),
             format_number(counts.lo_lc),
@@ -656,25 +657,26 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
     log!();
     log!("Lines Of Review analysis  {}", date);
     log!("  LOPC2R (Lines Of Proven Code to Review)");
-    log!("    LODT     {:>10}", format_number(grand.lodt));
-    log!("    FnTySig  {:>10}", format_number(grand.fn_ty_sig));
-    log!("    FnReqEns {:>10}", format_number(grand.fn_req_ens));
-    log!("    LoAA     {:>10}", format_number(grand.lo_aa));
-    log!("    LoRTT    {:>10}", format_number(grand.lo_rtt));
-    log!("    LoBT     {:>10}", format_number(grand.lo_bt));
-    log!("    LoPTT    {:>10}", format_number(grand.lo_ptt));
-    log!("    Total    {:>10}", format_number(grand.lopc2r()));
+    log!("    LODT       {:>10}  data-type definition lines", format_number(grand.lodt));
+    log!("    FnTySig    {:>10}  function type signatures", format_number(grand.fn_ty_sig));
+    log!("    FnContract {:>10}  function contract — requires/recommends/ensures/decreases/… (exec fns AND lemmas AND spec fns)", format_number(grand.fn_contract));
+    log!("    LoAA       {:>10}  algorithmic-analysis comments (APAS + Claude)", format_number(grand.lo_aa));
+    log!("    LoPTT      {:>10}  proof-time test code (rust_verify_test/)", format_number(grand.lo_ptt));
+    log!("    Total      {:>10}", format_number(grand.lopc2r()));
     log!("  LOC0R (Lines Of Code 0 Review)");
-    log!("    LoEC     {:>10}", format_number(grand.lo_ec));
-    log!("    LoLC     {:>10}", format_number(grand.lo_lc));
-    log!("    LOP      {:>10}", format_number(grand.lop));
-    log!("    Spec     {:>10}", format_number(grand.spec));
-    log!("    Total    {:>10}", format_number(grand.loc0r()));
+    log!("    LoEC       {:>10}  executable code bodies", format_number(grand.lo_ec));
+    log!("    LoLC       {:>10}  lemma body lines — the proof; trusted once Verus verifies (lemma requires/ensures go to FnContract, above)", format_number(grand.lo_lc));
+    log!("    LOP        {:>10}  inline proof in exec/spec bodies", format_number(grand.lop));
+    log!("    Spec       {:>10}  specification-function bodies", format_number(grand.spec));
+    log!("    Total      {:>10}", format_number(grand.loc0r()));
+    log!("  Non-proof code (reported separately, not in ratio)");
+    log!("    LoRTT      {:>10}  run-time test code", format_number(grand.lo_rtt));
+    log!("    LoBT       {:>10}  benchmark test code", format_number(grand.lo_bt));
     let lopc2r = grand.lopc2r();
     let loc0r = grand.loc0r();
     log!("  LOPC2R / LOC0R = {}", ratio_str(lopc2r, loc0r));
     log!("  LOPC2R / (LOPC2R + LOC0R) = {:.3}", pct(lopc2r, lopc2r + loc0r));
-    log!("  Files: src {}, RTT {}, BT {}, PTT {}; elapsed {}ms",
+    log!("  Files: src {}, RTT {}, Benches {}, PTT {}; elapsed {}ms",
         format_number(files.len()),
         format_number(rtt_files),
         format_number(bt_files),
@@ -685,7 +687,7 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
     log!();
     log!("By chapter:");
     log!("| {:>4} | {:>5} | {:>7} | {:>8} | {:>5} | {:>6} | {:>5} | {:>5} | {:>5} | {:>7} | {:>6} | {:>8} |",
-        "Chap", "LODT", "FnTySig", "FnReqEns", "LoAA",
+        "Chap", "LODT", "FnTySig", "FnContract", "LoAA",
         "LoEC", "LoLC", "LOP", "Spec", "LOPC2R", "LOC0R", "L2R/L0R");
     log!("| {:->4} | {:->5} | {:->7} | {:->8} | {:->5} | {:->6} | {:->5} | {:->5} | {:->5} | {:->7} | {:->6} | {:->8} |",
         "", "", "", "", "", "", "", "", "", "", "", "");
@@ -695,7 +697,7 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
             num,
             format_number(c.lodt),
             format_number(c.fn_ty_sig),
-            format_number(c.fn_req_ens),
+            format_number(c.fn_contract),
             format_number(c.lo_aa),
             format_number(c.lo_ec),
             format_number(c.lo_lc),
@@ -709,7 +711,7 @@ fn run(args: &StandardArgs, base_dir: &Path, search_dirs: &[PathBuf], start: Ins
         "Tot",
         format_number(grand.lodt),
         format_number(grand.fn_ty_sig),
-        format_number(grand.fn_req_ens),
+        format_number(grand.fn_contract),
         format_number(grand.lo_aa),
         format_number(grand.lo_ec),
         format_number(grand.lo_lc),

@@ -87,11 +87,13 @@ two buckets. The 12 categories and their abbreviations live in
 `docs/veracity-count-lines-of-review.md` (a glossary table is at the top of
 that file). Short summary:
 
-- **LOPC2R — Lines Of Proven Code to Review.** `LODT`, `FnTySig`, `FnReqEns`,
-  `LoAA`, `LoRTT`, `LoBT`, `LoPTT`. Tests, benchmarks, and proof-time tests
-  all count as review (every non-comment line).
+- **LOPC2R — Lines Of Proven Code to Review.** `LODT`, `FnTySig`, `FnContract`,
+  `LoAA`, `LoPTT`. Proof-time tests (`rust_verify_test/`) count as review
+  because they drive Verus verification.
 - **LOC0R — Lines Of Code 0 Review.** `LoEC`, `LoLC`, `LOP`, `Spec`. Trusted
   once Verus has verified.
+- **LoRTT / LoBT** — run-time tests and benchmarks. Reported separately;
+  **not** part of LOPC2R (they exercise compiled code, not proofs).
 
 Always use these full acronyms in output, tables, and docs. Do not use the
 provisional `LoR` / `LoI` or `LOPCNR` short forms that predated them.
