@@ -188,17 +188,17 @@ executable code; KLOP = thousand lines of proof + spec).
 
 | # | Quantity                     | seL4            | Notes                                              |
 |--:|:-----------------------------|----------------:|:---------------------------------------------------|
-| 1 | Person-years                 |              22 |                                                    |
-| 2 | Hours                        |          45,760 | 22 × 2,080                                         |
+| 1 | Person-years                 |            22.5 |                                                    |
+| 2 | Hours                        |          46,800 | 22.5 × 2,080                                       |
 | 3 | KLOE                         |              10 | C source — 10,000 LOE                              |
 | 4 | KLOP                         |             480 | Isabelle/HOL spec + proof — 480,000 LOP            |
 | 5 | KLOP / KLOE ratio            |              48 | 48 lines of proof per line of executable code      |
-| 6 | Programmer cost              |    $ 8,250,000  | 22 × $ 375,000 — programmer-only, no AI            |
+| 6 | Programmer cost              |    $ 8,437,500  | 22.5 × $ 375,000 — programmer-only, no AI          |
 | 7 | AI cost                      |    $          0 | Pre-LLM era; Isabelle/HOL tactics are not AI cost  |
-| 8 | **C + P (total)**            | **$ 8,250,000** |                                                    |
-| 9 | $ / KLine                    |       $ 16,837  | $ 8,250,000 / 490 KLines                           |
-| 10| $ / KLOE                     |       $825,000  |                                                    |
-| 11| $ / KLOP                     |       $ 17,188  |                                                    |
+| 8 | **C + P (total)**            | **$ 8,437,500** |                                                    |
+| 9 | $ / KLine                    |       $ 17,219  | $ 8,437,500 / 490 KLines                           |
+| 10| $ / KLOE                     |      $ 843,750  | $ 8,437,500 / 10 KLOE                              |
+| 11| $ / KLOP                     |       $ 17,578  | $ 8,437,500 / 480 KLOP                             |
 
 ### Head-to-head — seL4 vs APAS-VERUS + Veracity
 
@@ -212,17 +212,17 @@ classifier:
 
 | # | Quantity              | seL4 (pre-AI) | APAS-VERUS + Veracity (AI-paired) | Ratio        |
 |--:|:----------------------|--------------:|----------------------------------:|:-------------|
-| 1 | Person-years          |          22   |              0.64                 | seL4  ~34 ×  |
-| 2 | Hours                 |      45,760   |              1,123                | seL4  ~41 ×  |
+| 1 | Person-years          |        22.5   |              0.64                 | seL4  ~35 ×  |
+| 2 | Hours                 |      46,800   |              1,123                | seL4  ~42 ×  |
 | 3 | KLOE                  |          10   |              ~ 57                 | Verus ~5.7 × |
 | 4 | KLOP                  |         480   |             ~ 110                 | seL4  ~4.4 × |
 | 5 | KLOP / KLOE           |          48   |              ~ 1.9                | seL4  ~25 ×  (proof bloat) |
 | 6 | Total Klines          |         490   |             ~ 167                 | seL4  ~2.9 × |
-| 7 | Klines / hour         |       0.0107  |              0.148                | Verus ~14 ×  |
-| 8 | $ / KLine             |    $ 16,837   |          ~ $ 1,471 \*             | seL4  ~11.4 ×|
-| 9 | $ / KLOE              |    $825,000   |          ~ $ 4,300 \*             | seL4  ~192 × |
-| 10| $ / KLOP              |    $ 17,188   |          ~ $ 2,225 \*             | seL4  ~7.7 × |
-| 11| C + P total           | $ 8,250,000   |          $ 244,840 \*             | seL4  ~33.7 ×|
+| 7 | Klines / hour         |       0.0105  |              0.148                | Verus ~14 ×  |
+| 8 | $ / KLine             |    $ 17,219   |          ~ $ 1,471 \*             | seL4  ~11.7 ×|
+| 9 | $ / KLOE              |   $ 843,750   |          ~ $ 4,300 \*             | seL4  ~196 × |
+| 10| $ / KLOP              |    $ 17,578   |          ~ $ 2,225 \*             | seL4  ~7.9 × |
+| 11| C + P total           | $ 8,437,500   |          $ 244,840 \*             | seL4  ~34.5 ×|
 
 \* using `--ai-costs 8599` (real-spend rate) — replaces the earlier $90,000 placeholder.
 
