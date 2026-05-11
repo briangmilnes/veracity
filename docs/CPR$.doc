@@ -200,31 +200,38 @@ executable code; KLOP = thousand lines of proof + spec).
 | 10| $ / KLOE                     |      $ 843,750  | $ 8,437,500 / 10 KLOE                              |
 | 11| $ / KLOP                     |       $ 17,578  | $ 8,437,500 / 480 KLOP                             |
 
-### Head-to-head — seL4 vs APAS-VERUS + Veracity
+### Head-to-head — seL4 vs APAS-AI + APAS-VERUS
 
-For APAS-VERUS, KLOE and KLOP analogues are computed from the line
-classifier:
+Apples-to-apples engineering cost: both columns use the same modern
+salary ($ 375,000 / yr loaded). seL4 has no AI cost; APAS includes the
+≤ $ 7,000 of real AI spend. The APAS column combines APAS-AI and
+APAS-VERUS effort — the verified deliverable's executable cost is only
+meaningful with the total proof cost attached.
+
+For the deliverable, KLOE and KLOP analogues are computed from the line
+classifier on APAS-VERUS (the verified artifact):
 - **KLOE** = LoEC (executable Verus bodies) ≈ 56.5
 - **KLOP** = everything else in the verified deliverable
   (LOC0R − LoEC + LOPC2R contracts/specs + LoPTT) ≈ 110
 
 (Excluding LoAA and LoRTT/LoBT.)
 
-| # | Quantity              | seL4 (pre-AI) | APAS-VERUS + Veracity (AI-paired) | Ratio        |
-|--:|:----------------------|--------------:|----------------------------------:|:-------------|
-| 1 | Person-years          |        22.5   |              0.64                 | seL4  ~35 ×  |
-| 2 | Hours                 |      46,800   |              1,123                | seL4  ~42 ×  |
-| 3 | KLOE                  |          10   |              ~ 57                 | Verus ~5.7 × |
-| 4 | KLOP                  |         480   |             ~ 110                 | seL4  ~4.4 × |
-| 5 | KLOP / KLOE           |          48   |              ~ 1.9                | seL4  ~25 ×  (proof bloat) |
-| 6 | Total Klines          |         490   |             ~ 167                 | seL4  ~2.9 × |
-| 7 | Klines / hour         |       0.0105  |              0.148                | Verus ~14 ×  |
-| 8 | $ / KLine             |    $ 17,219   |          ~ $ 1,471 \*             | seL4  ~11.7 ×|
-| 9 | $ / KLOE              |   $ 843,750   |          ~ $ 4,300 \*             | seL4  ~196 × |
-| 10| $ / KLOP              |    $ 17,578   |          ~ $ 2,225 \*             | seL4  ~7.9 × |
-| 11| C + P total           | $ 8,437,500   |          $ 244,840 \*             | seL4  ~34.5 ×|
+| # | Quantity              | seL4 (no AI)  | APAS-AI + APAS-VERUS (AI-paired) | Ratio        |
+|--:|:----------------------|--------------:|---------------------------------:|:-------------|
+| 1 | Person-years          |        22.5   |              0.81                | seL4  ~28 ×  |
+| 2 | Hours                 |      46,800   |             1,433                | seL4  ~33 ×  |
+| 3 | KLOE                  |          10   |              ~ 57                | Verus ~5.7 × |
+| 4 | KLOP                  |         480   |             ~ 110                | seL4  ~4.4 × |
+| 5 | KLOP / KLOE           |          48   |              ~ 1.9               | seL4  ~25 ×  (proof bloat) |
+| 6 | Total Klines          |         490   |             ~ 167                | seL4  ~2.9 × |
+| 7 | Klines / hour         |       0.0105  |             0.117                | Verus ~11 ×  |
+| 8 | $ / KLine             |    $ 17,219   |          ~ $ 1,870 \*            | seL4  ~9.2 × |
+| 9 | $ / KLOE              |   $ 843,750   |         ~ $ 31,232 \*            | seL4  ~27 ×  |
+| 10| $ / KLOP              |    $ 17,578   |             ~ $ 651 \*           | seL4  ~27 ×  |
+| 11| C + P total           | $ 8,437,500   |          $ 312,317 \*            | seL4  ~27 ×  |
 
-\* using `--ai-costs 8599` (real-spend rate) — replaces the earlier $90,000 placeholder.
+\* combined APAS-AI + APAS-VERUS: 179 person-days / 1,433 hours at
+$ 375,000 / yr loaded salary + $ 7,000 real AI spend (`--ai-costs 8599`).
 
 The most striking row is **5**: Verus needs only ~ 1.9 lines of proof
 per line of executable, vs. seL4's 48. SMT automation does most of the
