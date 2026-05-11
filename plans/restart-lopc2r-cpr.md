@@ -14,7 +14,7 @@ design. Read top-to-bottom; it is ~10 minutes.
 | 1 | `veracity-count-lines-of-review` | `src/bin/count_lines_of_review.rs` | New binary. Partitions every line of proven Verus source into **LOPC2R** (must review) and **LOC0R** (trusted once verified). Reports per-file, per-chapter, and totals. |
 | 2 | Cost-analysis bolted onto `veracity-count-loc` | `src/bin/count_loc.rs` | New flags `--ai-paired-{programming,proving}`, `--programmer-costs`, `--ai-costs`, `--person-days`, `--average-hours-per-day`, `--projects`. Emits a `Cost analysis — <projects> (<mode>)` block after the regular count-loc output. In proving mode it subprocesses out to `veracity-count-lines-of-review` for LOPC2R / LOC0R / LoPTT totals. |
 | 3 | Benches-anywhere bug fix in count-loc | `src/bin/count_loc.rs` | New `filter_src_excludes` (in addition to `filter_excludes`) drops files whose path contains any of `tests` / `benches` / `e2e` / `bench` / etc. as a component, applied **only to src scans**. Test/bench scans still use the unmodified `filter_excludes` so they don't drop their own files. |
-| 4 | CPR$ documentation | `docs/CPR$.doc` (Markdown despite the extension) | Spec of CPR$ — Code, Proof, Review costs. Definitions, formulas, AI-cost split methods, worked example for APAS-AI + Rusticate vs APAS-VERUS + Veracity, seL4 (2009) anchor in K-units. |
+| 4 | CPR$ documentation | `docs/CPR$$.md` | Spec of CPR$ — Code, Proof, Review costs. Definitions, formulas, AI-cost split methods, worked example for APAS-AI + Rusticate vs APAS-VERUS + Veracity, seL4 (2009) anchor in K-units. |
 | 5 | count-lines-of-review documentation | `docs/veracity-count-lines-of-review.md` | Full glossary, semantics, sample output, implementation notes. |
 
 ## 2. Twelve categories — the glossary you need to remember
@@ -107,11 +107,11 @@ CPR$:
 |  2 | `src/bin/count_loc.rs`                        | committed (cost flags) | adds CPR$ output |
 |  3 | `Cargo.toml`                                  | committed | added `[[bin]]` for count-lines-of-review |
 |  4 | `CLAUDE.md`                                   | committed (`0078da4`) | TIMESTAMP rules + LOPC2R/LOC0R terminology + numbered-tables rule |
-|  5 | `.gitignore`                                  | committed | adds `docs/veracity-count-lines-of-review.md` and `analyses/veracity-count-lines-of-review.*.log` ; NOTE: does **not** ignore `docs/CPR$.doc` |
+|  5 | `.gitignore`                                  | committed | adds `docs/veracity-count-lines-of-review.md` and `analyses/veracity-count-lines-of-review.*.log` ; NOTE: does **not** ignore `docs/CPR$$.md` |
 |  6 | `docs/veracity-count-lines-of-review.md`      | **gitignored** | "close to the chest" until further notice |
-|  7 | `docs/CPR$.doc`                               | **uncommitted, NOT gitignored** | check before next commit; user may want it close-to-the-chest too |
+|  7 | `docs/CPR$$.md`                               | **uncommitted, NOT gitignored** | check before next commit; user may want it close-to-the-chest too |
 
-User instruction from earlier: "exclude logs for this from git and the docs from git. We are going to keep these close to the chest for a few days." This applied originally to `veracity-count-lines-of-review`'s docs and logs. **CPR$.doc was created later — confirm whether it should be added to .gitignore before committing.**
+User instruction from earlier: "exclude logs for this from git and the docs from git. We are going to keep these close to the chest for a few days." This applied originally to `veracity-count-lines-of-review`'s docs and logs. **CPR$$.md was created later — confirm whether it should be added to .gitignore before committing.**
 
 ## 6. Open decisions (revisit before next implementation)
 
@@ -189,7 +189,7 @@ hours; expect very specific terminology preferences. They prefer:
 ## 9. Suggested first move on resumption
 
 1. `git status` to see what's uncommitted.
-2. Decide CPR$.doc visibility (close-to-chest like the others, or ship?).
+2. Decide CPR$$.md visibility (close-to-chest like the others, or ship?).
 3. Ask the user where they want to take it next — the obvious axes are:
    - tighten the AI-spend split (real receipts per project),
    - extend cost-analysis to handle multiple projects in one invocation,
