@@ -234,10 +234,12 @@ struct ChainEdge {
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct ClusteredPattern {
-    skeleton: String,
+struct UniqueRewrite {
+    status: String,          // T-class id ("T1" .. "T8") or "U-OTHER"
+    old_skeleton: String,
+    new_skeleton: String,
     count: usize,
-    suggested_new: String,
+    files: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1597,32 +1599,85 @@ fn canonical_spacing(s: &str) -> String {
     t.trim().to_string()
 }
 
-fn build_uother_clusters(findings: &[FileFindings]) -> Vec<ClusteredPattern> {
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+/// Unified rewrite table per Deferral 4 / §13a.12. Combines every T-finding's
+/// (old, new) pair with every U-OTHER finding's message + suggested new. Group
+/// by (status, old_skeleton); count occurrences + distinct files. Drop any
+/// skeleton whose tokens don't include literal `it` (belt-and-braces — the
+/// matcher should already only emit `it`-bearing clauses).
+fn build_unique_rewrites(findings: &[FileFindings]) -> Vec<UniqueRewrite> {
     let prefix = "unrecognized `it`-bearing clause: ";
+    // (status, old_skel) -> (count, files-set, new_skel-most-recent)
+    let mut acc: BTreeMap<(String, String), (usize, BTreeSet<String>, String)> = BTreeMap::new();
+
     for f in findings {
+        for t in &f.transforms {
+            let old_skel = skeleton_of(&t.old);
+            if !contains_it_token(&old_skel) {
+                continue;
+            }
+            // For T-class new text, skeletonize per-line (T8 has newlines).
+            let new_skel = if t.new == "<remove>" {
+                "<remove>".to_string()
+            } else if t.new.contains('\n') {
+                // Skeletonize each line independently, rejoin with " ⏎ "
+                t.new
+                    .lines()
+                    .map(skeleton_of)
+                    .collect::<Vec<_>>()
+                    .join(" ⏎ ")
+            } else {
+                skeleton_of(&t.new)
+            };
+            let key = (t.class.as_str().to_string(), old_skel.clone());
+            let entry = acc.entry(key).or_insert_with(|| (0, BTreeSet::new(), new_skel.clone()));
+            entry.0 += 1;
+            entry.1.insert(f.path.clone());
+        }
         for u in &f.unresolved {
             if u.code != UClass::Other {
                 continue;
             }
             let text = u.message.strip_prefix(prefix).unwrap_or(&u.message).trim();
-            let skel = skeleton_of(text);
-            *counts.entry(skel).or_insert(0) += 1;
+            let old_skel = skeleton_of(text);
+            if !contains_it_token(&old_skel) {
+                continue;
+            }
+            let new_skel = suggest_new(&old_skel);
+            let new_skel = if new_skel.is_empty() { "<no-suggestion>".to_string() } else { new_skel };
+            let key = ("U-OTHER".to_string(), old_skel.clone());
+            let entry = acc.entry(key).or_insert_with(|| (0, BTreeSet::new(), new_skel.clone()));
+            entry.0 += 1;
+            entry.1.insert(f.path.clone());
         }
     }
-    let mut out: Vec<ClusteredPattern> = counts
+
+    let mut out: Vec<UniqueRewrite> = acc
         .into_iter()
-        .map(|(skel, count)| {
-            let suggested = suggest_new(&skel);
-            ClusteredPattern {
-                skeleton: skel,
-                count,
-                suggested_new: suggested,
-            }
+        .map(|((status, old_skel), (count, files, new_skel))| UniqueRewrite {
+            status,
+            old_skeleton: old_skel,
+            new_skeleton: new_skel,
+            count,
+            files: files.len(),
         })
         .collect();
-    out.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.skeleton.cmp(&b.skeleton)));
+    out.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.status.cmp(&b.status))
+            .then_with(|| a.old_skeleton.cmp(&b.old_skeleton))
+    });
     out
+}
+
+fn contains_it_token(skel: &str) -> bool {
+    // Token-aware `it` check: word-boundary match on the literal identifier.
+    for piece in skel.split(|c: char| !(c.is_alphanumeric() || c == '_')) {
+        if piece == "it" {
+            return true;
+        }
+    }
+    false
 }
 
 fn suggest_new(skel: &str) -> String {
@@ -1682,8 +1737,8 @@ fn write_reports(
     let scanned_paths: Vec<String> = findings.iter().map(|f| f.path.clone()).collect();
     let manifest = build_manifest(root, &scanned_paths);
     let chain_edges = build_chain_edges(findings);
-    let clusters = build_uother_clusters(findings);
     let uclass = build_uclass_rollup(findings);
+    let unique_rewrites = build_unique_rewrites(findings);
 
     if formats.contains(&"md") {
         let path = out_dir.join("iterator-upgrade-detect.md");
@@ -1695,7 +1750,7 @@ fn write_reports(
             parse_failures,
             &manifest,
             &chain_edges,
-            &clusters,
+            &unique_rewrites,
             &uclass,
         );
         fs::write(&path, body).with_context(|| format!("writing {}", path.display()))?;
@@ -1709,7 +1764,7 @@ fn write_reports(
             &timestamp,
             &manifest,
             &chain_edges,
-            &clusters,
+            &unique_rewrites,
             &uclass,
         )?;
         fs::write(&path, body).with_context(|| format!("writing {}", path.display()))?;
@@ -1748,7 +1803,7 @@ fn render_markdown(
     parse_failures: &[(PathBuf, String)],
     manifest: &Manifest,
     chain_edges: &[ChainEdge],
-    clusters: &[ClusteredPattern],
+    unique_rewrites: &[UniqueRewrite],
     uclass: &[UClassRollup],
 ) -> String {
     let mut s = String::new();
@@ -1835,29 +1890,30 @@ fn render_markdown(
         s.push('\n');
     }
 
-    // §13a.9: U-OTHER pattern clustering.
-    if !clusters.is_empty() {
-        let limit = clusters
+    // §13a.12: Unified Unique transforms table. Combines T-class transforms +
+    // U-OTHER findings into one dedup'd view. The standalone U-OTHER patterns
+    // table (§13a.9) is subsumed and no longer emitted.
+    if !unique_rewrites.is_empty() {
+        let limit = unique_rewrites
             .iter()
-            .filter(|c| c.count >= 2)
+            .filter(|r| r.count >= 2)
             .count()
-            .max(10)
-            .min(clusters.len());
-        s.push_str(&format!("## U-OTHER patterns (top {})\n\n", limit));
-        s.push_str("| # | Skeleton | Count | Suggested new form |\n|--:|----------|------:|--------------------|\n");
-        for (i, c) in clusters.iter().take(limit).enumerate() {
-            let promote = if c.count >= 5 { " → T(new)" } else { "" };
+            .max(50)
+            .min(unique_rewrites.len());
+        s.push_str(&format!("## Unique transforms (top {})\n\n", limit));
+        s.push_str("Every `it`-bearing rewrite the matcher saw, dedup'd by skeleton (literal `it` preserved; other idents and large literals collapsed to `<ident>`/`<lit>`). Status `T<n>` is a class that fires today; `U-OTHER` is a candidate for a future T-class.\n\n");
+        s.push_str("| # | Status | Old skeleton | New skeleton | Count | Files |\n|--:|--------|--------------|--------------|------:|------:|\n");
+        for (i, r) in unique_rewrites.iter().take(limit).enumerate() {
+            let promote = if r.status == "U-OTHER" && r.count >= 5 { " → T(new)" } else { "" };
             s.push_str(&format!(
-                "| {} | `{}` | {}{} | {} |\n",
+                "| {} | {}{} | `{}` | `{}` | {} | {} |\n",
                 i + 1,
-                escape_md_table(&c.skeleton),
-                c.count,
+                r.status,
                 promote,
-                if c.suggested_new.is_empty() {
-                    "—".to_string()
-                } else {
-                    format!("`{}`", escape_md_table(&c.suggested_new))
-                }
+                escape_md_table(&r.old_skeleton),
+                escape_md_table(&r.new_skeleton),
+                r.count,
+                r.files
             ));
         }
         s.push('\n');
@@ -2019,7 +2075,7 @@ fn render_json(
     timestamp: &str,
     manifest: &Manifest,
     chain_edges: &[ChainEdge],
-    clusters: &[ClusteredPattern],
+    unique_rewrites: &[UniqueRewrite],
     uclass: &[UClassRollup],
 ) -> Result<String> {
     #[derive(Serialize)]
@@ -2033,7 +2089,7 @@ fn render_json(
         files: &'a [FileFindings],
         summary: &'a Summary,
         unresolved_by_class: &'a [UClassRollup],
-        uother_clusters: &'a [ClusteredPattern],
+        unique_rewrites: &'a [UniqueRewrite],
         chain_edges: &'a [ChainEdge],
     }
     let doc = Doc {
@@ -2046,7 +2102,7 @@ fn render_json(
         files: findings,
         summary,
         unresolved_by_class: uclass,
-        uother_clusters: clusters,
+        unique_rewrites,
         chain_edges,
     };
     Ok(serde_json::to_string_pretty(&doc)?)

@@ -8,8 +8,8 @@ table { width: 100% !important; table-layout: fixed; }
 # Iterator-Upgrade Detect Report
 
 - Root: `/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS`
-- Generated: 2026-05-23T17:01:18Z
-- Tool SHA: `6486db74bc5aef89a6dcce560ac8da9345a2677e`
+- Generated: 2026-05-23T17:04:20Z
+- Tool SHA: `775300bbc363d0e0e9dcd3be82b1fd11f66eaf91`
 - Totals: files=70, D=500, T=395, U=341
 
 ## Manifest check
@@ -34,36 +34,62 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 | 3 | U-CHAIN | 12 | 12 |
 | 4 | U-CLASS | 8 | 8 |
 
-## U-OTHER patterns (top 26)
+## Unique transforms (top 50)
 
-| # | Skeleton | Count | Suggested new form |
-|--:|----------|------:|--------------------|
-| 1 | `it@.0 <= <ident>.<ident> ()` | 112 → T(new) | `it.index() <= <ident>.<ident> ()` |
-| 2 | `it@.1.<ident> ()` | 19 → T(new) | `it.seq().<ident> ()` |
-| 3 | `it@.0 <= it@.1.<ident> ()` | 16 → T(new) | `it.index() <= it.seq().<ident> ()` |
-| 4 | `<ident> == it@.1` | 8 → T(new) | `<ident> == it.seq()` |
-| 5 | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | 8 → T(new) | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` |
-| 6 | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | 6 → T(new) | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` |
-| 7 | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | 6 → T(new) | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` |
-| 8 | `it@.1 =~= self.<ident> ()` | 5 → T(new) | `it.seq() =~= self.<ident> ()` |
-| 9 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | 4 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` |
-| 10 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | 4 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` |
-| 11 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))` | 4 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))` |
-| 12 | `it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | 4 | `it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` |
-| 13 | `it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()` | 4 | `it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()` |
-| 14 | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | 4 | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` |
-| 15 | `it@.1.<ident> () == self@.<ident> ()` | 3 | `it.seq().<ident> () == self@.<ident> ()` |
-| 16 | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` |
-| 17 | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>` | 2 | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>` |
-| 18 | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)` | 2 | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)` |
-| 19 | `<ident>@.<ident> () <= it@.0` | 2 | `<ident>@.<ident> () <= it.index()` |
-| 20 | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` |
-| 21 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | 2 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` |
-| 22 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | 2 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` |
-| 23 | `it@.0 == old (it)@.0` | 2 | `it.index() == old (it)@.0` |
-| 24 | `it@.1.<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | 2 | `it.seq().<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` |
-| 25 | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | 2 | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` |
-| 26 | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | 2 | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` |
+Every `it`-bearing rewrite the matcher saw, dedup'd by skeleton (literal `it` preserved; other idents and large literals collapsed to `<ident>`/`<lit>`). Status `T<n>` is a class that fires today; `U-OTHER` is a candidate for a future T-class.
+
+| # | Status | Old skeleton | New skeleton | Count | Files |
+|--:|--------|--------------|--------------|------:|------:|
+| 1 | T6 | `<ident>.<ident> () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` | 122 | 26 |
+| 2 | T3 | `it@.1 == <ident>` | `it.seq() == it_seq,` | 114 | 23 |
+| 3 | U-OTHER → T(new) | `it@.0 <= <ident>.<ident> ()` | `it.index() <= <ident>.<ident> ()` | 112 | 21 |
+| 4 | T4 | `<ident> (& it)` | `<remove>` | 53 | 31 |
+| 5 | T1 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` | 41 | 23 |
+| 6 | T8 | `iter_invariant(&it) (constructor ensures triple)` | `IteratorSpec::remaining(&it) == self.seq@.as_ref(), ⏎ IteratorSpec::decrease(&it) is Some, ⏎ IteratorSpec::initial_value_relation(&it, &it),` | 29 | 16 |
+| 7 | T1 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` | 20 | 14 |
+| 8 | U-OTHER → T(new) | `it@.1.<ident> ()` | `it.seq().<ident> ()` | 19 | 15 |
+| 9 | U-OTHER → T(new) | `it@.0 <= it@.1.<ident> ()` | `it.index() <= it.seq().<ident> ()` | 16 | 9 |
+| 10 | U-OTHER → T(new) | `<ident> == it@.1` | `<ident> == it.seq()` | 8 | 3 |
+| 11 | U-OTHER → T(new) | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | 8 | 8 |
+| 12 | T2 | `it@.1 == self.<ident>@` | `it.seq() == self.seq@,` | 7 | 7 |
+| 13 | T6 | `it@.1.<ident> () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` | 6 | 4 |
+| 14 | U-OTHER → T(new) | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | 6 | 6 |
+| 15 | U-OTHER → T(new) | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | 6 | 6 |
+| 16 | U-OTHER → T(new) | `it@.1 =~= self.<ident> ()` | `it.seq() =~= self.<ident> ()` | 5 | 2 |
+| 17 | U-OTHER | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | 4 | 2 |
+| 18 | U-OTHER | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | 4 | 2 |
+| 19 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))` | 4 | 2 |
+| 20 | U-OTHER | `it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | `it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | 4 | 2 |
+| 21 | U-OTHER | `it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()` | `it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()` | 4 | 2 |
+| 22 | U-OTHER | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | 4 | 2 |
+| 23 | U-OTHER | `it@.1.<ident> () == self@.<ident> ()` | `it.seq().<ident> () == self@.<ident> ()` | 3 | 2 |
+| 24 | T3 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` | 2 | 2 |
+| 25 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | 2 |
+| 26 | U-OTHER | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>` | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>` | 2 | 2 |
+| 27 | U-OTHER | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)` | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)` | 2 | 2 |
+| 28 | U-OTHER | `<ident>@.<ident> () <= it@.0` | `<ident>@.<ident> () <= it.index()` | 2 | 2 |
+| 29 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | 2 |
+| 30 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | 2 | 2 |
+| 31 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | 2 | 2 |
+| 32 | U-OTHER | `it@.0 == old (it)@.0` | `it.index() == old (it)@.0` | 2 | 2 |
+| 33 | U-OTHER | `it@.1.<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | `it.seq().<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | 2 | 1 |
+| 34 | U-OTHER | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | 2 | 1 |
+| 35 | U-OTHER | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | 2 | 1 |
+| 36 | T3 | `it@.1 == self.<ident>@` | `it.seq() == self.data@,` | 1 | 1 |
+| 37 | U-OTHER | `<ident> ==> it@.0 >= <ident>.<ident> ()` | `<ident> ==> it.index() >= <ident>.<ident> ()` | 1 | 1 |
+| 38 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)` | 1 | 1 |
+| 39 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
+| 40 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)` | 1 | 1 |
+| 41 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
+| 42 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
+| 43 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
+| 44 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
+| 45 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
+| 46 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
+| 47 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
+| 48 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
+| 49 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
+| 50 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
 
 ## Per-file summary
 

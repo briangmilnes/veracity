@@ -1,7 +1,7 @@
 # veracity-iterator-upgrade --detect
 # root: /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS
-# tool_sha: 6486db74bc5aef89a6dcce560ac8da9345a2677e
-# generated: 2026-05-23T17:01:18Z
+# tool_sha: 775300bbc363d0e0e9dcd3be82b1fd11f66eaf91
+# generated: 2026-05-23T17:04:20Z
 # totals: files=70 D=500 T=395 U=341
 manifest:1:1: warning: manifest: scanned 70 of ? — inventory not found
 src/Chap05/MappingStEph.rs:1:1: summary: delegated, D=12 T=3 U=5

@@ -1,9 +1,9 @@
 {
   "tool": "veracity-iterator-upgrade",
-  "tool_sha": "6486db74bc5aef89a6dcce560ac8da9345a2677e",
+  "tool_sha": "775300bbc363d0e0e9dcd3be82b1fd11f66eaf91",
   "mode": "detect",
   "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
-  "generated": "2026-05-23T17:01:18Z",
+  "generated": "2026-05-23T17:04:20Z",
   "manifest": {
     "inventory_path": null,
     "inventory_count": null,
@@ -9180,506 +9180,776 @@
       "files_affected": 8
     }
   ],
-  "uother_clusters": [
+  "unique_rewrites": [
     {
-      "skeleton": "it@.0 <= <ident>.<ident> ()",
+      "status": "T6",
+      "old_skeleton": "<ident>.<ident> () - it@.0",
+      "new_skeleton": "IteratorSpec::decrease(&it).unwrap(),",
+      "count": 122,
+      "files": 26
+    },
+    {
+      "status": "T3",
+      "old_skeleton": "it@.1 == <ident>",
+      "new_skeleton": "it.seq() == it_seq,",
+      "count": 114,
+      "files": 23
+    },
+    {
+      "status": "U-OTHER",
+      "old_skeleton": "it@.0 <= <ident>.<ident> ()",
+      "new_skeleton": "it.index() <= <ident>.<ident> ()",
       "count": 112,
-      "suggested_new": "it.index() <= <ident>.<ident> ()"
+      "files": 21
     },
     {
-      "skeleton": "it@.1.<ident> ()",
+      "status": "T4",
+      "old_skeleton": "<ident> (& it)",
+      "new_skeleton": "<remove>",
+      "count": 53,
+      "files": 31
+    },
+    {
+      "status": "T1",
+      "old_skeleton": "it@.0 == 0",
+      "new_skeleton": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),",
+      "count": 41,
+      "files": 23
+    },
+    {
+      "status": "T8",
+      "old_skeleton": "iter_invariant(&it) (constructor ensures triple)",
+      "new_skeleton": "IteratorSpec::remaining(&it) == self.seq@.as_ref(), ⏎ IteratorSpec::decrease(&it) is Some, ⏎ IteratorSpec::initial_value_relation(&it, &it),",
+      "count": 29,
+      "files": 16
+    },
+    {
+      "status": "T1",
+      "old_skeleton": "it@.0 == 0int",
+      "new_skeleton": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),",
+      "count": 20,
+      "files": 14
+    },
+    {
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> ()",
+      "new_skeleton": "it.seq().<ident> ()",
       "count": 19,
-      "suggested_new": "it.seq().<ident> ()"
+      "files": 15
     },
     {
-      "skeleton": "it@.0 <= it@.1.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.0 <= it@.1.<ident> ()",
+      "new_skeleton": "it.index() <= it.seq().<ident> ()",
       "count": 16,
-      "suggested_new": "it.index() <= it.seq().<ident> ()"
+      "files": 9
     },
     {
-      "skeleton": "<ident> == it@.1",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> == it@.1",
+      "new_skeleton": "<ident> == it.seq()",
       "count": 8,
-      "suggested_new": "<ident> == it.seq()"
+      "files": 3
     },
     {
-      "skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>",
+      "new_skeleton": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>",
       "count": 8,
-      "suggested_new": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>"
+      "files": 8
     },
     {
-      "skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)",
+      "status": "T2",
+      "old_skeleton": "it@.1 == self.<ident>@",
+      "new_skeleton": "it.seq() == self.seq@,",
+      "count": 7,
+      "files": 7
+    },
+    {
+      "status": "T6",
+      "old_skeleton": "it@.1.<ident> () - it@.0",
+      "new_skeleton": "IteratorSpec::decrease(&it).unwrap(),",
       "count": 6,
-      "suggested_new": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)"
+      "files": 4
     },
     {
-      "skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)",
+      "new_skeleton": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)",
       "count": 6,
-      "suggested_new": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)"
+      "files": 6
     },
     {
-      "skeleton": "it@.1 =~= self.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)",
+      "new_skeleton": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)",
+      "count": 6,
+      "files": 6
+    },
+    {
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1 =~= self.<ident> ()",
+      "new_skeleton": "it.seq() =~= self.<ident> ()",
       "count": 5,
-      "suggested_new": "it.seq() =~= self.<ident> ()"
+      "files": 2
     },
     {
-      "skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))",
+      "new_skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))",
       "count": 4,
-      "suggested_new": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))"
+      "files": 2
     },
     {
-      "skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)",
+      "new_skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)",
       "count": 4,
-      "suggested_new": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)"
+      "files": 2
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))",
       "count": 4,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()",
+      "new_skeleton": "it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()",
       "count": 4,
-      "suggested_new": "it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()",
+      "new_skeleton": "it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()",
       "count": 4,
-      "suggested_new": "it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@",
+      "new_skeleton": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@",
       "count": 4,
-      "suggested_new": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> () == self@.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> () == self@.<ident> ()",
+      "new_skeleton": "it.seq().<ident> () == self@.<ident> ()",
       "count": 3,
-      "suggested_new": "it.seq().<ident> () == self@.<ident> ()"
+      "files": 2
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "status": "T3",
+      "old_skeleton": "it@.1 == old (it)@.1",
+      "new_skeleton": "it.seq() == old (it)@.1,",
       "count": 2,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>"
+      "files": 2
     },
     {
-      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
       "count": 2,
-      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>"
+      "files": 2
     },
     {
-      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>",
+      "new_skeleton": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>",
       "count": 2,
-      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)"
+      "files": 2
     },
     {
-      "skeleton": "<ident>@.<ident> () <= it@.0",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)",
+      "new_skeleton": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)",
       "count": 2,
-      "suggested_new": "<ident>@.<ident> () <= it.index()"
+      "files": 2
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@.<ident> () <= it@.0",
+      "new_skeleton": "<ident>@.<ident> () <= it.index()",
       "count": 2,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>"
+      "files": 2
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
       "count": 2,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)"
+      "files": 2
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)",
       "count": 2,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)"
+      "files": 2
     },
     {
-      "skeleton": "it@.0 == old (it)@.0",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)",
       "count": 2,
-      "suggested_new": "it.index() == old (it)@.0"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.0 == old (it)@.0",
+      "new_skeleton": "it.index() == old (it)@.0",
       "count": 2,
-      "suggested_new": "it.seq().<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()"
+      "files": 2
     },
     {
-      "skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()",
+      "new_skeleton": "it.seq().<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()",
       "count": 2,
-      "suggested_new": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>",
+      "new_skeleton": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>",
       "count": 2,
-      "suggested_new": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@"
+      "files": 1
     },
     {
-      "skeleton": "<ident> ==> it@.0 >= <ident>.<ident> ()",
+      "status": "U-OTHER",
+      "old_skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@",
+      "new_skeleton": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@",
+      "count": 2,
+      "files": 1
+    },
+    {
+      "status": "T3",
+      "old_skeleton": "it@.1 == self.<ident>@",
+      "new_skeleton": "it.seq() == self.data@,",
+      "count": 1,
+      "files": 1
+    },
+    {
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> ==> it@.0 >= <ident>.<ident> ()",
+      "new_skeleton": "<ident> ==> it.index() >= <ident>.<ident> ()",
       "count": 1,
-      "suggested_new": "<ident> ==> it.index() >= <ident>.<ident> ()"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== <ident>.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== <ident>.<lit>",
+      "new_skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== <ident>.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== <ident>.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "new_skeleton": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "new_skeleton": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | <ident> : <ident> | 0 <= <ident> < it@.0 ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | <ident> : <ident> | 0 <= <ident> < it@.0 ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)",
+      "new_skeleton": "<ident> | <ident> : <ident> | 0 <= <ident> < it.index() ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)",
       "count": 1,
-      "suggested_new": "<ident> | <ident> : <ident> | 0 <= <ident> < it.index() ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it@.1 [j])@))",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it@.1 [j])@))",
+      "new_skeleton": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it.seq() [j])@))",
       "count": 1,
-      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it.seq() [j])@))"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "new_skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
       "count": 1,
-      "suggested_new": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+      "files": 1
     },
     {
-      "skeleton": "<ident>.<ident> () == it@.0",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>.<ident> () == it@.0",
+      "new_skeleton": "<ident>.<ident> () == it.index()",
       "count": 1,
-      "suggested_new": "<ident>.<ident> () == it.index()"
+      "files": 1
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
       "count": 1,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))"
+      "files": 1
     },
     {
-      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "status": "U-OTHER",
+      "old_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "new_skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
       "count": 1,
-      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))"
+      "files": 1
     }
   ],
   "chain_edges": [
