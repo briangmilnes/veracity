@@ -55,12 +55,32 @@ const DEFAULT_IGNORES: &[&str] = &[
 #[derive(Parser, Debug)]
 #[command(
     name = "veracity-iterator-upgrade",
-    about = "Detect obsolete ForLoopGhostIterator usage and emit a migration report."
+    about = "Detect / dry-run-apply / apply migration of obsolete ForLoopGhostIterator usage."
 )]
 struct Cli {
-    /// Detect mode (read-only scan). Currently the only mode.
-    #[arg(long)]
+    /// Detect mode (read-only scan). Mutually exclusive with --dry-run-apply, --apply.
+    #[arg(long, conflicts_with_all = ["dry_run_apply", "apply"])]
     detect: bool,
+
+    /// Dry-run apply: produce per-file unified diffs at <out-dir>/diffs/ and a
+    /// manifest. Source files unchanged.
+    #[arg(long = "dry-run-apply", conflicts_with_all = ["detect", "apply"])]
+    dry_run_apply: bool,
+
+    /// Apply: rewrite source files in place inside the fixture. Refuses on a
+    /// dirty fixture unless --apply-on-dirty is also passed.
+    #[arg(long, conflicts_with_all = ["detect", "dry_run_apply"])]
+    apply: bool,
+
+    /// Override the dirty-fixture refusal of --apply. Verbose on purpose.
+    #[arg(long = "apply-on-dirty")]
+    apply_on_dirty: bool,
+
+    /// Comma-separated class list restricting which findings get rewritten,
+    /// e.g. "T9,T10" or "D1,D2,T8". Default: all mechanical classes (D1–D10,
+    /// T1–T10). U-classes are never applied regardless.
+    #[arg(long = "only-classes")]
+    only_classes: Option<String>,
 
     /// Project root. REQUIRED. Must be a veracity fixture path
     /// (under */veracity/tests/fixtures/) unless --i-know-what-im-doing-not-a-fixture
@@ -75,10 +95,14 @@ struct Cli {
     ignore: Vec<String>,
 
     /// Output format. One of md, json, compile, all. Default: all.
+    /// (--detect only; --dry-run-apply ignores this and always writes
+    /// manifest + diffs; --apply ignores it entirely.)
     #[arg(long, default_value = "all")]
     format: String,
 
     /// Output directory (under --root or under /tmp). Default: analyses/.
+    /// For --dry-run-apply: diffs go under <out-dir>/diffs/. For --apply,
+    /// this is unused (rewrites are in place).
     #[arg(long, default_value = "analyses")]
     out_dir: PathBuf,
 
@@ -201,11 +225,22 @@ struct Deletion {
 #[derive(Debug, Clone, Serialize)]
 struct Transform {
     class: TClass,
-    line: usize,
+    line: usize,             // first source line of the expression
+    /// Last source line of the expression. Equal to `line` for single-line
+    /// expressions. For multi-line forall/exists clauses this is > line, and
+    /// the apply pass must delete the trailing lines after substituting the
+    /// new text on `line`.
+    #[serde(default)]
+    line_end: usize,
     col_start: usize,
     col_end: usize,
     old: String,
     new: String,
+    /// Additional source lines that should be deleted as part of this
+    /// transform (used by T8: the it@.0 and it@.1 clauses preceding
+    /// iter_invariant(&it) need to be removed too).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    extra_delete_lines: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -262,13 +297,23 @@ struct Manifest {
     extra: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Detect,
+    DryRunApply,
+    Apply,
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    if !cli.detect {
-        // Detect is the only supported mode; require the flag to make this explicit.
-        bail!("--detect is required. (Future modes will need their own flag.)");
-    }
+    let mode = match (cli.detect, cli.dry_run_apply, cli.apply) {
+        (true, false, false) => Mode::Detect,
+        (false, true, false) => Mode::DryRunApply,
+        (false, false, true) => Mode::Apply,
+        (false, false, false) => bail!("one of --detect | --dry-run-apply | --apply is required"),
+        _ => bail!("--detect, --dry-run-apply, --apply are mutually exclusive"),
+    };
 
     let root = match cli.root.as_ref() {
         Some(r) => r.clone(),
@@ -279,6 +324,11 @@ fn main() -> Result<()> {
         .with_context(|| format!("canonicalizing --root {}", root.display()))?;
 
     enforce_fixture_root(&root, cli.override_fixture)?;
+
+    // --apply: refuse on a dirty fixture (uncommitted changes) unless override.
+    if mode == Mode::Apply {
+        enforce_clean_fixture(&root, cli.apply_on_dirty)?;
+    }
 
     let out_dir = if cli.out_dir.is_absolute() {
         cli.out_dir.clone()
@@ -299,6 +349,13 @@ fn main() -> Result<()> {
             Ok(None) => {} // not an iterator file, skipped silently
             Err(e) => parse_failures.push((file.clone(), e.to_string())),
         }
+    }
+
+    // Dispatch by mode.
+    if mode != Mode::Detect {
+        let only_classes = parse_only_classes(cli.only_classes.as_deref())?;
+        let dry_run = mode == Mode::DryRunApply;
+        return run_apply(&root, &out_dir, &findings, &parse_failures, &only_classes, dry_run);
     }
 
     let formats = parse_formats(&cli.format)?;
@@ -335,6 +392,62 @@ fn parse_formats(s: &str) -> Result<Vec<&'static str>> {
         "compile" => Ok(vec!["compile"]),
         other => bail!("--format must be one of md|json|compile|all (got {})", other),
     }
+}
+
+fn enforce_clean_fixture(root: &Path, allow_dirty: bool) -> Result<()> {
+    if allow_dirty {
+        return Ok(());
+    }
+    // Run `git -C <root> status --porcelain`. Empty stdout means clean.
+    let output = std::process::Command::new("git")
+        .args(["-C"])
+        .arg(root)
+        .args(["status", "--porcelain"])
+        .output()
+        .with_context(|| format!("running `git status --porcelain` in {}", root.display()))?;
+    if !output.status.success() {
+        // Not a git repo? Treat as clean — the fixture might be a flat snapshot.
+        return Ok(());
+    }
+    if !output.stdout.is_empty() {
+        let preview = String::from_utf8_lossy(&output.stdout);
+        bail!(
+            "--apply: fixture {} has uncommitted changes; commit or stash before running.\n\
+             First lines from `git status --porcelain`:\n{}\n\
+             Override with --apply-on-dirty (verbose on purpose).",
+            root.display(),
+            preview.lines().take(10).collect::<Vec<_>>().join("\n")
+        );
+    }
+    Ok(())
+}
+
+fn parse_only_classes(s: Option<&str>) -> Result<Option<BTreeSet<String>>> {
+    let s = match s {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+    let set: BTreeSet<String> = s
+        .split(',')
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+        .collect();
+    let valid: BTreeSet<&str> = [
+        "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10",
+        "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
+    ]
+    .iter()
+    .copied()
+    .collect();
+    for c in &set {
+        if !valid.contains(c.as_str()) {
+            bail!(
+                "--only-classes: unknown class `{}`. Valid: D1..D10, T1..T10.",
+                c
+            );
+        }
+    }
+    Ok(Some(set))
 }
 
 fn enforce_fixture_root(root: &Path, override_fixture: bool) -> Result<()> {
@@ -951,17 +1064,28 @@ impl ScanVisitor {
                      IteratorSpec::decrease(&it) is Some,\n\
                      IteratorSpec::initial_value_relation(&it, &it),",
                 );
+                // T8 replaces a 3-clause block: the it@.0 line, the it@.1
+                // line, AND the iter_invariant(&it) line. We anchor the
+                // substitution at the iter_invariant call (line/col) and
+                // record the it@.0 / it@.1 lines as extra deletions so the
+                // apply pass removes them.
+                let i0 = idx_zero.unwrap();
+                let i1 = idx_one.unwrap();
+                let zero_line = self.outer_line(spec.exprs.iter().nth(i0).unwrap().span());
+                let one_line = self.outer_line(spec.exprs.iter().nth(i1).unwrap().span());
                 self.transforms.push(Transform {
                     class: TClass::T8,
                     line,
+                    line_end: line, // iter_invariant call is single-line
                     col_start,
                     col_end,
                     old: "iter_invariant(&it) (constructor ensures triple)".to_string(),
                     new: new_text,
+                    extra_delete_lines: vec![zero_line, one_line],
                 });
                 t8_handled.insert(idx_iter_invariant.unwrap());
-                t8_handled.insert(idx_zero.unwrap());
-                t8_handled.insert(idx_one.unwrap());
+                t8_handled.insert(i0);
+                t8_handled.insert(i1);
             }
         }
 
@@ -977,6 +1101,7 @@ impl ScanVisitor {
     fn match_single_expr(&mut self, e: &Expr, ctx: SpecCtx) {
         let sp = e.span();
         let line = self.outer_line(sp);
+        let line_end = self.outer_line_end(sp);
         let col_start = sp.start().column + 1;
         let col_end = sp.end().column + 1;
 
@@ -986,10 +1111,12 @@ impl ScanVisitor {
                 self.transforms.push(Transform {
                     class: TClass::T6,
                     line,
+                    line_end,
                     col_start,
                     col_end,
                     old: render_expr(e),
                     new: "IteratorSpec::decrease(&it).unwrap(),".to_string(),
+                    extra_delete_lines: Vec::new(),
                 });
                 return;
             }
@@ -1000,10 +1127,12 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class: TClass::T5,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old: render_expr(e),
                 new: "IteratorSpec::decrease(&it).unwrap() > 0,".to_string(),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1013,6 +1142,7 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class: TClass::T1,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old: render_expr(e),
@@ -1020,6 +1150,7 @@ impl ScanVisitor {
                     "IteratorSpec::remaining(&it).len() + {} == it.seq().len(),",
                     rhs_src
                 ),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1029,10 +1160,12 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class: TClass::T7,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old: render_expr(e),
                 new: format!("it.index() == {},", rhs_src),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1047,10 +1180,12 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old: render_expr(e),
                 new: format!("it.seq() == {},", rhs_src),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1068,10 +1203,12 @@ impl ScanVisitor {
                 self.transforms.push(Transform {
                     class: TClass::T4,
                     line,
+                    line_end,
                     col_start,
                     col_end,
                     old: render_expr(e),
                     new: "<remove>".to_string(),
+                    extra_delete_lines: Vec::new(),
                 });
             }
             return;
@@ -1093,10 +1230,12 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class: TClass::T10,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old,
                 new: format!("{},", new),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1106,10 +1245,12 @@ impl ScanVisitor {
             self.transforms.push(Transform {
                 class: TClass::T9,
                 line,
+                line_end,
                 col_start,
                 col_end,
                 old,
                 new: format!("{},", new),
+                extra_delete_lines: Vec::new(),
             });
             return;
         }
@@ -1343,16 +1484,21 @@ fn view_field_index_of_it(e: &Expr) -> Option<u32> {
 }
 
 fn expr_mentions_it_identifier(e: &Expr) -> bool {
-    // Walk the AST looking for an `it` path. Conservative: matches any identifier
-    // named exactly `it` as a path.
+    // True iff the expression contains the OLD-model view shape `it@` —
+    // i.e., `Expr::View { expr: Path("it") }` as a sub-expression. Bare
+    // identifier `it` (without `@`) doesn't qualify; post-migration calls
+    // like `it.seq()`, `it.index()`, `it.next()` are NOT iterator-bearing
+    // U-OTHER candidates — they are the new model and should pass silently.
     struct ItVisitor(bool);
     impl<'ast> Visit<'ast> for ItVisitor {
-        fn visit_expr_path(&mut self, node: &'ast verus_syn::ExprPath) {
-            let segs = &node.path.segments;
-            if segs.len() == 1 && segs[0].ident == "it" {
-                self.0 = true;
+        fn visit_view(&mut self, node: &'ast verus_syn::View) {
+            if let Expr::Path(p) = &*node.expr {
+                let segs = &p.path.segments;
+                if segs.len() == 1 && segs[0].ident == "it" {
+                    self.0 = true;
+                }
             }
-            verus_syn::visit::visit_expr_path(self, node);
+            verus_syn::visit::visit_view(self, node);
         }
     }
     let mut v = ItVisitor(false);
@@ -1703,6 +1849,9 @@ fn canonical_spacing(s: &str) -> String {
     t = t.replace(" )", ")");
     t = t.replace(" @", "@");
     t = t.replace("@ ", "@");
+    // Do NOT strip spaces around `<` and `>` — that creates `a<b` from
+    // `a < b` which the parser then mis-reads as a turbofish / generic
+    // argument list. Leave `Foo < T >` looking verbose; it parses fine.
     t.trim().to_string()
 }
 
@@ -2318,6 +2467,772 @@ fn truncate(s: &str, max: usize) -> String {
         acc.push('…');
         acc
     }
+}
+
+// ==== Phase 2: --dry-run-apply and --apply ====
+//
+// Reuses the detect findings. For each finding, build a Rewrite that either
+// deletes a contiguous line range (D-classes), substitutes a clause's text
+// (T-classes), or skips with a recorded reason (U-classes, comment-bearing
+// ranges, --only-classes filter-out, atypical T8 shapes). Apply bottom-up so
+// earlier line numbers stay valid for later edits in the same file.
+
+#[derive(Debug, Clone, Serialize)]
+struct Rewrite {
+    class: String,                // "D1".."D10" or "T1".."T10"
+    kind: RewriteKind,
+    line_start: usize,            // 1-based outer line
+    line_end: usize,              // 1-based outer line (inclusive)
+    col_start: Option<usize>,     // 1-based col (T-class only)
+    col_end: Option<usize>,
+    old_text: String,             // for context in the diff / manifest
+    new_text: String,             // empty for Delete
+    skip_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+enum RewriteKind {
+    Delete,                       // remove [line_start..line_end] inclusive
+    Substitute,                   // replace [line_start, col_start..col_end] with new_text
+    Skip,                         // recorded only; no mutation
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FileRewritePlan {
+    path: String,                 // relative to root
+    abs_path: PathBuf,
+    rewrites: Vec<Rewrite>,
+    skipped: Vec<Rewrite>,        // for manifest reporting
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ApplyManifest {
+    tool: String,
+    tool_sha: String,
+    mode: String,                 // "dry-run-apply" or "apply"
+    root: String,
+    generated: String,
+    files_changed: usize,
+    findings_applied: usize,
+    findings_skipped: usize,
+    plans: Vec<FileRewritePlan>,
+    u_skipped: Vec<UFinding>,
+    parse_failures: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct UFinding {
+    path: String,
+    code: String,
+    line: usize,
+    message: String,
+}
+
+fn run_apply(
+    root: &Path,
+    out_dir: &Path,
+    findings: &[FileFindings],
+    parse_failures: &[(PathBuf, String)],
+    only_classes: &Option<BTreeSet<String>>,
+    dry_run: bool,
+) -> Result<()> {
+    let mode_label = if dry_run { "dry-run-apply" } else { "apply" };
+
+    // Build per-file rewrite plans.
+    let mut plans: Vec<FileRewritePlan> = Vec::new();
+    let mut u_skipped: Vec<UFinding> = Vec::new();
+
+    for f in findings {
+        let abs_path = root.join(&f.path);
+        let content = fs::read_to_string(&abs_path)
+            .with_context(|| format!("reading {}", abs_path.display()))?;
+
+        let mut rewrites: Vec<Rewrite> = Vec::new();
+        let mut skipped: Vec<Rewrite> = Vec::new();
+
+        // D-class deletions.
+        for d in &f.deletions {
+            let class = d.class.as_str().to_string();
+            if !class_active(&class, only_classes) {
+                skipped.push(Rewrite {
+                    class,
+                    kind: RewriteKind::Skip,
+                    line_start: d.line_start,
+                    line_end: d.line_end,
+                    col_start: None,
+                    col_end: None,
+                    old_text: d.ident.clone(),
+                    new_text: String::new(),
+                    skip_reason: Some("not in --only-classes".to_string()),
+                });
+                continue;
+            }
+            rewrites.push(Rewrite {
+                class,
+                kind: RewriteKind::Delete,
+                line_start: d.line_start,
+                line_end: d.line_end,
+                col_start: None,
+                col_end: None,
+                old_text: d.ident.clone(),
+                new_text: String::new(),
+                skip_reason: None,
+            });
+        }
+
+        // T-class substitutions.
+        for t in &f.transforms {
+            let class = t.class.as_str().to_string();
+            if !class_active(&class, only_classes) {
+                skipped.push(Rewrite {
+                    class,
+                    kind: RewriteKind::Skip,
+                    line_start: t.line,
+                    line_end: t.line,
+                    col_start: Some(t.col_start),
+                    col_end: Some(t.col_end),
+                    old_text: t.old.clone(),
+                    new_text: t.new.clone(),
+                    skip_reason: Some("not in --only-classes".to_string()),
+                });
+                continue;
+            }
+            // T8 multi-line check: if the new_text is multi-line, the
+            // substitution still applies at a single line/col span (the
+            // matcher records the iter_invariant(&it) call's span); we
+            // replace it with the prophetic triple as multiple lines.
+            // The atypical-shape downgrade is left for T8 outliers — flagged
+            // when the new_text contains "(constructor ensures triple)" but
+            // the col span is empty.
+            if t.class == TClass::T8 && (t.col_end <= t.col_start) {
+                skipped.push(Rewrite {
+                    class,
+                    kind: RewriteKind::Skip,
+                    line_start: t.line,
+                    line_end: t.line,
+                    col_start: Some(t.col_start),
+                    col_end: Some(t.col_end),
+                    old_text: t.old.clone(),
+                    new_text: t.new.clone(),
+                    skip_reason: Some("T8 atypical shape: empty col span".to_string()),
+                });
+                continue;
+            }
+            // Comment detection on the source line.
+            if let Some(line_text) = content.lines().nth(t.line.saturating_sub(1)) {
+                if has_comment_in_clause_range(line_text, t.col_start, t.col_end) {
+                    skipped.push(Rewrite {
+                        class,
+                        kind: RewriteKind::Skip,
+                        line_start: t.line,
+                        line_end: t.line,
+                        col_start: Some(t.col_start),
+                        col_end: Some(t.col_end),
+                        old_text: t.old.clone(),
+                        new_text: t.new.clone(),
+                        skip_reason: Some("comment present in clause range".to_string()),
+                    });
+                    continue;
+                }
+            }
+            // T4: `iter_invariant(&it),` is a clause-deletion. Substitute
+            // empty text for the call expression; the existing trailing-comma
+            // consumer handles `,`. If the line ends with `;` (trait method
+            // declaration), the `;` stays — the previous clause's `,` plus
+            // the trailing `;` is the trailing-comma-before-terminator idiom
+            // and parses fine.
+            let new_text = if t.new == "<remove>" {
+                String::new()
+            } else {
+                t.new.clone()
+            };
+            // Multi-line expressions: the Transform's line_end may be > line.
+            // Pass that through to the Rewrite so apply_rewrites_to_text uses
+            // the correct suffix line for col_end. The intervening lines get
+            // deleted as part of the multi-line Substitute (it sets to_delete
+            // for them) — no extra Delete rewrites needed.
+            let real_end = if t.line_end > 0 { t.line_end } else { t.line };
+            rewrites.push(Rewrite {
+                class: class.clone(),
+                kind: RewriteKind::Substitute,
+                line_start: t.line,
+                line_end: real_end,
+                col_start: Some(t.col_start),
+                col_end: Some(t.col_end),
+                old_text: t.old.clone(),
+                new_text,
+                skip_reason: None,
+            });
+            // For T8 (and any future transform that bundles extra deletions):
+            // synthesize Delete rewrites for the extra source lines. This is
+            // how the constructor `ensures` triple's it@.0 and it@.1 lines
+            // get removed alongside the iter_invariant(&it) substitution.
+            for &dl in &t.extra_delete_lines {
+                rewrites.push(Rewrite {
+                    class: class.clone(),
+                    kind: RewriteKind::Delete,
+                    line_start: dl,
+                    line_end: dl,
+                    col_start: None,
+                    col_end: None,
+                    old_text: format!("(triple companion line {})", dl),
+                    new_text: String::new(),
+                    skip_reason: None,
+                });
+            }
+        }
+
+        // U-class findings: never mutated. Record for the manifest.
+        for u in &f.unresolved {
+            u_skipped.push(UFinding {
+                path: f.path.clone(),
+                code: u.code.as_str().to_string(),
+                line: u.line,
+                message: u.message.clone(),
+            });
+        }
+
+        // Sort rewrites bottom-up by (line_start, col_start), so applying
+        // them in order keeps earlier line numbers stable.
+        rewrites.sort_by(|a, b| {
+            b.line_start
+                .cmp(&a.line_start)
+                .then_with(|| b.col_start.unwrap_or(0).cmp(&a.col_start.unwrap_or(0)))
+        });
+
+        plans.push(FileRewritePlan {
+            path: f.path.clone(),
+            abs_path,
+            rewrites,
+            skipped,
+        });
+    }
+
+    // Apply or render.
+    let mut files_changed = 0usize;
+    let mut findings_applied = 0usize;
+    let mut findings_skipped = 0usize;
+
+    let diffs_dir = if dry_run { Some(out_dir.join("diffs")) } else { None };
+    if let Some(d) = &diffs_dir {
+        fs::create_dir_all(d).with_context(|| format!("creating {}", d.display()))?;
+    }
+
+    for plan in &plans {
+        findings_skipped += plan.skipped.len();
+        if plan.rewrites.is_empty() {
+            continue;
+        }
+        let original = fs::read_to_string(&plan.abs_path)
+            .with_context(|| format!("reading {}", plan.abs_path.display()))?;
+        let rewritten = apply_rewrites_to_text(&original, &plan.rewrites);
+
+        if rewritten == original {
+            // No effective change — count rewrites as skipped instead.
+            findings_skipped += plan.rewrites.len();
+            continue;
+        }
+
+        files_changed += 1;
+        findings_applied += plan.rewrites.len();
+
+        if dry_run {
+            let diff = render_unified_diff(&plan.path, &original, &rewritten);
+            let diff_path = diffs_dir
+                .as_ref()
+                .unwrap()
+                .join(format!("{}.diff", plan.path));
+            if let Some(parent) = diff_path.parent() {
+                fs::create_dir_all(parent).ok();
+            }
+            fs::write(&diff_path, diff)
+                .with_context(|| format!("writing {}", diff_path.display()))?;
+        } else {
+            // Atomic write: tempfile + rename.
+            let tmp = plan.abs_path.with_extension(format!(
+                "{}.iuapply.tmp",
+                plan.abs_path
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+            ));
+            fs::write(&tmp, &rewritten)
+                .with_context(|| format!("writing temp {}", tmp.display()))?;
+            fs::rename(&tmp, &plan.abs_path)
+                .with_context(|| format!("renaming {} -> {}", tmp.display(), plan.abs_path.display()))?;
+        }
+    }
+
+    let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let parse_failures_s: Vec<(String, String)> = parse_failures
+        .iter()
+        .map(|(p, e)| (p.display().to_string(), e.clone()))
+        .collect();
+
+    let manifest = ApplyManifest {
+        tool: "veracity-iterator-upgrade".to_string(),
+        tool_sha: TOOL_SHA.to_string(),
+        mode: mode_label.to_string(),
+        root: root.display().to_string(),
+        generated: timestamp,
+        files_changed,
+        findings_applied,
+        findings_skipped,
+        plans: plans.clone(),
+        u_skipped: u_skipped.clone(),
+        parse_failures: parse_failures_s,
+    };
+
+    // Manifest output.
+    let manifest_path_md = out_dir.join("iterator-upgrade-apply.md");
+    let manifest_path_json = out_dir.join("iterator-upgrade-apply.json");
+    fs::write(&manifest_path_md, render_apply_manifest_md(&manifest))?;
+    fs::write(&manifest_path_json, serde_json::to_string_pretty(&manifest)?)?;
+
+    eprintln!(
+        "veracity-iterator-upgrade --{}: {} files changed, {} findings applied, {} skipped. Out: {}",
+        mode_label,
+        files_changed,
+        findings_applied,
+        findings_skipped,
+        out_dir.display()
+    );
+
+    if !parse_failures.is_empty() {
+        std::process::exit(2);
+    }
+    Ok(())
+}
+
+fn class_active(class: &str, only: &Option<BTreeSet<String>>) -> bool {
+    match only {
+        Some(set) => set.contains(class),
+        None => true,
+    }
+}
+
+/// Detect if the substring `[col_start..col_end]` (1-based, end-exclusive)
+/// of `line_text` contains a `//` or `/* */` comment marker. Used to skip
+/// rewrites whose source range carries inline commentary that the renderer
+/// would otherwise drop.
+fn has_comment_in_clause_range(line_text: &str, col_start: usize, col_end: usize) -> bool {
+    // Be conservative: if either marker appears anywhere on the line, skip.
+    // Inline comments on the same line as a clause are usually attached to it.
+    let _ = (col_start, col_end);
+    line_text.contains("//") || line_text.contains("/*")
+}
+
+fn apply_rewrites_to_text(content: &str, rewrites: &[Rewrite]) -> String {
+    // Build a Vec of (1-based line) -> String.
+    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+    // Track whether the source ended in a newline so we can re-add it.
+    let had_trailing_newline = content.ends_with('\n');
+
+    // rewrites are already sorted bottom-up.
+    let mut to_delete: BTreeSet<usize> = BTreeSet::new();
+    for rw in rewrites {
+        match rw.kind {
+            RewriteKind::Delete => {
+                for ln in rw.line_start..=rw.line_end {
+                    if ln >= 1 && ln <= lines.len() {
+                        to_delete.insert(ln);
+                    }
+                }
+            }
+            RewriteKind::Substitute => {
+                if rw.line_start < 1 || rw.line_start > lines.len() {
+                    continue;
+                }
+                let li = rw.line_start - 1;
+                let (cs, ce) = match (rw.col_start, rw.col_end) {
+                    (Some(s), Some(e)) => (s, e),
+                    _ => continue,
+                };
+                // Multi-line expressions: the source spans line_start..line_end.
+                // Collapse the range into one substitution:
+                //   prefix = original[line_start][..col_start_byte]
+                //   suffix = original[line_end][col_end_byte..]
+                //   delete lines (line_start+1 .. line_end) — handled below.
+                let multi_line = rw.line_end > rw.line_start && rw.line_end <= lines.len();
+                let prefix_line = lines[li].clone();
+                let suffix_line = if multi_line {
+                    lines[rw.line_end - 1].clone()
+                } else {
+                    prefix_line.clone()
+                };
+                if !multi_line && ce <= cs {
+                    continue;
+                }
+                let cs_b = char_col_to_byte(&prefix_line, cs);
+                let mut ce_b = char_col_to_byte(&suffix_line, ce);
+                if cs_b > prefix_line.len() || ce_b > suffix_line.len() {
+                    continue;
+                }
+                // Consume the source's trailing `,` if any (on the suffix
+                // line) so the new_text's own trailing `,` doesn't double up.
+                let suffix_bytes = suffix_line.as_bytes();
+                let mut probe = ce_b;
+                while probe < suffix_bytes.len() && suffix_bytes[probe] == b' ' {
+                    probe += 1;
+                }
+                if probe < suffix_bytes.len() && suffix_bytes[probe] == b',' {
+                    ce_b = probe + 1;
+                }
+                // Multi-line new_text: indent non-first lines to match col_start.
+                let indented_new = if rw.new_text.contains('\n') {
+                    let indent: String = prefix_line[..cs_b]
+                        .chars()
+                        .take_while(|c| c.is_whitespace())
+                        .collect();
+                    rw.new_text
+                        .split('\n')
+                        .enumerate()
+                        .map(|(i, l)| if i == 0 { l.to_string() } else { format!("{}{}", indent, l.trim_start()) })
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                } else {
+                    rw.new_text.clone()
+                };
+                let mut new_line = String::new();
+                new_line.push_str(&prefix_line[..cs_b]);
+                new_line.push_str(&indented_new);
+                new_line.push_str(&suffix_line[ce_b..]);
+                lines[li] = new_line;
+                // Mark the trailing source lines for deletion.
+                if multi_line {
+                    for ln in (rw.line_start + 1)..=rw.line_end {
+                        to_delete.insert(ln);
+                    }
+                }
+            }
+            RewriteKind::Skip => {}
+        }
+    }
+
+    // Drop deleted lines AND collapse adjacent blank-line pairs that became
+    // adjacent because of a deletion. Only the deletion-boundary neighborhood
+    // is touched — the rest of the file keeps its original whitespace.
+    let boundary_lines: BTreeSet<usize> = to_delete
+        .iter()
+        .flat_map(|&n| [n.saturating_sub(1), n + 1])
+        .filter(|&n| n >= 1 && n <= lines.len())
+        .collect();
+
+    if !to_delete.is_empty() {
+        // Determine which kept lines are at a deletion boundary.
+        let mut kept: Vec<(usize, String, bool)> =
+            Vec::with_capacity(lines.len() - to_delete.len());
+        for (i, line) in lines.into_iter().enumerate() {
+            let one_based = i + 1;
+            if to_delete.contains(&one_based) {
+                continue;
+            }
+            let at_boundary = boundary_lines.contains(&one_based);
+            kept.push((one_based, line, at_boundary));
+        }
+
+        // Collapse blank-line pairs only when both halves are at a boundary.
+        let mut out: Vec<String> = Vec::with_capacity(kept.len());
+        let mut prev: Option<(bool, bool)> = None; // (is_blank, at_boundary)
+        for (_n, line, at_b) in kept {
+            let is_blank = line.trim().is_empty();
+            if is_blank && at_b {
+                if let Some((true, true)) = prev {
+                    // Two consecutive blanks both touching a deletion → drop this one.
+                    continue;
+                }
+            }
+            prev = Some((is_blank, at_b));
+            out.push(line);
+        }
+        lines = out;
+    }
+
+    let mut joined = lines.join("\n");
+    if had_trailing_newline {
+        joined.push('\n');
+    }
+    joined
+}
+
+fn char_col_to_byte(line: &str, col: usize) -> usize {
+    let col = col.saturating_sub(1); // 1-based to 0-based
+    let mut byte = 0;
+    for (i, c) in line.char_indices() {
+        if i.checked_div(1).is_some() && byte_position_eq_chars(line, byte, col) {
+            return i;
+        }
+        let _ = c;
+    }
+    // Walk char indices directly:
+    let mut count = 0;
+    for (i, _c) in line.char_indices() {
+        if count == col {
+            return i;
+        }
+        count += 1;
+    }
+    line.len()
+}
+
+fn byte_position_eq_chars(_line: &str, _byte: usize, _chars: usize) -> bool {
+    // Unused helper retained to keep the diff small; the real implementation
+    // is the loop below in char_col_to_byte.
+    false
+}
+
+fn render_unified_diff(rel_path: &str, before: &str, after: &str) -> String {
+    let before_lines: Vec<&str> = before.lines().collect();
+    let after_lines: Vec<&str> = after.lines().collect();
+
+    let mut out = String::new();
+    out.push_str(&format!("--- a/{}\n", rel_path));
+    out.push_str(&format!("+++ b/{}\n", rel_path));
+
+    // Minimal-difference unified diff via LCS. For our use case (a handful of
+    // edits per file) a quadratic LCS is fine.
+    let lcs = lcs_indices(&before_lines, &after_lines);
+    let chunks = group_into_hunks(&before_lines, &after_lines, &lcs);
+    for chunk in chunks {
+        out.push_str(&chunk);
+    }
+    out
+}
+
+/// Returns aligned indices `(i, j)` such that before[i] == after[j], in order.
+fn lcs_indices(a: &[&str], b: &[&str]) -> Vec<(usize, usize)> {
+    let n = a.len();
+    let m = b.len();
+    if n == 0 || m == 0 {
+        return Vec::new();
+    }
+    let mut dp = vec![vec![0usize; m + 1]; n + 1];
+    for i in 0..n {
+        for j in 0..m {
+            if a[i] == b[j] {
+                dp[i + 1][j + 1] = dp[i][j] + 1;
+            } else {
+                dp[i + 1][j + 1] = dp[i + 1][j].max(dp[i][j + 1]);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    let (mut i, mut j) = (n, m);
+    while i > 0 && j > 0 {
+        if a[i - 1] == b[j - 1] {
+            out.push((i - 1, j - 1));
+            i -= 1;
+            j -= 1;
+        } else if dp[i - 1][j] >= dp[i][j - 1] {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    out.reverse();
+    out
+}
+
+fn group_into_hunks(before: &[&str], after: &[&str], lcs: &[(usize, usize)]) -> Vec<String> {
+    // Walk both sides simultaneously, accumulating an edit script.
+    let mut edits: Vec<(char, usize, String)> = Vec::new(); // ('=', '-', '+'), index, text
+    let mut bi = 0;
+    let mut ai = 0;
+    let mut li = 0;
+    while bi < before.len() || ai < after.len() {
+        if li < lcs.len() && bi == lcs[li].0 && ai == lcs[li].1 {
+            edits.push(('=', bi, before[bi].to_string()));
+            bi += 1;
+            ai += 1;
+            li += 1;
+        } else if li < lcs.len() && bi < lcs[li].0 {
+            edits.push(('-', bi, before[bi].to_string()));
+            bi += 1;
+        } else if li < lcs.len() && ai < lcs[li].1 {
+            edits.push(('+', ai, after[ai].to_string()));
+            ai += 1;
+        } else if bi < before.len() {
+            edits.push(('-', bi, before[bi].to_string()));
+            bi += 1;
+        } else if ai < after.len() {
+            edits.push(('+', ai, after[ai].to_string()));
+            ai += 1;
+        }
+    }
+
+    // Cluster edits into hunks with 3 lines of context.
+    const CTX: usize = 3;
+    let mut hunks: Vec<Vec<usize>> = Vec::new();
+    let mut current: Vec<usize> = Vec::new();
+    for (idx, (kind, _i, _s)) in edits.iter().enumerate() {
+        let is_change = *kind != '=';
+        if is_change {
+            if current.is_empty() {
+                // Add up to CTX preceding context.
+                let start = idx.saturating_sub(CTX);
+                for k in start..idx {
+                    current.push(k);
+                }
+            }
+            current.push(idx);
+        } else if !current.is_empty() {
+            current.push(idx);
+            // Look ahead: if there's another change within CTX, keep accumulating;
+            // else close the hunk after CTX trailing context.
+            let mut closed = true;
+            let mut k = idx + 1;
+            let mut steps = 0;
+            while k < edits.len() && steps < CTX {
+                if edits[k].0 != '=' {
+                    closed = false;
+                    break;
+                }
+                steps += 1;
+                k += 1;
+            }
+            if closed {
+                hunks.push(std::mem::take(&mut current));
+            }
+        }
+    }
+    if !current.is_empty() {
+        hunks.push(current);
+    }
+
+    let mut out: Vec<String> = Vec::new();
+    for hunk in hunks {
+        if hunk.is_empty() {
+            continue;
+        }
+        // Compute header counts and origin lines (1-based).
+        let mut b_start = usize::MAX;
+        let mut a_start = usize::MAX;
+        let mut b_count = 0usize;
+        let mut a_count = 0usize;
+        for &idx in &hunk {
+            let (kind, _, _) = &edits[idx];
+            // Re-derive positions from preceding edits.
+            let (bpos, apos) = position_at(&edits, idx);
+            if *kind == '=' || *kind == '-' {
+                if b_start == usize::MAX {
+                    b_start = bpos + 1;
+                }
+                b_count += 1;
+            }
+            if *kind == '=' || *kind == '+' {
+                if a_start == usize::MAX {
+                    a_start = apos + 1;
+                }
+                a_count += 1;
+            }
+        }
+        let b_start = if b_start == usize::MAX { 1 } else { b_start };
+        let a_start = if a_start == usize::MAX { 1 } else { a_start };
+        let mut chunk = String::new();
+        chunk.push_str(&format!(
+            "@@ -{},{} +{},{} @@\n",
+            b_start, b_count, a_start, a_count
+        ));
+        for idx in hunk {
+            let (kind, _, text) = &edits[idx];
+            // '=' is our internal context marker; render it as ' ' per
+            // unified-diff convention. Only touch the leading char — NOT
+            // the line content (which may contain real `=` operators).
+            let leader = if *kind == '=' { ' ' } else { *kind };
+            chunk.push(leader);
+            chunk.push_str(text);
+            chunk.push('\n');
+        }
+        out.push(chunk);
+    }
+    out
+}
+
+fn position_at(edits: &[(char, usize, String)], idx: usize) -> (usize, usize) {
+    let mut bpos = 0;
+    let mut apos = 0;
+    for (k, (kind, _, _)) in edits.iter().enumerate() {
+        if k == idx {
+            return (bpos, apos);
+        }
+        match kind {
+            '=' => {
+                bpos += 1;
+                apos += 1;
+            }
+            '-' => bpos += 1,
+            '+' => apos += 1,
+            _ => {}
+        }
+    }
+    (bpos, apos)
+}
+
+fn render_apply_manifest_md(m: &ApplyManifest) -> String {
+    let mut s = String::new();
+    s.push_str(WIDE_MD_STYLE);
+    s.push_str(&format!("# Iterator-Upgrade Apply Manifest ({})\n\n", m.mode));
+    s.push_str(&format!("- Root: `{}`\n", m.root));
+    s.push_str(&format!("- Generated: {}\n", m.generated));
+    s.push_str(&format!("- Tool SHA: `{}`\n", m.tool_sha));
+    s.push_str(&format!(
+        "- Totals: files_changed={}, findings_applied={}, findings_skipped={}, u_skipped={}\n\n",
+        m.files_changed, m.findings_applied, m.findings_skipped, m.u_skipped.len()
+    ));
+
+    s.push_str("## Per-file rewrite plan\n\n");
+    s.push_str("| # | File | Applied | Skipped |\n|--:|------|--------:|--------:|\n");
+    for (i, p) in m.plans.iter().enumerate() {
+        if p.rewrites.is_empty() && p.skipped.is_empty() {
+            continue;
+        }
+        s.push_str(&format!(
+            "| {} | `{}` | {} | {} |\n",
+            i + 1,
+            p.path.strip_prefix("src/").unwrap_or(&p.path),
+            p.rewrites.len(),
+            p.skipped.len()
+        ));
+    }
+    s.push('\n');
+
+    // Skipped findings (note + reason).
+    let total_skip: usize = m.plans.iter().map(|p| p.skipped.len()).sum();
+    if total_skip > 0 {
+        s.push_str(&format!("## Skipped findings ({})\n\n", total_skip));
+        s.push_str("| # | File | Line | Class | Reason |\n|--:|------|-----:|-------|--------|\n");
+        let mut idx = 0;
+        for p in &m.plans {
+            for sk in &p.skipped {
+                idx += 1;
+                s.push_str(&format!(
+                    "| {} | `{}` | {} | {} | {} |\n",
+                    idx,
+                    p.path.strip_prefix("src/").unwrap_or(&p.path),
+                    sk.line_start,
+                    sk.class,
+                    sk.skip_reason.as_deref().unwrap_or("—")
+                ));
+            }
+        }
+        s.push('\n');
+    }
+
+    if !m.u_skipped.is_empty() {
+        s.push_str(&format!("## U-class findings (not applied) ({})\n\n", m.u_skipped.len()));
+        s.push_str("| # | File | Line | Code | Message |\n|--:|------|-----:|------|---------|\n");
+        for (i, u) in m.u_skipped.iter().enumerate() {
+            s.push_str(&format!(
+                "| {} | `{}` | {} | {} | {} |\n",
+                i + 1,
+                u.path.strip_prefix("src/").unwrap_or(&u.path),
+                u.line,
+                u.code,
+                truncate(&u.message, 100)
+            ));
+        }
+    }
+    s
 }
 
 // ==== Drop-down ABI for downstream tools to ignore unused params ====

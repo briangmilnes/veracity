@@ -1,9 +1,9 @@
 {
   "tool": "veracity-iterator-upgrade",
-  "tool_sha": "3b75fc744d1a4c714b34c3993380f3537f864453",
+  "tool_sha": "c7b6b3290045b5a3e8810a94c974171b6a2875e3",
   "mode": "detect",
   "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
-  "generated": "2026-05-23T17:07:05Z",
+  "generated": "2026-05-23T18:47:56Z",
   "manifest": {
     "inventory_path": null,
     "inventory_count": null,
@@ -95,6 +95,7 @@
         {
           "class": "T1",
           "line": 235,
+          "line_end": 235,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -103,6 +104,7 @@
         {
           "class": "T10",
           "line": 236,
+          "line_end": 237,
           "col_start": 17,
           "col_end": 95,
           "old": "it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)",
@@ -111,6 +113,7 @@
         {
           "class": "T10",
           "line": 238,
+          "line_end": 238,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -119,6 +122,7 @@
         {
           "class": "T4",
           "line": 239,
+          "line_end": 239,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -127,6 +131,7 @@
         {
           "class": "T1",
           "line": 616,
+          "line_end": 616,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -135,6 +140,7 @@
         {
           "class": "T10",
           "line": 617,
+          "line_end": 618,
           "col_start": 17,
           "col_end": 95,
           "old": "it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)",
@@ -143,6 +149,7 @@
         {
           "class": "T10",
           "line": 619,
+          "line_end": 619,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -243,6 +250,7 @@
         {
           "class": "T1",
           "line": 156,
+          "line_end": 156,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -251,6 +259,7 @@
         {
           "class": "T10",
           "line": 157,
+          "line_end": 157,
           "col_start": 17,
           "col_end": 72,
           "old": "it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@",
@@ -259,6 +268,7 @@
         {
           "class": "T10",
           "line": 158,
+          "line_end": 158,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -267,6 +277,7 @@
         {
           "class": "T4",
           "line": 159,
+          "line_end": 159,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -275,6 +286,7 @@
         {
           "class": "T1",
           "line": 408,
+          "line_end": 408,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -283,6 +295,7 @@
         {
           "class": "T10",
           "line": 409,
+          "line_end": 409,
           "col_start": 17,
           "col_end": 72,
           "old": "it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@",
@@ -291,6 +304,7 @@
         {
           "class": "T10",
           "line": 410,
+          "line_end": 410,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -391,6 +405,7 @@
         {
           "class": "T1",
           "line": 162,
+          "line_end": 162,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -399,6 +414,7 @@
         {
           "class": "T10",
           "line": 163,
+          "line_end": 163,
           "col_start": 17,
           "col_end": 63,
           "old": "it@.1.map (| i : int, k : T | k@).to_set () == self@",
@@ -407,6 +423,7 @@
         {
           "class": "T10",
           "line": 164,
+          "line_end": 164,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -415,6 +432,7 @@
         {
           "class": "T10",
           "line": 165,
+          "line_end": 165,
           "col_start": 17,
           "col_end": 94,
           "old": "forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)",
@@ -423,6 +441,7 @@
         {
           "class": "T4",
           "line": 166,
+          "line_end": 166,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -431,6 +450,7 @@
         {
           "class": "T3",
           "line": 572,
+          "line_end": 572,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == it_seq",
@@ -439,6 +459,7 @@
         {
           "class": "T9",
           "line": 573,
+          "line_end": 573,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= it_seq.len ()",
@@ -447,6 +468,7 @@
         {
           "class": "T9",
           "line": 578,
+          "line_end": 578,
           "col_start": 21,
           "col_end": 49,
           "old": "spawned_views.len () == it@.0",
@@ -455,6 +477,7 @@
         {
           "class": "T6",
           "line": 585,
+          "line_end": 585,
           "col_start": 27,
           "col_end": 47,
           "old": "it_seq.len () - it@.0",
@@ -463,6 +486,7 @@
         {
           "class": "T1",
           "line": 1051,
+          "line_end": 1051,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -471,6 +495,7 @@
         {
           "class": "T10",
           "line": 1052,
+          "line_end": 1052,
           "col_start": 17,
           "col_end": 63,
           "old": "it@.1.map (| i : int, k : T | k@).to_set () == self@",
@@ -479,6 +504,7 @@
         {
           "class": "T10",
           "line": 1053,
+          "line_end": 1053,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -579,6 +605,7 @@
         {
           "class": "T1",
           "line": 142,
+          "line_end": 142,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -587,6 +614,7 @@
         {
           "class": "T10",
           "line": 143,
+          "line_end": 143,
           "col_start": 17,
           "col_end": 63,
           "old": "it@.1.map (| i : int, k : T | k@).to_set () == self@",
@@ -595,6 +623,7 @@
         {
           "class": "T10",
           "line": 144,
+          "line_end": 144,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -603,6 +632,7 @@
         {
           "class": "T10",
           "line": 145,
+          "line_end": 145,
           "col_start": 17,
           "col_end": 94,
           "old": "forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)",
@@ -611,6 +641,7 @@
         {
           "class": "T4",
           "line": 146,
+          "line_end": 146,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -619,6 +650,7 @@
         {
           "class": "T1",
           "line": 912,
+          "line_end": 912,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -627,6 +659,7 @@
         {
           "class": "T10",
           "line": 913,
+          "line_end": 913,
           "col_start": 17,
           "col_end": 63,
           "old": "it@.1.map (| i : int, k : T | k@).to_set () == self@",
@@ -635,6 +668,7 @@
         {
           "class": "T10",
           "line": 914,
+          "line_end": 914,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -643,6 +677,7 @@
         {
           "class": "T4",
           "line": 915,
+          "line_end": 915,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -743,6 +778,7 @@
         {
           "class": "T1",
           "line": 858,
+          "line_end": 858,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -751,6 +787,7 @@
         {
           "class": "T10",
           "line": 859,
+          "line_end": 859,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -759,6 +796,7 @@
         {
           "class": "T10",
           "line": 860,
+          "line_end": 860,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -767,6 +805,7 @@
         {
           "class": "T4",
           "line": 861,
+          "line_end": 861,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -867,6 +906,7 @@
         {
           "class": "T9",
           "line": 299,
+          "line_end": 299,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= u_seq.len ()",
@@ -875,6 +915,7 @@
         {
           "class": "T3",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 35,
           "old": "it@.1 == u_seq",
@@ -883,6 +924,7 @@
         {
           "class": "T9",
           "line": 302,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 79,
           "old": "neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))",
@@ -891,6 +933,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 31,
           "col_end": 50,
           "old": "u_seq.len () - it@.0",
@@ -899,6 +942,7 @@
         {
           "class": "T9",
           "line": 360,
+          "line_end": 360,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= arcs_seq.len ()",
@@ -907,6 +951,7 @@
         {
           "class": "T3",
           "line": 361,
+          "line_end": 361,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == arcs_seq",
@@ -915,6 +960,7 @@
         {
           "class": "T9",
           "line": 363,
+          "line_end": 365,
           "col_start": 21,
           "col_end": 91,
           "old": "out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w)",
@@ -923,6 +969,7 @@
         {
           "class": "T6",
           "line": 366,
+          "line_end": 366,
           "col_start": 31,
           "col_end": 53,
           "old": "arcs_seq.len () - it@.0",
@@ -931,6 +978,7 @@
         {
           "class": "T9",
           "line": 418,
+          "line_end": 418,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= arcs_seq.len ()",
@@ -939,6 +987,7 @@
         {
           "class": "T3",
           "line": 419,
+          "line_end": 419,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == arcs_seq",
@@ -947,6 +996,7 @@
         {
           "class": "T9",
           "line": 421,
+          "line_end": 423,
           "col_start": 21,
           "col_end": 91,
           "old": "inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u)",
@@ -955,6 +1005,7 @@
         {
           "class": "T6",
           "line": 424,
+          "line_end": 424,
           "col_start": 31,
           "col_end": 53,
           "old": "arcs_seq.len () - it@.0",
@@ -963,6 +1014,7 @@
         {
           "class": "T9",
           "line": 477,
+          "line_end": 477,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= u_seq.len ()",
@@ -971,6 +1023,7 @@
         {
           "class": "T3",
           "line": 478,
+          "line_end": 478,
           "col_start": 21,
           "col_end": 35,
           "old": "it@.1 == u_seq",
@@ -979,6 +1032,7 @@
         {
           "class": "T9",
           "line": 480,
+          "line_end": 482,
           "col_start": 21,
           "col_end": 83,
           "old": "out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_plus (u_seq[i]@).contains (w))",
@@ -987,6 +1041,7 @@
         {
           "class": "T6",
           "line": 483,
+          "line_end": 483,
           "col_start": 31,
           "col_end": 50,
           "old": "u_seq.len () - it@.0",
@@ -995,6 +1050,7 @@
         {
           "class": "T9",
           "line": 539,
+          "line_end": 539,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= u_seq.len ()",
@@ -1003,6 +1059,7 @@
         {
           "class": "T3",
           "line": 540,
+          "line_end": 540,
           "col_start": 21,
           "col_end": 35,
           "old": "it@.1 == u_seq",
@@ -1011,6 +1068,7 @@
         {
           "class": "T9",
           "line": 542,
+          "line_end": 545,
           "col_start": 21,
           "col_end": 84,
           "old": "in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_minus (u_seq[i]@).contains (w))",
@@ -1019,6 +1077,7 @@
         {
           "class": "T6",
           "line": 546,
+          "line_end": 546,
           "col_start": 31,
           "col_end": 50,
           "old": "u_seq.len () - it@.0",
@@ -1027,6 +1086,7 @@
         {
           "class": "T1",
           "line": 717,
+          "line_end": 717,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -1035,6 +1095,7 @@
         {
           "class": "T10",
           "line": 718,
+          "line_end": 718,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -1043,6 +1104,7 @@
         {
           "class": "T10",
           "line": 719,
+          "line_end": 719,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -1051,6 +1113,7 @@
         {
           "class": "T4",
           "line": 720,
+          "line_end": 720,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -1151,6 +1214,7 @@
         {
           "class": "T9",
           "line": 316,
+          "line_end": 316,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1159,6 +1223,7 @@
         {
           "class": "T3",
           "line": 317,
+          "line_end": 317,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1167,6 +1232,7 @@
         {
           "class": "T9",
           "line": 319,
+          "line_end": 320,
           "col_start": 21,
           "col_end": 124,
           "old": "arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)",
@@ -1175,6 +1241,7 @@
         {
           "class": "T6",
           "line": 321,
+          "line_end": 321,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1183,6 +1250,7 @@
         {
           "class": "T9",
           "line": 379,
+          "line_end": 379,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1191,6 +1259,7 @@
         {
           "class": "T3",
           "line": 380,
+          "line_end": 380,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1199,6 +1268,7 @@
         {
           "class": "T9",
           "line": 382,
+          "line_end": 382,
           "col_start": 21,
           "col_end": 133,
           "old": "forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)",
@@ -1207,6 +1277,7 @@
         {
           "class": "T6",
           "line": 383,
+          "line_end": 383,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1215,6 +1286,7 @@
         {
           "class": "T9",
           "line": 420,
+          "line_end": 420,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1223,6 +1295,7 @@
         {
           "class": "T3",
           "line": 421,
+          "line_end": 421,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1231,6 +1304,7 @@
         {
           "class": "T9",
           "line": 423,
+          "line_end": 423,
           "col_start": 21,
           "col_end": 133,
           "old": "forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)",
@@ -1239,6 +1313,7 @@
         {
           "class": "T6",
           "line": 424,
+          "line_end": 424,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1247,6 +1322,7 @@
         {
           "class": "T1",
           "line": 754,
+          "line_end": 754,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -1255,6 +1331,7 @@
         {
           "class": "T10",
           "line": 755,
+          "line_end": 755,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -1263,6 +1340,7 @@
         {
           "class": "T10",
           "line": 756,
+          "line_end": 756,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -1271,6 +1349,7 @@
         {
           "class": "T4",
           "line": 757,
+          "line_end": 757,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -1371,6 +1450,7 @@
         {
           "class": "T9",
           "line": 225,
+          "line_end": 225,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1379,6 +1459,7 @@
         {
           "class": "T3",
           "line": 226,
+          "line_end": 226,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1387,6 +1468,7 @@
         {
           "class": "T9",
           "line": 228,
+          "line_end": 229,
           "col_start": 21,
           "col_end": 124,
           "old": "arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)",
@@ -1395,6 +1477,7 @@
         {
           "class": "T6",
           "line": 230,
+          "line_end": 230,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1403,6 +1486,7 @@
         {
           "class": "T9",
           "line": 286,
+          "line_end": 286,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1411,6 +1495,7 @@
         {
           "class": "T3",
           "line": 287,
+          "line_end": 287,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1419,6 +1504,7 @@
         {
           "class": "T9",
           "line": 289,
+          "line_end": 289,
           "col_start": 21,
           "col_end": 133,
           "old": "forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)",
@@ -1427,6 +1513,7 @@
         {
           "class": "T6",
           "line": 290,
+          "line_end": 290,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1435,6 +1522,7 @@
         {
           "class": "T9",
           "line": 327,
+          "line_end": 327,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1443,6 +1531,7 @@
         {
           "class": "T3",
           "line": 328,
+          "line_end": 328,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1451,6 +1540,7 @@
         {
           "class": "T9",
           "line": 330,
+          "line_end": 330,
           "col_start": 21,
           "col_end": 133,
           "old": "forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)",
@@ -1459,6 +1549,7 @@
         {
           "class": "T6",
           "line": 331,
+          "line_end": 331,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1467,6 +1558,7 @@
         {
           "class": "T9",
           "line": 376,
+          "line_end": 376,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1475,6 +1567,7 @@
         {
           "class": "T3",
           "line": 377,
+          "line_end": 377,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1483,6 +1576,7 @@
         {
           "class": "T9",
           "line": 379,
+          "line_end": 380,
           "col_start": 21,
           "col_end": 125,
           "old": "neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == v_view && la_seq[i]@.1 == w)",
@@ -1491,6 +1585,7 @@
         {
           "class": "T6",
           "line": 381,
+          "line_end": 381,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1499,6 +1594,7 @@
         {
           "class": "T9",
           "line": 431,
+          "line_end": 431,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= la_seq.len ()",
@@ -1507,6 +1603,7 @@
         {
           "class": "T3",
           "line": 432,
+          "line_end": 432,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == la_seq",
@@ -1515,6 +1612,7 @@
         {
           "class": "T9",
           "line": 434,
+          "line_end": 435,
           "col_start": 21,
           "col_end": 125,
           "old": "neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.1 == v_view && la_seq[i]@.0 == u)",
@@ -1523,6 +1621,7 @@
         {
           "class": "T6",
           "line": 437,
+          "line_end": 437,
           "col_start": 27,
           "col_end": 47,
           "old": "la_seq.len () - it@.0",
@@ -1531,6 +1630,7 @@
         {
           "class": "T1",
           "line": 586,
+          "line_end": 586,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -1539,6 +1639,7 @@
         {
           "class": "T10",
           "line": 587,
+          "line_end": 587,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -1547,6 +1648,7 @@
         {
           "class": "T10",
           "line": 588,
+          "line_end": 588,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -1555,6 +1657,7 @@
         {
           "class": "T4",
           "line": 589,
+          "line_end": 589,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -1655,6 +1758,7 @@
         {
           "class": "T9",
           "line": 283,
+          "line_end": 283,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1663,6 +1767,7 @@
         {
           "class": "T3",
           "line": 284,
+          "line_end": 284,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1671,6 +1776,7 @@
         {
           "class": "T9",
           "line": 286,
+          "line_end": 287,
           "col_start": 21,
           "col_end": 125,
           "old": "forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)",
@@ -1679,6 +1785,7 @@
         {
           "class": "T6",
           "line": 288,
+          "line_end": 288,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1687,6 +1794,7 @@
         {
           "class": "T9",
           "line": 349,
+          "line_end": 349,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1695,6 +1803,7 @@
         {
           "class": "T3",
           "line": 350,
+          "line_end": 350,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1703,6 +1812,7 @@
         {
           "class": "T9",
           "line": 352,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 80,
           "old": "forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))",
@@ -1711,6 +1821,7 @@
         {
           "class": "T6",
           "line": 355,
+          "line_end": 355,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1719,6 +1830,7 @@
         {
           "class": "T9",
           "line": 393,
+          "line_end": 393,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1727,6 +1839,7 @@
         {
           "class": "T3",
           "line": 394,
+          "line_end": 394,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1735,6 +1848,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 80,
           "old": "forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))",
@@ -1743,6 +1857,7 @@
         {
           "class": "T6",
           "line": 399,
+          "line_end": 399,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1751,6 +1866,7 @@
         {
           "class": "T1",
           "line": 696,
+          "line_end": 696,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -1759,6 +1875,7 @@
         {
           "class": "T10",
           "line": 697,
+          "line_end": 697,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -1767,6 +1884,7 @@
         {
           "class": "T10",
           "line": 698,
+          "line_end": 698,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -1775,6 +1893,7 @@
         {
           "class": "T4",
           "line": 699,
+          "line_end": 699,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -1875,6 +1994,7 @@
         {
           "class": "T9",
           "line": 218,
+          "line_end": 218,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1883,6 +2003,7 @@
         {
           "class": "T3",
           "line": 219,
+          "line_end": 219,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1891,6 +2012,7 @@
         {
           "class": "T9",
           "line": 221,
+          "line_end": 222,
           "col_start": 21,
           "col_end": 125,
           "old": "forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)",
@@ -1899,6 +2021,7 @@
         {
           "class": "T6",
           "line": 223,
+          "line_end": 223,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1907,6 +2030,7 @@
         {
           "class": "T9",
           "line": 284,
+          "line_end": 284,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1915,6 +2039,7 @@
         {
           "class": "T3",
           "line": 285,
+          "line_end": 285,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1923,6 +2048,7 @@
         {
           "class": "T9",
           "line": 287,
+          "line_end": 289,
           "col_start": 21,
           "col_end": 80,
           "old": "forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))",
@@ -1931,6 +2057,7 @@
         {
           "class": "T6",
           "line": 290,
+          "line_end": 290,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1939,6 +2066,7 @@
         {
           "class": "T9",
           "line": 329,
+          "line_end": 329,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1947,6 +2075,7 @@
         {
           "class": "T3",
           "line": 330,
+          "line_end": 330,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1955,6 +2084,7 @@
         {
           "class": "T9",
           "line": 332,
+          "line_end": 334,
           "col_start": 21,
           "col_end": 80,
           "old": "forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))",
@@ -1963,6 +2093,7 @@
         {
           "class": "T6",
           "line": 335,
+          "line_end": 335,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -1971,6 +2102,7 @@
         {
           "class": "T9",
           "line": 376,
+          "line_end": 376,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= le_seq.len ()",
@@ -1979,6 +2111,7 @@
         {
           "class": "T3",
           "line": 377,
+          "line_end": 377,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == le_seq",
@@ -1987,6 +2120,7 @@
         {
           "class": "T9",
           "line": 379,
+          "line_end": 382,
           "col_start": 21,
           "col_end": 77,
           "old": "ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && ((le_seq[i]@.0 == v_view && le_seq[i]@.1 == w) || (le_seq[i]@.1 == v_view && le_seq[i]@.0 == w)))",
@@ -1995,6 +2129,7 @@
         {
           "class": "T6",
           "line": 384,
+          "line_end": 384,
           "col_start": 27,
           "col_end": 47,
           "old": "le_seq.len () - it@.0",
@@ -2003,6 +2138,7 @@
         {
           "class": "T1",
           "line": 542,
+          "line_end": 542,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -2011,6 +2147,7 @@
         {
           "class": "T10",
           "line": 543,
+          "line_end": 543,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -2019,6 +2156,7 @@
         {
           "class": "T10",
           "line": 544,
+          "line_end": 544,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -2027,6 +2165,7 @@
         {
           "class": "T4",
           "line": 545,
+          "line_end": 545,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -2127,6 +2266,7 @@
         {
           "class": "T1",
           "line": 566,
+          "line_end": 566,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -2135,6 +2275,7 @@
         {
           "class": "T10",
           "line": 567,
+          "line_end": 567,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -2143,6 +2284,7 @@
         {
           "class": "T10",
           "line": 568,
+          "line_end": 568,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -2151,6 +2293,7 @@
         {
           "class": "T4",
           "line": 569,
+          "line_end": 569,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -2251,6 +2394,7 @@
         {
           "class": "T9",
           "line": 248,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 45,
           "old": "it@.0 <= edges_seq.len ()",
@@ -2259,6 +2403,7 @@
         {
           "class": "T3",
           "line": 249,
+          "line_end": 249,
           "col_start": 21,
           "col_end": 39,
           "old": "it@.1 == edges_seq",
@@ -2267,6 +2412,7 @@
         {
           "class": "T9",
           "line": 251,
+          "line_end": 254,
           "col_start": 21,
           "col_end": 83,
           "old": "ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it@.0 && ((edges_seq[i]@.0 == v_view && edges_seq[i]@.1 == w) || (edges_seq[i]@.1 == v_view && edges_seq[i]@.0 == w)))",
@@ -2275,6 +2421,7 @@
         {
           "class": "T6",
           "line": 255,
+          "line_end": 255,
           "col_start": 27,
           "col_end": 50,
           "old": "edges_seq.len () - it@.0",
@@ -2283,6 +2430,7 @@
         {
           "class": "T9",
           "line": 312,
+          "line_end": 312,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= u_seq.len ()",
@@ -2291,6 +2439,7 @@
         {
           "class": "T3",
           "line": 313,
+          "line_end": 313,
           "col_start": 21,
           "col_end": 35,
           "old": "it@.1 == u_seq",
@@ -2299,6 +2448,7 @@
         {
           "class": "T9",
           "line": 315,
+          "line_end": 316,
           "col_start": 21,
           "col_end": 116,
           "old": "neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))",
@@ -2307,6 +2457,7 @@
         {
           "class": "T6",
           "line": 317,
+          "line_end": 317,
           "col_start": 27,
           "col_end": 46,
           "old": "u_seq.len () - it@.0",
@@ -2315,6 +2466,7 @@
         {
           "class": "T1",
           "line": 483,
+          "line_end": 483,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -2323,6 +2475,7 @@
         {
           "class": "T10",
           "line": 484,
+          "line_end": 484,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.map (| i : int, k : V | k@).to_set () == self@.V",
@@ -2331,6 +2484,7 @@
         {
           "class": "T10",
           "line": 485,
+          "line_end": 485,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.1.no_duplicates ()",
@@ -2339,6 +2493,7 @@
         {
           "class": "T4",
           "line": 486,
+          "line_end": 486,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -2366,6 +2521,7 @@
         {
           "class": "T9",
           "line": 131,
+          "line_end": 131,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -2374,6 +2530,7 @@
         {
           "class": "T3",
           "line": 132,
+          "line_end": 132,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -2382,6 +2539,7 @@
         {
           "class": "T9",
           "line": 137,
+          "line_end": 138,
           "col_start": 21,
           "col_end": 102,
           "old": "forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)",
@@ -2390,6 +2548,7 @@
         {
           "class": "T6",
           "line": 139,
+          "line_end": 139,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -2398,6 +2557,7 @@
         {
           "class": "T9",
           "line": 190,
+          "line_end": 190,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2406,6 +2566,7 @@
         {
           "class": "T3",
           "line": 191,
+          "line_end": 191,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2414,6 +2575,7 @@
         {
           "class": "T9",
           "line": 193,
+          "line_end": 194,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -2422,6 +2584,7 @@
         {
           "class": "T6",
           "line": 195,
+          "line_end": 195,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2430,6 +2593,7 @@
         {
           "class": "T9",
           "line": 226,
+          "line_end": 226,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2438,6 +2602,7 @@
         {
           "class": "T3",
           "line": 227,
+          "line_end": 227,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2446,6 +2611,7 @@
         {
           "class": "T9",
           "line": 229,
+          "line_end": 230,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2454,6 +2620,7 @@
         {
           "class": "T6",
           "line": 231,
+          "line_end": 231,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2462,6 +2629,7 @@
         {
           "class": "T9",
           "line": 282,
+          "line_end": 282,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2470,6 +2638,7 @@
         {
           "class": "T3",
           "line": 283,
+          "line_end": 283,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2478,6 +2647,7 @@
         {
           "class": "T9",
           "line": 285,
+          "line_end": 286,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2486,6 +2656,7 @@
         {
           "class": "T6",
           "line": 287,
+          "line_end": 287,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2506,6 +2677,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -2514,6 +2686,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -2522,6 +2695,7 @@
         {
           "class": "T9",
           "line": 162,
+          "line_end": 163,
           "col_start": 21,
           "col_end": 102,
           "old": "forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)",
@@ -2530,6 +2704,7 @@
         {
           "class": "T6",
           "line": 164,
+          "line_end": 164,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -2538,6 +2713,7 @@
         {
           "class": "T9",
           "line": 215,
+          "line_end": 215,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2546,6 +2722,7 @@
         {
           "class": "T3",
           "line": 216,
+          "line_end": 216,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2554,6 +2731,7 @@
         {
           "class": "T9",
           "line": 218,
+          "line_end": 219,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -2562,6 +2740,7 @@
         {
           "class": "T6",
           "line": 220,
+          "line_end": 220,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2570,6 +2749,7 @@
         {
           "class": "T9",
           "line": 251,
+          "line_end": 251,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2578,6 +2758,7 @@
         {
           "class": "T3",
           "line": 252,
+          "line_end": 252,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2586,6 +2767,7 @@
         {
           "class": "T9",
           "line": 254,
+          "line_end": 255,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2594,6 +2776,7 @@
         {
           "class": "T6",
           "line": 256,
+          "line_end": 256,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2602,6 +2785,7 @@
         {
           "class": "T9",
           "line": 307,
+          "line_end": 307,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2610,6 +2794,7 @@
         {
           "class": "T3",
           "line": 308,
+          "line_end": 308,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2618,6 +2803,7 @@
         {
           "class": "T9",
           "line": 310,
+          "line_end": 311,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2626,6 +2812,7 @@
         {
           "class": "T6",
           "line": 312,
+          "line_end": 312,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2634,6 +2821,7 @@
         {
           "class": "T9",
           "line": 361,
+          "line_end": 361,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2642,6 +2830,7 @@
         {
           "class": "T3",
           "line": 362,
+          "line_end": 362,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2650,6 +2839,7 @@
         {
           "class": "T9",
           "line": 365,
+          "line_end": 365,
           "col_start": 21,
           "col_end": 121,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> | acc + e@.2 as int)",
@@ -2658,6 +2848,7 @@
         {
           "class": "T6",
           "line": 367,
+          "line_end": 367,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2666,6 +2857,7 @@
         {
           "class": "T9",
           "line": 403,
+          "line_end": 403,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2674,6 +2866,7 @@
         {
           "class": "T3",
           "line": 404,
+          "line_end": 404,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2682,6 +2875,7 @@
         {
           "class": "T9",
           "line": 407,
+          "line_end": 408,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -2690,6 +2884,7 @@
         {
           "class": "T6",
           "line": 409,
+          "line_end": 409,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2698,6 +2893,7 @@
         {
           "class": "T9",
           "line": 456,
+          "line_end": 456,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2706,6 +2902,7 @@
         {
           "class": "T3",
           "line": 457,
+          "line_end": 457,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2714,6 +2911,7 @@
         {
           "class": "T9",
           "line": 460,
+          "line_end": 461,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -2722,6 +2920,7 @@
         {
           "class": "T6",
           "line": 462,
+          "line_end": 462,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2742,6 +2941,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -2750,6 +2950,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -2758,6 +2959,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -2766,6 +2968,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2774,6 +2977,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2782,6 +2986,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -2790,6 +2995,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2798,6 +3004,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2806,6 +3013,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2814,6 +3022,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2822,6 +3031,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2830,6 +3040,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2838,6 +3049,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2846,6 +3058,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -2854,6 +3067,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2862,6 +3076,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2870,6 +3085,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2878,6 +3094,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> | acc + e@.2 as int)",
@@ -2886,6 +3103,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2894,6 +3112,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 396,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2902,6 +3121,7 @@
         {
           "class": "T3",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2910,6 +3130,7 @@
         {
           "class": "T9",
           "line": 399,
+          "line_end": 401,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -2918,6 +3139,7 @@
         {
           "class": "T6",
           "line": 402,
+          "line_end": 402,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2926,6 +3148,7 @@
         {
           "class": "T9",
           "line": 449,
+          "line_end": 449,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -2934,6 +3157,7 @@
         {
           "class": "T3",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -2942,6 +3166,7 @@
         {
           "class": "T9",
           "line": 453,
+          "line_end": 454,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -2950,6 +3175,7 @@
         {
           "class": "T6",
           "line": 455,
+          "line_end": 455,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -2970,6 +3196,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -2978,6 +3205,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -2986,6 +3214,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -2994,6 +3223,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3002,6 +3232,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3010,6 +3241,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -3018,6 +3250,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3026,6 +3259,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3034,6 +3268,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3042,6 +3277,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3050,6 +3286,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3058,6 +3295,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3066,6 +3304,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3074,6 +3313,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3082,6 +3322,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3090,6 +3331,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3098,6 +3340,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3106,6 +3349,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> | acc + e@.2 as int)",
@@ -3114,6 +3358,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3122,6 +3367,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 396,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3130,6 +3376,7 @@
         {
           "class": "T3",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3138,6 +3385,7 @@
         {
           "class": "T9",
           "line": 399,
+          "line_end": 401,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -3146,6 +3394,7 @@
         {
           "class": "T6",
           "line": 402,
+          "line_end": 402,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3154,6 +3403,7 @@
         {
           "class": "T9",
           "line": 449,
+          "line_end": 449,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3162,6 +3412,7 @@
         {
           "class": "T3",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3170,6 +3421,7 @@
         {
           "class": "T9",
           "line": 453,
+          "line_end": 454,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -3178,6 +3430,7 @@
         {
           "class": "T6",
           "line": 455,
+          "line_end": 455,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3198,6 +3451,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -3206,6 +3460,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -3214,6 +3469,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -3222,6 +3478,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3230,6 +3487,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3238,6 +3496,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -3246,6 +3505,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3254,6 +3514,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3262,6 +3523,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3270,6 +3532,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3278,6 +3541,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3286,6 +3550,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3294,6 +3559,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3302,6 +3568,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3310,6 +3577,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3318,6 +3586,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3326,6 +3595,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3334,6 +3604,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> | acc + e@.2 as int)",
@@ -3342,6 +3613,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3350,6 +3622,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 396,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3358,6 +3631,7 @@
         {
           "class": "T3",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3366,6 +3640,7 @@
         {
           "class": "T9",
           "line": 399,
+          "line_end": 401,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -3374,6 +3649,7 @@
         {
           "class": "T6",
           "line": 402,
+          "line_end": 402,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3382,6 +3658,7 @@
         {
           "class": "T9",
           "line": 449,
+          "line_end": 449,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3390,6 +3667,7 @@
         {
           "class": "T3",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3398,6 +3676,7 @@
         {
           "class": "T9",
           "line": 453,
+          "line_end": 454,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -3406,6 +3685,7 @@
         {
           "class": "T6",
           "line": 455,
+          "line_end": 455,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3426,6 +3706,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -3434,6 +3715,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -3442,6 +3724,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -3450,6 +3733,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3458,6 +3742,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3466,6 +3751,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -3474,6 +3760,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3482,6 +3769,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3490,6 +3778,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3498,6 +3787,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3506,6 +3796,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3514,6 +3805,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3522,6 +3814,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3530,6 +3823,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3538,6 +3832,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3546,6 +3841,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3554,6 +3850,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3562,6 +3859,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 119,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | acc + e@.2 as int)",
@@ -3570,6 +3868,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3578,6 +3877,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 396,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3586,6 +3886,7 @@
         {
           "class": "T3",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3594,6 +3895,7 @@
         {
           "class": "T9",
           "line": 399,
+          "line_end": 401,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -3602,6 +3904,7 @@
         {
           "class": "T6",
           "line": 402,
+          "line_end": 402,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3610,6 +3913,7 @@
         {
           "class": "T9",
           "line": 449,
+          "line_end": 449,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3618,6 +3922,7 @@
         {
           "class": "T3",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3626,6 +3931,7 @@
         {
           "class": "T9",
           "line": 453,
+          "line_end": 454,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -3634,6 +3940,7 @@
         {
           "class": "T6",
           "line": 455,
+          "line_end": 455,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3654,6 +3961,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -3662,6 +3970,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -3670,6 +3979,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -3678,6 +3988,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3686,6 +3997,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3694,6 +4006,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -3702,6 +4015,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3710,6 +4024,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3718,6 +4033,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3726,6 +4042,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3734,6 +4051,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3742,6 +4060,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3750,6 +4069,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3758,6 +4078,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3766,6 +4087,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3774,6 +4096,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3782,6 +4105,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3790,6 +4114,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 122,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, isize> | acc + e@.2 as int)",
@@ -3798,6 +4123,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3806,6 +4132,7 @@
         {
           "class": "T9",
           "line": 396,
+          "line_end": 396,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3814,6 +4141,7 @@
         {
           "class": "T3",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3822,6 +4150,7 @@
         {
           "class": "T9",
           "line": 399,
+          "line_end": 401,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -3830,6 +4159,7 @@
         {
           "class": "T6",
           "line": 402,
+          "line_end": 402,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3838,6 +4168,7 @@
         {
           "class": "T9",
           "line": 449,
+          "line_end": 449,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3846,6 +4177,7 @@
         {
           "class": "T3",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3854,6 +4186,7 @@
         {
           "class": "T9",
           "line": 453,
+          "line_end": 454,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -3862,6 +4195,7 @@
         {
           "class": "T6",
           "line": 455,
+          "line_end": 455,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3882,6 +4216,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -3890,6 +4225,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -3898,6 +4234,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -3906,6 +4243,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3914,6 +4252,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3922,6 +4261,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -3930,6 +4270,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3938,6 +4279,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3946,6 +4288,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3954,6 +4297,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3962,6 +4306,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -3970,6 +4315,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -3978,6 +4324,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -3986,6 +4333,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -3994,6 +4342,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4002,6 +4351,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4010,6 +4360,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4018,6 +4369,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 121,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> | acc + e@.2 as nat)",
@@ -4026,6 +4378,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4034,6 +4387,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4042,6 +4396,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4050,6 +4405,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -4058,6 +4414,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4066,6 +4423,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4074,6 +4432,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4082,6 +4441,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -4090,6 +4450,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4110,6 +4471,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -4118,6 +4480,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -4126,6 +4489,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -4134,6 +4498,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4142,6 +4507,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4150,6 +4516,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -4158,6 +4525,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4166,6 +4534,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4174,6 +4543,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4182,6 +4552,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4190,6 +4561,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4198,6 +4570,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4206,6 +4579,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4214,6 +4588,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4222,6 +4597,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4230,6 +4606,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4238,6 +4615,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4246,6 +4624,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> | acc + e@.2 as nat)",
@@ -4254,6 +4633,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4262,6 +4642,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4270,6 +4651,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4278,6 +4660,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -4286,6 +4669,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4294,6 +4678,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4302,6 +4687,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4310,6 +4696,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -4318,6 +4705,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4338,6 +4726,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -4346,6 +4735,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -4354,6 +4744,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -4362,6 +4753,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4370,6 +4762,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4378,6 +4771,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -4386,6 +4780,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4394,6 +4789,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4402,6 +4798,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4410,6 +4807,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4418,6 +4816,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4426,6 +4825,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4434,6 +4834,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4442,6 +4843,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4450,6 +4852,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4458,6 +4861,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4466,6 +4870,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4474,6 +4879,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> | acc + e@.2 as nat)",
@@ -4482,6 +4888,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4490,6 +4897,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4498,6 +4906,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4506,6 +4915,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -4514,6 +4924,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4522,6 +4933,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4530,6 +4942,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4538,6 +4951,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -4546,6 +4960,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4566,6 +4981,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -4574,6 +4990,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -4582,6 +4999,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -4590,6 +5008,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4598,6 +5017,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4606,6 +5026,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -4614,6 +5035,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4622,6 +5044,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4630,6 +5053,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4638,6 +5062,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4646,6 +5071,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4654,6 +5080,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4662,6 +5089,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4670,6 +5098,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4678,6 +5107,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4686,6 +5116,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4694,6 +5125,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4702,6 +5134,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 120,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> | acc + e@.2 as nat)",
@@ -4710,6 +5143,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4718,6 +5152,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4726,6 +5161,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4734,6 +5170,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -4742,6 +5179,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4750,6 +5188,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4758,6 +5197,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4766,6 +5206,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -4774,6 +5215,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4794,6 +5236,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -4802,6 +5245,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -4810,6 +5254,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -4818,6 +5263,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4826,6 +5272,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4834,6 +5281,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -4842,6 +5290,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4850,6 +5299,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4858,6 +5308,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4866,6 +5317,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4874,6 +5326,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4882,6 +5335,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4890,6 +5344,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4898,6 +5353,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -4906,6 +5362,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4914,6 +5371,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4922,6 +5380,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4930,6 +5389,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 119,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | acc + e@.2 as nat)",
@@ -4938,6 +5398,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4946,6 +5407,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4954,6 +5416,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4962,6 +5425,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -4970,6 +5434,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -4978,6 +5443,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -4986,6 +5452,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -4994,6 +5461,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -5002,6 +5470,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5022,6 +5491,7 @@
         {
           "class": "T9",
           "line": 156,
+          "line_end": 156,
           "col_start": 21,
           "col_end": 44,
           "old": "it@.0 <= edge_seq.len ()",
@@ -5030,6 +5500,7 @@
         {
           "class": "T3",
           "line": 157,
+          "line_end": 157,
           "col_start": 21,
           "col_end": 38,
           "old": "it@.1 == edge_seq",
@@ -5038,6 +5509,7 @@
         {
           "class": "T6",
           "line": 162,
+          "line_end": 162,
           "col_start": 27,
           "col_end": 49,
           "old": "edge_seq.len () - it@.0",
@@ -5046,6 +5518,7 @@
         {
           "class": "T9",
           "line": 208,
+          "line_end": 208,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5054,6 +5527,7 @@
         {
           "class": "T3",
           "line": 209,
+          "line_end": 209,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5062,6 +5536,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 212,
           "col_start": 21,
           "col_end": 98,
           "old": "forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)",
@@ -5070,6 +5545,7 @@
         {
           "class": "T6",
           "line": 213,
+          "line_end": 213,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5078,6 +5554,7 @@
         {
           "class": "T9",
           "line": 244,
+          "line_end": 244,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5086,6 +5563,7 @@
         {
           "class": "T3",
           "line": 245,
+          "line_end": 245,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5094,6 +5572,7 @@
         {
           "class": "T9",
           "line": 247,
+          "line_end": 248,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -5102,6 +5581,7 @@
         {
           "class": "T6",
           "line": 249,
+          "line_end": 249,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5110,6 +5590,7 @@
         {
           "class": "T9",
           "line": 300,
+          "line_end": 300,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5118,6 +5599,7 @@
         {
           "class": "T3",
           "line": 301,
+          "line_end": 301,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5126,6 +5608,7 @@
         {
           "class": "T9",
           "line": 303,
+          "line_end": 304,
           "col_start": 21,
           "col_end": 151,
           "old": "forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)",
@@ -5134,6 +5617,7 @@
         {
           "class": "T6",
           "line": 305,
+          "line_end": 305,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5142,6 +5626,7 @@
         {
           "class": "T9",
           "line": 354,
+          "line_end": 354,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5150,6 +5635,7 @@
         {
           "class": "T3",
           "line": 355,
+          "line_end": 355,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5158,6 +5644,7 @@
         {
           "class": "T9",
           "line": 358,
+          "line_end": 358,
           "col_start": 21,
           "col_end": 122,
           "old": "sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, usize> | acc + e@.2 as nat)",
@@ -5166,6 +5653,7 @@
         {
           "class": "T6",
           "line": 359,
+          "line_end": 359,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5174,6 +5662,7 @@
         {
           "class": "T9",
           "line": 397,
+          "line_end": 397,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5182,6 +5671,7 @@
         {
           "class": "T3",
           "line": 398,
+          "line_end": 398,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5190,6 +5680,7 @@
         {
           "class": "T9",
           "line": 400,
+          "line_end": 402,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)",
@@ -5198,6 +5689,7 @@
         {
           "class": "T6",
           "line": 403,
+          "line_end": 403,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5206,6 +5698,7 @@
         {
           "class": "T9",
           "line": 450,
+          "line_end": 450,
           "col_start": 21,
           "col_end": 42,
           "old": "it@.0 <= wa_seq.len ()",
@@ -5214,6 +5707,7 @@
         {
           "class": "T3",
           "line": 451,
+          "line_end": 451,
           "col_start": 21,
           "col_end": 36,
           "old": "it@.1 == wa_seq",
@@ -5222,6 +5716,7 @@
         {
           "class": "T9",
           "line": 454,
+          "line_end": 455,
           "col_start": 21,
           "col_end": 117,
           "old": "forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)",
@@ -5230,6 +5725,7 @@
         {
           "class": "T6",
           "line": 456,
+          "line_end": 456,
           "col_start": 27,
           "col_end": 47,
           "old": "wa_seq.len () - it@.0",
@@ -5323,30 +5819,46 @@
         {
           "class": "T8",
           "line": 235,
+          "line_end": 235,
           "col_start": 21,
           "col_end": 40,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            233,
+            234
+          ]
         },
         {
           "class": "T8",
           "line": 551,
+          "line_end": 551,
           "col_start": 21,
           "col_end": 40,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            549,
+            550
+          ]
         },
         {
           "class": "T8",
           "line": 661,
+          "line_end": 661,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            659,
+            660
+          ]
         },
         {
           "class": "T1",
           "line": 672,
+          "line_end": 672,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -5355,6 +5867,7 @@
         {
           "class": "T3",
           "line": 673,
+          "line_end": 673,
           "col_start": 17,
           "col_end": 36,
           "old": "it@.1 == self.data@",
@@ -5448,10 +5961,15 @@
         {
           "class": "T8",
           "line": 1512,
+          "line_end": 1512,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1510,
+            1511
+          ]
         }
       ],
       "unresolved": [],
@@ -5541,22 +6059,33 @@
         {
           "class": "T8",
           "line": 644,
+          "line_end": 644,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            642,
+            643
+          ]
         },
         {
           "class": "T8",
           "line": 1524,
+          "line_end": 1524,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1522,
+            1523
+          ]
         },
         {
           "class": "T1",
           "line": 1535,
+          "line_end": 1535,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -5565,6 +6094,7 @@
         {
           "class": "T2",
           "line": 1536,
+          "line_end": 1536,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -5658,18 +6188,28 @@
         {
           "class": "T8",
           "line": 348,
+          "line_end": 348,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            346,
+            347
+          ]
         },
         {
           "class": "T8",
           "line": 1654,
+          "line_end": 1654,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1652,
+            1653
+          ]
         }
       ],
       "unresolved": [],
@@ -5759,22 +6299,33 @@
         {
           "class": "T8",
           "line": 893,
+          "line_end": 893,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            891,
+            892
+          ]
         },
         {
           "class": "T8",
           "line": 1838,
+          "line_end": 1838,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1836,
+            1837
+          ]
         },
         {
           "class": "T1",
           "line": 1849,
+          "line_end": 1849,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -5783,6 +6334,7 @@
         {
           "class": "T2",
           "line": 1850,
+          "line_end": 1850,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -5876,22 +6428,33 @@
         {
           "class": "T8",
           "line": 935,
+          "line_end": 935,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            933,
+            934
+          ]
         },
         {
           "class": "T8",
           "line": 1046,
+          "line_end": 1046,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1044,
+            1045
+          ]
         },
         {
           "class": "T1",
           "line": 1057,
+          "line_end": 1057,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -5900,6 +6463,7 @@
         {
           "class": "T2",
           "line": 1058,
+          "line_end": 1058,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -5993,10 +6557,15 @@
         {
           "class": "T8",
           "line": 915,
+          "line_end": 915,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            913,
+            914
+          ]
         }
       ],
       "unresolved": [],
@@ -6086,10 +6655,15 @@
         {
           "class": "T8",
           "line": 766,
+          "line_end": 766,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            764,
+            765
+          ]
         }
       ],
       "unresolved": [],
@@ -6179,10 +6753,15 @@
         {
           "class": "T8",
           "line": 748,
+          "line_end": 748,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            746,
+            747
+          ]
         }
       ],
       "unresolved": [],
@@ -6272,22 +6851,33 @@
         {
           "class": "T8",
           "line": 1029,
+          "line_end": 1029,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1027,
+            1028
+          ]
         },
         {
           "class": "T8",
           "line": 1681,
+          "line_end": 1681,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1679,
+            1680
+          ]
         },
         {
           "class": "T1",
           "line": 1693,
+          "line_end": 1693,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6296,6 +6886,7 @@
         {
           "class": "T2",
           "line": 1694,
+          "line_end": 1694,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -6389,18 +6980,28 @@
         {
           "class": "T8",
           "line": 448,
+          "line_end": 448,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            446,
+            447
+          ]
         },
         {
           "class": "T8",
           "line": 1683,
+          "line_end": 1683,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1681,
+            1682
+          ]
         }
       ],
       "unresolved": [],
@@ -6490,22 +7091,33 @@
         {
           "class": "T8",
           "line": 1008,
+          "line_end": 1008,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1006,
+            1007
+          ]
         },
         {
           "class": "T8",
           "line": 1130,
+          "line_end": 1130,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1128,
+            1129
+          ]
         },
         {
           "class": "T1",
           "line": 1141,
+          "line_end": 1141,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6514,6 +7126,7 @@
         {
           "class": "T2",
           "line": 1142,
+          "line_end": 1142,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -6607,22 +7220,33 @@
         {
           "class": "T8",
           "line": 1018,
+          "line_end": 1018,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1016,
+            1017
+          ]
         },
         {
           "class": "T8",
           "line": 1132,
+          "line_end": 1132,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1130,
+            1131
+          ]
         },
         {
           "class": "T1",
           "line": 1143,
+          "line_end": 1143,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6631,6 +7255,7 @@
         {
           "class": "T2",
           "line": 1144,
+          "line_end": 1144,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -6868,6 +7493,7 @@
         {
           "class": "T1",
           "line": 347,
+          "line_end": 347,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6876,6 +7502,7 @@
         {
           "class": "T10",
           "line": 348,
+          "line_end": 348,
           "col_start": 17,
           "col_end": 47,
           "old": "it@.1 =~= self.spec_in_order ()",
@@ -6884,6 +7511,7 @@
         {
           "class": "T4",
           "line": 349,
+          "line_end": 349,
           "col_start": 17,
           "col_end": 45,
           "old": "in_order_iter_invariant (& it)",
@@ -6892,6 +7520,7 @@
         {
           "class": "T1",
           "line": 361,
+          "line_end": 361,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6900,6 +7529,7 @@
         {
           "class": "T10",
           "line": 362,
+          "line_end": 362,
           "col_start": 17,
           "col_end": 48,
           "old": "it@.1 =~= self.spec_pre_order ()",
@@ -6908,6 +7538,7 @@
         {
           "class": "T4",
           "line": 363,
+          "line_end": 363,
           "col_start": 17,
           "col_end": 46,
           "old": "pre_order_iter_invariant (& it)",
@@ -6916,6 +7547,7 @@
         {
           "class": "T1",
           "line": 375,
+          "line_end": 375,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -6924,6 +7556,7 @@
         {
           "class": "T10",
           "line": 376,
+          "line_end": 376,
           "col_start": 17,
           "col_end": 49,
           "old": "it@.1 =~= self.spec_post_order ()",
@@ -6932,6 +7565,7 @@
         {
           "class": "T4",
           "line": 377,
+          "line_end": 377,
           "col_start": 17,
           "col_end": 47,
           "old": "post_order_iter_invariant (& it)",
@@ -7025,14 +7659,20 @@
         {
           "class": "T8",
           "line": 115,
+          "line_end": 115,
           "col_start": 17,
           "col_end": 50,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            113,
+            114
+          ]
         },
         {
           "class": "T1",
           "line": 580,
+          "line_end": 580,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -7041,6 +7681,7 @@
         {
           "class": "T2",
           "line": 581,
+          "line_end": 581,
           "col_start": 17,
           "col_end": 35,
           "old": "it@.1 == self.seq@",
@@ -7049,10 +7690,15 @@
         {
           "class": "T8",
           "line": 715,
+          "line_end": 715,
           "col_start": 17,
           "col_end": 50,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            713,
+            714
+          ]
         }
       ],
       "unresolved": [],
@@ -7106,6 +7752,7 @@
         {
           "class": "T1",
           "line": 434,
+          "line_end": 434,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -7114,6 +7761,7 @@
         {
           "class": "T10",
           "line": 435,
+          "line_end": 435,
           "col_start": 17,
           "col_end": 75,
           "old": "it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()",
@@ -7122,6 +7770,7 @@
         {
           "class": "T4",
           "line": 436,
+          "line_end": 436,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -7130,6 +7779,7 @@
         {
           "class": "T1",
           "line": 1299,
+          "line_end": 1299,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -7138,6 +7788,7 @@
         {
           "class": "T10",
           "line": 1300,
+          "line_end": 1300,
           "col_start": 17,
           "col_end": 75,
           "old": "it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()",
@@ -7146,6 +7797,7 @@
         {
           "class": "T4",
           "line": 1301,
+          "line_end": 1301,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -7300,6 +7952,7 @@
         {
           "class": "T1",
           "line": 342,
+          "line_end": 342,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -7308,6 +7961,7 @@
         {
           "class": "T10",
           "line": 343,
+          "line_end": 343,
           "col_start": 17,
           "col_end": 42,
           "old": "it@.1 =~= self.spec_seq ()",
@@ -7316,6 +7970,7 @@
         {
           "class": "T4",
           "line": 344,
+          "line_end": 344,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -7324,6 +7979,7 @@
         {
           "class": "T1",
           "line": 940,
+          "line_end": 940,
           "col_start": 17,
           "col_end": 30,
           "old": "it@.0 == 0int",
@@ -7332,6 +7988,7 @@
         {
           "class": "T10",
           "line": 941,
+          "line_end": 941,
           "col_start": 17,
           "col_end": 42,
           "old": "it@.1 =~= self.spec_seq ()",
@@ -7340,6 +7997,7 @@
         {
           "class": "T4",
           "line": 942,
+          "line_end": 942,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -7404,6 +8062,7 @@
         {
           "class": "T9",
           "line": 442,
+          "line_end": 442,
           "col_start": 13,
           "col_end": 32,
           "old": "it@.0 == old (it)@.0",
@@ -7412,6 +8071,7 @@
         {
           "class": "T3",
           "line": 443,
+          "line_end": 443,
           "col_start": 13,
           "col_end": 32,
           "old": "it@.1 == old (it)@.1",
@@ -7420,18 +8080,28 @@
         {
           "class": "T8",
           "line": 503,
+          "line_end": 503,
           "col_start": 17,
           "col_end": 52,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            501,
+            502
+          ]
         },
         {
           "class": "T8",
           "line": 880,
+          "line_end": 880,
           "col_start": 17,
           "col_end": 52,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            878,
+            879
+          ]
         }
       ],
       "unresolved": [
@@ -7522,14 +8192,20 @@
         {
           "class": "T8",
           "line": 385,
+          "line_end": 385,
           "col_start": 17,
           "col_end": 52,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            383,
+            384
+          ]
         },
         {
           "class": "T9",
           "line": 928,
+          "line_end": 928,
           "col_start": 13,
           "col_end": 32,
           "old": "it@.0 == old (it)@.0",
@@ -7538,6 +8214,7 @@
         {
           "class": "T3",
           "line": 929,
+          "line_end": 929,
           "col_start": 13,
           "col_end": 32,
           "old": "it@.1 == old (it)@.1",
@@ -7546,10 +8223,15 @@
         {
           "class": "T8",
           "line": 1069,
+          "line_end": 1069,
           "col_start": 17,
           "col_end": 52,
           "old": "iter_invariant(&it) (constructor ensures triple)",
-          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),",
+          "extra_delete_lines": [
+            1067,
+            1068
+          ]
         }
       ],
       "unresolved": [
@@ -7646,6 +8328,7 @@
         {
           "class": "T1",
           "line": 148,
+          "line_end": 148,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7654,6 +8337,7 @@
         {
           "class": "T4",
           "line": 148,
+          "line_end": 148,
           "col_start": 33,
           "col_end": 67,
           "old": "bstsetavlmteph_iter_invariant (& it)",
@@ -7662,6 +8346,7 @@
         {
           "class": "T1",
           "line": 652,
+          "line_end": 652,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7670,6 +8355,7 @@
         {
           "class": "T4",
           "line": 652,
+          "line_end": 652,
           "col_start": 33,
           "col_end": 67,
           "old": "bstsetavlmteph_iter_invariant (& it)",
@@ -7678,6 +8364,7 @@
         {
           "class": "T1",
           "line": 663,
+          "line_end": 663,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7686,6 +8373,7 @@
         {
           "class": "T4",
           "line": 663,
+          "line_end": 663,
           "col_start": 33,
           "col_end": 67,
           "old": "bstsetavlmteph_iter_invariant (& it)",
@@ -7756,6 +8444,7 @@
         {
           "class": "T1",
           "line": 148,
+          "line_end": 148,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7764,6 +8453,7 @@
         {
           "class": "T4",
           "line": 148,
+          "line_end": 148,
           "col_start": 33,
           "col_end": 71,
           "old": "bstsetbbalphamteph_iter_invariant (& it)",
@@ -7772,6 +8462,7 @@
         {
           "class": "T1",
           "line": 605,
+          "line_end": 605,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7780,6 +8471,7 @@
         {
           "class": "T4",
           "line": 605,
+          "line_end": 605,
           "col_start": 33,
           "col_end": 71,
           "old": "bstsetbbalphamteph_iter_invariant (& it)",
@@ -7850,6 +8542,7 @@
         {
           "class": "T1",
           "line": 148,
+          "line_end": 148,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7858,6 +8551,7 @@
         {
           "class": "T4",
           "line": 148,
+          "line_end": 148,
           "col_start": 33,
           "col_end": 69,
           "old": "bstsetplainmteph_iter_invariant (& it)",
@@ -7866,6 +8560,7 @@
         {
           "class": "T1",
           "line": 605,
+          "line_end": 605,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7874,6 +8569,7 @@
         {
           "class": "T4",
           "line": 605,
+          "line_end": 605,
           "col_start": 33,
           "col_end": 69,
           "old": "bstsetplainmteph_iter_invariant (& it)",
@@ -7944,6 +8640,7 @@
         {
           "class": "T1",
           "line": 147,
+          "line_end": 147,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7952,6 +8649,7 @@
         {
           "class": "T4",
           "line": 147,
+          "line_end": 147,
           "col_start": 33,
           "col_end": 66,
           "old": "bstsetrbmteph_iter_invariant (& it)",
@@ -7960,6 +8658,7 @@
         {
           "class": "T1",
           "line": 651,
+          "line_end": 651,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7968,6 +8667,7 @@
         {
           "class": "T4",
           "line": 651,
+          "line_end": 651,
           "col_start": 33,
           "col_end": 66,
           "old": "bstsetrbmteph_iter_invariant (& it)",
@@ -7976,6 +8676,7 @@
         {
           "class": "T1",
           "line": 662,
+          "line_end": 662,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -7984,6 +8685,7 @@
         {
           "class": "T4",
           "line": 662,
+          "line_end": 662,
           "col_start": 33,
           "col_end": 66,
           "old": "bstsetrbmteph_iter_invariant (& it)",
@@ -8054,6 +8756,7 @@
         {
           "class": "T1",
           "line": 148,
+          "line_end": 148,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -8062,6 +8765,7 @@
         {
           "class": "T4",
           "line": 148,
+          "line_end": 148,
           "col_start": 33,
           "col_end": 69,
           "old": "bstsetsplaymteph_iter_invariant (& it)",
@@ -8070,6 +8774,7 @@
         {
           "class": "T1",
           "line": 669,
+          "line_end": 669,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -8078,6 +8783,7 @@
         {
           "class": "T4",
           "line": 669,
+          "line_end": 669,
           "col_start": 33,
           "col_end": 69,
           "old": "bstsetsplaymteph_iter_invariant (& it)",
@@ -8086,6 +8792,7 @@
         {
           "class": "T1",
           "line": 680,
+          "line_end": 680,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -8094,6 +8801,7 @@
         {
           "class": "T4",
           "line": 680,
+          "line_end": 680,
           "col_start": 33,
           "col_end": 69,
           "old": "bstsetsplaymteph_iter_invariant (& it)",
@@ -8164,6 +8872,7 @@
         {
           "class": "T1",
           "line": 240,
+          "line_end": 240,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -8172,6 +8881,7 @@
         {
           "class": "T4",
           "line": 240,
+          "line_end": 240,
           "col_start": 33,
           "col_end": 68,
           "old": "avltreesetmteph_iter_invariant (& it)",
@@ -8180,6 +8890,7 @@
         {
           "class": "T1",
           "line": 639,
+          "line_end": 639,
           "col_start": 21,
           "col_end": 31,
           "old": "it@.0 == 0",
@@ -8188,6 +8899,7 @@
         {
           "class": "T4",
           "line": 639,
+          "line_end": 639,
           "col_start": 33,
           "col_end": 68,
           "old": "avltreesetmteph_iter_invariant (& it)",
@@ -8215,6 +8927,7 @@
         {
           "class": "T1",
           "line": 404,
+          "line_end": 404,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8223,6 +8936,7 @@
         {
           "class": "T4",
           "line": 405,
+          "line_end": 405,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8231,6 +8945,7 @@
         {
           "class": "T1",
           "line": 904,
+          "line_end": 904,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8239,6 +8954,7 @@
         {
           "class": "T4",
           "line": 905,
+          "line_end": 905,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8259,6 +8975,7 @@
         {
           "class": "T1",
           "line": 952,
+          "line_end": 952,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8267,6 +8984,7 @@
         {
           "class": "T10",
           "line": 953,
+          "line_end": 953,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.len () == self.base_table.tree.inner@.len ()",
@@ -8275,6 +8993,7 @@
         {
           "class": "T4",
           "line": 954,
+          "line_end": 954,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8283,6 +9002,7 @@
         {
           "class": "T1",
           "line": 969,
+          "line_end": 969,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8291,6 +9011,7 @@
         {
           "class": "T10",
           "line": 970,
+          "line_end": 970,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.len () == self.base_table.tree.inner@.len ()",
@@ -8299,6 +9020,7 @@
         {
           "class": "T4",
           "line": 971,
+          "line_end": 971,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8319,6 +9041,7 @@
         {
           "class": "T1",
           "line": 1014,
+          "line_end": 1014,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8327,6 +9050,7 @@
         {
           "class": "T10",
           "line": 1015,
+          "line_end": 1015,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.len () == self.base_table.tree.inner@.len ()",
@@ -8335,6 +9059,7 @@
         {
           "class": "T4",
           "line": 1016,
+          "line_end": 1016,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8343,6 +9068,7 @@
         {
           "class": "T1",
           "line": 1032,
+          "line_end": 1032,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8351,6 +9077,7 @@
         {
           "class": "T10",
           "line": 1033,
+          "line_end": 1033,
           "col_start": 17,
           "col_end": 65,
           "old": "it@.1.len () == self.base_table.tree.inner@.len ()",
@@ -8359,6 +9086,7 @@
         {
           "class": "T4",
           "line": 1034,
+          "line_end": 1034,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8452,6 +9180,7 @@
         {
           "class": "T1",
           "line": 980,
+          "line_end": 980,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8460,6 +9189,7 @@
         {
           "class": "T10",
           "line": 981,
+          "line_end": 981,
           "col_start": 17,
           "col_end": 43,
           "old": "it@.1.len () == self@.len ()",
@@ -8468,6 +9198,7 @@
         {
           "class": "T4",
           "line": 982,
+          "line_end": 982,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8476,6 +9207,7 @@
         {
           "class": "T1",
           "line": 1103,
+          "line_end": 1103,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8484,6 +9216,7 @@
         {
           "class": "T10",
           "line": 1104,
+          "line_end": 1104,
           "col_start": 17,
           "col_end": 43,
           "old": "it@.1.len () == self@.len ()",
@@ -8492,6 +9225,7 @@
         {
           "class": "T4",
           "line": 1105,
+          "line_end": 1105,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8585,6 +9319,7 @@
         {
           "class": "T1",
           "line": 1059,
+          "line_end": 1059,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8593,6 +9328,7 @@
         {
           "class": "T10",
           "line": 1060,
+          "line_end": 1060,
           "col_start": 17,
           "col_end": 43,
           "old": "it@.1.len () == self@.len ()",
@@ -8601,6 +9337,7 @@
         {
           "class": "T4",
           "line": 1061,
+          "line_end": 1061,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8694,6 +9431,7 @@
         {
           "class": "T1",
           "line": 82,
+          "line_end": 82,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8702,6 +9440,7 @@
         {
           "class": "T4",
           "line": 83,
+          "line_end": 83,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8710,6 +9449,7 @@
         {
           "class": "T1",
           "line": 398,
+          "line_end": 398,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8718,6 +9458,7 @@
         {
           "class": "T4",
           "line": 399,
+          "line_end": 399,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8818,6 +9559,7 @@
         {
           "class": "T1",
           "line": 1658,
+          "line_end": 1658,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8826,6 +9568,7 @@
         {
           "class": "T10",
           "line": 1659,
+          "line_end": 1659,
           "col_start": 17,
           "col_end": 54,
           "old": "it@.1.len () == self.tree.inner@.len ()",
@@ -8834,6 +9577,7 @@
         {
           "class": "T4",
           "line": 1660,
+          "line_end": 1660,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8842,6 +9586,7 @@
         {
           "class": "T1",
           "line": 1892,
+          "line_end": 1892,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8850,6 +9595,7 @@
         {
           "class": "T10",
           "line": 1893,
+          "line_end": 1893,
           "col_start": 17,
           "col_end": 54,
           "old": "it@.1.len () == self.tree.inner@.len ()",
@@ -8858,6 +9604,7 @@
         {
           "class": "T4",
           "line": 1894,
+          "line_end": 1894,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8951,6 +9698,7 @@
         {
           "class": "T1",
           "line": 1239,
+          "line_end": 1239,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8959,6 +9707,7 @@
         {
           "class": "T10",
           "line": 1240,
+          "line_end": 1240,
           "col_start": 17,
           "col_end": 54,
           "old": "it@.1.len () == self.tree.inner@.len ()",
@@ -8967,6 +9716,7 @@
         {
           "class": "T4",
           "line": 1241,
+          "line_end": 1241,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -8975,6 +9725,7 @@
         {
           "class": "T1",
           "line": 1494,
+          "line_end": 1494,
           "col_start": 17,
           "col_end": 27,
           "old": "it@.0 == 0",
@@ -8983,6 +9734,7 @@
         {
           "class": "T10",
           "line": 1495,
+          "line_end": 1495,
           "col_start": 17,
           "col_end": 54,
           "old": "it@.1.len () == self.tree.inner@.len ()",
@@ -8991,6 +9743,7 @@
         {
           "class": "T4",
           "line": 1496,
+          "line_end": 1496,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -9011,6 +9764,7 @@
         {
           "class": "T10",
           "line": 262,
+          "line_end": 262,
           "col_start": 29,
           "col_end": 49,
           "old": "it@.0 <= it@.1.len ()",
@@ -9019,6 +9773,7 @@
         {
           "class": "T10",
           "line": 272,
+          "line_end": 272,
           "col_start": 29,
           "col_end": 50,
           "old": "it@.1.no_duplicates ()",
@@ -9027,6 +9782,7 @@
         {
           "class": "T10",
           "line": 275,
+          "line_end": 276,
           "col_start": 29,
           "col_end": 94,
           "old": "forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))",
@@ -9035,6 +9791,7 @@
         {
           "class": "T10",
           "line": 277,
+          "line_end": 278,
           "col_start": 29,
           "col_end": 117,
           "old": "forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))",
@@ -9055,6 +9812,7 @@
         {
           "class": "T10",
           "line": 252,
+          "line_end": 252,
           "col_start": 29,
           "col_end": 49,
           "old": "it@.0 <= it@.1.len ()",
@@ -9063,6 +9821,7 @@
         {
           "class": "T10",
           "line": 262,
+          "line_end": 262,
           "col_start": 29,
           "col_end": 50,
           "old": "it@.1.no_duplicates ()",
@@ -9071,6 +9830,7 @@
         {
           "class": "T10",
           "line": 265,
+          "line_end": 266,
           "col_start": 29,
           "col_end": 94,
           "old": "forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))",
@@ -9079,6 +9839,7 @@
         {
           "class": "T10",
           "line": 267,
+          "line_end": 268,
           "col_start": 29,
           "col_end": 117,
           "old": "forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))",
@@ -9099,6 +9860,7 @@
         {
           "class": "T10",
           "line": 132,
+          "line_end": 132,
           "col_start": 25,
           "col_end": 45,
           "old": "it@.0 <= it@.1.len ()",
@@ -9107,6 +9869,7 @@
         {
           "class": "T6",
           "line": 133,
+          "line_end": 133,
           "col_start": 31,
           "col_end": 50,
           "old": "it@.1.len () - it@.0",
@@ -9115,6 +9878,7 @@
         {
           "class": "T10",
           "line": 226,
+          "line_end": 226,
           "col_start": 25,
           "col_end": 45,
           "old": "it@.0 <= it@.1.len ()",
@@ -9123,6 +9887,7 @@
         {
           "class": "T6",
           "line": 227,
+          "line_end": 227,
           "col_start": 31,
           "col_end": 50,
           "old": "it@.1.len () - it@.0",
@@ -9143,6 +9908,7 @@
         {
           "class": "T10",
           "line": 156,
+          "line_end": 156,
           "col_start": 25,
           "col_end": 45,
           "old": "it@.0 <= it@.1.len ()",
@@ -9151,6 +9917,7 @@
         {
           "class": "T6",
           "line": 157,
+          "line_end": 157,
           "col_start": 31,
           "col_end": 50,
           "old": "it@.1.len () - it@.0",
@@ -9159,6 +9926,7 @@
         {
           "class": "T10",
           "line": 251,
+          "line_end": 251,
           "col_start": 25,
           "col_end": 45,
           "old": "it@.0 <= it@.1.len ()",
@@ -9167,6 +9935,7 @@
         {
           "class": "T6",
           "line": 252,
+          "line_end": 252,
           "col_start": 31,
           "col_end": 50,
           "old": "it@.1.len () - it@.0",
@@ -9187,6 +9956,7 @@
         {
           "class": "T10",
           "line": 195,
+          "line_end": 195,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= it@.1.len ()",
@@ -9195,6 +9965,7 @@
         {
           "class": "T6",
           "line": 199,
+          "line_end": 199,
           "col_start": 27,
           "col_end": 46,
           "old": "it@.1.len () - it@.0",
@@ -9203,6 +9974,7 @@
         {
           "class": "T10",
           "line": 287,
+          "line_end": 287,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9211,6 +9983,7 @@
         {
           "class": "T3",
           "line": 288,
+          "line_end": 288,
           "col_start": 17,
           "col_end": 34,
           "old": "it@.1 == arcs_seq",
@@ -9219,6 +9992,7 @@
         {
           "class": "T9",
           "line": 291,
+          "line_end": 291,
           "col_start": 17,
           "col_end": 38,
           "old": "edges@.len () <= it@.0",
@@ -9227,6 +10001,7 @@
         {
           "class": "T6",
           "line": 295,
+          "line_end": 295,
           "col_start": 23,
           "col_end": 45,
           "old": "arcs_seq.len () - it@.0",
@@ -9247,6 +10022,7 @@
         {
           "class": "T10",
           "line": 199,
+          "line_end": 199,
           "col_start": 21,
           "col_end": 41,
           "old": "it@.0 <= it@.1.len ()",
@@ -9255,6 +10031,7 @@
         {
           "class": "T6",
           "line": 203,
+          "line_end": 203,
           "col_start": 27,
           "col_end": 46,
           "old": "it@.1.len () - it@.0",
@@ -9263,6 +10040,7 @@
         {
           "class": "T10",
           "line": 289,
+          "line_end": 289,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9271,6 +10049,7 @@
         {
           "class": "T3",
           "line": 290,
+          "line_end": 290,
           "col_start": 17,
           "col_end": 34,
           "old": "it@.1 == arcs_seq",
@@ -9279,6 +10058,7 @@
         {
           "class": "T9",
           "line": 293,
+          "line_end": 293,
           "col_start": 17,
           "col_end": 38,
           "old": "edges@.len () <= it@.0",
@@ -9287,6 +10067,7 @@
         {
           "class": "T6",
           "line": 297,
+          "line_end": 297,
           "col_start": 23,
           "col_end": 45,
           "old": "arcs_seq.len () - it@.0",
@@ -9307,6 +10088,7 @@
         {
           "class": "T10",
           "line": 207,
+          "line_end": 207,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9315,6 +10097,7 @@
         {
           "class": "T10",
           "line": 208,
+          "line_end": 208,
           "col_start": 17,
           "col_end": 32,
           "old": "it_seq == it@.1",
@@ -9323,6 +10106,7 @@
         {
           "class": "T9",
           "line": 211,
+          "line_end": 211,
           "col_start": 17,
           "col_end": 53,
           "old": "merge_done ==> it@.0>= it_seq.len ()",
@@ -9331,6 +10115,7 @@
         {
           "class": "T9",
           "line": 216,
+          "line_end": 217,
           "col_start": 17,
           "col_end": 68,
           "old": "forall | idx : int | 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_seq[idx].0@)",
@@ -9339,6 +10124,7 @@
         {
           "class": "T6",
           "line": 224,
+          "line_end": 224,
           "col_start": 45,
           "col_end": 65,
           "old": "it_seq.len () - it@.0",
@@ -9359,6 +10145,7 @@
         {
           "class": "T10",
           "line": 409,
+          "line_end": 409,
           "col_start": 25,
           "col_end": 45,
           "old": "it@.0 <= it@.1.len ()",
@@ -9367,6 +10154,7 @@
         {
           "class": "T10",
           "line": 410,
+          "line_end": 410,
           "col_start": 25,
           "col_end": 46,
           "old": "it@.1.no_duplicates ()",
@@ -9375,6 +10163,7 @@
         {
           "class": "T10",
           "line": 416,
+          "line_end": 417,
           "col_start": 25,
           "col_end": 70,
           "old": "forall | j : int | 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.1[j])@))",
@@ -9383,6 +10172,7 @@
         {
           "class": "T10",
           "line": 418,
+          "line_end": 420,
           "col_start": 25,
           "col_end": 62,
           "old": "forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== e.1))",
@@ -9391,6 +10181,7 @@
         {
           "class": "T9",
           "line": 481,
+          "line_end": 481,
           "col_start": 17,
           "col_end": 38,
           "old": "it@.0 <= le_seq.len ()",
@@ -9399,6 +10190,7 @@
         {
           "class": "T3",
           "line": 482,
+          "line_end": 482,
           "col_start": 17,
           "col_end": 32,
           "old": "it@.1 == le_seq",
@@ -9407,6 +10199,7 @@
         {
           "class": "T6",
           "line": 484,
+          "line_end": 484,
           "col_start": 23,
           "col_end": 43,
           "old": "le_seq.len () - it@.0",
@@ -9427,6 +10220,7 @@
         {
           "class": "T10",
           "line": 265,
+          "line_end": 265,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9435,6 +10229,7 @@
         {
           "class": "T10",
           "line": 266,
+          "line_end": 266,
           "col_start": 17,
           "col_end": 32,
           "old": "it_seq == it@.1",
@@ -9443,6 +10238,7 @@
         {
           "class": "T6",
           "line": 267,
+          "line_end": 267,
           "col_start": 23,
           "col_end": 43,
           "old": "it_seq.len () - it@.0",
@@ -9451,6 +10247,7 @@
         {
           "class": "T10",
           "line": 479,
+          "line_end": 479,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9459,6 +10256,7 @@
         {
           "class": "T10",
           "line": 480,
+          "line_end": 480,
           "col_start": 17,
           "col_end": 32,
           "old": "it_seq == it@.1",
@@ -9467,6 +10265,7 @@
         {
           "class": "T6",
           "line": 481,
+          "line_end": 481,
           "col_start": 23,
           "col_end": 43,
           "old": "it_seq.len () - it@.0",
@@ -9475,6 +10274,7 @@
         {
           "class": "T10",
           "line": 567,
+          "line_end": 567,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9483,6 +10283,7 @@
         {
           "class": "T10",
           "line": 568,
+          "line_end": 568,
           "col_start": 17,
           "col_end": 32,
           "old": "it_seq == it@.1",
@@ -9491,6 +10292,7 @@
         {
           "class": "T6",
           "line": 574,
+          "line_end": 574,
           "col_start": 23,
           "col_end": 43,
           "old": "it_seq.len () - it@.0",
@@ -9499,6 +10301,7 @@
         {
           "class": "T10",
           "line": 757,
+          "line_end": 757,
           "col_start": 17,
           "col_end": 37,
           "old": "it@.0 <= it@.1.len ()",
@@ -9507,6 +10310,7 @@
         {
           "class": "T10",
           "line": 758,
+          "line_end": 758,
           "col_start": 17,
           "col_end": 32,
           "old": "it_seq == it@.1",
@@ -9515,6 +10319,7 @@
         {
           "class": "T6",
           "line": 759,
+          "line_end": 759,
           "col_start": 23,
           "col_end": 43,
           "old": "it_seq.len () - it@.0",
@@ -9523,6 +10328,7 @@
         {
           "class": "T4",
           "line": 1091,
+          "line_end": 1091,
           "col_start": 17,
           "col_end": 36,
           "old": "iter_invariant (& it)",
@@ -9531,6 +10337,7 @@
         {
           "class": "T10",
           "line": 1092,
+          "line_end": 1092,
           "col_start": 17,
           "col_end": 34,
           "old": "iter_seq == it@.1",
@@ -9539,6 +10346,7 @@
         {
           "class": "T6",
           "line": 1094,
+          "line_end": 1094,
           "col_start": 23,
           "col_end": 45,
           "old": "iter_seq.len () - it@.0",
@@ -9559,6 +10367,7 @@
         {
           "class": "T4",
           "line": 228,
+          "line_end": 228,
           "col_start": 21,
           "col_end": 40,
           "old": "iter_invariant (& it)",
@@ -9567,6 +10376,7 @@
         {
           "class": "T10",
           "line": 229,
+          "line_end": 229,
           "col_start": 21,
           "col_end": 38,
           "old": "iter_seq == it@.1",
@@ -9575,6 +10385,7 @@
         {
           "class": "T6",
           "line": 235,
+          "line_end": 235,
           "col_start": 27,
           "col_end": 49,
           "old": "iter_seq.len () - it@.0",
@@ -9583,6 +10394,7 @@
         {
           "class": "T4",
           "line": 535,
+          "line_end": 535,
           "col_start": 21,
           "col_end": 40,
           "old": "iter_invariant (& it)",
@@ -9591,6 +10403,7 @@
         {
           "class": "T10",
           "line": 536,
+          "line_end": 536,
           "col_start": 21,
           "col_end": 38,
           "old": "iter_seq == it@.1",
@@ -9599,6 +10412,7 @@
         {
           "class": "T6",
           "line": 538,
+          "line_end": 538,
           "col_start": 27,
           "col_end": 49,
           "old": "iter_seq.len () - it@.0",
