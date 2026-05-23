@@ -8,9 +8,9 @@ table { width: 100% !important; table-layout: fixed; }
 # Iterator-Upgrade Detect Report
 
 - Root: `/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS`
-- Generated: 2026-05-23T16:33:36Z
-- Tool SHA: `db56dd0021a95446380405f7d906bb699c5f6b71`
-- Totals: files=70, D=500, T=395, U=348
+- Generated: 2026-05-23T16:53:23Z
+- Tool SHA: `ee649d9fcace84e789da1a9968c922422fa06cb0`
+- Totals: files=70, D=500, T=395, U=341
 
 ## Manifest check
 
@@ -30,8 +30,8 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 | # | Code | Count | Files affected |
 |--:|------|------:|---------------:|
 | 1 | U-OTHER | 303 | 46 |
-| 2 | U-CHAIN | 19 | 17 |
-| 3 | U-CUSTOM | 18 | 3 |
+| 2 | U-CUSTOM | 18 | 3 |
+| 3 | U-CHAIN | 12 | 12 |
 | 4 | U-CLASS | 8 | 8 |
 
 ## U-OTHER patterns (top 26)
@@ -107,7 +107,7 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 | 36 | 19 | `Chap19/ArraySeqMtEphSlice.rs` | 1580 | delegated | 12 | 2 | 0 |
 | 37 | 19 | `Chap19/ArraySeqStEph.rs` | 1025 | delegated | 12 | 4 | 0 |
 | 38 | 19 | `Chap19/ArraySeqStPer.rs` | 1027 | delegated | 12 | 4 | 0 |
-| 39 | 23 | `Chap23/BalBinTreeStEph.rs` | 511 | delegated | 36 | 6 | 6 |
+| 39 | 23 | `Chap23/BalBinTreeStEph.rs` | 511 | delegated | 36 | 6 | 3 |
 | 40 | 23 | `Chap23/PrimTreeSeqStPer.rs` | 616 | delegated | 12 | 4 | 0 |
 | 41 | 37 | `Chap37/AVLTreeSeq.rs` | 1188 | custom | 6 | 4 | 8 |
 | 42 | 37 | `Chap37/AVLTreeSeqMtPer.rs` | 823 | delegated | 16 | 4 | 3 |
@@ -122,11 +122,11 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 | 51 | 43 | `Chap43/AugOrderedTableMtEph.rs` | — | delegated | 0 | 4 | 0 |
 | 52 | 43 | `Chap43/AugOrderedTableStEph.rs` | — | delegated | 0 | 4 | 2 |
 | 53 | 43 | `Chap43/AugOrderedTableStPer.rs` | — | delegated | 0 | 4 | 2 |
-| 54 | 43 | `Chap43/OrderedSetStEph.rs` | 1005 | delegated | 12 | 4 | 3 |
-| 55 | 43 | `Chap43/OrderedSetStPer.rs` | 1072 | delegated | 12 | 2 | 2 |
+| 54 | 43 | `Chap43/OrderedSetStEph.rs` | 1005 | delegated | 12 | 4 | 2 |
+| 55 | 43 | `Chap43/OrderedSetStPer.rs` | 1072 | delegated | 12 | 2 | 1 |
 | 56 | 43 | `Chap43/OrderedTableMtEph.rs` | 896 | delegated | 12 | 4 | 1 |
-| 57 | 43 | `Chap43/OrderedTableStEph.rs` | 1790 | delegated | 12 | 4 | 3 |
-| 58 | 43 | `Chap43/OrderedTableStPer.rs` | 1392 | delegated | 12 | 4 | 3 |
+| 57 | 43 | `Chap43/OrderedTableStEph.rs` | 1790 | delegated | 12 | 4 | 2 |
+| 58 | 43 | `Chap43/OrderedTableStPer.rs` | 1392 | delegated | 12 | 4 | 2 |
 | 59 | 57 | `Chap57/DijkstraStEphF64.rs` | — | delegated | 0 | 0 | 4 |
 | 60 | 57 | `Chap57/DijkstraStEphU64.rs` | — | delegated | 0 | 0 | 4 |
 | 61 | 58 | `Chap58/BellmanFordStEphF64.rs` | — | delegated | 0 | 2 | 2 |
@@ -140,7 +140,7 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 | 69 | — | `vstdplus/hash_map_with_view_plus.rs` | 170 | delegated | 8 | 0 | 0 |
 | 70 | — | `vstdplus/hash_set_with_view_plus.rs` | 166 | delegated | 8 | 0 | 0 |
 
-Grand total: D=500, T=395, U=348
+Grand total: D=500, T=395, U=341
 
 ## Per-file findings
 
@@ -1716,16 +1716,13 @@ Transforms (6):
 | 5 | T1 | 375 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
 | 6 | T4 | 377 | `post_order_iter_invariant (& it)` | `<remove>` |
 
-Unresolved (6):
+Unresolved (3):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-OTHER | 348 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_in_order () |
 | 2 | U-OTHER | 362 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_pre_order () |
 | 3 | U-OTHER | 376 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order () |
-| 4 | U-CHAIN | 511 | InOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
-| 5 | U-CHAIN | 517 | PreOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
-| 6 | U-CHAIN | 523 | PostOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
 
 ### `Chap23/PrimTreeSeqStPer.rs` (delegated) — Iter@616
 
@@ -2199,13 +2196,12 @@ Transforms (4):
 | 3 | T1 | 1103 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
 | 4 | T4 | 1105 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (2):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-OTHER | 981 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
-| 2 | U-CHAIN | 1005 | OrderedSetStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
-| 3 | U-OTHER | 1104 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
+| 2 | U-OTHER | 1104 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
 
 ### `Chap43/OrderedSetStPer.rs` (delegated) — Iter@1072
 
@@ -2233,12 +2229,11 @@ Transforms (2):
 | 1 | T1 | 1059 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
 | 2 | T4 | 1061 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (2):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-OTHER | 1060 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
-| 2 | U-CHAIN | 1072 | OrderedSetStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
 
 ### `Chap43/OrderedTableMtEph.rs` (delegated) — Iter@896
 
@@ -2302,13 +2297,12 @@ Transforms (4):
 | 3 | T1 | 1892 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
 | 4 | T4 | 1894 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (2):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-OTHER | 1659 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
-| 2 | U-CHAIN | 1790 | OrderedTableStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
-| 3 | U-OTHER | 1893 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
+| 2 | U-OTHER | 1893 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
 
 ### `Chap43/OrderedTableStPer.rs` (delegated) — Iter@1392
 
@@ -2338,13 +2332,12 @@ Transforms (4):
 | 3 | T1 | 1494 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
 | 4 | T4 | 1496 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (2):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-OTHER | 1240 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
-| 2 | U-CHAIN | 1392 | OrderedTableStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration |
-| 3 | U-OTHER | 1495 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
+| 2 | U-OTHER | 1495 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
 
 ### `Chap57/DijkstraStEphF64.rs` (delegated)
 
@@ -2547,27 +2540,22 @@ Deletions (8):
 | 7 | D4 | ForLoopGhostIterator for HashSetWithViewPlusGhostIterator | 223–260 |
 | 8 | D2 | View for HashSetWithViewPlusGhostIterator | 262–268 |
 
-## Chain ordering (17 chained wrappers)
+## Chain ordering (12 chained wrappers)
 
 | # | Layer | Wrapper | Backing |
 |--:|------:|---------|---------|
 | 1 | 1 | `Chap05/SetMtEph.rs` | `vstdplus/hash_set_with_view_plus.rs` |
 | 2 | 1 | `Chap05/SetStEph.rs` | `vstdplus/hash_set_with_view_plus.rs` |
-| 3 | 1 | `Chap23/BalBinTreeStEph.rs` | `<unresolved:IntoIter>` |
-| 4 | 1 | `Chap43/OrderedSetStEph.rs` | `<unresolved:IntoIter>` |
-| 5 | 1 | `Chap43/OrderedSetStPer.rs` | `<unresolved:IntoIter>` |
-| 6 | 1 | `Chap43/OrderedTableStEph.rs` | `<unresolved:IntoIter>` |
-| 7 | 1 | `Chap43/OrderedTableStPer.rs` | `<unresolved:IntoIter>` |
-| 8 | 2 | `Chap05/RelationStEph.rs` | `Chap05/SetStEph.rs` |
-| 9 | 2 | `Chap06/DirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
-| 10 | 2 | `Chap06/DirGraphStEph.rs` | `Chap05/SetStEph.rs` |
-| 11 | 2 | `Chap06/LabDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
-| 12 | 2 | `Chap06/LabDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
-| 13 | 2 | `Chap06/LabUnDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
-| 14 | 2 | `Chap06/LabUnDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
-| 15 | 2 | `Chap06/UnDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
-| 16 | 2 | `Chap06/UnDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
-| 17 | 3 | `Chap05/MappingStEph.rs` | `Chap05/RelationStEph.rs` |
+| 3 | 2 | `Chap05/RelationStEph.rs` | `Chap05/SetStEph.rs` |
+| 4 | 2 | `Chap06/DirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
+| 5 | 2 | `Chap06/DirGraphStEph.rs` | `Chap05/SetStEph.rs` |
+| 6 | 2 | `Chap06/LabDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
+| 7 | 2 | `Chap06/LabDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
+| 8 | 2 | `Chap06/LabUnDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
+| 9 | 2 | `Chap06/LabUnDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
+| 10 | 2 | `Chap06/UnDirGraphMtEph.rs` | `Chap05/SetStEph.rs` |
+| 11 | 2 | `Chap06/UnDirGraphStEph.rs` | `Chap05/SetStEph.rs` |
+| 12 | 3 | `Chap05/MappingStEph.rs` | `Chap05/RelationStEph.rs` |
 
 Files at the same layer can migrate in parallel; a layer-`k+1` file must wait for its layer-`k` backing. Layer `?` indicates a cycle (matcher bug).
 

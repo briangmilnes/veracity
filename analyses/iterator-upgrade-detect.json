@@ -1,9 +1,9 @@
 {
   "tool": "veracity-iterator-upgrade",
-  "tool_sha": "db56dd0021a95446380405f7d906bb699c5f6b71",
+  "tool_sha": "ee649d9fcace84e789da1a9968c922422fa06cb0",
   "mode": "detect",
   "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
-  "generated": "2026-05-23T16:33:36Z",
+  "generated": "2026-05-23T16:53:23Z",
   "manifest": {
     "inventory_path": null,
     "inventory_count": null,
@@ -6455,27 +6455,9 @@
           "line": 376,
           "col": 17,
           "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order ()"
-        },
-        {
-          "code": "Chain",
-          "line": 511,
-          "col": 1,
-          "message": "InOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
-        },
-        {
-          "code": "Chain",
-          "line": 517,
-          "col": 1,
-          "message": "PreOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
-        },
-        {
-          "code": "Chain",
-          "line": 523,
-          "col": 1,
-          "message": "PostOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         }
       ],
-      "chain_backing": "IntoIter",
+      "chain_backing": null,
       "skip_reason": null
     },
     {
@@ -8008,19 +7990,13 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
         },
         {
-          "code": "Chain",
-          "line": 1005,
-          "col": 1,
-          "message": "OrderedSetStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
-        },
-        {
           "code": "Other",
           "line": 1104,
           "col": 17,
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
         }
       ],
-      "chain_backing": "IntoIter",
+      "chain_backing": null,
       "skip_reason": null
     },
     {
@@ -8126,15 +8102,9 @@
           "line": 1060,
           "col": 17,
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
-        },
-        {
-          "code": "Chain",
-          "line": 1072,
-          "col": 1,
-          "message": "OrderedSetStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         }
       ],
-      "chain_backing": "IntoIter",
+      "chain_backing": null,
       "skip_reason": null
     },
     {
@@ -8382,19 +8352,13 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         },
         {
-          "code": "Chain",
-          "line": 1790,
-          "col": 1,
-          "message": "OrderedTableStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
-        },
-        {
           "code": "Other",
           "line": 1893,
           "col": 17,
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         }
       ],
-      "chain_backing": "IntoIter",
+      "chain_backing": null,
       "skip_reason": null
     },
     {
@@ -8518,19 +8482,13 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         },
         {
-          "code": "Chain",
-          "line": 1392,
-          "col": 1,
-          "message": "OrderedTableStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
-        },
-        {
           "code": "Other",
           "line": 1495,
           "col": 17,
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         }
       ],
-      "chain_backing": "IntoIter",
+      "chain_backing": null,
       "skip_reason": null
     },
     {
@@ -9198,7 +9156,7 @@
     "files": 70,
     "deletions": 500,
     "transforms": 395,
-    "unresolved": 348
+    "unresolved": 341
   },
   "unresolved_by_class": [
     {
@@ -9207,14 +9165,14 @@
       "files_affected": 46
     },
     {
-      "code": "U-CHAIN",
-      "count": 19,
-      "files_affected": 17
-    },
-    {
       "code": "U-CUSTOM",
       "count": 18,
       "files_affected": 3
+    },
+    {
+      "code": "U-CHAIN",
+      "count": 12,
+      "files_affected": 12
     },
     {
       "code": "U-CLASS",
@@ -9796,36 +9754,6 @@
       "backing": "Chap05/SetStEph.rs",
       "backing_ident": "SetStEphIter",
       "layer": 2
-    },
-    {
-      "wrapper": "Chap23/BalBinTreeStEph.rs",
-      "backing": "<unresolved:IntoIter>",
-      "backing_ident": "IntoIter",
-      "layer": 1
-    },
-    {
-      "wrapper": "Chap43/OrderedSetStEph.rs",
-      "backing": "<unresolved:IntoIter>",
-      "backing_ident": "IntoIter",
-      "layer": 1
-    },
-    {
-      "wrapper": "Chap43/OrderedSetStPer.rs",
-      "backing": "<unresolved:IntoIter>",
-      "backing_ident": "IntoIter",
-      "layer": 1
-    },
-    {
-      "wrapper": "Chap43/OrderedTableStEph.rs",
-      "backing": "<unresolved:IntoIter>",
-      "backing_ident": "IntoIter",
-      "layer": 1
-    },
-    {
-      "wrapper": "Chap43/OrderedTableStPer.rs",
-      "backing": "<unresolved:IntoIter>",
-      "backing_ident": "IntoIter",
-      "layer": 1
     }
   ]
 }

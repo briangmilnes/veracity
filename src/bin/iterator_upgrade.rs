@@ -1326,11 +1326,22 @@ fn classify_iter_struct(node: &ItemStruct) -> (bool, bool, Option<String>) {
 }
 
 fn is_std_iter_type(ty: &Type) -> bool {
+    // True for any of:
+    //   - fully-qualified std iters (std::slice::Iter, std::vec::IntoIter,
+    //     std::collections::hash_set::Iter, std::collections::hash_map::Iter).
+    //   - bare unqualified `Iter` / `IntoIter` (imported via `use std::...`).
+    //     APAS convention names every wrapper `*Iter` with a non-empty prefix
+    //     (`ArraySeqStEphIter`, etc.), so the bare unprefixed forms can only
+    //     be std iters.
     if let Type::Path(tp) = ty {
         let segs: Vec<String> = tp.path.segments.iter().map(|s| s.ident.to_string()).collect();
         let last = segs.last().cloned().unwrap_or_default();
         if !matches!(last.as_str(), "Iter" | "IntoIter") {
             return false;
+        }
+        if segs.len() == 1 {
+            // Bare `Iter` or `IntoIter` — std by convention.
+            return true;
         }
         let joined = segs.join("::");
         return joined.contains("slice")
@@ -1342,13 +1353,15 @@ fn is_std_iter_type(ty: &Type) -> bool {
 }
 
 fn is_apas_iter_type(ty: &Type) -> bool {
+    if is_std_iter_type(ty) {
+        return false;
+    }
     if let Type::Path(tp) = ty {
         if let Some(last) = tp.path.segments.last() {
             let l = last.ident.to_string();
-            // Custom iter: identifier ends with "Iter" and is not a std-path Iter.
-            if (l.ends_with("Iter") && l != "Iter" && l != "IntoIter") || l == "Iter" || l == "IntoIter" {
-                return !is_std_iter_type(ty) && l.ends_with("Iter");
-            }
+            // APAS *Iter: ends with "Iter" AND has a non-empty prefix
+            // (so `Iter`/`IntoIter` themselves don't qualify — those are std).
+            return l.ends_with("Iter") && l.len() > 4 && l != "IntoIter";
         }
     }
     false

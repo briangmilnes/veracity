@@ -1,8 +1,8 @@
 # veracity-iterator-upgrade --detect
 # root: /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS
-# tool_sha: db56dd0021a95446380405f7d906bb699c5f6b71
-# generated: 2026-05-23T16:33:36Z
-# totals: files=70 D=500 T=395 U=348
+# tool_sha: ee649d9fcace84e789da1a9968c922422fa06cb0
+# generated: 2026-05-23T16:53:23Z
+# totals: files=70 D=500 T=395 U=341
 manifest:1:1: warning: manifest: scanned 70 of ? — inventory not found
 src/Chap05/MappingStEph.rs:1:1: summary: delegated, D=12 T=3 U=5
 src/Chap05/MappingStEph.rs:505:1: warning: D6: MappingStEphIter [505-510]
@@ -887,7 +887,7 @@ src/Chap19/ArraySeqStPer.rs:1018:17: info: T8: iter_invariant(&it) (constructor 
 src/Chap19/ArraySeqStPer.rs:1132:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
 src/Chap19/ArraySeqStPer.rs:1143:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap19/ArraySeqStPer.rs:1144:17: info: T2: it@.1 == self.seq@  →  it.seq() == self.seq@,
-src/Chap23/BalBinTreeStEph.rs:1:1: summary: delegated, D=36 T=6 U=6
+src/Chap23/BalBinTreeStEph.rs:1:1: summary: delegated, D=36 T=6 U=3
 src/Chap23/BalBinTreeStEph.rs:396:1: warning: D10: in_order_iter_invariant<…> [396-398]
 src/Chap23/BalBinTreeStEph.rs:400:1: warning: D10: pre_order_iter_invariant<…> [400-402]
 src/Chap23/BalBinTreeStEph.rs:404:1: warning: D10: post_order_iter_invariant<…> [404-406]
@@ -933,9 +933,6 @@ src/Chap23/BalBinTreeStEph.rs:377:17: info: T4: post_order_iter_invariant (& it)
 src/Chap23/BalBinTreeStEph.rs:348:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_in_order ()
 src/Chap23/BalBinTreeStEph.rs:362:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_pre_order ()
 src/Chap23/BalBinTreeStEph.rs:376:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order ()
-src/Chap23/BalBinTreeStEph.rs:511:1: error: U-CHAIN: InOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
-src/Chap23/BalBinTreeStEph.rs:517:1: error: U-CHAIN: PreOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
-src/Chap23/BalBinTreeStEph.rs:523:1: error: U-CHAIN: PostOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
 src/Chap23/PrimTreeSeqStPer.rs:1:1: summary: delegated, D=12 T=4 U=0
 src/Chap23/PrimTreeSeqStPer.rs:616:1: warning: D6: PrimTreeSeqStIter [616-619]
 src/Chap23/PrimTreeSeqStPer.rs:621:1: warning: D7: View for PrimTreeSeqStIter [621-624]
@@ -1133,7 +1130,7 @@ src/Chap43/AugOrderedTableStPer.rs:1032:17: info: T1: it@.0 == 0  →  IteratorS
 src/Chap43/AugOrderedTableStPer.rs:1034:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/AugOrderedTableStPer.rs:1015:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
 src/Chap43/AugOrderedTableStPer.rs:1033:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
-src/Chap43/OrderedSetStEph.rs:1:1: summary: delegated, D=12 T=4 U=3
+src/Chap43/OrderedSetStEph.rs:1:1: summary: delegated, D=12 T=4 U=2
 src/Chap43/OrderedSetStEph.rs:1005:1: warning: D6: OrderedSetStEphIter [1005-1008]
 src/Chap43/OrderedSetStEph.rs:1010:1: warning: D7: View for OrderedSetStEphIter [1010-1013]
 src/Chap43/OrderedSetStEph.rs:1015:1: warning: D10: iter_invariant<…> [1015-1017]
@@ -1151,9 +1148,8 @@ src/Chap43/OrderedSetStEph.rs:982:17: info: T4: iter_invariant (& it)  →  <rem
 src/Chap43/OrderedSetStEph.rs:1103:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedSetStEph.rs:1105:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedSetStEph.rs:981:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
-src/Chap43/OrderedSetStEph.rs:1005:1: error: U-CHAIN: OrderedSetStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
 src/Chap43/OrderedSetStEph.rs:1104:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
-src/Chap43/OrderedSetStPer.rs:1:1: summary: delegated, D=12 T=2 U=2
+src/Chap43/OrderedSetStPer.rs:1:1: summary: delegated, D=12 T=2 U=1
 src/Chap43/OrderedSetStPer.rs:1072:1: warning: D6: OrderedSetStPerIter [1072-1075]
 src/Chap43/OrderedSetStPer.rs:1077:1: warning: D7: View for OrderedSetStPerIter [1077-1080]
 src/Chap43/OrderedSetStPer.rs:1082:1: warning: D10: iter_invariant<…> [1082-1084]
@@ -1169,7 +1165,6 @@ src/Chap43/OrderedSetStPer.rs:1259:1: warning: D5: Display for OrderedSetStPerGh
 src/Chap43/OrderedSetStPer.rs:1059:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedSetStPer.rs:1061:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedSetStPer.rs:1060:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
-src/Chap43/OrderedSetStPer.rs:1072:1: error: U-CHAIN: OrderedSetStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
 src/Chap43/OrderedTableMtEph.rs:1:1: summary: delegated, D=12 T=4 U=1
 src/Chap43/OrderedTableMtEph.rs:71:1: warning: D10: iter_invariant<…> [71-73]
 src/Chap43/OrderedTableMtEph.rs:896:1: warning: D6: OrderedTableMtEphIter [896-902]
@@ -1188,7 +1183,7 @@ src/Chap43/OrderedTableMtEph.rs:83:17: info: T4: iter_invariant (& it)  →  <re
 src/Chap43/OrderedTableMtEph.rs:398:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedTableMtEph.rs:399:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableMtEph.rs:1:1: error: U-CLASS: observed custom-style iterator in a non-pinned file — review pin list
-src/Chap43/OrderedTableStEph.rs:1:1: summary: delegated, D=12 T=4 U=3
+src/Chap43/OrderedTableStEph.rs:1:1: summary: delegated, D=12 T=4 U=2
 src/Chap43/OrderedTableStEph.rs:1790:1: warning: D6: OrderedTableStEphIter [1790-1794]
 src/Chap43/OrderedTableStEph.rs:1796:1: warning: D7: View for OrderedTableStEphIter [1796-1799]
 src/Chap43/OrderedTableStEph.rs:1801:1: warning: D10: iter_invariant<…> [1801-1803]
@@ -1206,9 +1201,8 @@ src/Chap43/OrderedTableStEph.rs:1660:17: info: T4: iter_invariant (& it)  →  <
 src/Chap43/OrderedTableStEph.rs:1892:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedTableStEph.rs:1894:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableStEph.rs:1659:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStEph.rs:1790:1: error: U-CHAIN: OrderedTableStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
 src/Chap43/OrderedTableStEph.rs:1893:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStPer.rs:1:1: summary: delegated, D=12 T=4 U=3
+src/Chap43/OrderedTableStPer.rs:1:1: summary: delegated, D=12 T=4 U=2
 src/Chap43/OrderedTableStPer.rs:1392:1: warning: D6: OrderedTableStPerIter [1392-1396]
 src/Chap43/OrderedTableStPer.rs:1398:1: warning: D7: View for OrderedTableStPerIter [1398-1401]
 src/Chap43/OrderedTableStPer.rs:1403:1: warning: D10: iter_invariant<…> [1403-1405]
@@ -1226,7 +1220,6 @@ src/Chap43/OrderedTableStPer.rs:1241:17: info: T4: iter_invariant (& it)  →  <
 src/Chap43/OrderedTableStPer.rs:1494:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedTableStPer.rs:1496:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableStPer.rs:1240:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStPer.rs:1392:1: error: U-CHAIN: OrderedTableStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration
 src/Chap43/OrderedTableStPer.rs:1495:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
 src/Chap57/DijkstraStEphF64.rs:1:1: summary: delegated, D=0 T=0 U=4
 src/Chap57/DijkstraStEphF64.rs:262:29: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
