@@ -18,7 +18,7 @@ use anyhow::{bail, Context, Result};
 use clap::Parser;
 use ra_ap_syntax::{ast::{self, AstNode}, Edition, SourceFile};
 use serde::Serialize;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use syn::spanned::Spanned;
@@ -28,6 +28,13 @@ use verus_syn::{
     ItemStruct, Member, Signature, Specification, Stmt, Type,
 };
 use walkdir::WalkDir;
+
+const TOOL_SHA: &str = match option_env!("GIT_HASH") {
+    Some(s) => s,
+    None => "unknown",
+};
+
+const WIDE_MD_STYLE: &str = "<style>\nbody { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 1em !important; }\n.markdown-body { max-width: 100% !important; width: 100% !important; }\n.container, .container-lg, .container-xl, main, article { max-width: 100% !important; width: 100% !important; }\ntable { width: 100% !important; table-layout: fixed; }\n</style>\n\n";
 
 const CUSTOM_FILES: &[&str] = &[
     "Chap37/AVLTreeSeq.rs",
@@ -210,10 +217,43 @@ struct FileFindings {
     path: String,
     chap: Option<String>,
     style: Style,
+    iter_line: Option<usize>, // D6 line_start when present
     deletions: Vec<Deletion>,
     transforms: Vec<Transform>,
     unresolved: Vec<UnresolvedFinding>,
+    chain_backing: Option<String>, // backing-ident string for U-CHAIN files
     skip_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ChainEdge {
+    wrapper: String,        // relative path
+    backing: String,        // "Chap05/SetStEph.rs" or "<unresolved:Ident>"
+    backing_ident: String,  // the type identifier
+    layer: Option<u32>,     // filled in post-topo (None if cycle)
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ClusteredPattern {
+    skeleton: String,
+    count: usize,
+    suggested_new: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct UClassRollup {
+    code: String,
+    count: usize,
+    files_affected: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct Manifest {
+    inventory_path: Option<String>,
+    inventory_count: Option<usize>,
+    scanned_count: usize,
+    missing: Vec<String>,
+    extra: Vec<String>,
 }
 
 fn main() -> Result<()> {
@@ -379,20 +419,10 @@ fn scan_file(path: &Path, root: &Path) -> Result<Option<FileFindings>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("reading {}", path.display()))?;
 
-    // Quick screen: does the file mention any iterator-related identifier we care about?
-    // If not, skip entirely. Substring match here is just a fast filter, not a parser.
-    let looks_iterish = content.contains("GhostIterator")
-        || content.contains("ForLoopGhostIterator")
-        || content.contains("iter_invariant")
-        || content.contains("ForLoopGhostIteratorNew");
-    if !looks_iterish {
-        return Ok(None);
-    }
-
     let (open, close, brace_line) = match find_verus_block(&content) {
         Some(x) => x,
         None => {
-            // Treat as a non-iterator file; the patterns we care about live inside verus!.
+            // No verus! macro in this file — patterns we care about live inside verus!.
             return Ok(None);
         }
     };
@@ -463,15 +493,26 @@ fn scan_file(path: &Path, root: &Path) -> Result<Option<FileFindings>> {
 
     unresolved.sort_by_key(|u| (u.line, u.col));
 
-    Ok(Some(FileFindings {
+    let ff = FileFindings {
         path: rel,
         chap,
         style,
+        iter_line: v.iter_line,
         deletions,
         transforms: v.transforms,
         unresolved,
+        chain_backing: v.chain_backing_ident,
         skip_reason: None,
-    }))
+    };
+
+    // Drop noisy "zero-findings" entries — these are files that have a verus! block
+    // but no iterator-related content. Without this filter the per-file summary would
+    // include every Verus file in the tree.
+    if ff.deletions.is_empty() && ff.transforms.is_empty() && ff.unresolved.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(ff))
 }
 
 fn find_verus_block(content: &str) -> Option<(usize, usize, usize)> {
@@ -606,6 +647,12 @@ struct ScanVisitor {
 
     // Did we observe a custom-style iterator? (i.e., *Iter struct with non-std field.)
     observed_custom: bool,
+
+    // First *Iter struct line (used as the `Iter` column in the per-file summary).
+    iter_line: Option<usize>,
+
+    // For U-CHAIN: the backing-iter type ident when the wrapper's sole field is an APAS *Iter.
+    chain_backing_ident: Option<String>,
 }
 
 impl ScanVisitor {
@@ -619,6 +666,8 @@ impl ScanVisitor {
             iter_idents: BTreeSet::new(),
             ghost_iter_idents: BTreeSet::new(),
             observed_custom: false,
+            iter_line: None,
+            chain_backing_ident: None,
         }
     }
 
@@ -678,8 +727,11 @@ impl<'ast> Visit<'ast> for ScanVisitor {
                 line_end,
             });
         } else if is_iter_struct_name(&name) {
+            if self.iter_line.is_none() {
+                self.iter_line = Some(line_start);
+            }
             // D6 if delegated (single std-iter or APAS-iter field).
-            let (is_delegated, has_apas_chain) = classify_iter_struct(node);
+            let (is_delegated, has_apas_chain, backing) = classify_iter_struct(node);
             if is_delegated {
                 self.iter_idents.insert(name.clone());
                 self.deletions.push(Deletion {
@@ -689,13 +741,17 @@ impl<'ast> Visit<'ast> for ScanVisitor {
                     line_end,
                 });
                 if has_apas_chain {
+                    if self.chain_backing_ident.is_none() {
+                        self.chain_backing_ident = backing.clone();
+                    }
+                    let backing_str = backing.unwrap_or_else(|| "?".to_string());
                     self.unresolved.push(UnresolvedFinding {
                         code: UClass::Chain,
                         line: line_start,
                         col: 1,
                         message: format!(
-                            "{} wraps another APAS *Iter — deletion order depends on inner collection migration",
-                            name
+                            "{} wraps another APAS *Iter ({}) — deletion order depends on inner collection migration",
+                            name, backing_str
                         ),
                     });
                 }
@@ -1233,11 +1289,11 @@ fn impl_trait_last(it: &ItemImpl) -> Option<String> {
         .and_then(|(_, p, _)| p.segments.last().map(|s| s.ident.to_string()))
 }
 
-// Returns (is_delegated, has_apas_chain).
-fn classify_iter_struct(node: &ItemStruct) -> (bool, bool) {
+// Returns (is_delegated, has_apas_chain, backing_ident_if_apas_chain).
+fn classify_iter_struct(node: &ItemStruct) -> (bool, bool, Option<String>) {
     let fields = match &node.fields {
         Fields::Named(named) => &named.named,
-        Fields::Unnamed(_) | Fields::Unit => return (false, false),
+        Fields::Unnamed(_) | Fields::Unit => return (false, false, None),
     };
     let mut data_fields = Vec::new();
     for f in fields {
@@ -1252,12 +1308,21 @@ fn classify_iter_struct(node: &ItemStruct) -> (bool, bool) {
         data_fields.push(&f.ty);
     }
     if data_fields.len() != 1 {
-        return (false, false);
+        return (false, false, None);
     }
     let ty = data_fields[0];
     let std_iter = is_std_iter_type(ty);
     let apas_iter = is_apas_iter_type(ty);
-    (std_iter || apas_iter, apas_iter)
+    let backing = if apas_iter {
+        if let Type::Path(tp) = ty {
+            tp.path.segments.last().map(|s| s.ident.to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    (std_iter || apas_iter, apas_iter, backing)
 }
 
 fn is_std_iter_type(ty: &Type) -> bool {
@@ -1289,6 +1354,307 @@ fn is_apas_iter_type(ty: &Type) -> bool {
     false
 }
 
+// ==== Manifest / chain ordering / clustering / short paths ====
+
+fn short_path(p: &str) -> String {
+    p.strip_prefix("src/").unwrap_or(p).to_string()
+}
+
+/// Load `docs/PropheticIterators.md` and extract the 71-file inventory.
+/// The inventory rows are recognized as any table row whose first cell parses
+/// as an integer and whose second cell starts with `src/` and ends with `.rs`.
+/// Returns (inventory_path, files) or None when the file is absent.
+fn load_inventory(root: &Path) -> Option<(PathBuf, Vec<String>)> {
+    let path = root.join("docs/PropheticIterators.md");
+    let content = fs::read_to_string(&path).ok()?;
+    let mut out = Vec::new();
+    for line in content.lines() {
+        let line = line.trim();
+        if !line.starts_with('|') {
+            continue;
+        }
+        let cells: Vec<&str> = line.split('|').map(|c| c.trim()).collect();
+        // cells = ["", "1", "src/Chap.../File.rs", ...].
+        if cells.len() < 3 {
+            continue;
+        }
+        if cells[1].parse::<u32>().is_err() {
+            continue;
+        }
+        // Take whatever path-looking text is in cell 2 (strip inline `code` ticks).
+        let candidate = cells[2].trim_matches('`').trim();
+        if candidate.starts_with("src/") && candidate.ends_with(".rs") {
+            out.push(candidate.to_string());
+        }
+    }
+    if out.is_empty() {
+        return None;
+    }
+    Some((path, out))
+}
+
+fn build_manifest(root: &Path, scanned: &[String]) -> Manifest {
+    let scanned_set: BTreeSet<&str> = scanned.iter().map(|s| s.as_str()).collect();
+    let inv = load_inventory(root);
+    match inv {
+        Some((path, files)) => {
+            let inv_set: BTreeSet<&str> = files.iter().map(|s| s.as_str()).collect();
+            let missing: Vec<String> = inv_set
+                .difference(&scanned_set)
+                .map(|s| s.to_string())
+                .collect();
+            let extra: Vec<String> = scanned_set
+                .difference(&inv_set)
+                .map(|s| s.to_string())
+                .collect();
+            Manifest {
+                inventory_path: Some(path.display().to_string()),
+                inventory_count: Some(files.len()),
+                scanned_count: scanned.len(),
+                missing,
+                extra,
+            }
+        }
+        None => Manifest {
+            inventory_path: None,
+            inventory_count: None,
+            scanned_count: scanned.len(),
+            missing: Vec::new(),
+            extra: Vec::new(),
+        },
+    }
+}
+
+/// Resolve a chained-backing ident (e.g., "SetStEphIter") to the file that defines
+/// the matching collection (e.g., "Chap05/SetStEph.rs"). Best-effort: scan the
+/// findings list for a file whose D6 ident is the backing ident.
+fn resolve_chain_backing(backing_ident: &str, findings: &[FileFindings]) -> Option<String> {
+    for f in findings {
+        for d in &f.deletions {
+            if d.class == DClass::D6 && d.ident == backing_ident {
+                return Some(short_path(&f.path));
+            }
+        }
+    }
+    None
+}
+
+fn build_chain_edges(findings: &[FileFindings]) -> Vec<ChainEdge> {
+    let mut edges = Vec::new();
+    for f in findings {
+        if let Some(backing_ident) = &f.chain_backing {
+            let backing = resolve_chain_backing(backing_ident, findings)
+                .unwrap_or_else(|| format!("<unresolved:{}>", backing_ident));
+            edges.push(ChainEdge {
+                wrapper: short_path(&f.path),
+                backing,
+                backing_ident: backing_ident.clone(),
+                layer: None,
+            });
+        }
+    }
+    topo_assign_layers(&mut edges);
+    edges
+}
+
+/// Assign topological layers. Files with no APAS backing in this scan get layer 1
+/// (independent of other APAS files; back to std). Each subsequent layer's files
+/// have all their dependencies in earlier layers.
+fn topo_assign_layers(edges: &mut [ChainEdge]) {
+    // Build a map: wrapper -> backing-wrapper (or None if backing isn't a tracked wrapper).
+    let wrappers: BTreeSet<String> = edges.iter().map(|e| e.wrapper.clone()).collect();
+    let parent: BTreeMap<String, Option<String>> = edges
+        .iter()
+        .map(|e| {
+            let parent = if wrappers.contains(&e.backing) {
+                Some(e.backing.clone())
+            } else {
+                None
+            };
+            (e.wrapper.clone(), parent)
+        })
+        .collect();
+
+    // BFS layer assignment with cycle detection.
+    let mut layer_map: BTreeMap<String, u32> = BTreeMap::new();
+    let mut changed = true;
+    let mut iters = 0;
+    while changed {
+        changed = false;
+        iters += 1;
+        if iters > 100 {
+            break; // cycle guard
+        }
+        for w in &wrappers {
+            if layer_map.contains_key(w) {
+                continue;
+            }
+            match parent.get(w).and_then(|p| p.as_ref()) {
+                None => {
+                    layer_map.insert(w.clone(), 1);
+                    changed = true;
+                }
+                Some(p) => {
+                    if let Some(&pl) = layer_map.get(p) {
+                        layer_map.insert(w.clone(), pl + 1);
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    for e in edges.iter_mut() {
+        e.layer = layer_map.get(&e.wrapper).copied();
+    }
+}
+
+/// Normalize an expression's rendered text to a clustering skeleton:
+/// any path-segment ident not in a whitelist becomes `<ident>`, any literal
+/// becomes `<lit>`. Re-parse + walk via verus_syn so this is AST-based.
+fn skeleton_of(expr_text: &str) -> String {
+    // Try parsing as expression; if it fails, return the original text.
+    let parsed: Result<Expr, _> = verus_syn::parse_str(expr_text);
+    let expr = match parsed {
+        Ok(e) => e,
+        Err(_) => return expr_text.to_string(),
+    };
+
+    // Re-tokenize via quote::ToTokens and rewrite at the token level.
+    use quote::ToTokens;
+    let tokens = expr.to_token_stream().to_string();
+
+    // Tokenize at whitespace boundaries (quote::to_string emits a space-padded token stream).
+    let pieces: Vec<&str> = tokens.split(' ').collect();
+    let whitelist: BTreeSet<&str> = [
+        "it", "self", "Self", "old", "IteratorSpec", "Some", "None", "true", "false",
+        "i", "j", "k", "p",
+    ]
+    .iter()
+    .copied()
+    .collect();
+
+    let mut rebuilt = String::new();
+    // Keep small integer literals (0, 1, 2, 3) as-is — they're usually structural
+    // (tuple indices, loop bounds) and the clustering loses too much without them.
+    let small_int_kept: BTreeSet<&str> = ["0", "1", "2", "3"].iter().copied().collect();
+    let small_int_kept_int: BTreeSet<String> = small_int_kept
+        .iter()
+        .flat_map(|s| vec![s.to_string(), format!("{}int", s), format!("{}nat", s), format!("{}u64", s), format!("{}usize", s)])
+        .collect();
+
+    for (i, tok) in pieces.iter().enumerate() {
+        let tok = *tok;
+        if i > 0 {
+            rebuilt.push(' ');
+        }
+        if tok.is_empty() {
+            continue;
+        }
+        let looks_lit = tok.chars().next().map_or(false, |c| c.is_ascii_digit())
+            || (tok.starts_with('"') && tok.ends_with('"'));
+        let looks_ident = tok
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_alphabetic() || c == '_')
+            && tok.chars().all(|c| c.is_alphanumeric() || c == '_');
+
+        if looks_lit && !small_int_kept_int.contains(tok) {
+            rebuilt.push_str("<lit>");
+        } else if looks_ident && !whitelist.contains(tok) {
+            rebuilt.push_str("<ident>");
+        } else {
+            rebuilt.push_str(tok);
+        }
+    }
+    canonical_spacing(&rebuilt)
+}
+
+fn canonical_spacing(s: &str) -> String {
+    let mut t = s.to_string();
+    t = t.replace(" . ", ".");
+    t = t.replace(" , ", ", ");
+    t = t.replace(" :: ", "::");
+    t = t.replace(" ( ", "(");
+    t = t.replace(" ) ", ")");
+    t = t.replace("( ", "(");
+    t = t.replace(" )", ")");
+    t = t.replace(" @", "@");
+    t = t.replace("@ ", "@");
+    t.trim().to_string()
+}
+
+fn build_uother_clusters(findings: &[FileFindings]) -> Vec<ClusteredPattern> {
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    let prefix = "unrecognized `it`-bearing clause: ";
+    for f in findings {
+        for u in &f.unresolved {
+            if u.code != UClass::Other {
+                continue;
+            }
+            let text = u.message.strip_prefix(prefix).unwrap_or(&u.message).trim();
+            let skel = skeleton_of(text);
+            *counts.entry(skel).or_insert(0) += 1;
+        }
+    }
+    let mut out: Vec<ClusteredPattern> = counts
+        .into_iter()
+        .map(|(skel, count)| {
+            let suggested = suggest_new(&skel);
+            ClusteredPattern {
+                skeleton: skel,
+                count,
+                suggested_new: suggested,
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.skeleton.cmp(&b.skeleton)));
+    out
+}
+
+fn suggest_new(skel: &str) -> String {
+    let mut s = skel.to_string();
+    // Handle the canonical-spacing forms `it@.0` / `it@.1`.
+    let touched = s.contains("it@.0") || s.contains("it@.1");
+    if !touched {
+        return String::new();
+    }
+    s = s.replace("it@.0", "it.index()");
+    s = s.replace("it@.1", "it.seq()");
+    s
+}
+
+fn build_uclass_rollup(findings: &[FileFindings]) -> Vec<UClassRollup> {
+    let mut counts: BTreeMap<&'static str, (usize, BTreeSet<String>)> = BTreeMap::new();
+    for f in findings {
+        for u in &f.unresolved {
+            let entry = counts.entry(u.code.as_str()).or_insert_with(|| (0, BTreeSet::new()));
+            entry.0 += 1;
+            entry.1.insert(f.path.clone());
+        }
+    }
+    let mut out: Vec<UClassRollup> = counts
+        .into_iter()
+        .map(|(code, (count, files))| UClassRollup {
+            code: code.to_string(),
+            count,
+            files_affected: files.len(),
+        })
+        .collect();
+    out.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.code.cmp(&b.code)));
+    out
+}
+
+const LEGEND_ROWS: &[(&str, &str, &str)] = &[
+    ("U-OTHER",  "`it`-bearing clause matched no T1–T8 template",                 "Extend matcher or hand-fix"),
+    ("U-CHAIN",  "Chained-wrapper iterator; backing must migrate first",           "Schedule per chain appendix"),
+    ("U-CUSTOM", "File is pinned-custom; needs hand-written IteratorSpecImpl",     "Manual port, not mechanical"),
+    ("U-CLASS",  "Matcher saw custom but pin says delegated (or vice versa)",     "Reconcile pin list vs D6 rule"),
+    ("U-LOOP",   "Manual loop with non-IteratorSpec decreases",                    "Human review of decreases"),
+    ("U-POST",   "Post-loop assertion referencing `it@` after loop exit",          "Move to when_used_as_spec"),
+    ("U-MULTI",  "Multi-iterator (zip-like) loop",                                 "Split into per-iterator invariants"),
+];
+
 // ==== Report writers ====
 
 fn write_reports(
@@ -1300,20 +1666,44 @@ fn write_reports(
 ) -> Result<()> {
     let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let summary = aggregate_summary(findings);
+    let scanned_paths: Vec<String> = findings.iter().map(|f| f.path.clone()).collect();
+    let manifest = build_manifest(root, &scanned_paths);
+    let chain_edges = build_chain_edges(findings);
+    let clusters = build_uother_clusters(findings);
+    let uclass = build_uclass_rollup(findings);
 
     if formats.contains(&"md") {
         let path = out_dir.join("iterator-upgrade-detect.md");
-        let body = render_markdown(findings, &summary, root, &timestamp, parse_failures);
+        let body = render_markdown(
+            findings,
+            &summary,
+            root,
+            &timestamp,
+            parse_failures,
+            &manifest,
+            &chain_edges,
+            &clusters,
+            &uclass,
+        );
         fs::write(&path, body).with_context(|| format!("writing {}", path.display()))?;
     }
     if formats.contains(&"json") {
         let path = out_dir.join("iterator-upgrade-detect.json");
-        let body = render_json(findings, &summary, root, &timestamp)?;
+        let body = render_json(
+            findings,
+            &summary,
+            root,
+            &timestamp,
+            &manifest,
+            &chain_edges,
+            &clusters,
+            &uclass,
+        )?;
         fs::write(&path, body).with_context(|| format!("writing {}", path.display()))?;
     }
     if formats.contains(&"compile") {
         let path = out_dir.join("iterator-upgrade-detect.compile");
-        let body = render_compile(findings, &summary, root, &timestamp);
+        let body = render_compile(findings, &summary, root, &timestamp, &manifest, &chain_edges);
         fs::write(&path, body).with_context(|| format!("writing {}", path.display()))?;
     }
     Ok(())
@@ -1336,40 +1726,152 @@ fn aggregate_summary(findings: &[FileFindings]) -> Summary {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_markdown(
     findings: &[FileFindings],
     summary: &Summary,
     root: &Path,
     timestamp: &str,
     parse_failures: &[(PathBuf, String)],
+    manifest: &Manifest,
+    chain_edges: &[ChainEdge],
+    clusters: &[ClusteredPattern],
+    uclass: &[UClassRollup],
 ) -> String {
     let mut s = String::new();
+    // Wide-MD style block (§13a.6).
+    s.push_str(WIDE_MD_STYLE);
+
     s.push_str("# Iterator-Upgrade Detect Report\n\n");
     s.push_str(&format!("- Root: `{}`\n", root.display()));
     s.push_str(&format!("- Generated: {}\n", timestamp));
+    s.push_str(&format!("- Tool SHA: `{}`\n", TOOL_SHA));
     s.push_str(&format!(
         "- Totals: files={}, D={}, T={}, U={}\n\n",
         summary.files, summary.deletions, summary.transforms, summary.unresolved
     ));
 
+    // §13a.1: Manifest check.
+    s.push_str("## Manifest check\n\n");
+    match (manifest.inventory_count, &manifest.inventory_path) {
+        (Some(total), Some(p)) => {
+            s.push_str(&format!(
+                "Scanned **{} of {}** inventory files (`{}`). {} missing, {} extra.\n\n",
+                manifest.scanned_count,
+                total,
+                p,
+                manifest.missing.len(),
+                manifest.extra.len()
+            ));
+        }
+        _ => {
+            s.push_str(&format!(
+                "Scanned **{} of ?** inventory files. `docs/PropheticIterators.md` not found under root — manifest check skipped.\n\n",
+                manifest.scanned_count
+            ));
+        }
+    }
+    if !manifest.missing.is_empty() {
+        s.push_str(&format!("### Missing ({})\n\n", manifest.missing.len()));
+        s.push_str("| # | File |\n|--:|------|\n");
+        for (i, m) in manifest.missing.iter().enumerate() {
+            s.push_str(&format!("| {} | `{}` |\n", i + 1, short_path(m)));
+        }
+        s.push('\n');
+    }
+    if !manifest.extra.is_empty() {
+        s.push_str(&format!("### Extra ({})\n\n", manifest.extra.len()));
+        s.push_str("| # | File |\n|--:|------|\n");
+        for (i, e) in manifest.extra.iter().enumerate() {
+            s.push_str(&format!("| {} | `{}` |\n", i + 1, short_path(e)));
+        }
+        s.push('\n');
+    }
+
+    // §13a.4: Legend.
+    let present: BTreeSet<&str> = findings
+        .iter()
+        .flat_map(|f| f.unresolved.iter().map(|u| u.code.as_str()))
+        .collect();
+    if !present.is_empty() {
+        s.push_str("## Legend\n\n");
+        s.push_str("| # | Code | Means | Action |\n|--:|------|-------|--------|\n");
+        let mut idx = 0;
+        for (code, means, action) in LEGEND_ROWS {
+            if present.contains(code) {
+                idx += 1;
+                s.push_str(&format!("| {} | {} | {} | {} |\n", idx, code, means, action));
+            }
+        }
+        s.push('\n');
+    }
+
+    // §13a.5: Aggregate "Unresolved by class".
+    if !uclass.is_empty() {
+        s.push_str("## Unresolved by class\n\n");
+        s.push_str("| # | Code | Count | Files affected |\n|--:|------|------:|---------------:|\n");
+        for (i, r) in uclass.iter().enumerate() {
+            s.push_str(&format!(
+                "| {} | {} | {} | {} |\n",
+                i + 1,
+                r.code,
+                r.count,
+                r.files_affected
+            ));
+        }
+        s.push('\n');
+    }
+
+    // §13a.9: U-OTHER pattern clustering.
+    if !clusters.is_empty() {
+        let limit = clusters
+            .iter()
+            .filter(|c| c.count >= 2)
+            .count()
+            .max(10)
+            .min(clusters.len());
+        s.push_str(&format!("## U-OTHER patterns (top {})\n\n", limit));
+        s.push_str("| # | Skeleton | Count | Suggested new form |\n|--:|----------|------:|--------------------|\n");
+        for (i, c) in clusters.iter().take(limit).enumerate() {
+            let promote = if c.count >= 5 { " → T(new)" } else { "" };
+            s.push_str(&format!(
+                "| {} | `{}` | {}{} | {} |\n",
+                i + 1,
+                escape_md_table(&c.skeleton),
+                c.count,
+                promote,
+                if c.suggested_new.is_empty() {
+                    "—".to_string()
+                } else {
+                    format!("`{}`", escape_md_table(&c.suggested_new))
+                }
+            ));
+        }
+        s.push('\n');
+    }
+
     if !parse_failures.is_empty() {
         s.push_str(&format!("## Parse failures ({})\n\n", parse_failures.len()));
-        s.push_str("| # | File | Error |\n|---|------|-------|\n");
+        s.push_str("| # | File | Error |\n|--:|------|-------|\n");
         for (i, (p, e)) in parse_failures.iter().enumerate() {
             s.push_str(&format!("| {} | `{}` | {} |\n", i + 1, p.display(), e));
         }
         s.push('\n');
     }
 
+    // §13a.3 + §13a.2: per-file summary with Iter column and short paths.
     s.push_str("## Per-file summary\n\n");
-    s.push_str("| # | Chap | File | Style | D | T | U |\n");
-    s.push_str("|---|------|------|-------|---|---|---|\n");
+    s.push_str("| # | Chap | File | Iter | Style | D | T | U |\n");
+    s.push_str("|--:|------|------|-----:|-------|--:|--:|--:|\n");
     for (i, f) in findings.iter().enumerate() {
         s.push_str(&format!(
-            "| {} | {} | `{}` | {} | {} | {} | {} |\n",
+            "| {} | {} | `{}` | {} | {} | {} | {} | {} |\n",
             i + 1,
             f.chap.as_deref().unwrap_or("—"),
-            f.path,
+            short_path(&f.path),
+            f.iter_line
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| "—".to_string()),
             f.style.as_str(),
             f.deletions.len(),
             f.transforms.len(),
@@ -1381,25 +1883,34 @@ fn render_markdown(
         summary.deletions, summary.transforms, summary.unresolved
     ));
 
+    // Per-file findings.
     s.push_str("## Per-file findings\n\n");
     for f in findings {
-        s.push_str(&format!("### `{}` ({})\n\n", f.path, f.style.as_str()));
+        let iter_marker = f
+            .iter_line
+            .map(|n| format!(" — Iter@{}", n))
+            .unwrap_or_default();
+        s.push_str(&format!(
+            "### `{}` ({}){}\n\n",
+            short_path(&f.path),
+            f.style.as_str(),
+            iter_marker
+        ));
         if !f.deletions.is_empty() {
             s.push_str(&format!("Deletions ({}):\n\n", f.deletions.len()));
-            s.push_str("| # | Class | Item | Lines |\n|---|-------|------|-------|\n");
+            s.push_str("| # | Class | Item | Lines |\n|--:|-------|------|-------|\n");
             for (i, d) in f.deletions.iter().enumerate() {
                 s.push_str(&format!(
                     "| {} | {} | {} | {}–{} |\n",
                     i + 1,
                     d.class.as_str(),
-                    truncate(&d.ident, 60),
+                    truncate(&d.ident, 80),
                     d.line_start,
                     d.line_end
                 ));
             }
             s.push('\n');
         }
-        // Separate T8 from the others for layout (review §3 row 9).
         let t8: Vec<&Transform> = f
             .transforms
             .iter()
@@ -1412,15 +1923,15 @@ fn render_markdown(
             .collect();
         if !others.is_empty() {
             s.push_str(&format!("Transforms ({}):\n\n", others.len()));
-            s.push_str("| # | Class | Line | Old | New |\n|---|-------|------|-----|-----|\n");
+            s.push_str("| # | Class | Line | Old | New |\n|--:|-------|-----:|-----|-----|\n");
             for (i, t) in others.iter().enumerate() {
                 s.push_str(&format!(
-                    "| {} | {} | {} | {} | {} |\n",
+                    "| {} | {} | {} | `{}` | `{}` |\n",
                     i + 1,
                     t.class.as_str(),
                     t.line,
-                    truncate(&t.old, 40),
-                    truncate(&t.new, 40)
+                    truncate(&escape_md_table(&t.old), 80),
+                    truncate(&escape_md_table(&t.new), 80)
                 ));
             }
             s.push('\n');
@@ -1438,44 +1949,92 @@ fn render_markdown(
         }
         if !f.unresolved.is_empty() {
             s.push_str(&format!("Unresolved ({}):\n\n", f.unresolved.len()));
-            s.push_str("| # | Code | Line | Message |\n|---|------|------|---------|\n");
+            s.push_str("| # | Code | Line | Message |\n|--:|------|-----:|---------|\n");
             for (i, u) in f.unresolved.iter().enumerate() {
                 s.push_str(&format!(
                     "| {} | {} | {} | {} |\n",
                     i + 1,
                     u.code.as_str(),
                     u.line,
-                    truncate(&u.message, 80)
+                    truncate(&u.message, 120)
                 ));
             }
             s.push('\n');
         }
     }
+
+    // §13a.8: Chain-ordering appendix.
+    if !chain_edges.is_empty() {
+        s.push_str(&format!("## Chain ordering ({} chained wrappers)\n\n", chain_edges.len()));
+        s.push_str("| # | Layer | Wrapper | Backing |\n|--:|------:|---------|---------|\n");
+        let mut sorted = chain_edges.to_vec();
+        sorted.sort_by(|a, b| {
+            a.layer
+                .unwrap_or(u32::MAX)
+                .cmp(&b.layer.unwrap_or(u32::MAX))
+                .then_with(|| a.wrapper.cmp(&b.wrapper))
+        });
+        for (i, e) in sorted.iter().enumerate() {
+            let layer = e
+                .layer
+                .map(|l| l.to_string())
+                .unwrap_or_else(|| "?".to_string());
+            s.push_str(&format!(
+                "| {} | {} | `{}` | `{}` |\n",
+                i + 1,
+                layer,
+                e.wrapper,
+                e.backing
+            ));
+        }
+        s.push_str("\nFiles at the same layer can migrate in parallel; a layer-`k+1` file must wait for its layer-`k` backing. Layer `?` indicates a cycle (matcher bug).\n\n");
+    }
+
     s
 }
 
+/// Minimal markdown table escaping: pipes break cells.
+fn escape_md_table(s: &str) -> String {
+    s.replace('|', "\\|").replace('\n', " ")
+}
+
+#[allow(clippy::too_many_arguments)]
 fn render_json(
     findings: &[FileFindings],
     summary: &Summary,
     root: &Path,
     timestamp: &str,
+    manifest: &Manifest,
+    chain_edges: &[ChainEdge],
+    clusters: &[ClusteredPattern],
+    uclass: &[UClassRollup],
 ) -> Result<String> {
     #[derive(Serialize)]
     struct Doc<'a> {
         tool: &'a str,
+        tool_sha: &'a str,
         mode: &'a str,
         root: String,
         generated: &'a str,
+        manifest: &'a Manifest,
         files: &'a [FileFindings],
         summary: &'a Summary,
+        unresolved_by_class: &'a [UClassRollup],
+        uother_clusters: &'a [ClusteredPattern],
+        chain_edges: &'a [ChainEdge],
     }
     let doc = Doc {
         tool: "veracity-iterator-upgrade",
+        tool_sha: TOOL_SHA,
         mode: "detect",
         root: root.display().to_string(),
         generated: timestamp,
+        manifest,
         files: findings,
         summary,
+        unresolved_by_class: uclass,
+        uother_clusters: clusters,
+        chain_edges,
     };
     Ok(serde_json::to_string_pretty(&doc)?)
 }
@@ -1485,15 +2044,45 @@ fn render_compile(
     summary: &Summary,
     root: &Path,
     timestamp: &str,
+    manifest: &Manifest,
+    chain_edges: &[ChainEdge],
 ) -> String {
     let mut s = String::new();
     s.push_str("# veracity-iterator-upgrade --detect\n");
     s.push_str(&format!("# root: {}\n", root.display()));
+    s.push_str(&format!("# tool_sha: {}\n", TOOL_SHA));
     s.push_str(&format!("# generated: {}\n", timestamp));
     s.push_str(&format!(
         "# totals: files={} D={} T={} U={}\n",
         summary.files, summary.deletions, summary.transforms, summary.unresolved
     ));
+
+    // §13a.1: manifest line in compile output.
+    match (manifest.inventory_count, &manifest.inventory_path) {
+        (Some(total), Some(_)) => {
+            s.push_str(&format!(
+                "docs/PropheticIterators.md:1:1: warning: manifest: scanned {} of {} — {} missing, {} extra\n",
+                manifest.scanned_count,
+                total,
+                manifest.missing.len(),
+                manifest.extra.len()
+            ));
+        }
+        _ => {
+            s.push_str(&format!(
+                "manifest:1:1: warning: manifest: scanned {} of ? — inventory not found\n",
+                manifest.scanned_count
+            ));
+        }
+    }
+
+    // §13a.8 cycle handling: emit an error line for any wrapper without a layer.
+    for e in chain_edges.iter().filter(|e| e.layer.is_none()) {
+        s.push_str(&format!(
+            "{}:1:1: error: U-CHAIN: cycle involving {} → {}\n",
+            e.wrapper, e.wrapper, e.backing
+        ));
+    }
 
     for f in findings {
         s.push_str(&format!(

@@ -1,0 +1,10 @@
+# veracity-iterator-upgrade --detect
+# root: /home/milnes/projects/veracity/tests/fixtures/iterator-upgrade-detect/D5
+# tool_sha: 6bb41ef55f8baaedb6281103a7fdd234c1a08a49
+# generated: 2026-05-23T12:00:35Z
+# totals: files=1 D=3 T=0 U=0
+manifest:1:1: warning: manifest: scanned 1 of ? — inventory not found
+fixture.rs:1:1: summary: delegated, D=3 T=0 U=0
+fixture.rs:7:1: warning: D1: FooGhostIterator [7-10]
+fixture.rs:13:1: warning: D5: Debug for FooGhostIterator [13-18]
+fixture.rs:19:1: warning: D5: Display for FooGhostIterator [19-24]

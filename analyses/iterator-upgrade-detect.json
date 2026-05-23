@@ -1,13 +1,22 @@
 {
   "tool": "veracity-iterator-upgrade",
+  "tool_sha": "6bb41ef55f8baaedb6281103a7fdd234c1a08a49",
   "mode": "detect",
   "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
-  "generated": "2026-05-23T00:34:01Z",
+  "generated": "2026-05-23T12:39:46Z",
+  "manifest": {
+    "inventory_path": null,
+    "inventory_count": null,
+    "scanned_count": 70,
+    "missing": [],
+    "extra": []
+  },
   "files": [
     {
       "path": "src/Chap05/MappingStEph.rs",
       "chap": "05",
       "style": "Delegated",
+      "iter_line": 505,
       "deletions": [
         {
           "class": "D6",
@@ -125,7 +134,7 @@
           "code": "Chain",
           "line": 505,
           "col": 1,
-          "message": "MappingStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "MappingStEphIter wraps another APAS *Iter (RelationStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -140,12 +149,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "RelationStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap05/RelationStEph.rs",
       "chap": "05",
       "style": "Delegated",
+      "iter_line": 297,
       "deletions": [
         {
           "class": "D6",
@@ -263,7 +274,7 @@
           "code": "Chain",
           "line": 297,
           "col": 1,
-          "message": "RelationStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "RelationStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -278,12 +289,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap05/SetMtEph.rs",
       "chap": "05",
       "style": "Delegated",
+      "iter_line": 942,
       "deletions": [
         {
           "class": "D6",
@@ -435,7 +448,7 @@
           "code": "Chain",
           "line": 942,
           "col": 1,
-          "message": "SetMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "SetMtEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -450,12 +463,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "HashSetWithViewPlusIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap05/SetStEph.rs",
       "chap": "05",
       "style": "Delegated",
+      "iter_line": 800,
       "deletions": [
         {
           "class": "D6",
@@ -587,7 +602,7 @@
           "code": "Chain",
           "line": 800,
           "col": 1,
-          "message": "SetStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "SetStEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -602,12 +617,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "HashSetWithViewPlusIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/DirGraphMtEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 749,
       "deletions": [
         {
           "class": "D6",
@@ -705,7 +722,7 @@
           "code": "Chain",
           "line": 749,
           "col": 1,
-          "message": "DirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "DirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -720,12 +737,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/DirGraphStEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 608,
       "deletions": [
         {
           "class": "D6",
@@ -963,7 +982,7 @@
           "code": "Chain",
           "line": 608,
           "col": 1,
-          "message": "DirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "DirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -978,12 +997,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/LabDirGraphMtEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 645,
       "deletions": [
         {
           "class": "D6",
@@ -1165,7 +1186,7 @@
           "code": "Chain",
           "line": 645,
           "col": 1,
-          "message": "LabDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "LabDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -1180,12 +1201,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/LabDirGraphStEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 477,
       "deletions": [
         {
           "class": "D6",
@@ -1423,7 +1446,7 @@
           "code": "Chain",
           "line": 477,
           "col": 1,
-          "message": "LabDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "LabDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -1438,12 +1461,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/LabUnDirGraphMtEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 587,
       "deletions": [
         {
           "class": "D6",
@@ -1625,7 +1650,7 @@
           "code": "Chain",
           "line": 587,
           "col": 1,
-          "message": "LabUnDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "LabUnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -1640,12 +1665,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/LabUnDirGraphStEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 433,
       "deletions": [
         {
           "class": "D6",
@@ -1855,7 +1882,7 @@
           "code": "Chain",
           "line": 433,
           "col": 1,
-          "message": "LabUnDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "LabUnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -1870,12 +1897,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/UnDirGraphMtEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 457,
       "deletions": [
         {
           "class": "D6",
@@ -1973,7 +2002,7 @@
           "code": "Chain",
           "line": 457,
           "col": 1,
-          "message": "UnDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "UnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -1988,12 +2017,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap06/UnDirGraphStEph.rs",
       "chap": "06",
       "style": "Delegated",
+      "iter_line": 374,
       "deletions": [
         {
           "class": "D6",
@@ -2147,7 +2178,7 @@
           "code": "Chain",
           "line": 374,
           "col": 1,
-          "message": "UnDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "UnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -2162,12 +2193,2581 @@
           "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
         }
       ],
+      "chain_backing": "SetStEphIter",
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphF64.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 132,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 139,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 191,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 195,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 227,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 231,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 283,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 287,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 131,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 137,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 190,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 193,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 226,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 229,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 282,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 285,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphI128.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 164,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 216,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 220,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 252,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 256,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 308,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 312,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 362,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 367,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 404,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 409,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 457,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 462,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 162,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 215,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 218,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 251,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 254,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 307,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 310,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 361,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 365,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 403,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 407,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 456,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 460,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphI16.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 397,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 402,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 450,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 455,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 399,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 449,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 453,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphI32.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 397,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 402,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 450,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 455,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 399,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 449,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 453,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphI64.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 397,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 402,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 450,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 455,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 399,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 449,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 453,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphI8.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 397,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 402,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 450,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 455,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 399,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 449,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 453,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphIsize.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 397,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 402,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 450,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 455,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, isize> | acc + e@.2 as int)"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 399,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 449,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 453,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphU128.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphU16.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphU32.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphU64.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphU8.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/WeightedDirGraphStEphUsize.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 157,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == edge_seq",
+          "new": "it.seq() == edge_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 162,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "edge_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 209,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 213,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 245,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 249,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 301,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 355,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 359,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 398,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 403,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 451,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == wa_seq",
+          "new": "it.seq() == wa_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 456,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "wa_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)"
+        },
+        {
+          "code": "Other",
+          "line": 244,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 247,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 300,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 303,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 354,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 358,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, usize> | acc + e@.2 as nat)"
+        },
+        {
+          "code": "Other",
+          "line": 397,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 400,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)"
+        },
+        {
+          "code": "Other",
+          "line": 450,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 454,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)"
+        }
+      ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap17/MathSeq.rs",
       "chap": "17",
       "style": "Delegated",
+      "iter_line": 560,
       "deletions": [
         {
           "class": "D6",
@@ -2285,12 +4885,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeq.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 1526,
       "deletions": [
         {
           "class": "D6",
@@ -2376,12 +4978,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeqMtEph.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 1422,
       "deletions": [
         {
           "class": "D6",
@@ -2491,12 +5095,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeqMtEphSlice.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 1551,
       "deletions": [
         {
           "class": "D6",
@@ -2590,12 +5196,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeqMtPer.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 1735,
       "deletions": [
         {
           "class": "D6",
@@ -2705,12 +5313,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeqStEph.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 944,
       "deletions": [
         {
           "class": "D6",
@@ -2820,12 +5430,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/ArraySeqStPer.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 924,
       "deletions": [
         {
           "class": "D6",
@@ -2911,12 +5523,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/LinkedListStEph.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 775,
       "deletions": [
         {
           "class": "D6",
@@ -3002,12 +5616,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap18/LinkedListStPer.rs",
       "chap": "18",
       "style": "Delegated",
+      "iter_line": 757,
       "deletions": [
         {
           "class": "D6",
@@ -3093,12 +5709,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap19/ArraySeqMtEph.rs",
       "chap": "19",
       "style": "Delegated",
+      "iter_line": 1579,
       "deletions": [
         {
           "class": "D6",
@@ -3208,12 +5826,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap19/ArraySeqMtEphSlice.rs",
       "chap": "19",
       "style": "Delegated",
+      "iter_line": 1580,
       "deletions": [
         {
           "class": "D6",
@@ -3307,12 +5927,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap19/ArraySeqStEph.rs",
       "chap": "19",
       "style": "Delegated",
+      "iter_line": 1025,
       "deletions": [
         {
           "class": "D6",
@@ -3422,12 +6044,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap19/ArraySeqStPer.rs",
       "chap": "19",
       "style": "Delegated",
+      "iter_line": 1027,
       "deletions": [
         {
           "class": "D6",
@@ -3537,12 +6161,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap23/BalBinTreeStEph.rs",
       "chap": "23",
       "style": "Delegated",
+      "iter_line": 511,
       "deletions": [
         {
           "class": "D10",
@@ -3834,27 +6460,29 @@
           "code": "Chain",
           "line": 511,
           "col": 1,
-          "message": "InOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "InOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Chain",
           "line": 517,
           "col": 1,
-          "message": "PreOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "PreOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Chain",
           "line": 523,
           "col": 1,
-          "message": "PostOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "PostOrderIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         }
       ],
+      "chain_backing": "IntoIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap23/PrimTreeSeqStPer.rs",
       "chap": "23",
       "style": "Delegated",
+      "iter_line": 616,
       "deletions": [
         {
           "class": "D6",
@@ -3964,12 +6592,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/AVLTreeSeq.rs",
       "chap": "37",
       "style": "Custom",
+      "iter_line": 1188,
       "deletions": [
         {
           "class": "D1",
@@ -4092,12 +6722,14 @@
           "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIter"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/AVLTreeSeqMtPer.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 823,
       "deletions": [
         {
           "class": "D6",
@@ -4250,12 +6882,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq ()"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/AVLTreeSeqStEph.rs",
       "chap": "37",
       "style": "Custom",
+      "iter_line": 512,
       "deletions": [
         {
           "class": "D4",
@@ -4364,12 +6998,14 @@
           "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIterStEph"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/AVLTreeSeqStPer.rs",
       "chap": "37",
       "style": "Custom",
+      "iter_line": 945,
       "deletions": [
         {
           "class": "D1",
@@ -4478,12 +7114,14 @@
           "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqStPerIter"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/BSTSetAVLMtEph.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 546,
       "deletions": [
         {
           "class": "D10",
@@ -4586,12 +7224,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/BSTSetBBAlphaMtEph.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 499,
       "deletions": [
         {
           "class": "D10",
@@ -4678,12 +7318,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/BSTSetPlainMtEph.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 499,
       "deletions": [
         {
           "class": "D10",
@@ -4770,12 +7412,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/BSTSetRBMtEph.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 545,
       "deletions": [
         {
           "class": "D10",
@@ -4878,12 +7522,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap37/BSTSetSplayMtEph.rs",
       "chap": "37",
       "style": "Delegated",
+      "iter_line": 563,
       "deletions": [
         {
           "class": "D10",
@@ -4986,12 +7632,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap41/AVLTreeSetMtEph.rs",
       "chap": "41",
       "style": "Delegated",
+      "iter_line": 535,
       "deletions": [
         {
           "class": "D10",
@@ -5078,12 +7726,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap43/AugOrderedTableMtEph.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [
         {
@@ -5120,12 +7770,14 @@
         }
       ],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap43/AugOrderedTableStEph.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [
         {
@@ -5175,12 +7827,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap43/AugOrderedTableStPer.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [
         {
@@ -5230,12 +7884,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap43/OrderedSetStEph.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": 1005,
       "deletions": [
         {
           "class": "D6",
@@ -5355,7 +8011,7 @@
           "code": "Chain",
           "line": 1005,
           "col": 1,
-          "message": "OrderedSetStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "OrderedSetStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -5364,12 +8020,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
         }
       ],
+      "chain_backing": "IntoIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap43/OrderedSetStPer.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": 1072,
       "deletions": [
         {
           "class": "D6",
@@ -5473,15 +8131,17 @@
           "code": "Chain",
           "line": 1072,
           "col": 1,
-          "message": "OrderedSetStPerIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "OrderedSetStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         }
       ],
+      "chain_backing": "IntoIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap43/OrderedTableMtEph.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": 896,
       "deletions": [
         {
           "class": "D10",
@@ -5598,12 +8258,14 @@
           "message": "observed custom-style iterator in a non-pinned file — review pin list"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap43/OrderedTableStEph.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": 1790,
       "deletions": [
         {
           "class": "D6",
@@ -5723,7 +8385,7 @@
           "code": "Chain",
           "line": 1790,
           "col": 1,
-          "message": "OrderedTableStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "OrderedTableStEphIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -5732,12 +8394,14 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         }
       ],
+      "chain_backing": "IntoIter",
       "skip_reason": null
     },
     {
       "path": "src/Chap43/OrderedTableStPer.rs",
       "chap": "43",
       "style": "Delegated",
+      "iter_line": 1392,
       "deletions": [
         {
           "class": "D6",
@@ -5857,7 +8521,7 @@
           "code": "Chain",
           "line": 1392,
           "col": 1,
-          "message": "OrderedTableStPerIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+          "message": "OrderedTableStPerIter wraps another APAS *Iter (IntoIter) — deletion order depends on inner collection migration"
         },
         {
           "code": "Other",
@@ -5866,21 +8530,382 @@
           "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
         }
       ],
+      "chain_backing": "IntoIter",
       "skip_reason": null
     },
     {
-      "path": "src/Chap65/KruskalStEph.rs",
-      "chap": "65",
+      "path": "src/Chap57/DijkstraStEphF64.rs",
+      "chap": "57",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [],
-      "unresolved": [],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 262,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 272,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Other",
+          "line": 275,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))"
+        },
+        {
+          "code": "Other",
+          "line": 277,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap57/DijkstraStEphU64.rs",
+      "chap": "57",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 252,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 262,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Other",
+          "line": 265,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))"
+        },
+        {
+          "code": "Other",
+          "line": 267,
+          "col": 29,
+          "message": "unrecognized `it`-bearing clause: forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap58/BellmanFordStEphF64.rs",
+      "chap": "58",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 133,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T6",
+          "line": 227,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 132,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 226,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap58/BellmanFordStEphI64.rs",
+      "chap": "58",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 157,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T6",
+          "line": 252,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 156,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 251,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap59/JohnsonStEphF64.rs",
+      "chap": "59",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 199,
+          "col_start": 27,
+          "col_end": 46,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 288,
+          "col_start": 17,
+          "col_end": 34,
+          "old": "it@.1 == arcs_seq",
+          "new": "it.seq() == arcs_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 295,
+          "col_start": 23,
+          "col_end": 45,
+          "old": "arcs_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 195,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 287,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 291,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: edges@.len () <= it@.0"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap59/JohnsonStEphI64.rs",
+      "chap": "59",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 203,
+          "col_start": 27,
+          "col_end": 46,
+          "old": "it@.1.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 290,
+          "col_start": 17,
+          "col_end": 34,
+          "old": "it@.1 == arcs_seq",
+          "new": "it.seq() == arcs_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 297,
+          "col_start": 23,
+          "col_end": 45,
+          "old": "arcs_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 199,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 289,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 293,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: edges@.len () <= it@.0"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap62/StarPartitionMtEph.rs",
+      "chap": "62",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 224,
+          "col_start": 45,
+          "col_end": 65,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 207,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 208,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 211,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: merge_done ==> it@.0>= it_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 216,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: forall | idx : int | 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_seq[idx].0@)"
+        }
+      ],
+      "chain_backing": null,
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap65/PrimStEph.rs",
+      "chap": "65",
+      "style": "Delegated",
+      "iter_line": null,
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 482,
+          "col_start": 17,
+          "col_end": 32,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 484,
+          "col_start": 23,
+          "col_end": 43,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 409,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 410,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Other",
+          "line": 416,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.1[j])@))"
+        },
+        {
+          "code": "Other",
+          "line": 418,
+          "col": 25,
+          "message": "unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== e.1))"
+        },
+        {
+          "code": "Other",
+          "line": 481,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        }
+      ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap66/BoruvkaMtEph.rs",
       "chap": "66",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [
         {
@@ -5988,12 +9013,14 @@
           "message": "unrecognized `it`-bearing clause: iter_seq == it@.1"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/Chap66/BoruvkaStEph.rs",
       "chap": "66",
       "style": "Delegated",
+      "iter_line": null,
       "deletions": [],
       "transforms": [
         {
@@ -6043,12 +9070,14 @@
           "message": "unrecognized `it`-bearing clause: iter_seq == it@.1"
         }
       ],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/vstdplus/hash_map_with_view_plus.rs",
       "chap": null,
       "style": "Delegated",
+      "iter_line": 170,
       "deletions": [
         {
           "class": "D6",
@@ -6101,12 +9130,14 @@
       ],
       "transforms": [],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     },
     {
       "path": "src/vstdplus/hash_set_with_view_plus.rs",
       "chap": null,
       "style": "Delegated",
+      "iter_line": 166,
       "deletions": [
         {
           "class": "D6",
@@ -6159,13 +9190,642 @@
       ],
       "transforms": [],
       "unresolved": [],
+      "chain_backing": null,
       "skip_reason": null
     }
   ],
   "summary": {
-    "files": 50,
+    "files": 70,
     "deletions": 500,
-    "transforms": 206,
-    "unresolved": 156
-  }
+    "transforms": 395,
+    "unresolved": 348
+  },
+  "unresolved_by_class": [
+    {
+      "code": "U-OTHER",
+      "count": 303,
+      "files_affected": 46
+    },
+    {
+      "code": "U-CHAIN",
+      "count": 19,
+      "files_affected": 17
+    },
+    {
+      "code": "U-CUSTOM",
+      "count": 18,
+      "files_affected": 3
+    },
+    {
+      "code": "U-CLASS",
+      "count": 8,
+      "files_affected": 8
+    }
+  ],
+  "uother_clusters": [
+    {
+      "skeleton": "it@.0 <= <ident>.<ident> ()",
+      "count": 112,
+      "suggested_new": "it.index() <= <ident>.<ident> ()"
+    },
+    {
+      "skeleton": "it@.1.<ident> ()",
+      "count": 19,
+      "suggested_new": "it.seq().<ident> ()"
+    },
+    {
+      "skeleton": "it@.0 <= it@.1.<ident> ()",
+      "count": 16,
+      "suggested_new": "it.index() <= it.seq().<ident> ()"
+    },
+    {
+      "skeleton": "<ident> == it@.1",
+      "count": 8,
+      "suggested_new": "<ident> == it.seq()"
+    },
+    {
+      "skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>",
+      "count": 8,
+      "suggested_new": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@.<ident>"
+    },
+    {
+      "skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)",
+      "count": 6,
+      "suggested_new": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> int)"
+    },
+    {
+      "skeleton": "<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)",
+      "count": 6,
+      "suggested_new": "<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, | <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > | <ident> + <ident>@.2 <ident> nat)"
+    },
+    {
+      "skeleton": "it@.1 =~= self.<ident> ()",
+      "count": 5,
+      "suggested_new": "it.seq() =~= self.<ident> ()"
+    },
+    {
+      "skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))",
+      "count": 4,
+      "suggested_new": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) || (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))"
+    },
+    {
+      "skeleton": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)",
+      "count": 4,
+      "suggested_new": "<ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))",
+      "count": 4,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))"
+    },
+    {
+      "skeleton": "it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()",
+      "count": 4,
+      "suggested_new": "it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()"
+    },
+    {
+      "skeleton": "it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()",
+      "count": 4,
+      "suggested_new": "it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()"
+    },
+    {
+      "skeleton": "it@.1.<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@",
+      "count": 4,
+      "suggested_new": "it.seq().<ident> (| i : <ident>, k : <ident> | k@).<ident> () == self@"
+    },
+    {
+      "skeleton": "it@.1.<ident> () == self@.<ident> ()",
+      "count": 3,
+      "suggested_new": "it.seq().<ident> () == self@.<ident> ()"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "count": 2,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::V) | <ident>@.<ident> (e) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>"
+    },
+    {
+      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>",
+      "count": 2,
+      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>"
+    },
+    {
+      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)",
+      "count": 2,
+      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)"
+    },
+    {
+      "skeleton": "<ident>@.<ident> () <= it@.0",
+      "count": 2,
+      "suggested_new": "<ident>@.<ident> () <= it.index()"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>",
+      "count": 2,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : (V::<ident>, <ident>::V) | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)",
+      "count": 2,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)",
+      "count": 2,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)"
+    },
+    {
+      "skeleton": "it@.0 == old (it)@.0",
+      "count": 2,
+      "suggested_new": "it.index() == old (it)@.0"
+    },
+    {
+      "skeleton": "it@.1.<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()",
+      "count": 2,
+      "suggested_new": "it.seq().<ident> (| <ident> : <ident> | <ident>@) =~= self.<ident> ()"
+    },
+    {
+      "skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>",
+      "count": 2,
+      "suggested_new": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == <ident>::<ident> (| p : (X::<ident>, <ident>::V) | self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>"
+    },
+    {
+      "skeleton": "it@.1.<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@",
+      "count": 2,
+      "suggested_new": "it.seq().<ident> (| i : <ident>, p : <ident> < <ident>, <ident> > | p@).<ident> () == self@"
+    },
+    {
+      "skeleton": "<ident> ==> it@.0 >= <ident>.<ident> ()",
+      "count": 1,
+      "suggested_new": "<ident> ==> it.index() >= <ident>.<ident> ()"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, f64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | # [trigger] <ident>@.<ident> (t) <==> (exists | j : <ident> | # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, i8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, isize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u128) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u16) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u32) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u64) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, u8) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::<ident>, usize) | <ident>@.<ident> (t) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== <ident>.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (V::<ident>, <ident>::V) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@|| (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== <ident>.<lit>"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (usize, <ident>, f64) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>"
+    },
+    {
+      "skeleton": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : (usize, <ident>, i128) | # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> || (exists | j : <ident> | 0 <= j < it.index() && # [trigger] it.seq() [j]@== (e.1, <ident>.<lit>"
+    },
+    {
+      "skeleton": "<ident> | <ident> : <ident> | 0 <= <ident> < it@.0 ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)",
+      "count": 1,
+      "suggested_new": "<ident> | <ident> : <ident> | 0 <= <ident> < it.index() ==> # [trigger] <ident>@.<ident> (it_seq [idx].0@)"
+    },
+    {
+      "skeleton": "<ident> | j : <ident> | 0 <= j < it@.1.<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it@.1 [j])@))",
+      "count": 1,
+      "suggested_new": "<ident> | j : <ident> | 0 <= j < it.seq().<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it.seq() [j])@))"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, f64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, i8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, isize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u128) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u16) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u32) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u64) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, u8) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>",
+      "count": 1,
+      "suggested_new": "<ident> | p : (V::<ident>, usize) | <ident>@.<ident> (p) == (exists | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == p.0 && <ident> [i]@.2 == p.<lit>"
+    },
+    {
+      "skeleton": "<ident>.<ident> () == it@.0",
+      "count": 1,
+      "suggested_new": "<ident>.<ident> () == it.index()"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "count": 1,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((edges_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (edges_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))"
+    },
+    {
+      "skeleton": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it@.0 && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))",
+      "count": 1,
+      "suggested_new": "<ident>@== <ident>::<ident> (| <ident> : <ident>::<ident> | <ident> | i : <ident> | # ! [trigger <ident> [i]] 0 <= i < it.index() && ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == w) || (le_seq [i]@.1 == <ident> && <ident> [i]@.0 == w)))"
+    }
+  ],
+  "chain_edges": [
+    {
+      "wrapper": "Chap05/MappingStEph.rs",
+      "backing": "Chap05/RelationStEph.rs",
+      "backing_ident": "RelationStEphIter",
+      "layer": 3
+    },
+    {
+      "wrapper": "Chap05/RelationStEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap05/SetMtEph.rs",
+      "backing": "vstdplus/hash_set_with_view_plus.rs",
+      "backing_ident": "HashSetWithViewPlusIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap05/SetStEph.rs",
+      "backing": "vstdplus/hash_set_with_view_plus.rs",
+      "backing_ident": "HashSetWithViewPlusIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap06/DirGraphMtEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/DirGraphStEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/LabDirGraphMtEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/LabDirGraphStEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/LabUnDirGraphMtEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/LabUnDirGraphStEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/UnDirGraphMtEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap06/UnDirGraphStEph.rs",
+      "backing": "Chap05/SetStEph.rs",
+      "backing_ident": "SetStEphIter",
+      "layer": 2
+    },
+    {
+      "wrapper": "Chap23/BalBinTreeStEph.rs",
+      "backing": "<unresolved:IntoIter>",
+      "backing_ident": "IntoIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap43/OrderedSetStEph.rs",
+      "backing": "<unresolved:IntoIter>",
+      "backing_ident": "IntoIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap43/OrderedSetStPer.rs",
+      "backing": "<unresolved:IntoIter>",
+      "backing_ident": "IntoIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap43/OrderedTableStEph.rs",
+      "backing": "<unresolved:IntoIter>",
+      "backing_ident": "IntoIter",
+      "layer": 1
+    },
+    {
+      "wrapper": "Chap43/OrderedTableStPer.rs",
+      "backing": "<unresolved:IntoIter>",
+      "backing_ident": "IntoIter",
+      "layer": 1
+    }
+  ]
 }

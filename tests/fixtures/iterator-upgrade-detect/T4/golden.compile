@@ -1,0 +1,10 @@
+# veracity-iterator-upgrade --detect
+# root: /home/milnes/projects/veracity/tests/fixtures/iterator-upgrade-detect/T4
+# tool_sha: 6bb41ef55f8baaedb6281103a7fdd234c1a08a49
+# generated: 2026-05-23T12:00:36Z
+# totals: files=1 D=2 T=1 U=0
+manifest:1:1: warning: manifest: scanned 1 of ? — inventory not found
+fixture.rs:1:1: summary: delegated, D=2 T=1 U=0
+fixture.rs:6:1: warning: D6: FooIter [6-6]
+fixture.rs:8:1: warning: D10: iter_invariant<…> [8-8]
+fixture.rs:17:17: info: T4: iter_invariant (& it)  →  <remove>
