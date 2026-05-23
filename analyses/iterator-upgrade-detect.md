@@ -8,8 +8,8 @@ table { width: 100% !important; table-layout: fixed; }
 # Iterator-Upgrade Detect Report
 
 - Root: `/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS`
-- Generated: 2026-05-23T16:53:23Z
-- Tool SHA: `ee649d9fcace84e789da1a9968c922422fa06cb0`
+- Generated: 2026-05-23T17:01:18Z
+- Tool SHA: `6486db74bc5aef89a6dcce560ac8da9345a2677e`
 - Totals: files=70, D=500, T=395, U=341
 
 ## Manifest check

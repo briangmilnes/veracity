@@ -1,9 +1,9 @@
 {
   "tool": "veracity-iterator-upgrade",
-  "tool_sha": "ee649d9fcace84e789da1a9968c922422fa06cb0",
+  "tool_sha": "6486db74bc5aef89a6dcce560ac8da9345a2677e",
   "mode": "detect",
   "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
-  "generated": "2026-05-23T16:53:23Z",
+  "generated": "2026-05-23T17:01:18Z",
   "manifest": {
     "inventory_path": null,
     "inventory_count": null,
