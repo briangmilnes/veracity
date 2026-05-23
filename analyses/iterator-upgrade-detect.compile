@@ -1,10 +1,10 @@
 # veracity-iterator-upgrade --detect
 # root: /home/milnes/projects/veracity/tests/fixtures/APAS-VERUS
-# tool_sha: 775300bbc363d0e0e9dcd3be82b1fd11f66eaf91
-# generated: 2026-05-23T17:04:20Z
-# totals: files=70 D=500 T=395 U=341
+# tool_sha: 3b75fc744d1a4c714b34c3993380f3537f864453
+# generated: 2026-05-23T17:07:05Z
+# totals: files=70 D=500 T=698 U=38
 manifest:1:1: warning: manifest: scanned 70 of ? — inventory not found
-src/Chap05/MappingStEph.rs:1:1: summary: delegated, D=12 T=3 U=5
+src/Chap05/MappingStEph.rs:1:1: summary: delegated, D=12 T=7 U=1
 src/Chap05/MappingStEph.rs:505:1: warning: D6: MappingStEphIter [505-510]
 src/Chap05/MappingStEph.rs:512:1: warning: D7: View for MappingStEphIter [512-515]
 src/Chap05/MappingStEph.rs:517:1: warning: D10: iter_invariant<…> [517-519]
@@ -18,14 +18,14 @@ src/Chap05/MappingStEph.rs:705:1: warning: D9: Display for MappingStEphIter [705
 src/Chap05/MappingStEph.rs:709:1: warning: D5: Debug for MappingStEphGhostIterator [709-711]
 src/Chap05/MappingStEph.rs:713:1: warning: D5: Display for MappingStEphGhostIterator [713-715]
 src/Chap05/MappingStEph.rs:235:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap05/MappingStEph.rs:236:17: info: T10: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)  →  it.seq().map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1),
+src/Chap05/MappingStEph.rs:238:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/MappingStEph.rs:239:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap05/MappingStEph.rs:616:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
-src/Chap05/MappingStEph.rs:236:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)
-src/Chap05/MappingStEph.rs:238:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
+src/Chap05/MappingStEph.rs:617:17: info: T10: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)  →  it.seq().map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1),
+src/Chap05/MappingStEph.rs:619:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/MappingStEph.rs:505:1: error: U-CHAIN: MappingStEphIter wraps another APAS *Iter (RelationStEphIter) — deletion order depends on inner collection migration
-src/Chap05/MappingStEph.rs:617:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)
-src/Chap05/MappingStEph.rs:619:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap05/RelationStEph.rs:1:1: summary: delegated, D=12 T=3 U=5
+src/Chap05/RelationStEph.rs:1:1: summary: delegated, D=12 T=7 U=1
 src/Chap05/RelationStEph.rs:297:1: warning: D6: RelationStEphIter [297-302]
 src/Chap05/RelationStEph.rs:304:1: warning: D7: View for RelationStEphIter [304-307]
 src/Chap05/RelationStEph.rs:309:1: warning: D10: iter_invariant<…> [309-311]
@@ -39,14 +39,14 @@ src/Chap05/RelationStEph.rs:475:1: warning: D9: Display for RelationStEphIter [4
 src/Chap05/RelationStEph.rs:479:1: warning: D5: Debug for RelationStEphGhostIterator [479-481]
 src/Chap05/RelationStEph.rs:483:1: warning: D5: Display for RelationStEphGhostIterator [483-485]
 src/Chap05/RelationStEph.rs:156:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap05/RelationStEph.rs:157:17: info: T10: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@  →  it.seq().map (| i : int, p : Pair<X, Y> | p@).to_set () == self@,
+src/Chap05/RelationStEph.rs:158:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/RelationStEph.rs:159:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap05/RelationStEph.rs:408:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
-src/Chap05/RelationStEph.rs:157:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@
-src/Chap05/RelationStEph.rs:158:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
+src/Chap05/RelationStEph.rs:409:17: info: T10: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@  →  it.seq().map (| i : int, p : Pair<X, Y> | p@).to_set () == self@,
+src/Chap05/RelationStEph.rs:410:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/RelationStEph.rs:297:1: error: U-CHAIN: RelationStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap05/RelationStEph.rs:409:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@
-src/Chap05/RelationStEph.rs:410:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap05/SetMtEph.rs:1:1: summary: delegated, D=12 T=5 U=8
+src/Chap05/SetMtEph.rs:1:1: summary: delegated, D=12 T=12 U=1
 src/Chap05/SetMtEph.rs:942:1: warning: D6: SetMtEphIter [942-946]
 src/Chap05/SetMtEph.rs:948:1: warning: D7: View for SetMtEphIter [948-951]
 src/Chap05/SetMtEph.rs:953:1: warning: D10: iter_invariant<…> [953-955]
@@ -60,19 +60,19 @@ src/Chap05/SetMtEph.rs:1265:1: warning: D9: Display for SetMtEphIter [1265-1269]
 src/Chap05/SetMtEph.rs:1271:1: warning: D5: Debug for SetMtEphGhostIterator [1271-1275]
 src/Chap05/SetMtEph.rs:1277:1: warning: D5: Display for SetMtEphGhostIterator [1277-1281]
 src/Chap05/SetMtEph.rs:162:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap05/SetMtEph.rs:163:17: info: T10: it@.1.map (| i : int, k : T | k@).to_set () == self@  →  it.seq().map (| i : int, k : T | k@).to_set () == self@,
+src/Chap05/SetMtEph.rs:164:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
+src/Chap05/SetMtEph.rs:165:17: info: T10: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)  →  forall | j : int | 0 <= j<it.seq().len () ==> self@.contains (#[trigger] it.seq()[j]@),
 src/Chap05/SetMtEph.rs:166:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap05/SetMtEph.rs:572:21: info: T3: it@.1 == it_seq  →  it.seq() == it_seq,
+src/Chap05/SetMtEph.rs:573:21: info: T9: it@.0 <= it_seq.len ()  →  it.index() <= it_seq.len (),
+src/Chap05/SetMtEph.rs:578:21: info: T9: spawned_views.len () == it@.0  →  spawned_views.len () == it.index(),
 src/Chap05/SetMtEph.rs:585:27: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap05/SetMtEph.rs:1051:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
-src/Chap05/SetMtEph.rs:163:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@
-src/Chap05/SetMtEph.rs:164:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap05/SetMtEph.rs:165:17: error: U-OTHER: unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)
-src/Chap05/SetMtEph.rs:573:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it_seq.len ()
-src/Chap05/SetMtEph.rs:578:21: error: U-OTHER: unrecognized `it`-bearing clause: spawned_views.len () == it@.0
+src/Chap05/SetMtEph.rs:1052:17: info: T10: it@.1.map (| i : int, k : T | k@).to_set () == self@  →  it.seq().map (| i : int, k : T | k@).to_set () == self@,
+src/Chap05/SetMtEph.rs:1053:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/SetMtEph.rs:942:1: error: U-CHAIN: SetMtEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration
-src/Chap05/SetMtEph.rs:1052:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@
-src/Chap05/SetMtEph.rs:1053:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap05/SetStEph.rs:1:1: summary: delegated, D=12 T=4 U=6
+src/Chap05/SetStEph.rs:1:1: summary: delegated, D=12 T=9 U=1
 src/Chap05/SetStEph.rs:800:1: warning: D6: SetStEphIter [800-803]
 src/Chap05/SetStEph.rs:805:1: warning: D7: View for SetStEphIter [805-810]
 src/Chap05/SetStEph.rs:812:1: warning: D10: iter_invariant<…> [812-814]
@@ -86,16 +86,16 @@ src/Chap05/SetStEph.rs:992:1: warning: D9: Display for SetStEphIter [992-996]
 src/Chap05/SetStEph.rs:998:1: warning: D5: Debug for SetStEphGhostIterator [998-1002]
 src/Chap05/SetStEph.rs:1004:1: warning: D5: Display for SetStEphGhostIterator [1004-1008]
 src/Chap05/SetStEph.rs:142:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap05/SetStEph.rs:143:17: info: T10: it@.1.map (| i : int, k : T | k@).to_set () == self@  →  it.seq().map (| i : int, k : T | k@).to_set () == self@,
+src/Chap05/SetStEph.rs:144:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
+src/Chap05/SetStEph.rs:145:17: info: T10: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)  →  forall | j : int | 0 <= j<it.seq().len () ==> self@.contains (#[trigger] it.seq()[j]@),
 src/Chap05/SetStEph.rs:146:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap05/SetStEph.rs:912:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap05/SetStEph.rs:913:17: info: T10: it@.1.map (| i : int, k : T | k@).to_set () == self@  →  it.seq().map (| i : int, k : T | k@).to_set () == self@,
+src/Chap05/SetStEph.rs:914:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap05/SetStEph.rs:915:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap05/SetStEph.rs:143:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@
-src/Chap05/SetStEph.rs:144:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap05/SetStEph.rs:145:17: error: U-OTHER: unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)
 src/Chap05/SetStEph.rs:800:1: error: U-CHAIN: SetStEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration
-src/Chap05/SetStEph.rs:913:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@
-src/Chap05/SetStEph.rs:914:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/DirGraphMtEph.rs:1:1: summary: delegated, D=12 T=2 U=3
+src/Chap06/DirGraphMtEph.rs:1:1: summary: delegated, D=12 T=4 U=1
 src/Chap06/DirGraphMtEph.rs:749:1: warning: D6: DirGraphMtEphIter [749-753]
 src/Chap06/DirGraphMtEph.rs:755:1: warning: D7: View for DirGraphMtEphIter [755-758]
 src/Chap06/DirGraphMtEph.rs:760:1: warning: D10: iter_invariant<…> [760-762]
@@ -109,11 +109,11 @@ src/Chap06/DirGraphMtEph.rs:1269:1: warning: D9: Display for DirGraphMtEphIter [
 src/Chap06/DirGraphMtEph.rs:1273:1: warning: D5: Debug for DirGraphMtEphGhostIterator [1273-1275]
 src/Chap06/DirGraphMtEph.rs:1277:1: warning: D5: Display for DirGraphMtEphGhostIterator [1277-1279]
 src/Chap06/DirGraphMtEph.rs:858:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/DirGraphMtEph.rs:859:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/DirGraphMtEph.rs:860:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/DirGraphMtEph.rs:861:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap06/DirGraphMtEph.rs:749:1: error: U-CHAIN: DirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/DirGraphMtEph.rs:859:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/DirGraphMtEph.rs:860:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/DirGraphStEph.rs:1:1: summary: delegated, D=12 T=12 U=13
+src/Chap06/DirGraphStEph.rs:1:1: summary: delegated, D=12 T=24 U=1
 src/Chap06/DirGraphStEph.rs:608:1: warning: D6: DirGraphStEphIter [608-612]
 src/Chap06/DirGraphStEph.rs:614:1: warning: D7: View for DirGraphStEphIter [614-617]
 src/Chap06/DirGraphStEph.rs:619:1: warning: D10: iter_invariant<…> [619-621]
@@ -126,32 +126,32 @@ src/Chap06/DirGraphStEph.rs:801:1: warning: D9: Debug for DirGraphStEphIter [801
 src/Chap06/DirGraphStEph.rs:805:1: warning: D9: Display for DirGraphStEphIter [805-807]
 src/Chap06/DirGraphStEph.rs:809:1: warning: D5: Debug for DirGraphStEphGhostIterator [809-811]
 src/Chap06/DirGraphStEph.rs:813:1: warning: D5: Display for DirGraphStEphGhostIterator [813-815]
+src/Chap06/DirGraphStEph.rs:299:21: info: T9: it@.0 <= u_seq.len ()  →  it.index() <= u_seq.len (),
 src/Chap06/DirGraphStEph.rs:300:21: info: T3: it@.1 == u_seq  →  it.seq() == u_seq,
+src/Chap06/DirGraphStEph.rs:302:21: info: T9: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))  →  neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it.index() && self.spec_ng (u_seq[i]@).contains (w)),
 src/Chap06/DirGraphStEph.rs:305:31: info: T6: u_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/DirGraphStEph.rs:360:21: info: T9: it@.0 <= arcs_seq.len ()  →  it.index() <= arcs_seq.len (),
 src/Chap06/DirGraphStEph.rs:361:21: info: T3: it@.1 == arcs_seq  →  it.seq() == arcs_seq,
+src/Chap06/DirGraphStEph.rs:363:21: info: T9: out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w)  →  out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it.index() && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w),
 src/Chap06/DirGraphStEph.rs:366:31: info: T6: arcs_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/DirGraphStEph.rs:418:21: info: T9: it@.0 <= arcs_seq.len ()  →  it.index() <= arcs_seq.len (),
 src/Chap06/DirGraphStEph.rs:419:21: info: T3: it@.1 == arcs_seq  →  it.seq() == arcs_seq,
+src/Chap06/DirGraphStEph.rs:421:21: info: T9: inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u)  →  inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it.index() && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u),
 src/Chap06/DirGraphStEph.rs:424:31: info: T6: arcs_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/DirGraphStEph.rs:477:21: info: T9: it@.0 <= u_seq.len ()  →  it.index() <= u_seq.len (),
 src/Chap06/DirGraphStEph.rs:478:21: info: T3: it@.1 == u_seq  →  it.seq() == u_seq,
+src/Chap06/DirGraphStEph.rs:480:21: info: T9: out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_plus (u_seq[i]@).contains (w))  →  out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it.index() && self.spec_n_plus (u_seq[i]@).contains (w)),
 src/Chap06/DirGraphStEph.rs:483:31: info: T6: u_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/DirGraphStEph.rs:539:21: info: T9: it@.0 <= u_seq.len ()  →  it.index() <= u_seq.len (),
 src/Chap06/DirGraphStEph.rs:540:21: info: T3: it@.1 == u_seq  →  it.seq() == u_seq,
+src/Chap06/DirGraphStEph.rs:542:21: info: T9: in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_minus (u_seq[i]@).contains (w))  →  in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it.index() && self.spec_n_minus (u_seq[i]@).contains (w)),
 src/Chap06/DirGraphStEph.rs:546:31: info: T6: u_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/DirGraphStEph.rs:717:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/DirGraphStEph.rs:718:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/DirGraphStEph.rs:719:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/DirGraphStEph.rs:720:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/DirGraphStEph.rs:299:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()
-src/Chap06/DirGraphStEph.rs:302:21: error: U-OTHER: unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))
-src/Chap06/DirGraphStEph.rs:360:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len ()
-src/Chap06/DirGraphStEph.rs:363:21: error: U-OTHER: unrecognized `it`-bearing clause: out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w)
-src/Chap06/DirGraphStEph.rs:418:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len ()
-src/Chap06/DirGraphStEph.rs:421:21: error: U-OTHER: unrecognized `it`-bearing clause: inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u)
-src/Chap06/DirGraphStEph.rs:477:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()
-src/Chap06/DirGraphStEph.rs:480:21: error: U-OTHER: unrecognized `it`-bearing clause: out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_plus (u_seq[i]@).contains (w))
-src/Chap06/DirGraphStEph.rs:539:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()
-src/Chap06/DirGraphStEph.rs:542:21: error: U-OTHER: unrecognized `it`-bearing clause: in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_minus (u_seq[i]@).contains (w))
 src/Chap06/DirGraphStEph.rs:608:1: error: U-CHAIN: DirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/DirGraphStEph.rs:718:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/DirGraphStEph.rs:719:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/LabDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=8 U=9
+src/Chap06/LabDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=16 U=1
 src/Chap06/LabDirGraphMtEph.rs:645:1: warning: D6: LabDirGraphMtEphIter [645-649]
 src/Chap06/LabDirGraphMtEph.rs:651:1: warning: D7: View for LabDirGraphMtEphIter [651-654]
 src/Chap06/LabDirGraphMtEph.rs:656:1: warning: D10: iter_invariant<…> [656-658]
@@ -164,24 +164,24 @@ src/Chap06/LabDirGraphMtEph.rs:992:1: warning: D9: Debug for LabDirGraphMtEphIte
 src/Chap06/LabDirGraphMtEph.rs:996:1: warning: D9: Display for LabDirGraphMtEphIter [996-998]
 src/Chap06/LabDirGraphMtEph.rs:1000:1: warning: D5: Debug for LabDirGraphMtEphGhostIterator [1000-1002]
 src/Chap06/LabDirGraphMtEph.rs:1004:1: warning: D5: Display for LabDirGraphMtEphGhostIterator [1004-1006]
+src/Chap06/LabDirGraphMtEph.rs:316:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphMtEph.rs:317:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphMtEph.rs:319:21: info: T9: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)  →  arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1),
 src/Chap06/LabDirGraphMtEph.rs:321:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphMtEph.rs:379:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphMtEph.rs:380:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphMtEph.rs:382:21: info: T9: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)  →  forall | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view),
 src/Chap06/LabDirGraphMtEph.rs:383:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphMtEph.rs:420:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphMtEph.rs:421:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphMtEph.rs:423:21: info: T9: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)  →  forall | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view),
 src/Chap06/LabDirGraphMtEph.rs:424:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/LabDirGraphMtEph.rs:754:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/LabDirGraphMtEph.rs:755:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/LabDirGraphMtEph.rs:756:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/LabDirGraphMtEph.rs:757:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/LabDirGraphMtEph.rs:316:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphMtEph.rs:319:21: error: U-OTHER: unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)
-src/Chap06/LabDirGraphMtEph.rs:379:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphMtEph.rs:382:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)
-src/Chap06/LabDirGraphMtEph.rs:420:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphMtEph.rs:423:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)
 src/Chap06/LabDirGraphMtEph.rs:645:1: error: U-CHAIN: LabDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/LabDirGraphMtEph.rs:755:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/LabDirGraphMtEph.rs:756:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/LabDirGraphStEph.rs:1:1: summary: delegated, D=12 T=12 U=13
+src/Chap06/LabDirGraphStEph.rs:1:1: summary: delegated, D=12 T=24 U=1
 src/Chap06/LabDirGraphStEph.rs:477:1: warning: D6: LabDirGraphStEphIter [477-481]
 src/Chap06/LabDirGraphStEph.rs:483:1: warning: D7: View for LabDirGraphStEphIter [483-486]
 src/Chap06/LabDirGraphStEph.rs:488:1: warning: D10: iter_invariant<…> [488-490]
@@ -194,32 +194,32 @@ src/Chap06/LabDirGraphStEph.rs:637:1: warning: D9: Debug for LabDirGraphStEphIte
 src/Chap06/LabDirGraphStEph.rs:641:1: warning: D9: Display for LabDirGraphStEphIter [641-643]
 src/Chap06/LabDirGraphStEph.rs:645:1: warning: D5: Debug for LabDirGraphStEphGhostIterator [645-647]
 src/Chap06/LabDirGraphStEph.rs:649:1: warning: D5: Display for LabDirGraphStEphGhostIterator [649-651]
+src/Chap06/LabDirGraphStEph.rs:225:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphStEph.rs:226:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphStEph.rs:228:21: info: T9: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)  →  arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1),
 src/Chap06/LabDirGraphStEph.rs:230:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphStEph.rs:286:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphStEph.rs:287:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphStEph.rs:289:21: info: T9: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)  →  forall | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view),
 src/Chap06/LabDirGraphStEph.rs:290:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphStEph.rs:327:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphStEph.rs:328:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphStEph.rs:330:21: info: T9: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)  →  forall | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view),
 src/Chap06/LabDirGraphStEph.rs:331:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphStEph.rs:376:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphStEph.rs:377:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphStEph.rs:379:21: info: T9: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == v_view && la_seq[i]@.1 == w)  →  neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() && la_seq[i]@.0 == v_view && la_seq[i]@.1 == w),
 src/Chap06/LabDirGraphStEph.rs:381:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabDirGraphStEph.rs:431:21: info: T9: it@.0 <= la_seq.len ()  →  it.index() <= la_seq.len (),
 src/Chap06/LabDirGraphStEph.rs:432:21: info: T3: it@.1 == la_seq  →  it.seq() == la_seq,
+src/Chap06/LabDirGraphStEph.rs:434:21: info: T9: neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.1 == v_view && la_seq[i]@.0 == u)  →  neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it.index() && la_seq[i]@.1 == v_view && la_seq[i]@.0 == u),
 src/Chap06/LabDirGraphStEph.rs:437:27: info: T6: la_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/LabDirGraphStEph.rs:586:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/LabDirGraphStEph.rs:587:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/LabDirGraphStEph.rs:588:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/LabDirGraphStEph.rs:589:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/LabDirGraphStEph.rs:225:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphStEph.rs:228:21: error: U-OTHER: unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)
-src/Chap06/LabDirGraphStEph.rs:286:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphStEph.rs:289:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)
-src/Chap06/LabDirGraphStEph.rs:327:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphStEph.rs:330:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)
-src/Chap06/LabDirGraphStEph.rs:376:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphStEph.rs:379:21: error: U-OTHER: unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == v_view && la_seq[i]@.1 == w)
-src/Chap06/LabDirGraphStEph.rs:431:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()
-src/Chap06/LabDirGraphStEph.rs:434:21: error: U-OTHER: unrecognized `it`-bearing clause: neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.1 == v_view && la_seq[i]@.0 == u)
 src/Chap06/LabDirGraphStEph.rs:477:1: error: U-CHAIN: LabDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/LabDirGraphStEph.rs:587:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/LabDirGraphStEph.rs:588:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/LabUnDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=8 U=9
+src/Chap06/LabUnDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=16 U=1
 src/Chap06/LabUnDirGraphMtEph.rs:587:1: warning: D6: LabUnDirGraphMtEphIter [587-591]
 src/Chap06/LabUnDirGraphMtEph.rs:593:1: warning: D7: View for LabUnDirGraphMtEphIter [593-596]
 src/Chap06/LabUnDirGraphMtEph.rs:598:1: warning: D10: iter_invariant<…> [598-600]
@@ -232,24 +232,24 @@ src/Chap06/LabUnDirGraphMtEph.rs:980:1: warning: D9: Debug for LabUnDirGraphMtEp
 src/Chap06/LabUnDirGraphMtEph.rs:984:1: warning: D9: Display for LabUnDirGraphMtEphIter [984-986]
 src/Chap06/LabUnDirGraphMtEph.rs:988:1: warning: D5: Debug for LabUnDirGraphMtEphGhostIterator [988-990]
 src/Chap06/LabUnDirGraphMtEph.rs:992:1: warning: D5: Display for LabUnDirGraphMtEphGhostIterator [992-994]
+src/Chap06/LabUnDirGraphMtEph.rs:283:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphMtEph.rs:284:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphMtEph.rs:286:21: info: T9: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)  →  forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1),
 src/Chap06/LabUnDirGraphMtEph.rs:288:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabUnDirGraphMtEph.rs:349:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphMtEph.rs:350:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphMtEph.rs:352:21: info: T9: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))  →  forall | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view)),
 src/Chap06/LabUnDirGraphMtEph.rs:355:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabUnDirGraphMtEph.rs:393:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphMtEph.rs:394:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphMtEph.rs:396:21: info: T9: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))  →  forall | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view)),
 src/Chap06/LabUnDirGraphMtEph.rs:399:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/LabUnDirGraphMtEph.rs:696:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/LabUnDirGraphMtEph.rs:697:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/LabUnDirGraphMtEph.rs:698:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/LabUnDirGraphMtEph.rs:699:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/LabUnDirGraphMtEph.rs:283:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphMtEph.rs:286:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)
-src/Chap06/LabUnDirGraphMtEph.rs:349:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphMtEph.rs:352:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))
-src/Chap06/LabUnDirGraphMtEph.rs:393:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphMtEph.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))
 src/Chap06/LabUnDirGraphMtEph.rs:587:1: error: U-CHAIN: LabUnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/LabUnDirGraphMtEph.rs:697:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/LabUnDirGraphMtEph.rs:698:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/LabUnDirGraphStEph.rs:1:1: summary: delegated, D=12 T=10 U=11
+src/Chap06/LabUnDirGraphStEph.rs:1:1: summary: delegated, D=12 T=20 U=1
 src/Chap06/LabUnDirGraphStEph.rs:433:1: warning: D6: LabUnDirGraphStEphIter [433-437]
 src/Chap06/LabUnDirGraphStEph.rs:439:1: warning: D7: View for LabUnDirGraphStEphIter [439-442]
 src/Chap06/LabUnDirGraphStEph.rs:444:1: warning: D10: iter_invariant<…> [444-446]
@@ -262,28 +262,28 @@ src/Chap06/LabUnDirGraphStEph.rs:604:1: warning: D9: Debug for LabUnDirGraphStEp
 src/Chap06/LabUnDirGraphStEph.rs:608:1: warning: D9: Display for LabUnDirGraphStEphIter [608-610]
 src/Chap06/LabUnDirGraphStEph.rs:612:1: warning: D5: Debug for LabUnDirGraphStEphGhostIterator [612-614]
 src/Chap06/LabUnDirGraphStEph.rs:616:1: warning: D5: Display for LabUnDirGraphStEphGhostIterator [616-618]
+src/Chap06/LabUnDirGraphStEph.rs:218:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphStEph.rs:219:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphStEph.rs:221:21: info: T9: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)  →  forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1),
 src/Chap06/LabUnDirGraphStEph.rs:223:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabUnDirGraphStEph.rs:284:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphStEph.rs:285:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphStEph.rs:287:21: info: T9: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))  →  forall | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view)),
 src/Chap06/LabUnDirGraphStEph.rs:290:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabUnDirGraphStEph.rs:329:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphStEph.rs:330:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphStEph.rs:332:21: info: T9: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))  →  forall | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view)),
 src/Chap06/LabUnDirGraphStEph.rs:335:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/LabUnDirGraphStEph.rs:376:21: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap06/LabUnDirGraphStEph.rs:377:21: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
+src/Chap06/LabUnDirGraphStEph.rs:379:21: info: T9: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && ((le_seq[i]@.0 == v_view && le_seq[i]@.1 == w) || (le_seq[i]@.1 == v_view && le_seq[i]@.0 == w)))  →  ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it.index() && ((le_seq[i]@.0 == v_view && le_seq[i]@.1 == w) || (le_seq[i]@.1 == v_view && le_seq[i]@.0 == w))),
 src/Chap06/LabUnDirGraphStEph.rs:384:27: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/LabUnDirGraphStEph.rs:542:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/LabUnDirGraphStEph.rs:543:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/LabUnDirGraphStEph.rs:544:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/LabUnDirGraphStEph.rs:545:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/LabUnDirGraphStEph.rs:218:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphStEph.rs:221:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)
-src/Chap06/LabUnDirGraphStEph.rs:284:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphStEph.rs:287:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))
-src/Chap06/LabUnDirGraphStEph.rs:329:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphStEph.rs:332:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))
-src/Chap06/LabUnDirGraphStEph.rs:376:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap06/LabUnDirGraphStEph.rs:379:21: error: U-OTHER: unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && ((le_seq[i]@.0 == v_view && le_seq[i]@.1 == w) || (le_seq[i]@.1 == v_view && le_seq[i]@.0 == w)))
 src/Chap06/LabUnDirGraphStEph.rs:433:1: error: U-CHAIN: LabUnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/LabUnDirGraphStEph.rs:543:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/LabUnDirGraphStEph.rs:544:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/UnDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=2 U=3
+src/Chap06/UnDirGraphMtEph.rs:1:1: summary: delegated, D=12 T=4 U=1
 src/Chap06/UnDirGraphMtEph.rs:457:1: warning: D6: UnDirGraphMtEphIter [457-461]
 src/Chap06/UnDirGraphMtEph.rs:463:1: warning: D7: View for UnDirGraphMtEphIter [463-466]
 src/Chap06/UnDirGraphMtEph.rs:468:1: warning: D10: iter_invariant<…> [468-470]
@@ -297,11 +297,11 @@ src/Chap06/UnDirGraphMtEph.rs:874:1: warning: D9: Display for UnDirGraphMtEphIte
 src/Chap06/UnDirGraphMtEph.rs:878:1: warning: D5: Debug for UnDirGraphMtEphGhostIterator [878-880]
 src/Chap06/UnDirGraphMtEph.rs:882:1: warning: D5: Display for UnDirGraphMtEphGhostIterator [882-884]
 src/Chap06/UnDirGraphMtEph.rs:566:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/UnDirGraphMtEph.rs:567:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/UnDirGraphMtEph.rs:568:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/UnDirGraphMtEph.rs:569:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap06/UnDirGraphMtEph.rs:457:1: error: U-CHAIN: UnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/UnDirGraphMtEph.rs:567:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/UnDirGraphMtEph.rs:568:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/UnDirGraphStEph.rs:1:1: summary: delegated, D=12 T=6 U=7
+src/Chap06/UnDirGraphStEph.rs:1:1: summary: delegated, D=12 T=12 U=1
 src/Chap06/UnDirGraphStEph.rs:374:1: warning: D6: UnDirGraphStEphIter [374-378]
 src/Chap06/UnDirGraphStEph.rs:380:1: warning: D7: View for UnDirGraphStEphIter [380-383]
 src/Chap06/UnDirGraphStEph.rs:385:1: warning: D10: iter_invariant<…> [385-387]
@@ -314,373 +314,373 @@ src/Chap06/UnDirGraphStEph.rs:566:1: warning: D9: Debug for UnDirGraphStEphIter 
 src/Chap06/UnDirGraphStEph.rs:570:1: warning: D9: Display for UnDirGraphStEphIter [570-572]
 src/Chap06/UnDirGraphStEph.rs:574:1: warning: D5: Debug for UnDirGraphStEphGhostIterator [574-576]
 src/Chap06/UnDirGraphStEph.rs:578:1: warning: D5: Display for UnDirGraphStEphGhostIterator [578-580]
+src/Chap06/UnDirGraphStEph.rs:248:21: info: T9: it@.0 <= edges_seq.len ()  →  it.index() <= edges_seq.len (),
 src/Chap06/UnDirGraphStEph.rs:249:21: info: T3: it@.1 == edges_seq  →  it.seq() == edges_seq,
+src/Chap06/UnDirGraphStEph.rs:251:21: info: T9: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it@.0 && ((edges_seq[i]@.0 == v_view && edges_seq[i]@.1 == w) || (edges_seq[i]@.1 == v_view && edges_seq[i]@.0 == w)))  →  ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it.index() && ((edges_seq[i]@.0 == v_view && edges_seq[i]@.1 == w) || (edges_seq[i]@.1 == v_view && edges_seq[i]@.0 == w))),
 src/Chap06/UnDirGraphStEph.rs:255:27: info: T6: edges_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/UnDirGraphStEph.rs:312:21: info: T9: it@.0 <= u_seq.len ()  →  it.index() <= u_seq.len (),
 src/Chap06/UnDirGraphStEph.rs:313:21: info: T3: it@.1 == u_seq  →  it.seq() == u_seq,
+src/Chap06/UnDirGraphStEph.rs:315:21: info: T9: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))  →  neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it.index() && self.spec_ng (u_seq[i]@).contains (w)),
 src/Chap06/UnDirGraphStEph.rs:317:27: info: T6: u_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap06/UnDirGraphStEph.rs:483:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap06/UnDirGraphStEph.rs:484:17: info: T10: it@.1.map (| i : int, k : V | k@).to_set () == self@.V  →  it.seq().map (| i : int, k : V | k@).to_set () == self@.V,
+src/Chap06/UnDirGraphStEph.rs:485:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
 src/Chap06/UnDirGraphStEph.rs:486:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap06/UnDirGraphStEph.rs:248:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edges_seq.len ()
-src/Chap06/UnDirGraphStEph.rs:251:21: error: U-OTHER: unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it@.0 && ((edges_seq[i]@.0 == v_view && edges_seq[i]@.1 == w) || (edges_seq[i]@.1 == v_view && edges_seq[i]@.0 == w)))
-src/Chap06/UnDirGraphStEph.rs:312:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()
-src/Chap06/UnDirGraphStEph.rs:315:21: error: U-OTHER: unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))
 src/Chap06/UnDirGraphStEph.rs:374:1: error: U-CHAIN: UnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration
-src/Chap06/UnDirGraphStEph.rs:484:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V
-src/Chap06/UnDirGraphStEph.rs:485:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap06/WeightedDirGraphStEphF64.rs:1:1: summary: delegated, D=0 T=8 U=8
+src/Chap06/WeightedDirGraphStEphF64.rs:1:1: summary: delegated, D=0 T=16 U=0
+src/Chap06/WeightedDirGraphStEphF64.rs:131:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphF64.rs:132:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
+src/Chap06/WeightedDirGraphStEphF64.rs:137:21: info: T9: forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)  →  forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it.index() && edge_seq[j]@== t),
 src/Chap06/WeightedDirGraphStEphF64.rs:139:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphF64.rs:190:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphF64.rs:191:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphF64.rs:193:21: info: T9: forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphF64.rs:195:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphF64.rs:226:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphF64.rs:227:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphF64.rs:229:21: info: T9: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphF64.rs:231:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphF64.rs:282:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphF64.rs:283:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphF64.rs:285:21: info: T9: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphF64.rs:287:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphF64.rs:131:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphF64.rs:137:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)
-src/Chap06/WeightedDirGraphStEphF64.rs:190:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphF64.rs:193:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphF64.rs:226:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphF64.rs:229:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphF64.rs:282:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphF64.rs:285:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI128.rs:1:1: summary: delegated, D=0 T=14 U=14
+src/Chap06/WeightedDirGraphStEphI128.rs:1:1: summary: delegated, D=0 T=28 U=0
+src/Chap06/WeightedDirGraphStEphI128.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:162:21: info: T9: forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)  →  forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it.index() && edge_seq[j]@== t),
 src/Chap06/WeightedDirGraphStEphI128.rs:164:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:215:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:216:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:218:21: info: T9: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphI128.rs:220:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:251:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:252:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:254:21: info: T9: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI128.rs:256:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:307:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:308:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:310:21: info: T9: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI128.rs:312:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:361:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:362:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:365:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphI128.rs:367:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:403:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:404:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:407:21: info: T9: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphI128.rs:409:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI128.rs:456:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI128.rs:457:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI128.rs:460:21: info: T9: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphI128.rs:462:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphI128.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:162:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j : int | # ![trigger edge_seq[j]] 0 <= j<it@.0 && edge_seq[j]@== t)
-src/Chap06/WeightedDirGraphStEphI128.rs:215:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:218:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphI128.rs:251:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:254:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI128.rs:307:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:310:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI128.rs:361:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:365:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphI128.rs:403:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:407:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphI128.rs:456:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI128.rs:460:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphI16.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphI16.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphI16.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphI16.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:211:21: info: T9: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphI16.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:247:21: info: T9: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI16.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:303:21: info: T9: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI16.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphI16.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:396:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:397:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:399:21: info: T9: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphI16.rs:402:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI16.rs:449:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI16.rs:450:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI16.rs:453:21: info: T9: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphI16.rs:455:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphI16.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphI16.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI16.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI16.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphI16.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:399:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphI16.rs:449:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI16.rs:453:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphI32.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphI32.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphI32.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphI32.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:211:21: info: T9: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphI32.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:247:21: info: T9: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI32.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:303:21: info: T9: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI32.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphI32.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:396:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:397:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:399:21: info: T9: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphI32.rs:402:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI32.rs:449:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI32.rs:450:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI32.rs:453:21: info: T9: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphI32.rs:455:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphI32.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphI32.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI32.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI32.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphI32.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:399:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphI32.rs:449:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI32.rs:453:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphI64.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphI64.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphI64.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphI64.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:211:21: info: T9: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphI64.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:247:21: info: T9: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI64.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:303:21: info: T9: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI64.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphI64.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:396:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:397:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:399:21: info: T9: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphI64.rs:402:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI64.rs:449:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI64.rs:450:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI64.rs:453:21: info: T9: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphI64.rs:455:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphI64.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphI64.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI64.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI64.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphI64.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:399:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphI64.rs:449:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI64.rs:453:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphI8.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphI8.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphI8.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphI8.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:211:21: info: T9: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphI8.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:247:21: info: T9: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI8.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:303:21: info: T9: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphI8.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphI8.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:396:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:397:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:399:21: info: T9: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphI8.rs:402:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphI8.rs:449:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphI8.rs:450:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphI8.rs:453:21: info: T9: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphI8.rs:455:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphI8.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphI8.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI8.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphI8.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphI8.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:399:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphI8.rs:449:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphI8.rs:453:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphIsize.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphIsize.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphIsize.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphIsize.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:211:21: info: T9: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphIsize.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:247:21: info: T9: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphIsize.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:303:21: info: T9: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphIsize.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, isize> | acc + e@.2 as int)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, isize> | acc + e@.2 as int),
 src/Chap06/WeightedDirGraphStEphIsize.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:396:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:397:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:399:21: info: T9: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphIsize.rs:402:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphIsize.rs:449:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphIsize.rs:450:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphIsize.rs:453:21: info: T9: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphIsize.rs:455:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphIsize.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphIsize.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphIsize.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphIsize.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, isize> | acc + e@.2 as int)
-src/Chap06/WeightedDirGraphStEphIsize.rs:396:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:399:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphIsize.rs:449:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphIsize.rs:453:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphU128.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphU128.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphU128.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphU128.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:211:21: info: T9: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphU128.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:247:21: info: T9: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU128.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:303:21: info: T9: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU128.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphU128.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:400:21: info: T9: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphU128.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU128.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU128.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU128.rs:454:21: info: T9: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphU128.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphU128.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphU128.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU128.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU128.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphU128.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphU128.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU128.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphU16.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphU16.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphU16.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphU16.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:211:21: info: T9: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphU16.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:247:21: info: T9: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU16.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:303:21: info: T9: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU16.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphU16.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:400:21: info: T9: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphU16.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU16.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU16.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU16.rs:454:21: info: T9: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphU16.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphU16.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphU16.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU16.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU16.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphU16.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphU16.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU16.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphU32.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphU32.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphU32.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphU32.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:211:21: info: T9: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphU32.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:247:21: info: T9: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU32.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:303:21: info: T9: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU32.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphU32.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:400:21: info: T9: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphU32.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU32.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU32.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU32.rs:454:21: info: T9: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphU32.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphU32.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphU32.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU32.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU32.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphU32.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphU32.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU32.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphU64.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphU64.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphU64.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphU64.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:211:21: info: T9: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphU64.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:247:21: info: T9: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU64.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:303:21: info: T9: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU64.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphU64.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:400:21: info: T9: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphU64.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU64.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU64.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU64.rs:454:21: info: T9: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphU64.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphU64.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphU64.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU64.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU64.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphU64.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphU64.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU64.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphU8.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphU8.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphU8.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphU8.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:211:21: info: T9: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphU8.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:247:21: info: T9: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU8.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:303:21: info: T9: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphU8.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphU8.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:400:21: info: T9: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphU8.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphU8.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphU8.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphU8.rs:454:21: info: T9: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphU8.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphU8.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphU8.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU8.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphU8.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphU8.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphU8.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphU8.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
-src/Chap06/WeightedDirGraphStEphUsize.rs:1:1: summary: delegated, D=0 T=14 U=13
+src/Chap06/WeightedDirGraphStEphUsize.rs:1:1: summary: delegated, D=0 T=27 U=0
+src/Chap06/WeightedDirGraphStEphUsize.rs:156:21: info: T9: it@.0 <= edge_seq.len ()  →  it.index() <= edge_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:157:21: info: T3: it@.1 == edge_seq  →  it.seq() == edge_seq,
 src/Chap06/WeightedDirGraphStEphUsize.rs:162:27: info: T6: edge_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:208:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:209:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:211:21: info: T9: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)  →  forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),
 src/Chap06/WeightedDirGraphStEphUsize.rs:213:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:244:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:245:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:247:21: info: T9: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphUsize.rs:249:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:300:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:301:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:303:21: info: T9: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)  →  forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1),
 src/Chap06/WeightedDirGraphStEphUsize.rs:305:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:354:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:355:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:358:21: info: T9: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, usize> | acc + e@.2 as nat)  →  sum@== wa_seq.take (it.index() as int).fold_left (0int, | acc : int, e : LabEdge<V, usize> | acc + e@.2 as nat),
 src/Chap06/WeightedDirGraphStEphUsize.rs:359:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:397:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:398:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:400:21: info: T9: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)  →  forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),
 src/Chap06/WeightedDirGraphStEphUsize.rs:403:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap06/WeightedDirGraphStEphUsize.rs:450:21: info: T9: it@.0 <= wa_seq.len ()  →  it.index() <= wa_seq.len (),
 src/Chap06/WeightedDirGraphStEphUsize.rs:451:21: info: T3: it@.1 == wa_seq  →  it.seq() == wa_seq,
+src/Chap06/WeightedDirGraphStEphUsize.rs:454:21: info: T9: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)  →  forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),
 src/Chap06/WeightedDirGraphStEphUsize.rs:456:27: info: T6: wa_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap06/WeightedDirGraphStEphUsize.rs:156:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= edge_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:208:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:211:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t)
-src/Chap06/WeightedDirGraphStEphUsize.rs:244:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:247:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.0 == v_view && wa_seq[i]@.1 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphUsize.rs:300:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:303:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@.1 == v_view && wa_seq[i]@.0 == p.0 && wa_seq[i]@.2 == p.1)
-src/Chap06/WeightedDirGraphStEphUsize.rs:354:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:358:21: error: U-OTHER: unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, usize> | acc + e@.2 as nat)
-src/Chap06/WeightedDirGraphStEphUsize.rs:397:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:400:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2> threshold)
-src/Chap06/WeightedDirGraphStEphUsize.rs:450:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= wa_seq.len ()
-src/Chap06/WeightedDirGraphStEphUsize.rs:454:21: error: U-OTHER: unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![trigger wa_seq[i]] 0 <= i<it@.0 && wa_seq[i]@== t && t.2<threshold)
 src/Chap17/MathSeq.rs:1:1: summary: delegated, D=12 T=5 U=0
 src/Chap17/MathSeq.rs:560:1: warning: D6: MathSeqIter [560-563]
 src/Chap17/MathSeq.rs:565:1: warning: D7: View for MathSeqIter [565-568]
@@ -887,7 +887,7 @@ src/Chap19/ArraySeqStPer.rs:1018:17: info: T8: iter_invariant(&it) (constructor 
 src/Chap19/ArraySeqStPer.rs:1132:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
 src/Chap19/ArraySeqStPer.rs:1143:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap19/ArraySeqStPer.rs:1144:17: info: T2: it@.1 == self.seq@  →  it.seq() == self.seq@,
-src/Chap23/BalBinTreeStEph.rs:1:1: summary: delegated, D=36 T=6 U=3
+src/Chap23/BalBinTreeStEph.rs:1:1: summary: delegated, D=36 T=9 U=0
 src/Chap23/BalBinTreeStEph.rs:396:1: warning: D10: in_order_iter_invariant<…> [396-398]
 src/Chap23/BalBinTreeStEph.rs:400:1: warning: D10: pre_order_iter_invariant<…> [400-402]
 src/Chap23/BalBinTreeStEph.rs:404:1: warning: D10: post_order_iter_invariant<…> [404-406]
@@ -925,14 +925,14 @@ src/Chap23/BalBinTreeStEph.rs:930:1: warning: D5: Display for PreOrderGhostItera
 src/Chap23/BalBinTreeStEph.rs:936:1: warning: D5: Debug for PostOrderGhostIterator [936-940]
 src/Chap23/BalBinTreeStEph.rs:942:1: warning: D5: Display for PostOrderGhostIterator [942-946]
 src/Chap23/BalBinTreeStEph.rs:347:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap23/BalBinTreeStEph.rs:348:17: info: T10: it@.1 =~= self.spec_in_order ()  →  it.seq() =~= self.spec_in_order (),
 src/Chap23/BalBinTreeStEph.rs:349:17: info: T4: in_order_iter_invariant (& it)  →  <remove>
 src/Chap23/BalBinTreeStEph.rs:361:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap23/BalBinTreeStEph.rs:362:17: info: T10: it@.1 =~= self.spec_pre_order ()  →  it.seq() =~= self.spec_pre_order (),
 src/Chap23/BalBinTreeStEph.rs:363:17: info: T4: pre_order_iter_invariant (& it)  →  <remove>
 src/Chap23/BalBinTreeStEph.rs:375:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap23/BalBinTreeStEph.rs:376:17: info: T10: it@.1 =~= self.spec_post_order ()  →  it.seq() =~= self.spec_post_order (),
 src/Chap23/BalBinTreeStEph.rs:377:17: info: T4: post_order_iter_invariant (& it)  →  <remove>
-src/Chap23/BalBinTreeStEph.rs:348:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_in_order ()
-src/Chap23/BalBinTreeStEph.rs:362:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_pre_order ()
-src/Chap23/BalBinTreeStEph.rs:376:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order ()
 src/Chap23/PrimTreeSeqStPer.rs:1:1: summary: delegated, D=12 T=4 U=0
 src/Chap23/PrimTreeSeqStPer.rs:616:1: warning: D6: PrimTreeSeqStIter [616-619]
 src/Chap23/PrimTreeSeqStPer.rs:621:1: warning: D7: View for PrimTreeSeqStIter [621-624]
@@ -950,7 +950,7 @@ src/Chap23/PrimTreeSeqStPer.rs:115:17: info: T8: iter_invariant(&it) (constructo
 src/Chap23/PrimTreeSeqStPer.rs:580:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap23/PrimTreeSeqStPer.rs:581:17: info: T2: it@.1 == self.seq@  →  it.seq() == self.seq@,
 src/Chap23/PrimTreeSeqStPer.rs:715:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
-src/Chap37/AVLTreeSeq.rs:1:1: summary: custom, D=6 T=4 U=8
+src/Chap37/AVLTreeSeq.rs:1:1: summary: custom, D=6 T=6 U=6
 src/Chap37/AVLTreeSeq.rs:1195:1: warning: D1: AVLTreeSeqGhostIterator [1195-1200]
 src/Chap37/AVLTreeSeq.rs:1209:1: warning: D2: View for AVLTreeSeqGhostIterator [1209-1212]
 src/Chap37/AVLTreeSeq.rs:1251:1: warning: D3: ForLoopGhostIteratorNew for AVLTreeSeqIter [1251-1256]
@@ -958,18 +958,18 @@ src/Chap37/AVLTreeSeq.rs:1258:1: warning: D4: ForLoopGhostIterator for AVLTreeSe
 src/Chap37/AVLTreeSeq.rs:1426:1: warning: D5: Debug for AVLTreeSeqGhostIterator [1426-1430]
 src/Chap37/AVLTreeSeq.rs:1432:1: warning: D5: Display for AVLTreeSeqGhostIterator [1432-1436]
 src/Chap37/AVLTreeSeq.rs:434:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap37/AVLTreeSeq.rs:435:17: info: T10: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()  →  it.seq().map_values (| t : T | t@) =~= self.spec_avltreeseq_seq (),
 src/Chap37/AVLTreeSeq.rs:436:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap37/AVLTreeSeq.rs:1299:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap37/AVLTreeSeq.rs:1300:17: info: T10: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()  →  it.seq().map_values (| t : T | t@) =~= self.spec_avltreeseq_seq (),
 src/Chap37/AVLTreeSeq.rs:1301:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap37/AVLTreeSeq.rs:435:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()
 src/Chap37/AVLTreeSeq.rs:1188:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIter
 src/Chap37/AVLTreeSeq.rs:1202:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIter
 src/Chap37/AVLTreeSeq.rs:1214:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for iter_invariant<…>
 src/Chap37/AVLTreeSeq.rs:1219:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIter
-src/Chap37/AVLTreeSeq.rs:1300:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()
 src/Chap37/AVLTreeSeq.rs:1411:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIter
 src/Chap37/AVLTreeSeq.rs:1420:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIter
-src/Chap37/AVLTreeSeqMtPer.rs:1:1: summary: delegated, D=16 T=4 U=3
+src/Chap37/AVLTreeSeqMtPer.rs:1:1: summary: delegated, D=16 T=6 U=1
 src/Chap37/AVLTreeSeqMtPer.rs:823:1: warning: D6: AVLTreeSeqMtPerIter [823-827]
 src/Chap37/AVLTreeSeqMtPer.rs:829:1: warning: D6: AVLTreeSeqMtPerBorrowIter [829-834]
 src/Chap37/AVLTreeSeqMtPer.rs:836:1: warning: D1: AVLTreeSeqMtPerGhostIterator [836-841]
@@ -987,30 +987,30 @@ src/Chap37/AVLTreeSeqMtPer.rs:1046:1: warning: D9: Display for AVLTreeSeqMtPerBo
 src/Chap37/AVLTreeSeqMtPer.rs:1052:1: warning: D5: Debug for AVLTreeSeqMtPerGhostIterator [1052-1056]
 src/Chap37/AVLTreeSeqMtPer.rs:1058:1: warning: D5: Display for AVLTreeSeqMtPerGhostIterator [1058-1062]
 src/Chap37/AVLTreeSeqMtPer.rs:342:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap37/AVLTreeSeqMtPer.rs:343:17: info: T10: it@.1 =~= self.spec_seq ()  →  it.seq() =~= self.spec_seq (),
 src/Chap37/AVLTreeSeqMtPer.rs:344:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap37/AVLTreeSeqMtPer.rs:940:17: info: T1: it@.0 == 0int  →  IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),
+src/Chap37/AVLTreeSeqMtPer.rs:941:17: info: T10: it@.1 =~= self.spec_seq ()  →  it.seq() =~= self.spec_seq (),
 src/Chap37/AVLTreeSeqMtPer.rs:942:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap37/AVLTreeSeqMtPer.rs:1:1: error: U-CLASS: observed custom-style iterator in a non-pinned file — review pin list
-src/Chap37/AVLTreeSeqMtPer.rs:343:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq ()
-src/Chap37/AVLTreeSeqMtPer.rs:941:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq ()
-src/Chap37/AVLTreeSeqStEph.rs:1:1: summary: custom, D=6 T=3 U=7
+src/Chap37/AVLTreeSeqStEph.rs:1:1: summary: custom, D=6 T=4 U=6
 src/Chap37/AVLTreeSeqStEph.rs:455:1: warning: D4: ForLoopGhostIterator for AVLTreeSeqStEphGhostIterator [455-492]
 src/Chap37/AVLTreeSeqStEph.rs:1276:1: warning: D1: AVLTreeSeqStEphGhostIterator [1276-1281]
 src/Chap37/AVLTreeSeqStEph.rs:1283:1: warning: D2: View for AVLTreeSeqStEphGhostIterator [1283-1288]
 src/Chap37/AVLTreeSeqStEph.rs:1320:1: warning: D3: ForLoopGhostIteratorNew for AVLTreeSeqIterStEph [1320-1326]
 src/Chap37/AVLTreeSeqStEph.rs:1420:1: warning: D5: Debug for AVLTreeSeqStEphGhostIterator [1420-1424]
 src/Chap37/AVLTreeSeqStEph.rs:1426:1: warning: D5: Display for AVLTreeSeqStEphGhostIterator [1426-1430]
+src/Chap37/AVLTreeSeqStEph.rs:442:13: info: T9: it@.0 == old (it)@.0  →  it.index() == old (it)@.0,
 src/Chap37/AVLTreeSeqStEph.rs:443:13: info: T3: it@.1 == old (it)@.1  →  it.seq() == old (it)@.1,
 src/Chap37/AVLTreeSeqStEph.rs:503:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
 src/Chap37/AVLTreeSeqStEph.rs:880:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
-src/Chap37/AVLTreeSeqStEph.rs:442:13: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 == old (it)@.0
 src/Chap37/AVLTreeSeqStEph.rs:512:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIterStEph
 src/Chap37/AVLTreeSeqStEph.rs:523:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIterStEph
 src/Chap37/AVLTreeSeqStEph.rs:533:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for avltreeseqsteph_iter_invariant<…>
 src/Chap37/AVLTreeSeqStEph.rs:1290:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIterStEph
 src/Chap37/AVLTreeSeqStEph.rs:1475:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIterStEph
 src/Chap37/AVLTreeSeqStEph.rs:1481:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIterStEph
-src/Chap37/AVLTreeSeqStPer.rs:1:1: summary: custom, D=6 T=3 U=7
+src/Chap37/AVLTreeSeqStPer.rs:1:1: summary: custom, D=6 T=4 U=6
 src/Chap37/AVLTreeSeqStPer.rs:953:1: warning: D1: AVLTreeSeqStPerGhostIterator [953-958]
 src/Chap37/AVLTreeSeqStPer.rs:967:1: warning: D2: View for AVLTreeSeqStPerGhostIterator [967-972]
 src/Chap37/AVLTreeSeqStPer.rs:1012:1: warning: D3: ForLoopGhostIteratorNew for AVLTreeSeqStPerIter [1012-1018]
@@ -1018,10 +1018,10 @@ src/Chap37/AVLTreeSeqStPer.rs:1020:1: warning: D4: ForLoopGhostIterator for AVLT
 src/Chap37/AVLTreeSeqStPer.rs:1136:1: warning: D5: Debug for AVLTreeSeqStPerGhostIterator [1136-1140]
 src/Chap37/AVLTreeSeqStPer.rs:1142:1: warning: D5: Display for AVLTreeSeqStPerGhostIterator [1142-1146]
 src/Chap37/AVLTreeSeqStPer.rs:385:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
+src/Chap37/AVLTreeSeqStPer.rs:928:13: info: T9: it@.0 == old (it)@.0  →  it.index() == old (it)@.0,
 src/Chap37/AVLTreeSeqStPer.rs:929:13: info: T3: it@.1 == old (it)@.1  →  it.seq() == old (it)@.1,
 src/Chap37/AVLTreeSeqStPer.rs:1069:17: info: T8: iter_invariant(&it) (constructor ensures triple)  →  IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),
 src/Chap37/AVLTreeSeqStPer.rs:98:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for avltreeseqstper_iter_invariant<…>
-src/Chap37/AVLTreeSeqStPer.rs:928:13: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 == old (it)@.0
 src/Chap37/AVLTreeSeqStPer.rs:945:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqStPerIter
 src/Chap37/AVLTreeSeqStPer.rs:960:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqStPerIter
 src/Chap37/AVLTreeSeqStPer.rs:974:1: error: U-CUSTOM: custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqStPerIter
@@ -1116,21 +1116,21 @@ src/Chap43/AugOrderedTableMtEph.rs:404:17: info: T1: it@.0 == 0  →  IteratorSp
 src/Chap43/AugOrderedTableMtEph.rs:405:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/AugOrderedTableMtEph.rs:904:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/AugOrderedTableMtEph.rs:905:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/AugOrderedTableStEph.rs:1:1: summary: delegated, D=0 T=4 U=2
+src/Chap43/AugOrderedTableStEph.rs:1:1: summary: delegated, D=0 T=6 U=0
 src/Chap43/AugOrderedTableStEph.rs:952:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/AugOrderedTableStEph.rs:953:17: info: T10: it@.1.len () == self.base_table.tree.inner@.len ()  →  it.seq().len () == self.base_table.tree.inner@.len (),
 src/Chap43/AugOrderedTableStEph.rs:954:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/AugOrderedTableStEph.rs:969:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/AugOrderedTableStEph.rs:970:17: info: T10: it@.1.len () == self.base_table.tree.inner@.len ()  →  it.seq().len () == self.base_table.tree.inner@.len (),
 src/Chap43/AugOrderedTableStEph.rs:971:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/AugOrderedTableStEph.rs:953:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
-src/Chap43/AugOrderedTableStEph.rs:970:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
-src/Chap43/AugOrderedTableStPer.rs:1:1: summary: delegated, D=0 T=4 U=2
+src/Chap43/AugOrderedTableStPer.rs:1:1: summary: delegated, D=0 T=6 U=0
 src/Chap43/AugOrderedTableStPer.rs:1014:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/AugOrderedTableStPer.rs:1015:17: info: T10: it@.1.len () == self.base_table.tree.inner@.len ()  →  it.seq().len () == self.base_table.tree.inner@.len (),
 src/Chap43/AugOrderedTableStPer.rs:1016:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/AugOrderedTableStPer.rs:1032:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/AugOrderedTableStPer.rs:1033:17: info: T10: it@.1.len () == self.base_table.tree.inner@.len ()  →  it.seq().len () == self.base_table.tree.inner@.len (),
 src/Chap43/AugOrderedTableStPer.rs:1034:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/AugOrderedTableStPer.rs:1015:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
-src/Chap43/AugOrderedTableStPer.rs:1033:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()
-src/Chap43/OrderedSetStEph.rs:1:1: summary: delegated, D=12 T=4 U=2
+src/Chap43/OrderedSetStEph.rs:1:1: summary: delegated, D=12 T=6 U=0
 src/Chap43/OrderedSetStEph.rs:1005:1: warning: D6: OrderedSetStEphIter [1005-1008]
 src/Chap43/OrderedSetStEph.rs:1010:1: warning: D7: View for OrderedSetStEphIter [1010-1013]
 src/Chap43/OrderedSetStEph.rs:1015:1: warning: D10: iter_invariant<…> [1015-1017]
@@ -1144,12 +1144,12 @@ src/Chap43/OrderedSetStEph.rs:1191:1: warning: D9: Display for OrderedSetStEphIt
 src/Chap43/OrderedSetStEph.rs:1197:1: warning: D5: Debug for OrderedSetStEphGhostIterator [1197-1201]
 src/Chap43/OrderedSetStEph.rs:1203:1: warning: D5: Display for OrderedSetStEphGhostIterator [1203-1207]
 src/Chap43/OrderedSetStEph.rs:980:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedSetStEph.rs:981:17: info: T10: it@.1.len () == self@.len ()  →  it.seq().len () == self@.len (),
 src/Chap43/OrderedSetStEph.rs:982:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedSetStEph.rs:1103:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedSetStEph.rs:1104:17: info: T10: it@.1.len () == self@.len ()  →  it.seq().len () == self@.len (),
 src/Chap43/OrderedSetStEph.rs:1105:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/OrderedSetStEph.rs:981:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
-src/Chap43/OrderedSetStEph.rs:1104:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
-src/Chap43/OrderedSetStPer.rs:1:1: summary: delegated, D=12 T=2 U=1
+src/Chap43/OrderedSetStPer.rs:1:1: summary: delegated, D=12 T=3 U=0
 src/Chap43/OrderedSetStPer.rs:1072:1: warning: D6: OrderedSetStPerIter [1072-1075]
 src/Chap43/OrderedSetStPer.rs:1077:1: warning: D7: View for OrderedSetStPerIter [1077-1080]
 src/Chap43/OrderedSetStPer.rs:1082:1: warning: D10: iter_invariant<…> [1082-1084]
@@ -1163,8 +1163,8 @@ src/Chap43/OrderedSetStPer.rs:1247:1: warning: D9: Display for OrderedSetStPerIt
 src/Chap43/OrderedSetStPer.rs:1253:1: warning: D5: Debug for OrderedSetStPerGhostIterator [1253-1257]
 src/Chap43/OrderedSetStPer.rs:1259:1: warning: D5: Display for OrderedSetStPerGhostIterator [1259-1263]
 src/Chap43/OrderedSetStPer.rs:1059:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedSetStPer.rs:1060:17: info: T10: it@.1.len () == self@.len ()  →  it.seq().len () == self@.len (),
 src/Chap43/OrderedSetStPer.rs:1061:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/OrderedSetStPer.rs:1060:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self@.len ()
 src/Chap43/OrderedTableMtEph.rs:1:1: summary: delegated, D=12 T=4 U=1
 src/Chap43/OrderedTableMtEph.rs:71:1: warning: D10: iter_invariant<…> [71-73]
 src/Chap43/OrderedTableMtEph.rs:896:1: warning: D6: OrderedTableMtEphIter [896-902]
@@ -1183,7 +1183,7 @@ src/Chap43/OrderedTableMtEph.rs:83:17: info: T4: iter_invariant (& it)  →  <re
 src/Chap43/OrderedTableMtEph.rs:398:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
 src/Chap43/OrderedTableMtEph.rs:399:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableMtEph.rs:1:1: error: U-CLASS: observed custom-style iterator in a non-pinned file — review pin list
-src/Chap43/OrderedTableStEph.rs:1:1: summary: delegated, D=12 T=4 U=2
+src/Chap43/OrderedTableStEph.rs:1:1: summary: delegated, D=12 T=6 U=0
 src/Chap43/OrderedTableStEph.rs:1790:1: warning: D6: OrderedTableStEphIter [1790-1794]
 src/Chap43/OrderedTableStEph.rs:1796:1: warning: D7: View for OrderedTableStEphIter [1796-1799]
 src/Chap43/OrderedTableStEph.rs:1801:1: warning: D10: iter_invariant<…> [1801-1803]
@@ -1197,12 +1197,12 @@ src/Chap43/OrderedTableStEph.rs:1954:1: warning: D9: Display for OrderedTableStE
 src/Chap43/OrderedTableStEph.rs:1960:1: warning: D5: Debug for OrderedTableStEphGhostIterator [1960-1964]
 src/Chap43/OrderedTableStEph.rs:1966:1: warning: D5: Display for OrderedTableStEphGhostIterator [1966-1970]
 src/Chap43/OrderedTableStEph.rs:1658:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedTableStEph.rs:1659:17: info: T10: it@.1.len () == self.tree.inner@.len ()  →  it.seq().len () == self.tree.inner@.len (),
 src/Chap43/OrderedTableStEph.rs:1660:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableStEph.rs:1892:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedTableStEph.rs:1893:17: info: T10: it@.1.len () == self.tree.inner@.len ()  →  it.seq().len () == self.tree.inner@.len (),
 src/Chap43/OrderedTableStEph.rs:1894:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/OrderedTableStEph.rs:1659:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStEph.rs:1893:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStPer.rs:1:1: summary: delegated, D=12 T=4 U=2
+src/Chap43/OrderedTableStPer.rs:1:1: summary: delegated, D=12 T=6 U=0
 src/Chap43/OrderedTableStPer.rs:1392:1: warning: D6: OrderedTableStPerIter [1392-1396]
 src/Chap43/OrderedTableStPer.rs:1398:1: warning: D7: View for OrderedTableStPerIter [1398-1401]
 src/Chap43/OrderedTableStPer.rs:1403:1: warning: D10: iter_invariant<…> [1403-1405]
@@ -1216,82 +1216,82 @@ src/Chap43/OrderedTableStPer.rs:1575:1: warning: D9: Display for OrderedTableStP
 src/Chap43/OrderedTableStPer.rs:1581:1: warning: D5: Debug for OrderedTableStPerGhostIterator [1581-1585]
 src/Chap43/OrderedTableStPer.rs:1587:1: warning: D5: Display for OrderedTableStPerGhostIterator [1587-1591]
 src/Chap43/OrderedTableStPer.rs:1239:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedTableStPer.rs:1240:17: info: T10: it@.1.len () == self.tree.inner@.len ()  →  it.seq().len () == self.tree.inner@.len (),
 src/Chap43/OrderedTableStPer.rs:1241:17: info: T4: iter_invariant (& it)  →  <remove>
 src/Chap43/OrderedTableStPer.rs:1494:17: info: T1: it@.0 == 0  →  IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),
+src/Chap43/OrderedTableStPer.rs:1495:17: info: T10: it@.1.len () == self.tree.inner@.len ()  →  it.seq().len () == self.tree.inner@.len (),
 src/Chap43/OrderedTableStPer.rs:1496:17: info: T4: iter_invariant (& it)  →  <remove>
-src/Chap43/OrderedTableStPer.rs:1240:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap43/OrderedTableStPer.rs:1495:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()
-src/Chap57/DijkstraStEphF64.rs:1:1: summary: delegated, D=0 T=0 U=4
-src/Chap57/DijkstraStEphF64.rs:262:29: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap57/DijkstraStEphF64.rs:272:29: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap57/DijkstraStEphF64.rs:275:29: error: U-OTHER: unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))
-src/Chap57/DijkstraStEphF64.rs:277:29: error: U-OTHER: unrecognized `it`-bearing clause: forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))
-src/Chap57/DijkstraStEphU64.rs:1:1: summary: delegated, D=0 T=0 U=4
-src/Chap57/DijkstraStEphU64.rs:252:29: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap57/DijkstraStEphU64.rs:262:29: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap57/DijkstraStEphU64.rs:265:29: error: U-OTHER: unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))
-src/Chap57/DijkstraStEphU64.rs:267:29: error: U-OTHER: unrecognized `it`-bearing clause: forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))
-src/Chap58/BellmanFordStEphF64.rs:1:1: summary: delegated, D=0 T=2 U=2
+src/Chap57/DijkstraStEphF64.rs:1:1: summary: delegated, D=0 T=4 U=0
+src/Chap57/DijkstraStEphF64.rs:262:29: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap57/DijkstraStEphF64.rs:272:29: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
+src/Chap57/DijkstraStEphF64.rs:275:29: info: T10: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))  →  forall | j : int | 0 <= j<it.seq().len () ==> graph@.A.contains ((v, (#[trigger] it.seq()[j])@.0, it.seq()[j]@.1)),
+src/Chap57/DijkstraStEphF64.rs:277:29: info: T10: forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))  →  forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it.index() && #[trigger] it.seq()[j]@== (e.1, e.2))),
+src/Chap57/DijkstraStEphU64.rs:1:1: summary: delegated, D=0 T=4 U=0
+src/Chap57/DijkstraStEphU64.rs:252:29: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap57/DijkstraStEphU64.rs:262:29: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
+src/Chap57/DijkstraStEphU64.rs:265:29: info: T10: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j])@.0, it@.1[j]@.1))  →  forall | j : int | 0 <= j<it.seq().len () ==> graph@.A.contains ((v, (#[trigger] it.seq()[j])@.0, it.seq()[j]@.1)),
+src/Chap57/DijkstraStEphU64.rs:267:29: info: T10: forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== (e.1, e.2)))  →  forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v || (exists | j : int | 0 <= j<it.index() && #[trigger] it.seq()[j]@== (e.1, e.2))),
+src/Chap58/BellmanFordStEphF64.rs:1:1: summary: delegated, D=0 T=4 U=0
+src/Chap58/BellmanFordStEphF64.rs:132:25: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap58/BellmanFordStEphF64.rs:133:31: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap58/BellmanFordStEphF64.rs:226:25: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap58/BellmanFordStEphF64.rs:227:31: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap58/BellmanFordStEphF64.rs:132:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap58/BellmanFordStEphF64.rs:226:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap58/BellmanFordStEphI64.rs:1:1: summary: delegated, D=0 T=2 U=2
+src/Chap58/BellmanFordStEphI64.rs:1:1: summary: delegated, D=0 T=4 U=0
+src/Chap58/BellmanFordStEphI64.rs:156:25: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap58/BellmanFordStEphI64.rs:157:31: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap58/BellmanFordStEphI64.rs:251:25: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap58/BellmanFordStEphI64.rs:252:31: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap58/BellmanFordStEphI64.rs:156:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap58/BellmanFordStEphI64.rs:251:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap59/JohnsonStEphF64.rs:1:1: summary: delegated, D=0 T=3 U=3
+src/Chap59/JohnsonStEphF64.rs:1:1: summary: delegated, D=0 T=6 U=0
+src/Chap59/JohnsonStEphF64.rs:195:21: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap59/JohnsonStEphF64.rs:199:27: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap59/JohnsonStEphF64.rs:287:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap59/JohnsonStEphF64.rs:288:17: info: T3: it@.1 == arcs_seq  →  it.seq() == arcs_seq,
+src/Chap59/JohnsonStEphF64.rs:291:17: info: T9: edges@.len () <= it@.0  →  edges@.len () <= it.index(),
 src/Chap59/JohnsonStEphF64.rs:295:23: info: T6: arcs_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap59/JohnsonStEphF64.rs:195:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap59/JohnsonStEphF64.rs:287:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap59/JohnsonStEphF64.rs:291:17: error: U-OTHER: unrecognized `it`-bearing clause: edges@.len () <= it@.0
-src/Chap59/JohnsonStEphI64.rs:1:1: summary: delegated, D=0 T=3 U=3
+src/Chap59/JohnsonStEphI64.rs:1:1: summary: delegated, D=0 T=6 U=0
+src/Chap59/JohnsonStEphI64.rs:199:21: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap59/JohnsonStEphI64.rs:203:27: info: T6: it@.1.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap59/JohnsonStEphI64.rs:289:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
 src/Chap59/JohnsonStEphI64.rs:290:17: info: T3: it@.1 == arcs_seq  →  it.seq() == arcs_seq,
+src/Chap59/JohnsonStEphI64.rs:293:17: info: T9: edges@.len () <= it@.0  →  edges@.len () <= it.index(),
 src/Chap59/JohnsonStEphI64.rs:297:23: info: T6: arcs_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap59/JohnsonStEphI64.rs:199:21: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap59/JohnsonStEphI64.rs:289:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap59/JohnsonStEphI64.rs:293:17: error: U-OTHER: unrecognized `it`-bearing clause: edges@.len () <= it@.0
-src/Chap62/StarPartitionMtEph.rs:1:1: summary: delegated, D=0 T=1 U=4
+src/Chap62/StarPartitionMtEph.rs:1:1: summary: delegated, D=0 T=5 U=0
+src/Chap62/StarPartitionMtEph.rs:207:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap62/StarPartitionMtEph.rs:208:17: info: T10: it_seq == it@.1  →  it_seq == it.seq(),
+src/Chap62/StarPartitionMtEph.rs:211:17: info: T9: merge_done ==> it@.0>= it_seq.len ()  →  merge_done ==> it.index()>= it_seq.len (),
+src/Chap62/StarPartitionMtEph.rs:216:17: info: T9: forall | idx : int | 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_seq[idx].0@)  →  forall | idx : int | 0 <= idx<it.index() ==> #[trigger] merged@.contains_key (it_seq[idx].0@),
 src/Chap62/StarPartitionMtEph.rs:224:45: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap62/StarPartitionMtEph.rs:207:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap62/StarPartitionMtEph.rs:208:17: error: U-OTHER: unrecognized `it`-bearing clause: it_seq == it@.1
-src/Chap62/StarPartitionMtEph.rs:211:17: error: U-OTHER: unrecognized `it`-bearing clause: merge_done ==> it@.0>= it_seq.len ()
-src/Chap62/StarPartitionMtEph.rs:216:17: error: U-OTHER: unrecognized `it`-bearing clause: forall | idx : int | 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_seq[idx].0@)
-src/Chap65/PrimStEph.rs:1:1: summary: delegated, D=0 T=2 U=5
+src/Chap65/PrimStEph.rs:1:1: summary: delegated, D=0 T=7 U=0
+src/Chap65/PrimStEph.rs:409:25: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap65/PrimStEph.rs:410:25: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),
+src/Chap65/PrimStEph.rs:416:25: info: T10: forall | j : int | 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.1[j])@))  →  forall | j : int | 0 <= j<it.seq().len () ==> DA.contains ((u@, (#[trigger] it.seq()[j])@)),
+src/Chap65/PrimStEph.rs:418:25: info: T10: forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== e.1))  →  forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exists | j : int | 0 <= j<it.index() && #[trigger] it.seq()[j]@== e.1)),
+src/Chap65/PrimStEph.rs:481:17: info: T9: it@.0 <= le_seq.len ()  →  it.index() <= le_seq.len (),
 src/Chap65/PrimStEph.rs:482:17: info: T3: it@.1 == le_seq  →  it.seq() == le_seq,
 src/Chap65/PrimStEph.rs:484:23: info: T6: le_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap65/PrimStEph.rs:409:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap65/PrimStEph.rs:410:25: error: U-OTHER: unrecognized `it`-bearing clause: it@.1.no_duplicates ()
-src/Chap65/PrimStEph.rs:416:25: error: U-OTHER: unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.1[j])@))
-src/Chap65/PrimStEph.rs:418:25: error: U-OTHER: unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exists | j : int | 0 <= j<it@.0 && #[trigger] it@.1[j]@== e.1))
-src/Chap65/PrimStEph.rs:481:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()
-src/Chap66/BoruvkaMtEph.rs:1:1: summary: delegated, D=0 T=6 U=9
+src/Chap66/BoruvkaMtEph.rs:1:1: summary: delegated, D=0 T=15 U=0
+src/Chap66/BoruvkaMtEph.rs:265:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap66/BoruvkaMtEph.rs:266:17: info: T10: it_seq == it@.1  →  it_seq == it.seq(),
 src/Chap66/BoruvkaMtEph.rs:267:23: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap66/BoruvkaMtEph.rs:479:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap66/BoruvkaMtEph.rs:480:17: info: T10: it_seq == it@.1  →  it_seq == it.seq(),
 src/Chap66/BoruvkaMtEph.rs:481:23: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap66/BoruvkaMtEph.rs:567:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap66/BoruvkaMtEph.rs:568:17: info: T10: it_seq == it@.1  →  it_seq == it.seq(),
 src/Chap66/BoruvkaMtEph.rs:574:23: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
+src/Chap66/BoruvkaMtEph.rs:757:17: info: T10: it@.0 <= it@.1.len ()  →  it.index() <= it.seq().len (),
+src/Chap66/BoruvkaMtEph.rs:758:17: info: T10: it_seq == it@.1  →  it_seq == it.seq(),
 src/Chap66/BoruvkaMtEph.rs:759:23: info: T6: it_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap66/BoruvkaMtEph.rs:1091:17: info: T4: iter_invariant (& it)  →  <remove>
+src/Chap66/BoruvkaMtEph.rs:1092:17: info: T10: iter_seq == it@.1  →  iter_seq == it.seq(),
 src/Chap66/BoruvkaMtEph.rs:1094:23: info: T6: iter_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap66/BoruvkaMtEph.rs:265:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap66/BoruvkaMtEph.rs:266:17: error: U-OTHER: unrecognized `it`-bearing clause: it_seq == it@.1
-src/Chap66/BoruvkaMtEph.rs:479:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap66/BoruvkaMtEph.rs:480:17: error: U-OTHER: unrecognized `it`-bearing clause: it_seq == it@.1
-src/Chap66/BoruvkaMtEph.rs:567:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap66/BoruvkaMtEph.rs:568:17: error: U-OTHER: unrecognized `it`-bearing clause: it_seq == it@.1
-src/Chap66/BoruvkaMtEph.rs:757:17: error: U-OTHER: unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()
-src/Chap66/BoruvkaMtEph.rs:758:17: error: U-OTHER: unrecognized `it`-bearing clause: it_seq == it@.1
-src/Chap66/BoruvkaMtEph.rs:1092:17: error: U-OTHER: unrecognized `it`-bearing clause: iter_seq == it@.1
-src/Chap66/BoruvkaStEph.rs:1:1: summary: delegated, D=0 T=4 U=2
+src/Chap66/BoruvkaStEph.rs:1:1: summary: delegated, D=0 T=6 U=0
 src/Chap66/BoruvkaStEph.rs:228:21: info: T4: iter_invariant (& it)  →  <remove>
+src/Chap66/BoruvkaStEph.rs:229:21: info: T10: iter_seq == it@.1  →  iter_seq == it.seq(),
 src/Chap66/BoruvkaStEph.rs:235:27: info: T6: iter_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
 src/Chap66/BoruvkaStEph.rs:535:21: info: T4: iter_invariant (& it)  →  <remove>
+src/Chap66/BoruvkaStEph.rs:536:21: info: T10: iter_seq == it@.1  →  iter_seq == it.seq(),
 src/Chap66/BoruvkaStEph.rs:538:27: info: T6: iter_seq.len () - it@.0  →  IteratorSpec::decrease(&it).unwrap(),
-src/Chap66/BoruvkaStEph.rs:229:21: error: U-OTHER: unrecognized `it`-bearing clause: iter_seq == it@.1
-src/Chap66/BoruvkaStEph.rs:536:21: error: U-OTHER: unrecognized `it`-bearing clause: iter_seq == it@.1
 src/vstdplus/hash_map_with_view_plus.rs:1:1: summary: delegated, D=8 T=0 U=0
 src/vstdplus/hash_map_with_view_plus.rs:170:1: warning: D6: HashMapWithViewPlusIter [170-175]
 src/vstdplus/hash_map_with_view_plus.rs:177:1: warning: D7: View for HashMapWithViewPlusIter [177-182]

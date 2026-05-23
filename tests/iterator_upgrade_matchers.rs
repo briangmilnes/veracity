@@ -106,7 +106,7 @@ fn normalize(s: &str) -> String {
 
 const CLASSES: &[&str] = &[
     "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10",
-    "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8",
+    "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
 ];
 
 #[test]

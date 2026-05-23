@@ -8,9 +8,9 @@ table { width: 100% !important; table-layout: fixed; }
 # Iterator-Upgrade Detect Report
 
 - Root: `/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS`
-- Generated: 2026-05-23T17:04:20Z
-- Tool SHA: `775300bbc363d0e0e9dcd3be82b1fd11f66eaf91`
-- Totals: files=70, D=500, T=395, U=341
+- Generated: 2026-05-23T17:07:05Z
+- Tool SHA: `3b75fc744d1a4c714b34c3993380f3537f864453`
+- Totals: files=70, D=500, T=698, U=38
 
 ## Manifest check
 
@@ -20,19 +20,17 @@ Scanned **70 of ?** inventory files. `docs/PropheticIterators.md` not found unde
 
 | # | Code | Means | Action |
 |--:|------|-------|--------|
-| 1 | U-OTHER | `it`-bearing clause matched no T1–T8 template | Extend matcher or hand-fix |
-| 2 | U-CHAIN | Chained-wrapper iterator; backing must migrate first | Schedule per chain appendix |
-| 3 | U-CUSTOM | File is pinned-custom; needs hand-written IteratorSpecImpl | Manual port, not mechanical |
-| 4 | U-CLASS | Matcher saw custom but pin says delegated (or vice versa) | Reconcile pin list vs D6 rule |
+| 1 | U-CHAIN | Chained-wrapper iterator; backing must migrate first | Schedule per chain appendix |
+| 2 | U-CUSTOM | File is pinned-custom; needs hand-written IteratorSpecImpl | Manual port, not mechanical |
+| 3 | U-CLASS | Matcher saw custom but pin says delegated (or vice versa) | Reconcile pin list vs D6 rule |
 
 ## Unresolved by class
 
 | # | Code | Count | Files affected |
 |--:|------|------:|---------------:|
-| 1 | U-OTHER | 303 | 46 |
-| 2 | U-CUSTOM | 18 | 3 |
-| 3 | U-CHAIN | 12 | 12 |
-| 4 | U-CLASS | 8 | 8 |
+| 1 | U-CUSTOM | 18 | 3 |
+| 2 | U-CHAIN | 12 | 12 |
+| 3 | U-CLASS | 8 | 8 |
 
 ## Unique transforms (top 50)
 
@@ -42,84 +40,84 @@ Every `it`-bearing rewrite the matcher saw, dedup'd by skeleton (literal `it` pr
 |--:|--------|--------------|--------------|------:|------:|
 | 1 | T6 | `<ident>.<ident> () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` | 122 | 26 |
 | 2 | T3 | `it@.1 == <ident>` | `it.seq() == it_seq,` | 114 | 23 |
-| 3 | U-OTHER → T(new) | `it@.0 <= <ident>.<ident> ()` | `it.index() <= <ident>.<ident> ()` | 112 | 21 |
+| 3 | T9 | `it@.0 <= <ident>.<ident> ()` | `it.index() <= it_seq.len (),` | 112 | 21 |
 | 4 | T4 | `<ident> (& it)` | `<remove>` | 53 | 31 |
 | 5 | T1 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` | 41 | 23 |
 | 6 | T8 | `iter_invariant(&it) (constructor ensures triple)` | `IteratorSpec::remaining(&it) == self.seq@.as_ref(), ⏎ IteratorSpec::decrease(&it) is Some, ⏎ IteratorSpec::initial_value_relation(&it, &it),` | 29 | 16 |
 | 7 | T1 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` | 20 | 14 |
-| 8 | U-OTHER → T(new) | `it@.1.<ident> ()` | `it.seq().<ident> ()` | 19 | 15 |
-| 9 | U-OTHER → T(new) | `it@.0 <= it@.1.<ident> ()` | `it.index() <= it.seq().<ident> ()` | 16 | 9 |
-| 10 | U-OTHER → T(new) | `<ident> == it@.1` | `<ident> == it.seq()` | 8 | 3 |
-| 11 | U-OTHER → T(new) | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | 8 | 8 |
+| 8 | T10 | `it@.1.<ident> ()` | `it.seq().no_duplicates (),` | 19 | 15 |
+| 9 | T10 | `it@.0 <= it@.1.<ident> ()` | `it.index() <= it.seq().len (),` | 16 | 9 |
+| 10 | T10 | `<ident> == it@.1` | `it_seq == it.seq(),` | 8 | 3 |
+| 11 | T10 | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@.<ident>` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` | 8 | 8 |
 | 12 | T2 | `it@.1 == self.<ident>@` | `it.seq() == self.seq@,` | 7 | 7 |
 | 13 | T6 | `it@.1.<ident> () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` | 6 | 4 |
-| 14 | U-OTHER → T(new) | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | 6 | 6 |
-| 15 | U-OTHER → T(new) | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | `<ident>@== <ident>.<ident> (it.index() <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | 6 | 6 |
-| 16 | U-OTHER → T(new) | `it@.1 =~= self.<ident> ()` | `it.seq() =~= self.<ident> ()` | 5 | 2 |
-| 17 | U-OTHER | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | 4 | 2 |
-| 18 | U-OTHER | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | 4 | 2 |
-| 19 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && self.<ident> (u_seq [i]@).<ident> (w))` | 4 | 2 |
-| 20 | U-OTHER | `it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | `it.seq().<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | 4 | 2 |
-| 21 | U-OTHER | `it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()` | `it.seq().<ident> () == self.<ident>.<ident>@.<ident> ()` | 4 | 2 |
-| 22 | U-OTHER | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | `it.seq().<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | 4 | 2 |
-| 23 | U-OTHER | `it@.1.<ident> () == self@.<ident> ()` | `it.seq().<ident> () == self@.<ident> ()` | 3 | 2 |
-| 24 | T3 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` | 2 | 2 |
-| 25 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | 2 |
-| 26 | U-OTHER | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>` | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it.seq() [j])@.0, it.seq() [j]@.<lit>` | 2 | 2 |
-| 27 | U-OTHER | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)` | `<ident> \| j : <ident> \| 0 <= j < it.seq().<ident> () ==> self@.<ident> (# [trigger] it.seq() [j]@)` | 2 | 2 |
-| 28 | U-OTHER | `<ident>@.<ident> () <= it@.0` | `<ident>@.<ident> () <= it.index()` | 2 | 2 |
-| 29 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | 2 | 2 |
-| 30 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | 2 | 2 |
-| 31 | U-OTHER | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | 2 | 2 |
-| 32 | U-OTHER | `it@.0 == old (it)@.0` | `it.index() == old (it)@.0` | 2 | 2 |
-| 33 | U-OTHER | `it@.1.<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | `it.seq().<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | 2 | 1 |
-| 34 | U-OTHER | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | 2 | 1 |
-| 35 | U-OTHER | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | `it.seq().<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | 2 | 1 |
-| 36 | T3 | `it@.1 == self.<ident>@` | `it.seq() == self.data@,` | 1 | 1 |
-| 37 | U-OTHER | `<ident> ==> it@.0 >= <ident>.<ident> ()` | `<ident> ==> it.index() >= <ident>.<ident> ()` | 1 | 1 |
-| 38 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)` | 1 | 1 |
-| 39 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
-| 40 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it.index() && <ident> [j]@== t)` | 1 | 1 |
-| 41 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
-| 42 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
-| 43 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
-| 44 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
-| 45 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
-| 46 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
-| 47 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
-| 48 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 > threshold)` | 1 | 1 |
-| 49 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i32) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== t)` | 1 | 1 |
-| 50 | U-OTHER | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it.index() && <ident> [i]@== <ident> && <ident>.2 < threshold)` | 1 | 1 |
+| 14 | T9 | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> int)` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEdge<V, i128> \| acc + e@.2 as int),` | 6 | 6 |
+| 15 | T9 | `<ident>@== <ident>.<ident> (it@.0 <ident> int).<ident> (0int, \| <ident> : <ident>, <ident> : <ident> < <ident>, <ident> > \| <ident> + <ident>@.2 <ident> nat)` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEdge<V, u128> \| acc + e@.2 as nat),` | 6 | 6 |
+| 16 | T10 | `it@.1 =~= self.<ident> ()` | `it.seq() =~= self.spec_in_order (),` | 5 | 2 |
+| 17 | T10 | `it@.1.<ident> () == self.<ident>.<ident>.<ident>@.<ident> ()` | `it.seq().len () == self.base_table.tree.inner@.len (),` | 4 | 2 |
+| 18 | T10 | `it@.1.<ident> () == self.<ident>.<ident>@.<ident> ()` | `it.seq().len () == self.tree.inner@.len (),` | 4 | 2 |
+| 19 | T10 | `it@.1.<ident> (\| i : <ident>, k : <ident> \| k@).<ident> () == self@` | `it.seq().map (\| i : int, k : T \| k@).to_set () == self@,` | 4 | 2 |
+| 20 | T9 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! ((le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v2_view) \|\| (le_seq [i]@.0 == <ident> && <ident> [i]@.1 == v1_view))` | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) \|\| (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view)),` | 4 | 2 |
+| 21 | T9 | `<ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 ==> ! (la_seq [i]@.0 == <ident> && <ident> [i]@.1 == to_view)` | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view),` | 4 | 2 |
+| 22 | T9 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && self.<ident> (u_seq [i]@).<ident> (w))` | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq[i]] 0 <= i<it.index() && self.spec_ng (u_seq[i]@).contains (w)),` | 4 | 2 |
+| 23 | T10 | `it@.1.<ident> () == self@.<ident> ()` | `it.seq().len () == self@.len (),` | 3 | 2 |
+| 24 | T10 | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> <ident>@.<ident>.<ident> ((v, (# [trigger] it@.1 [j])@.0, it@.1 [j]@.<lit>` | `forall \| j : int \| 0 <= j<it.seq().len () ==> graph@.A.contains ((v, (#[trigger] it.seq()[j])@.0, it.seq()[j]@.1)),` | 2 | 2 |
+| 25 | T10 | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> self@.<ident> (# [trigger] it@.1 [j]@)` | `forall \| j : int \| 0 <= j<it.seq().len () ==> self@.contains (#[trigger] it.seq()[j]@),` | 2 | 2 |
+| 26 | T10 | `it@.1.<ident> (\| <ident> : <ident> \| <ident>@) =~= self.<ident> ()` | `it.seq().map_values (\| t : T \| t@) =~= self.spec_avltreeseq_seq (),` | 2 | 1 |
+| 27 | T10 | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == <ident>::<ident> (\| p : (X::<ident>, <ident>::V) \| self@.<ident> ().<ident> (p.<lit> && self@[p.<lit> == p.<lit>` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == Set::new (\| p : (X::V, Y::V) \| self@.dom ().contains (p.0) && self@[p.0] == p.1),` | 2 | 1 |
+| 28 | T10 | `it@.1.<ident> (\| i : <ident>, p : <ident> < <ident>, <ident> > \| p@).<ident> () == self@` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == self@,` | 2 | 1 |
+| 29 | T3 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` | 2 | 2 |
+| 30 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| <ident>@.<ident> (e) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `forall \| e : (V::V, V::V) \| edges@.contains (e) == (exists \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1),` | 2 | 2 |
+| 31 | T9 | `<ident>@.<ident> () <= it@.0` | `edges@.len () <= it.index(),` | 2 | 2 |
+| 32 | T9 | `<ident>@== <ident>::<ident> (\| <ident> : (V::<ident>, <ident>::V) \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident>.0 && <ident> [i]@.1 == <ident>.<lit>` | `arcs@== Set::new (\| e : (V::V, V::V) \| exists \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1),` | 2 | 2 |
+| 33 | T9 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.0 == <ident> && <ident> [i]@.1 == w)` | `out@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0 <= i<it.index() && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w),` | 2 | 2 |
+| 34 | T9 | `<ident>@== <ident>::<ident> (\| <ident> : <ident>::<ident> \| <ident> \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@.1 == <ident> && <ident> [i]@.0 == u)` | `inn@== Set::new (\| u : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0 <= i<it.index() && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u),` | 2 | 2 |
+| 35 | T9 | `it@.0 == old (it)@.0` | `it.index() == old (it)@.0,` | 2 | 2 |
+| 36 | T10 | `<ident> \| <ident> : (V::<ident>, <ident>::V) \| # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident>@\|\| (exists \| j : <ident> \| 0 <= j < it@.0 && # [trigger] it@.1 [j]@== <ident>.<lit>` | `forall \| e : (V::V, V::V) \| #[trigger] used_pairs.contains (e) ==> (e.0 != u@\|\| (exists \| j : int \| 0 <= j<it.index() && #[trigger] it.seq()[j]@== e.1)),` | 1 | 1 |
+| 37 | T10 | `<ident> \| <ident> : (usize, <ident>, f64) \| # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> \|\| (exists \| j : <ident> \| 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>` | `forall \| e : (usize, usize, f64) \| #[trigger] used_edges.contains (e) ==> (e.0 != v \|\| (exists \| j : int \| 0 <= j<it.index() && #[trigger] it.seq()[j]@== (e.1, e.2))),` | 1 | 1 |
+| 38 | T10 | `<ident> \| <ident> : (usize, <ident>, i128) \| # [trigger] <ident>.<ident> (e) ==> (e.0 != <ident> \|\| (exists \| j : <ident> \| 0 <= j < it@.0 && # [trigger] it@.1 [j]@== (e.1, <ident>.<lit>` | `forall \| e : (usize, usize, i128) \| #[trigger] used_edges.contains (e) ==> (e.0 != v \|\| (exists \| j : int \| 0 <= j<it.index() && #[trigger] it.seq()[j]@== (e.1, e.2))),` | 1 | 1 |
+| 39 | T10 | `<ident> \| j : <ident> \| 0 <= j < it@.1.<ident> () ==> <ident>.<ident> ((u@, (# [trigger] it@.1 [j])@))` | `forall \| j : int \| 0 <= j<it.seq().len () ==> DA.contains ((u@, (#[trigger] it.seq()[j])@)),` | 1 | 1 |
+| 40 | T3 | `it@.1 == self.<ident>@` | `it.seq() == self.data@,` | 1 | 1 |
+| 41 | T9 | `<ident> ==> it@.0 >= <ident>.<ident> ()` | `merge_done ==> it.index()>= it_seq.len (),` | 1 | 1 |
+| 42 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `forall \| t : (V::V, V::V, f64) \| #[trigger] edge_set@.contains (t) <==> (exists \| j : int \| # ![trigger edge_seq[j]] 0 <= j<it.index() && edge_seq[j]@== t),` | 1 | 1 |
+| 43 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, f64) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `forall \| t : (V::V, V::V, f64) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),` | 1 | 1 |
+| 44 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| # [trigger] <ident>@.<ident> (t) <==> (exists \| j : <ident> \| # ! [trigger <ident> [j]] 0 <= j < it@.0 && <ident> [j]@== t)` | `forall \| t : (V::V, V::V, i128) \| #[trigger] edge_set@.contains (t) <==> (exists \| j : int \| # ![trigger edge_seq[j]] 0 <= j<it.index() && edge_seq[j]@== t),` | 1 | 1 |
+| 45 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),` | 1 | 1 |
+| 46 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),` | 1 | 1 |
+| 47 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i128) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),` | 1 | 1 |
+| 48 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 < threshold)` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2<threshold),` | 1 | 1 |
+| 49 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== <ident> && <ident>.2 > threshold)` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t && t.2> threshold),` | 1 | 1 |
+| 50 | T9 | `<ident> \| <ident> : (V::<ident>, <ident>::<ident>, i16) \| <ident>@.<ident> (t) == (exists \| i : <ident> \| # ! [trigger <ident> [i]] 0 <= i < it@.0 && <ident> [i]@== t)` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \| # ![trigger wa_seq[i]] 0 <= i<it.index() && wa_seq[i]@== t),` | 1 | 1 |
 
 ## Per-file summary
 
 | # | Chap | File | Iter | Style | D | T | U |
 |--:|------|------|-----:|-------|--:|--:|--:|
-| 1 | 05 | `Chap05/MappingStEph.rs` | 505 | delegated | 12 | 3 | 5 |
-| 2 | 05 | `Chap05/RelationStEph.rs` | 297 | delegated | 12 | 3 | 5 |
-| 3 | 05 | `Chap05/SetMtEph.rs` | 942 | delegated | 12 | 5 | 8 |
-| 4 | 05 | `Chap05/SetStEph.rs` | 800 | delegated | 12 | 4 | 6 |
-| 5 | 06 | `Chap06/DirGraphMtEph.rs` | 749 | delegated | 12 | 2 | 3 |
-| 6 | 06 | `Chap06/DirGraphStEph.rs` | 608 | delegated | 12 | 12 | 13 |
-| 7 | 06 | `Chap06/LabDirGraphMtEph.rs` | 645 | delegated | 12 | 8 | 9 |
-| 8 | 06 | `Chap06/LabDirGraphStEph.rs` | 477 | delegated | 12 | 12 | 13 |
-| 9 | 06 | `Chap06/LabUnDirGraphMtEph.rs` | 587 | delegated | 12 | 8 | 9 |
-| 10 | 06 | `Chap06/LabUnDirGraphStEph.rs` | 433 | delegated | 12 | 10 | 11 |
-| 11 | 06 | `Chap06/UnDirGraphMtEph.rs` | 457 | delegated | 12 | 2 | 3 |
-| 12 | 06 | `Chap06/UnDirGraphStEph.rs` | 374 | delegated | 12 | 6 | 7 |
-| 13 | 06 | `Chap06/WeightedDirGraphStEphF64.rs` | — | delegated | 0 | 8 | 8 |
-| 14 | 06 | `Chap06/WeightedDirGraphStEphI128.rs` | — | delegated | 0 | 14 | 14 |
-| 15 | 06 | `Chap06/WeightedDirGraphStEphI16.rs` | — | delegated | 0 | 14 | 13 |
-| 16 | 06 | `Chap06/WeightedDirGraphStEphI32.rs` | — | delegated | 0 | 14 | 13 |
-| 17 | 06 | `Chap06/WeightedDirGraphStEphI64.rs` | — | delegated | 0 | 14 | 13 |
-| 18 | 06 | `Chap06/WeightedDirGraphStEphI8.rs` | — | delegated | 0 | 14 | 13 |
-| 19 | 06 | `Chap06/WeightedDirGraphStEphIsize.rs` | — | delegated | 0 | 14 | 13 |
-| 20 | 06 | `Chap06/WeightedDirGraphStEphU128.rs` | — | delegated | 0 | 14 | 13 |
-| 21 | 06 | `Chap06/WeightedDirGraphStEphU16.rs` | — | delegated | 0 | 14 | 13 |
-| 22 | 06 | `Chap06/WeightedDirGraphStEphU32.rs` | — | delegated | 0 | 14 | 13 |
-| 23 | 06 | `Chap06/WeightedDirGraphStEphU64.rs` | — | delegated | 0 | 14 | 13 |
-| 24 | 06 | `Chap06/WeightedDirGraphStEphU8.rs` | — | delegated | 0 | 14 | 13 |
-| 25 | 06 | `Chap06/WeightedDirGraphStEphUsize.rs` | — | delegated | 0 | 14 | 13 |
+| 1 | 05 | `Chap05/MappingStEph.rs` | 505 | delegated | 12 | 7 | 1 |
+| 2 | 05 | `Chap05/RelationStEph.rs` | 297 | delegated | 12 | 7 | 1 |
+| 3 | 05 | `Chap05/SetMtEph.rs` | 942 | delegated | 12 | 12 | 1 |
+| 4 | 05 | `Chap05/SetStEph.rs` | 800 | delegated | 12 | 9 | 1 |
+| 5 | 06 | `Chap06/DirGraphMtEph.rs` | 749 | delegated | 12 | 4 | 1 |
+| 6 | 06 | `Chap06/DirGraphStEph.rs` | 608 | delegated | 12 | 24 | 1 |
+| 7 | 06 | `Chap06/LabDirGraphMtEph.rs` | 645 | delegated | 12 | 16 | 1 |
+| 8 | 06 | `Chap06/LabDirGraphStEph.rs` | 477 | delegated | 12 | 24 | 1 |
+| 9 | 06 | `Chap06/LabUnDirGraphMtEph.rs` | 587 | delegated | 12 | 16 | 1 |
+| 10 | 06 | `Chap06/LabUnDirGraphStEph.rs` | 433 | delegated | 12 | 20 | 1 |
+| 11 | 06 | `Chap06/UnDirGraphMtEph.rs` | 457 | delegated | 12 | 4 | 1 |
+| 12 | 06 | `Chap06/UnDirGraphStEph.rs` | 374 | delegated | 12 | 12 | 1 |
+| 13 | 06 | `Chap06/WeightedDirGraphStEphF64.rs` | — | delegated | 0 | 16 | 0 |
+| 14 | 06 | `Chap06/WeightedDirGraphStEphI128.rs` | — | delegated | 0 | 28 | 0 |
+| 15 | 06 | `Chap06/WeightedDirGraphStEphI16.rs` | — | delegated | 0 | 27 | 0 |
+| 16 | 06 | `Chap06/WeightedDirGraphStEphI32.rs` | — | delegated | 0 | 27 | 0 |
+| 17 | 06 | `Chap06/WeightedDirGraphStEphI64.rs` | — | delegated | 0 | 27 | 0 |
+| 18 | 06 | `Chap06/WeightedDirGraphStEphI8.rs` | — | delegated | 0 | 27 | 0 |
+| 19 | 06 | `Chap06/WeightedDirGraphStEphIsize.rs` | — | delegated | 0 | 27 | 0 |
+| 20 | 06 | `Chap06/WeightedDirGraphStEphU128.rs` | — | delegated | 0 | 27 | 0 |
+| 21 | 06 | `Chap06/WeightedDirGraphStEphU16.rs` | — | delegated | 0 | 27 | 0 |
+| 22 | 06 | `Chap06/WeightedDirGraphStEphU32.rs` | — | delegated | 0 | 27 | 0 |
+| 23 | 06 | `Chap06/WeightedDirGraphStEphU64.rs` | — | delegated | 0 | 27 | 0 |
+| 24 | 06 | `Chap06/WeightedDirGraphStEphU8.rs` | — | delegated | 0 | 27 | 0 |
+| 25 | 06 | `Chap06/WeightedDirGraphStEphUsize.rs` | — | delegated | 0 | 27 | 0 |
 | 26 | 17 | `Chap17/MathSeq.rs` | 560 | delegated | 12 | 5 | 0 |
 | 27 | 18 | `Chap18/ArraySeq.rs` | 1526 | delegated | 12 | 1 | 0 |
 | 28 | 18 | `Chap18/ArraySeqMtEph.rs` | 1422 | delegated | 12 | 4 | 0 |
@@ -133,12 +131,12 @@ Every `it`-bearing rewrite the matcher saw, dedup'd by skeleton (literal `it` pr
 | 36 | 19 | `Chap19/ArraySeqMtEphSlice.rs` | 1580 | delegated | 12 | 2 | 0 |
 | 37 | 19 | `Chap19/ArraySeqStEph.rs` | 1025 | delegated | 12 | 4 | 0 |
 | 38 | 19 | `Chap19/ArraySeqStPer.rs` | 1027 | delegated | 12 | 4 | 0 |
-| 39 | 23 | `Chap23/BalBinTreeStEph.rs` | 511 | delegated | 36 | 6 | 3 |
+| 39 | 23 | `Chap23/BalBinTreeStEph.rs` | 511 | delegated | 36 | 9 | 0 |
 | 40 | 23 | `Chap23/PrimTreeSeqStPer.rs` | 616 | delegated | 12 | 4 | 0 |
-| 41 | 37 | `Chap37/AVLTreeSeq.rs` | 1188 | custom | 6 | 4 | 8 |
-| 42 | 37 | `Chap37/AVLTreeSeqMtPer.rs` | 823 | delegated | 16 | 4 | 3 |
-| 43 | 37 | `Chap37/AVLTreeSeqStEph.rs` | 512 | custom | 6 | 3 | 7 |
-| 44 | 37 | `Chap37/AVLTreeSeqStPer.rs` | 945 | custom | 6 | 3 | 7 |
+| 41 | 37 | `Chap37/AVLTreeSeq.rs` | 1188 | custom | 6 | 6 | 6 |
+| 42 | 37 | `Chap37/AVLTreeSeqMtPer.rs` | 823 | delegated | 16 | 6 | 1 |
+| 43 | 37 | `Chap37/AVLTreeSeqStEph.rs` | 512 | custom | 6 | 4 | 6 |
+| 44 | 37 | `Chap37/AVLTreeSeqStPer.rs` | 945 | custom | 6 | 4 | 6 |
 | 45 | 37 | `Chap37/BSTSetAVLMtEph.rs` | 546 | delegated | 7 | 6 | 1 |
 | 46 | 37 | `Chap37/BSTSetBBAlphaMtEph.rs` | 499 | delegated | 7 | 4 | 1 |
 | 47 | 37 | `Chap37/BSTSetPlainMtEph.rs` | 499 | delegated | 7 | 4 | 1 |
@@ -146,27 +144,27 @@ Every `it`-bearing rewrite the matcher saw, dedup'd by skeleton (literal `it` pr
 | 49 | 37 | `Chap37/BSTSetSplayMtEph.rs` | 563 | delegated | 7 | 6 | 1 |
 | 50 | 41 | `Chap41/AVLTreeSetMtEph.rs` | 535 | delegated | 7 | 4 | 1 |
 | 51 | 43 | `Chap43/AugOrderedTableMtEph.rs` | — | delegated | 0 | 4 | 0 |
-| 52 | 43 | `Chap43/AugOrderedTableStEph.rs` | — | delegated | 0 | 4 | 2 |
-| 53 | 43 | `Chap43/AugOrderedTableStPer.rs` | — | delegated | 0 | 4 | 2 |
-| 54 | 43 | `Chap43/OrderedSetStEph.rs` | 1005 | delegated | 12 | 4 | 2 |
-| 55 | 43 | `Chap43/OrderedSetStPer.rs` | 1072 | delegated | 12 | 2 | 1 |
+| 52 | 43 | `Chap43/AugOrderedTableStEph.rs` | — | delegated | 0 | 6 | 0 |
+| 53 | 43 | `Chap43/AugOrderedTableStPer.rs` | — | delegated | 0 | 6 | 0 |
+| 54 | 43 | `Chap43/OrderedSetStEph.rs` | 1005 | delegated | 12 | 6 | 0 |
+| 55 | 43 | `Chap43/OrderedSetStPer.rs` | 1072 | delegated | 12 | 3 | 0 |
 | 56 | 43 | `Chap43/OrderedTableMtEph.rs` | 896 | delegated | 12 | 4 | 1 |
-| 57 | 43 | `Chap43/OrderedTableStEph.rs` | 1790 | delegated | 12 | 4 | 2 |
-| 58 | 43 | `Chap43/OrderedTableStPer.rs` | 1392 | delegated | 12 | 4 | 2 |
-| 59 | 57 | `Chap57/DijkstraStEphF64.rs` | — | delegated | 0 | 0 | 4 |
-| 60 | 57 | `Chap57/DijkstraStEphU64.rs` | — | delegated | 0 | 0 | 4 |
-| 61 | 58 | `Chap58/BellmanFordStEphF64.rs` | — | delegated | 0 | 2 | 2 |
-| 62 | 58 | `Chap58/BellmanFordStEphI64.rs` | — | delegated | 0 | 2 | 2 |
-| 63 | 59 | `Chap59/JohnsonStEphF64.rs` | — | delegated | 0 | 3 | 3 |
-| 64 | 59 | `Chap59/JohnsonStEphI64.rs` | — | delegated | 0 | 3 | 3 |
-| 65 | 62 | `Chap62/StarPartitionMtEph.rs` | — | delegated | 0 | 1 | 4 |
-| 66 | 65 | `Chap65/PrimStEph.rs` | — | delegated | 0 | 2 | 5 |
-| 67 | 66 | `Chap66/BoruvkaMtEph.rs` | — | delegated | 0 | 6 | 9 |
-| 68 | 66 | `Chap66/BoruvkaStEph.rs` | — | delegated | 0 | 4 | 2 |
+| 57 | 43 | `Chap43/OrderedTableStEph.rs` | 1790 | delegated | 12 | 6 | 0 |
+| 58 | 43 | `Chap43/OrderedTableStPer.rs` | 1392 | delegated | 12 | 6 | 0 |
+| 59 | 57 | `Chap57/DijkstraStEphF64.rs` | — | delegated | 0 | 4 | 0 |
+| 60 | 57 | `Chap57/DijkstraStEphU64.rs` | — | delegated | 0 | 4 | 0 |
+| 61 | 58 | `Chap58/BellmanFordStEphF64.rs` | — | delegated | 0 | 4 | 0 |
+| 62 | 58 | `Chap58/BellmanFordStEphI64.rs` | — | delegated | 0 | 4 | 0 |
+| 63 | 59 | `Chap59/JohnsonStEphF64.rs` | — | delegated | 0 | 6 | 0 |
+| 64 | 59 | `Chap59/JohnsonStEphI64.rs` | — | delegated | 0 | 6 | 0 |
+| 65 | 62 | `Chap62/StarPartitionMtEph.rs` | — | delegated | 0 | 5 | 0 |
+| 66 | 65 | `Chap65/PrimStEph.rs` | — | delegated | 0 | 7 | 0 |
+| 67 | 66 | `Chap66/BoruvkaMtEph.rs` | — | delegated | 0 | 15 | 0 |
+| 68 | 66 | `Chap66/BoruvkaStEph.rs` | — | delegated | 0 | 6 | 0 |
 | 69 | — | `vstdplus/hash_map_with_view_plus.rs` | 170 | delegated | 8 | 0 | 0 |
 | 70 | — | `vstdplus/hash_set_with_view_plus.rs` | 166 | delegated | 8 | 0 | 0 |
 
-Grand total: D=500, T=395, U=341
+Grand total: D=500, T=698, U=38
 
 ## Per-file findings
 
@@ -189,23 +187,23 @@ Deletions (12):
 | 11 | D5 | Debug for MappingStEphGhostIterator | 709–711 |
 | 12 | D5 | Display for MappingStEphGhostIterator | 713–715 |
 
-Transforms (3):
+Transforms (7):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 235 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 239 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 616 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 2 | T10 | 236 | `it@.1.map (\| i : int, p : Pair<X, Y> \| p@).to_set () == Set::new (\| p : (X::…` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == Set::new (\| p : (…` |
+| 3 | T10 | 238 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T4 | 239 | `iter_invariant (& it)` | `<remove>` |
+| 5 | T1 | 616 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 6 | T10 | 617 | `it@.1.map (\| i : int, p : Pair<X, Y> \| p@).to_set () == Set::new (\| p : (X::…` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == Set::new (\| p : (…` |
+| 7 | T10 | 619 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
 
-Unresolved (5):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 236 | unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) … |
-| 2 | U-OTHER | 238 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-CHAIN | 505 | MappingStEphIter wraps another APAS *Iter (RelationStEphIter) — deletion order depends on inner collection migration |
-| 4 | U-OTHER | 617 | unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) … |
-| 5 | U-OTHER | 619 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 505 | MappingStEphIter wraps another APAS *Iter (RelationStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap05/RelationStEph.rs` (delegated) — Iter@297
 
@@ -226,23 +224,23 @@ Deletions (12):
 | 11 | D5 | Debug for RelationStEphGhostIterator | 479–481 |
 | 12 | D5 | Display for RelationStEphGhostIterator | 483–485 |
 
-Transforms (3):
+Transforms (7):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 156 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 159 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 408 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 2 | T10 | 157 | `it@.1.map (\| i : int, p : Pair<X, Y> \| p@).to_set () == self@` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == self@,` |
+| 3 | T10 | 158 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T4 | 159 | `iter_invariant (& it)` | `<remove>` |
+| 5 | T1 | 408 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 6 | T10 | 409 | `it@.1.map (\| i : int, p : Pair<X, Y> \| p@).to_set () == self@` | `it.seq().map (\| i : int, p : Pair<X, Y> \| p@).to_set () == self@,` |
+| 7 | T10 | 410 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
 
-Unresolved (5):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 157 | unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@ |
-| 2 | U-OTHER | 158 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-CHAIN | 297 | RelationStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 4 | U-OTHER | 409 | unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@ |
-| 5 | U-OTHER | 410 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 297 | RelationStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap05/SetMtEph.rs` (delegated) — Iter@942
 
@@ -263,28 +261,28 @@ Deletions (12):
 | 11 | D5 | Debug for SetMtEphGhostIterator | 1271–1275 |
 | 12 | D5 | Display for SetMtEphGhostIterator | 1277–1281 |
 
-Transforms (5):
+Transforms (12):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 162 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 166 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T3 | 572 | `it@.1 == it_seq` | `it.seq() == it_seq,` |
-| 4 | T6 | 585 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T1 | 1051 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 2 | T10 | 163 | `it@.1.map (\| i : int, k : T \| k@).to_set () == self@` | `it.seq().map (\| i : int, k : T \| k@).to_set () == self@,` |
+| 3 | T10 | 164 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T10 | 165 | `forall \| j : int \| 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j…` | `forall \| j : int \| 0 <= j<it.seq().len () ==> self@.contains (#[trigger] it.s…` |
+| 5 | T4 | 166 | `iter_invariant (& it)` | `<remove>` |
+| 6 | T3 | 572 | `it@.1 == it_seq` | `it.seq() == it_seq,` |
+| 7 | T9 | 573 | `it@.0 <= it_seq.len ()` | `it.index() <= it_seq.len (),` |
+| 8 | T9 | 578 | `spawned_views.len () == it@.0` | `spawned_views.len () == it.index(),` |
+| 9 | T6 | 585 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 10 | T1 | 1051 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 11 | T10 | 1052 | `it@.1.map (\| i : int, k : T \| k@).to_set () == self@` | `it.seq().map (\| i : int, k : T \| k@).to_set () == self@,` |
+| 12 | T10 | 1053 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
 
-Unresolved (8):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 163 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@ |
-| 2 | U-OTHER | 164 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-OTHER | 165 | unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@) |
-| 4 | U-OTHER | 573 | unrecognized `it`-bearing clause: it@.0 <= it_seq.len () |
-| 5 | U-OTHER | 578 | unrecognized `it`-bearing clause: spawned_views.len () == it@.0 |
-| 6 | U-CHAIN | 942 | SetMtEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration |
-| 7 | U-OTHER | 1052 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@ |
-| 8 | U-OTHER | 1053 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 942 | SetMtEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration |
 
 ### `Chap05/SetStEph.rs` (delegated) — Iter@800
 
@@ -305,25 +303,25 @@ Deletions (12):
 | 11 | D5 | Debug for SetStEphGhostIterator | 998–1002 |
 | 12 | D5 | Display for SetStEphGhostIterator | 1004–1008 |
 
-Transforms (4):
+Transforms (9):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 142 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 146 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 912 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 4 | T4 | 915 | `iter_invariant (& it)` | `<remove>` |
+| 2 | T10 | 143 | `it@.1.map (\| i : int, k : T \| k@).to_set () == self@` | `it.seq().map (\| i : int, k : T \| k@).to_set () == self@,` |
+| 3 | T10 | 144 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T10 | 145 | `forall \| j : int \| 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j…` | `forall \| j : int \| 0 <= j<it.seq().len () ==> self@.contains (#[trigger] it.s…` |
+| 5 | T4 | 146 | `iter_invariant (& it)` | `<remove>` |
+| 6 | T1 | 912 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 7 | T10 | 913 | `it@.1.map (\| i : int, k : T \| k@).to_set () == self@` | `it.seq().map (\| i : int, k : T \| k@).to_set () == self@,` |
+| 8 | T10 | 914 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 9 | T4 | 915 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (6):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 143 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@ |
-| 2 | U-OTHER | 144 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-OTHER | 145 | unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@) |
-| 4 | U-CHAIN | 800 | SetStEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration |
-| 5 | U-OTHER | 913 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@ |
-| 6 | U-OTHER | 914 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 800 | SetStEphIter wraps another APAS *Iter (HashSetWithViewPlusIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/DirGraphMtEph.rs` (delegated) — Iter@749
 
@@ -344,20 +342,20 @@ Deletions (12):
 | 11 | D5 | Debug for DirGraphMtEphGhostIterator | 1273–1275 |
 | 12 | D5 | Display for DirGraphMtEphGhostIterator | 1277–1279 |
 
-Transforms (2):
+Transforms (4):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 858 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 861 | `iter_invariant (& it)` | `<remove>` |
+| 2 | T10 | 859 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 3 | T10 | 860 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T4 | 861 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-CHAIN | 749 | DirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 2 | U-OTHER | 859 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 3 | U-OTHER | 860 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
 
 ### `Chap06/DirGraphStEph.rs` (delegated) — Iter@608
 
@@ -378,40 +376,40 @@ Deletions (12):
 | 11 | D5 | Debug for DirGraphStEphGhostIterator | 809–811 |
 | 12 | D5 | Display for DirGraphStEphGhostIterator | 813–815 |
 
-Transforms (12):
+Transforms (24):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 300 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
-| 2 | T6 | 305 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 361 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
-| 4 | T6 | 366 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 419 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
-| 6 | T6 | 424 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 478 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
-| 8 | T6 | 483 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 540 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
-| 10 | T6 | 546 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T1 | 717 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 12 | T4 | 720 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 299 | `it@.0 <= u_seq.len ()` | `it.index() <= u_seq.len (),` |
+| 2 | T3 | 300 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
+| 3 | T9 | 302 | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq[i]…` | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq[i]…` |
+| 4 | T6 | 305 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 360 | `it@.0 <= arcs_seq.len ()` | `it.index() <= arcs_seq.len (),` |
+| 6 | T3 | 361 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
+| 7 | T9 | 363 | `out@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0…` | `out@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0…` |
+| 8 | T6 | 366 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 418 | `it@.0 <= arcs_seq.len ()` | `it.index() <= arcs_seq.len (),` |
+| 10 | T3 | 419 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
+| 11 | T9 | 421 | `inn@== Set::new (\| u : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0…` | `inn@== Set::new (\| u : V::V \| exists \| i : int \| # ![trigger arcs_seq[i]] 0…` |
+| 12 | T6 | 424 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T9 | 477 | `it@.0 <= u_seq.len ()` | `it.index() <= u_seq.len (),` |
+| 14 | T3 | 478 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
+| 15 | T9 | 480 | `out_neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_se…` | `out_neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_se…` |
+| 16 | T6 | 483 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 17 | T9 | 539 | `it@.0 <= u_seq.len ()` | `it.index() <= u_seq.len (),` |
+| 18 | T3 | 540 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
+| 19 | T9 | 542 | `in_neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq…` | `in_neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq…` |
+| 20 | T6 | 546 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 21 | T1 | 717 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 22 | T10 | 718 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 23 | T10 | 719 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 24 | T4 | 720 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (13):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 299 | unrecognized `it`-bearing clause: it@.0 <= u_seq.len () |
-| 2 | U-OTHER | 302 | unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<i… |
-| 3 | U-OTHER | 360 | unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len () |
-| 4 | U-OTHER | 363 | unrecognized `it`-bearing clause: out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.… |
-| 5 | U-OTHER | 418 | unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len () |
-| 6 | U-OTHER | 421 | unrecognized `it`-bearing clause: inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.… |
-| 7 | U-OTHER | 477 | unrecognized `it`-bearing clause: it@.0 <= u_seq.len () |
-| 8 | U-OTHER | 480 | unrecognized `it`-bearing clause: out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <=… |
-| 9 | U-OTHER | 539 | unrecognized `it`-bearing clause: it@.0 <= u_seq.len () |
-| 10 | U-OTHER | 542 | unrecognized `it`-bearing clause: in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= … |
-| 11 | U-CHAIN | 608 | DirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 12 | U-OTHER | 718 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 13 | U-OTHER | 719 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 608 | DirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/LabDirGraphMtEph.rs` (delegated) — Iter@645
 
@@ -432,32 +430,32 @@ Deletions (12):
 | 11 | D5 | Debug for LabDirGraphMtEphGhostIterator | 1000–1002 |
 | 12 | D5 | Display for LabDirGraphMtEphGhostIterator | 1004–1006 |
 
-Transforms (8):
+Transforms (16):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 317 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 2 | T6 | 321 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 380 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 4 | T6 | 383 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 421 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 6 | T6 | 424 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T1 | 754 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 8 | T4 | 757 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 316 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 2 | T3 | 317 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 3 | T9 | 319 | `arcs@== Set::new (\| e : (V::V, V::V) \| exists \| i : int \| # ![trigger la_se…` | `arcs@== Set::new (\| e : (V::V, V::V) \| exists \| i : int \| # ![trigger la_se…` |
+| 4 | T6 | 321 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 379 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 6 | T3 | 380 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 7 | T9 | 382 | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 ==…` | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@…` |
+| 8 | T6 | 383 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 420 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 10 | T3 | 421 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 11 | T9 | 423 | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 ==…` | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@…` |
+| 12 | T6 | 424 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T1 | 754 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 14 | T10 | 755 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 15 | T10 | 756 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 16 | T4 | 757 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (9):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 316 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 2 | U-OTHER | 319 | unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <=… |
-| 3 | U-OTHER | 379 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 4 | U-OTHER | 382 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_vi… |
-| 5 | U-OTHER | 420 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 6 | U-OTHER | 423 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_vi… |
-| 7 | U-CHAIN | 645 | LabDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 8 | U-OTHER | 755 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 9 | U-OTHER | 756 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 645 | LabDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/LabDirGraphStEph.rs` (delegated) — Iter@477
 
@@ -478,40 +476,40 @@ Deletions (12):
 | 11 | D5 | Debug for LabDirGraphStEphGhostIterator | 645–647 |
 | 12 | D5 | Display for LabDirGraphStEphGhostIterator | 649–651 |
 
-Transforms (12):
+Transforms (24):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 226 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 2 | T6 | 230 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 287 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 4 | T6 | 290 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 328 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 6 | T6 | 331 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 377 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 8 | T6 | 381 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 432 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
-| 10 | T6 | 437 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T1 | 586 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 12 | T4 | 589 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 225 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 2 | T3 | 226 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 3 | T9 | 228 | `arcs@== Set::new (\| e : (V::V, V::V) \| exists \| i : int \| # ![trigger la_se…` | `arcs@== Set::new (\| e : (V::V, V::V) \| exists \| i : int \| # ![trigger la_se…` |
+| 4 | T6 | 230 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 286 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 6 | T3 | 287 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 7 | T9 | 289 | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 ==…` | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@…` |
+| 8 | T6 | 290 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 327 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 10 | T3 | 328 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 11 | T9 | 330 | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 ==…` | `forall \| i : int \| # ![trigger la_seq[i]] 0 <= i<it.index() ==> ! (la_seq[i]@…` |
+| 12 | T6 | 331 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T9 | 376 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 14 | T3 | 377 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 15 | T9 | 379 | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger la_seq[i…` | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger la_seq[i…` |
+| 16 | T6 | 381 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 17 | T9 | 431 | `it@.0 <= la_seq.len ()` | `it.index() <= la_seq.len (),` |
+| 18 | T3 | 432 | `it@.1 == la_seq` | `it.seq() == la_seq,` |
+| 19 | T9 | 434 | `neighbors@== Set::new (\| u : V::V \| exists \| i : int \| # ![trigger la_seq[i…` | `neighbors@== Set::new (\| u : V::V \| exists \| i : int \| # ![trigger la_seq[i…` |
+| 20 | T6 | 437 | `la_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 21 | T1 | 586 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 22 | T10 | 587 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 23 | T10 | 588 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 24 | T4 | 589 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (13):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 225 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 2 | U-OTHER | 228 | unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <=… |
-| 3 | U-OTHER | 286 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 4 | U-OTHER | 289 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_vi… |
-| 5 | U-OTHER | 327 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 6 | U-OTHER | 330 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_vi… |
-| 7 | U-OTHER | 376 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 8 | U-OTHER | 379 | unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<… |
-| 9 | U-OTHER | 431 | unrecognized `it`-bearing clause: it@.0 <= la_seq.len () |
-| 10 | U-OTHER | 434 | unrecognized `it`-bearing clause: neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<… |
-| 11 | U-CHAIN | 477 | LabDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 12 | U-OTHER | 587 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 13 | U-OTHER | 588 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 477 | LabDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/LabUnDirGraphMtEph.rs` (delegated) — Iter@587
 
@@ -532,32 +530,32 @@ Deletions (12):
 | 11 | D5 | Debug for LabUnDirGraphMtEphGhostIterator | 988–990 |
 | 12 | D5 | Display for LabUnDirGraphMtEphGhostIterator | 992–994 |
 
-Transforms (8):
+Transforms (16):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 284 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 2 | T6 | 288 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 350 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 4 | T6 | 355 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 394 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 6 | T6 | 399 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T1 | 696 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 8 | T4 | 699 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 283 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 2 | T3 | 284 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 3 | T9 | 286 | `forall \| e : (V::V, V::V) \| edges@.contains (e) == (exists \| i : int \| # ![…` | `forall \| e : (V::V, V::V) \| edges@.contains (e) == (exists \| i : int \| # ![…` |
+| 4 | T6 | 288 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 349 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 6 | T3 | 350 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 7 | T9 | 352 | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 =…` | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]…` |
+| 8 | T6 | 355 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 393 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 10 | T3 | 394 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 11 | T9 | 396 | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 =…` | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]…` |
+| 12 | T6 | 399 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T1 | 696 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 14 | T10 | 697 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 15 | T10 | 698 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 16 | T4 | 699 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (9):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 283 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 2 | U-OTHER | 286 | unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le… |
-| 3 | U-OTHER | 349 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 4 | U-OTHER | 352 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_vie… |
-| 5 | U-OTHER | 393 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 6 | U-OTHER | 396 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_vie… |
-| 7 | U-CHAIN | 587 | LabUnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 8 | U-OTHER | 697 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 9 | U-OTHER | 698 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 587 | LabUnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/LabUnDirGraphStEph.rs` (delegated) — Iter@433
 
@@ -578,36 +576,36 @@ Deletions (12):
 | 11 | D5 | Debug for LabUnDirGraphStEphGhostIterator | 612–614 |
 | 12 | D5 | Display for LabUnDirGraphStEphGhostIterator | 616–618 |
 
-Transforms (10):
+Transforms (20):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 219 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 2 | T6 | 223 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 285 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 4 | T6 | 290 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 330 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 6 | T6 | 335 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 377 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 8 | T6 | 384 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T1 | 542 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 10 | T4 | 545 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 218 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 2 | T3 | 219 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 3 | T9 | 221 | `forall \| e : (V::V, V::V) \| edges@.contains (e) == (exists \| i : int \| # ![…` | `forall \| e : (V::V, V::V) \| edges@.contains (e) == (exists \| i : int \| # ![…` |
+| 4 | T6 | 223 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 284 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 6 | T3 | 285 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 7 | T9 | 287 | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 =…` | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]…` |
+| 8 | T6 | 290 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 329 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 10 | T3 | 330 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 11 | T9 | 332 | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 =…` | `forall \| i : int \| # ![trigger le_seq[i]] 0 <= i<it.index() ==> ! ((le_seq[i]…` |
+| 12 | T6 | 335 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T9 | 376 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 14 | T3 | 377 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 15 | T9 | 379 | `ng@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger le_seq[i]] 0 <=…` | `ng@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger le_seq[i]] 0 <=…` |
+| 16 | T6 | 384 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 17 | T1 | 542 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 18 | T10 | 543 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 19 | T10 | 544 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 20 | T4 | 545 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (11):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 218 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 2 | U-OTHER | 221 | unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le… |
-| 3 | U-OTHER | 284 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 4 | U-OTHER | 287 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_vie… |
-| 5 | U-OTHER | 329 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 6 | U-OTHER | 332 | unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_vie… |
-| 7 | U-OTHER | 376 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-| 8 | U-OTHER | 379 | unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 &… |
-| 9 | U-CHAIN | 433 | LabUnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 10 | U-OTHER | 543 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 11 | U-OTHER | 544 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 433 | LabUnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/UnDirGraphMtEph.rs` (delegated) — Iter@457
 
@@ -628,20 +626,20 @@ Deletions (12):
 | 11 | D5 | Debug for UnDirGraphMtEphGhostIterator | 878–880 |
 | 12 | D5 | Display for UnDirGraphMtEphGhostIterator | 882–884 |
 
-Transforms (2):
+Transforms (4):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 566 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 569 | `iter_invariant (& it)` | `<remove>` |
+| 2 | T10 | 567 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 3 | T10 | 568 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 4 | T4 | 569 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-CHAIN | 457 | UnDirGraphMtEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 2 | U-OTHER | 567 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 3 | U-OTHER | 568 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
 
 ### `Chap06/UnDirGraphStEph.rs` (delegated) — Iter@374
 
@@ -662,525 +660,460 @@ Deletions (12):
 | 11 | D5 | Debug for UnDirGraphStEphGhostIterator | 574–576 |
 | 12 | D5 | Display for UnDirGraphStEphGhostIterator | 578–580 |
 
-Transforms (6):
+Transforms (12):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 249 | `it@.1 == edges_seq` | `it.seq() == edges_seq,` |
-| 2 | T6 | 255 | `edges_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 313 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
-| 4 | T6 | 317 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T1 | 483 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 6 | T4 | 486 | `iter_invariant (& it)` | `<remove>` |
+| 1 | T9 | 248 | `it@.0 <= edges_seq.len ()` | `it.index() <= edges_seq.len (),` |
+| 2 | T3 | 249 | `it@.1 == edges_seq` | `it.seq() == edges_seq,` |
+| 3 | T9 | 251 | `ng@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger edges_seq[i]] 0…` | `ng@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger edges_seq[i]] 0…` |
+| 4 | T6 | 255 | `edges_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 312 | `it@.0 <= u_seq.len ()` | `it.index() <= u_seq.len (),` |
+| 6 | T3 | 313 | `it@.1 == u_seq` | `it.seq() == u_seq,` |
+| 7 | T9 | 315 | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq[i]…` | `neighbors@== Set::new (\| w : V::V \| exists \| i : int \| # ![trigger u_seq[i]…` |
+| 8 | T6 | 317 | `u_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T1 | 483 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 10 | T10 | 484 | `it@.1.map (\| i : int, k : V \| k@).to_set () == self@.V` | `it.seq().map (\| i : int, k : V \| k@).to_set () == self@.V,` |
+| 11 | T10 | 485 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 12 | T4 | 486 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (7):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 248 | unrecognized `it`-bearing clause: it@.0 <= edges_seq.len () |
-| 2 | U-OTHER | 251 | unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it@.… |
-| 3 | U-OTHER | 312 | unrecognized `it`-bearing clause: it@.0 <= u_seq.len () |
-| 4 | U-OTHER | 315 | unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<i… |
-| 5 | U-CHAIN | 374 | UnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
-| 6 | U-OTHER | 484 | unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V |
-| 7 | U-OTHER | 485 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
+| 1 | U-CHAIN | 374 | UnDirGraphStEphIter wraps another APAS *Iter (SetStEphIter) — deletion order depends on inner collection migration |
 
 ### `Chap06/WeightedDirGraphStEphF64.rs` (delegated)
 
-Transforms (8):
+Transforms (16):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 132 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 139 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 191 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 195 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 227 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 231 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 283 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 287 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (8):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 131 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 137 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | #[trigger] edge_set@.contains (t) <==> (exists | j :… |
-| 3 | U-OTHER | 190 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 4 | U-OTHER | 193 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, f64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 5 | U-OTHER | 226 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 6 | U-OTHER | 229 | unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 7 | U-OTHER | 282 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 8 | U-OTHER | 285 | unrecognized `it`-bearing clause: forall | p : (V::V, f64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
+| 1 | T9 | 131 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 132 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T9 | 137 | `forall \| t : (V::V, V::V, f64) \| #[trigger] edge_set@.contains (t) <==> (exis…` | `forall \| t : (V::V, V::V, f64) \| #[trigger] edge_set@.contains (t) <==> (exis…` |
+| 4 | T6 | 139 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 190 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 6 | T3 | 191 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 7 | T9 | 193 | `forall \| t : (V::V, V::V, f64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, f64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 8 | T6 | 195 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 226 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 10 | T3 | 227 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 11 | T9 | 229 | `forall \| p : (V::V, f64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, f64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 12 | T6 | 231 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T9 | 282 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 14 | T3 | 283 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 15 | T9 | 285 | `forall \| p : (V::V, f64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, f64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 16 | T6 | 287 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphI128.rs` (delegated)
 
-Transforms (14):
+Transforms (28):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 164 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 216 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 220 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 252 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 256 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 308 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 312 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 362 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 367 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 404 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 409 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 457 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 462 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (14):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 162 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | #[trigger] edge_set@.contains (t) <==> (exists | j … |
-| 3 | U-OTHER | 215 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 4 | U-OTHER | 218 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trig… |
-| 5 | U-OTHER | 251 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 6 | U-OTHER | 254 | unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigge… |
-| 7 | U-OTHER | 307 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 8 | U-OTHER | 310 | unrecognized `it`-bearing clause: forall | p : (V::V, i128) | neighbors@.contains (p) == (exists | i : int | # ![trigge… |
-| 9 | U-OTHER | 361 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 10 | U-OTHER | 365 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i128> … |
-| 11 | U-OTHER | 403 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 12 | U-OTHER | 407 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trig… |
-| 13 | U-OTHER | 456 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 14 | U-OTHER | 460 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i128) | edges@.contains (t) == (exists | i : int | # ![trig… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T9 | 162 | `forall \| t : (V::V, V::V, i128) \| #[trigger] edge_set@.contains (t) <==> (exi…` | `forall \| t : (V::V, V::V, i128) \| #[trigger] edge_set@.contains (t) <==> (exi…` |
+| 4 | T6 | 164 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 5 | T9 | 215 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 6 | T3 | 216 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 7 | T9 | 218 | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 8 | T6 | 220 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 9 | T9 | 251 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 10 | T3 | 252 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 11 | T9 | 254 | `forall \| p : (V::V, i128) \| neighbors@.contains (p) == (exists \| i : int \| …` | `forall \| p : (V::V, i128) \| neighbors@.contains (p) == (exists \| i : int \| …` |
+| 12 | T6 | 256 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T9 | 307 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 14 | T3 | 308 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 15 | T9 | 310 | `forall \| p : (V::V, i128) \| neighbors@.contains (p) == (exists \| i : int \| …` | `forall \| p : (V::V, i128) \| neighbors@.contains (p) == (exists \| i : int \| …` |
+| 16 | T6 | 312 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 17 | T9 | 361 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 18 | T3 | 362 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 19 | T9 | 365 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 20 | T6 | 367 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 21 | T9 | 403 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 22 | T3 | 404 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 23 | T9 | 407 | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 24 | T6 | 409 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 25 | T9 | 456 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 26 | T3 | 457 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 27 | T9 | 460 | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, i128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 28 | T6 | 462 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphI16.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, i16) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i16> |… |
-| 10 | U-OTHER | 396 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 399 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 449 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 453 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, i16) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i16) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, i16) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i16) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 396 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 399 | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 449 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 453 | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphI32.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, i32) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i32> |… |
-| 10 | U-OTHER | 396 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 399 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 449 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 453 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, i32) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i32) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, i32) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i32) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 396 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 399 | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 449 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 453 | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphI64.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, i64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i64> |… |
-| 10 | U-OTHER | 396 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 399 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 449 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 453 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, i64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, i64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, i64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 396 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 399 | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 449 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 453 | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, i64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphI8.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger … |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, i8) | neighbors@.contains (p) == (exists | i : int | # ![trigger … |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, i8> | … |
-| 10 | U-OTHER | 396 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 399 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
-| 12 | U-OTHER | 449 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 453 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, i8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, i8) \| neighbors@.contains (p) == (exists \| i : int \| # …` | `forall \| p : (V::V, i8) \| neighbors@.contains (p) == (exists \| i : int \| # …` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, i8) \| neighbors@.contains (p) == (exists \| i : int \| # …` | `forall \| p : (V::V, i8) \| neighbors@.contains (p) == (exists \| i : int \| # …` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 396 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 399 | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 23 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 449 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 453 | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, i8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 27 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphIsize.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![tri… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigg… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, isize) | neighbors@.contains (p) == (exists | i : int | # ![trigg… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, isize>… |
-| 10 | U-OTHER | 396 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 399 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![tri… |
-| 12 | U-OTHER | 449 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 453 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, isize) | edges@.contains (t) == (exists | i : int | # ![tri… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, isize) \| neighbors@.contains (p) == (exists \| i : int \|…` | `forall \| p : (V::V, isize) \| neighbors@.contains (p) == (exists \| i : int \|…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, isize) \| neighbors@.contains (p) == (exists \| i : int \|…` | `forall \| p : (V::V, isize) \| neighbors@.contains (p) == (exists \| i : int \|…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 396 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 397 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 399 | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` |
+| 23 | T6 | 402 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 449 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 450 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 453 | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, isize) \| edges@.contains (t) == (exists \| i : int …` |
+| 27 | T6 | 455 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphU128.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trig… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigge… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, u128) | neighbors@.contains (p) == (exists | i : int | # ![trigge… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u128> … |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trig… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u128) | edges@.contains (t) == (exists | i : int | # ![trig… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, u128) \| neighbors@.contains (p) == (exists \| i : int \| …` | `forall \| p : (V::V, u128) \| neighbors@.contains (p) == (exists \| i : int \| …` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, u128) \| neighbors@.contains (p) == (exists \| i : int \| …` | `forall \| p : (V::V, u128) \| neighbors@.contains (p) == (exists \| i : int \| …` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` | `forall \| t : (V::V, V::V, u128) \| edges@.contains (t) == (exists \| i : int \…` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphU16.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, u16) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u16> |… |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u16) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, u16) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u16) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, u16) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u16) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u16) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphU32.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, u32) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u32> |… |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u32) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, u32) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u32) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, u32) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u32) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u32) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphU64.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, u64) | neighbors@.contains (p) == (exists | i : int | # ![trigger… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u64> |… |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u64) | edges@.contains (t) == (exists | i : int | # ![trigg… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, u64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, u64) \| neighbors@.contains (p) == (exists \| i : int \| #…` | `forall \| p : (V::V, u64) \| neighbors@.contains (p) == (exists \| i : int \| #…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` | `forall \| t : (V::V, V::V, u64) \| edges@.contains (t) == (exists \| i : int \|…` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphU8.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger … |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, u8) | neighbors@.contains (p) == (exists | i : int | # ![trigger … |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, u8> | … |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, u8) | edges@.contains (t) == (exists | i : int | # ![trigge… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, u8) \| neighbors@.contains (p) == (exists \| i : int \| # …` | `forall \| p : (V::V, u8) \| neighbors@.contains (p) == (exists \| i : int \| # …` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, u8) \| neighbors@.contains (p) == (exists \| i : int \| # …` | `forall \| p : (V::V, u8) \| neighbors@.contains (p) == (exists \| i : int \| # …` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` | `forall \| t : (V::V, V::V, u8) \| edges@.contains (t) == (exists \| i : int \| …` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap06/WeightedDirGraphStEphUsize.rs` (delegated)
 
-Transforms (14):
+Transforms (27):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
-| 2 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 4 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 6 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 7 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 8 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 9 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 10 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 11 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 12 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 13 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
-| 14 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (13):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= edge_seq.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![tri… |
-| 4 | U-OTHER | 244 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 5 | U-OTHER | 247 | unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigg… |
-| 6 | U-OTHER | 300 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 7 | U-OTHER | 303 | unrecognized `it`-bearing clause: forall | p : (V::V, usize) | neighbors@.contains (p) == (exists | i : int | # ![trigg… |
-| 8 | U-OTHER | 354 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 9 | U-OTHER | 358 | unrecognized `it`-bearing clause: sum@== wa_seq.take (it@.0 as int).fold_left (0int, | acc : int, e : LabEdge<V, usize>… |
-| 10 | U-OTHER | 397 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 11 | U-OTHER | 400 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![tri… |
-| 12 | U-OTHER | 450 | unrecognized `it`-bearing clause: it@.0 <= wa_seq.len () |
-| 13 | U-OTHER | 454 | unrecognized `it`-bearing clause: forall | t : (V::V, V::V, usize) | edges@.contains (t) == (exists | i : int | # ![tri… |
+| 1 | T9 | 156 | `it@.0 <= edge_seq.len ()` | `it.index() <= edge_seq.len (),` |
+| 2 | T3 | 157 | `it@.1 == edge_seq` | `it.seq() == edge_seq,` |
+| 3 | T6 | 162 | `edge_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T9 | 208 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 5 | T3 | 209 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 6 | T9 | 211 | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` |
+| 7 | T6 | 213 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 8 | T9 | 244 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 9 | T3 | 245 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 10 | T9 | 247 | `forall \| p : (V::V, usize) \| neighbors@.contains (p) == (exists \| i : int \|…` | `forall \| p : (V::V, usize) \| neighbors@.contains (p) == (exists \| i : int \|…` |
+| 11 | T6 | 249 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 12 | T9 | 300 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 13 | T3 | 301 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 14 | T9 | 303 | `forall \| p : (V::V, usize) \| neighbors@.contains (p) == (exists \| i : int \|…` | `forall \| p : (V::V, usize) \| neighbors@.contains (p) == (exists \| i : int \|…` |
+| 15 | T6 | 305 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 16 | T9 | 354 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 17 | T3 | 355 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 18 | T9 | 358 | `sum@== wa_seq.take (it@.0 as int).fold_left (0int, \| acc : int, e : LabEdge<V,…` | `sum@== wa_seq.take (it.index() as int).fold_left (0int, \| acc : int, e : LabEd…` |
+| 19 | T6 | 359 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 20 | T9 | 397 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 21 | T3 | 398 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 22 | T9 | 400 | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` |
+| 23 | T6 | 403 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 24 | T9 | 450 | `it@.0 <= wa_seq.len ()` | `it.index() <= wa_seq.len (),` |
+| 25 | T3 | 451 | `it@.1 == wa_seq` | `it.seq() == wa_seq,` |
+| 26 | T9 | 454 | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` | `forall \| t : (V::V, V::V, usize) \| edges@.contains (t) == (exists \| i : int …` |
+| 27 | T6 | 456 | `wa_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap17/MathSeq.rs` (delegated) — Iter@560
 
@@ -1731,24 +1664,19 @@ Deletions (36):
 | 35 | D5 | Debug for PostOrderGhostIterator | 936–940 |
 | 36 | D5 | Display for PostOrderGhostIterator | 942–946 |
 
-Transforms (6):
+Transforms (9):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 347 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 349 | `in_order_iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 361 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 363 | `pre_order_iter_invariant (& it)` | `<remove>` |
-| 5 | T1 | 375 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 6 | T4 | 377 | `post_order_iter_invariant (& it)` | `<remove>` |
-
-Unresolved (3):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 348 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_in_order () |
-| 2 | U-OTHER | 362 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_pre_order () |
-| 3 | U-OTHER | 376 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order () |
+| 2 | T10 | 348 | `it@.1 =~= self.spec_in_order ()` | `it.seq() =~= self.spec_in_order (),` |
+| 3 | T4 | 349 | `in_order_iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 361 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 362 | `it@.1 =~= self.spec_pre_order ()` | `it.seq() =~= self.spec_pre_order (),` |
+| 6 | T4 | 363 | `pre_order_iter_invariant (& it)` | `<remove>` |
+| 7 | T1 | 375 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 8 | T10 | 376 | `it@.1 =~= self.spec_post_order ()` | `it.seq() =~= self.spec_post_order (),` |
+| 9 | T4 | 377 | `post_order_iter_invariant (& it)` | `<remove>` |
 
 ### `Chap23/PrimTreeSeqStPer.rs` (delegated) — Iter@616
 
@@ -1807,27 +1735,27 @@ Deletions (6):
 | 5 | D5 | Debug for AVLTreeSeqGhostIterator | 1426–1430 |
 | 6 | D5 | Display for AVLTreeSeqGhostIterator | 1432–1436 |
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 434 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 436 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 1299 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 4 | T4 | 1301 | `iter_invariant (& it)` | `<remove>` |
+| 2 | T10 | 435 | `it@.1.map_values (\| t : T \| t@) =~= self.spec_avltreeseq_seq ()` | `it.seq().map_values (\| t : T \| t@) =~= self.spec_avltreeseq_seq (),` |
+| 3 | T4 | 436 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 1299 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 5 | T10 | 1300 | `it@.1.map_values (\| t : T \| t@) =~= self.spec_avltreeseq_seq ()` | `it.seq().map_values (\| t : T \| t@) =~= self.spec_avltreeseq_seq (),` |
+| 6 | T4 | 1301 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (8):
+Unresolved (6):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 435 | unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq () |
-| 2 | U-CUSTOM | 1188 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIter |
-| 3 | U-CUSTOM | 1202 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIter |
-| 4 | U-CUSTOM | 1214 | custom-style file: hand-port IteratorSpecImpl required for iter_invariant<…> |
-| 5 | U-CUSTOM | 1219 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIter |
-| 6 | U-OTHER | 1300 | unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq () |
-| 7 | U-CUSTOM | 1411 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIter |
-| 8 | U-CUSTOM | 1420 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIter |
+| 1 | U-CUSTOM | 1188 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIter |
+| 2 | U-CUSTOM | 1202 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIter |
+| 3 | U-CUSTOM | 1214 | custom-style file: hand-port IteratorSpecImpl required for iter_invariant<…> |
+| 4 | U-CUSTOM | 1219 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIter |
+| 5 | U-CUSTOM | 1411 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIter |
+| 6 | U-CUSTOM | 1420 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIter |
 
 ### `Chap37/AVLTreeSeqMtPer.rs` (delegated) — Iter@823
 
@@ -1852,22 +1780,22 @@ Deletions (16):
 | 15 | D5 | Debug for AVLTreeSeqMtPerGhostIterator | 1052–1056 |
 | 16 | D5 | Display for AVLTreeSeqMtPerGhostIterator | 1058–1062 |
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 342 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 2 | T4 | 344 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 940 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
-| 4 | T4 | 942 | `iter_invariant (& it)` | `<remove>` |
+| 2 | T10 | 343 | `it@.1 =~= self.spec_seq ()` | `it.seq() =~= self.spec_seq (),` |
+| 3 | T4 | 344 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 940 | `it@.0 == 0int` | `IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),` |
+| 5 | T10 | 941 | `it@.1 =~= self.spec_seq ()` | `it.seq() =~= self.spec_seq (),` |
+| 6 | T4 | 942 | `iter_invariant (& it)` | `<remove>` |
 
-Unresolved (3):
+Unresolved (1):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-CLASS | 1 | observed custom-style iterator in a non-pinned file — review pin list |
-| 2 | U-OTHER | 343 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq () |
-| 3 | U-OTHER | 941 | unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq () |
 
 ### `Chap37/AVLTreeSeqStEph.rs` (custom) — Iter@512
 
@@ -1882,11 +1810,12 @@ Deletions (6):
 | 5 | D5 | Debug for AVLTreeSeqStEphGhostIterator | 1420–1424 |
 | 6 | D5 | Display for AVLTreeSeqStEphGhostIterator | 1426–1430 |
 
-Transforms (1):
+Transforms (2):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 443 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` |
+| 1 | T9 | 442 | `it@.0 == old (it)@.0` | `it.index() == old (it)@.0,` |
+| 2 | T3 | 443 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` |
 
 Constructor `ensures` rewrites (2):
 
@@ -1906,17 +1835,16 @@ Constructor `ensures` rewrites (2):
   IteratorSpec::initial_value_relation(&it, &it),
   ```
 
-Unresolved (7):
+Unresolved (6):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
-| 1 | U-OTHER | 442 | unrecognized `it`-bearing clause: it@.0 == old (it)@.0 |
-| 2 | U-CUSTOM | 512 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIterStEph |
-| 3 | U-CUSTOM | 523 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIterStEph |
-| 4 | U-CUSTOM | 533 | custom-style file: hand-port IteratorSpecImpl required for avltreeseqsteph_iter_invariant<…> |
-| 5 | U-CUSTOM | 1290 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIterStEph |
-| 6 | U-CUSTOM | 1475 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIterStEph |
-| 7 | U-CUSTOM | 1481 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIterStEph |
+| 1 | U-CUSTOM | 512 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIterStEph |
+| 2 | U-CUSTOM | 523 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIterStEph |
+| 3 | U-CUSTOM | 533 | custom-style file: hand-port IteratorSpecImpl required for avltreeseqsteph_iter_invariant<…> |
+| 4 | U-CUSTOM | 1290 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIterStEph |
+| 5 | U-CUSTOM | 1475 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIterStEph |
+| 6 | U-CUSTOM | 1481 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIterStEph |
 
 ### `Chap37/AVLTreeSeqStPer.rs` (custom) — Iter@945
 
@@ -1931,11 +1859,12 @@ Deletions (6):
 | 5 | D5 | Debug for AVLTreeSeqStPerGhostIterator | 1136–1140 |
 | 6 | D5 | Display for AVLTreeSeqStPerGhostIterator | 1142–1146 |
 
-Transforms (1):
+Transforms (2):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T3 | 929 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` |
+| 1 | T9 | 928 | `it@.0 == old (it)@.0` | `it.index() == old (it)@.0,` |
+| 2 | T3 | 929 | `it@.1 == old (it)@.1` | `it.seq() == old (it)@.1,` |
 
 Constructor `ensures` rewrites (2):
 
@@ -1955,17 +1884,16 @@ Constructor `ensures` rewrites (2):
   IteratorSpec::initial_value_relation(&it, &it),
   ```
 
-Unresolved (7):
+Unresolved (6):
 
 | # | Code | Line | Message |
 |--:|------|-----:|---------|
 | 1 | U-CUSTOM | 98 | custom-style file: hand-port IteratorSpecImpl required for avltreeseqstper_iter_invariant<…> |
-| 2 | U-OTHER | 928 | unrecognized `it`-bearing clause: it@.0 == old (it)@.0 |
-| 3 | U-CUSTOM | 945 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqStPerIter |
-| 4 | U-CUSTOM | 960 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqStPerIter |
-| 5 | U-CUSTOM | 974 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqStPerIter |
-| 6 | U-CUSTOM | 1124 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqStPerIter |
-| 7 | U-CUSTOM | 1130 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqStPerIter |
+| 2 | U-CUSTOM | 945 | custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqStPerIter |
+| 3 | U-CUSTOM | 960 | custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqStPerIter |
+| 4 | U-CUSTOM | 974 | custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqStPerIter |
+| 5 | U-CUSTOM | 1124 | custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqStPerIter |
+| 6 | U-CUSTOM | 1130 | custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqStPerIter |
 
 ### `Chap37/BSTSetAVLMtEph.rs` (delegated) — Iter@546
 
@@ -2160,39 +2088,29 @@ Transforms (4):
 
 ### `Chap43/AugOrderedTableStEph.rs` (delegated)
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 952 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 954 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 969 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 971 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 953 | unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len () |
-| 2 | U-OTHER | 970 | unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len () |
+| 2 | T10 | 953 | `it@.1.len () == self.base_table.tree.inner@.len ()` | `it.seq().len () == self.base_table.tree.inner@.len (),` |
+| 3 | T4 | 954 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 969 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 970 | `it@.1.len () == self.base_table.tree.inner@.len ()` | `it.seq().len () == self.base_table.tree.inner@.len (),` |
+| 6 | T4 | 971 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap43/AugOrderedTableStPer.rs` (delegated)
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 1014 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 1016 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 1032 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 1034 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 1015 | unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len () |
-| 2 | U-OTHER | 1033 | unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len () |
+| 2 | T10 | 1015 | `it@.1.len () == self.base_table.tree.inner@.len ()` | `it.seq().len () == self.base_table.tree.inner@.len (),` |
+| 3 | T4 | 1016 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 1032 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 1033 | `it@.1.len () == self.base_table.tree.inner@.len ()` | `it.seq().len () == self.base_table.tree.inner@.len (),` |
+| 6 | T4 | 1034 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap43/OrderedSetStEph.rs` (delegated) — Iter@1005
 
@@ -2213,21 +2131,16 @@ Deletions (12):
 | 11 | D5 | Debug for OrderedSetStEphGhostIterator | 1197–1201 |
 | 12 | D5 | Display for OrderedSetStEphGhostIterator | 1203–1207 |
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 980 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 982 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 1103 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 1105 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 981 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
-| 2 | U-OTHER | 1104 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
+| 2 | T10 | 981 | `it@.1.len () == self@.len ()` | `it.seq().len () == self@.len (),` |
+| 3 | T4 | 982 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 1103 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 1104 | `it@.1.len () == self@.len ()` | `it.seq().len () == self@.len (),` |
+| 6 | T4 | 1105 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap43/OrderedSetStPer.rs` (delegated) — Iter@1072
 
@@ -2248,18 +2161,13 @@ Deletions (12):
 | 11 | D5 | Debug for OrderedSetStPerGhostIterator | 1253–1257 |
 | 12 | D5 | Display for OrderedSetStPerGhostIterator | 1259–1263 |
 
-Transforms (2):
+Transforms (3):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 1059 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 1061 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (1):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 1060 | unrecognized `it`-bearing clause: it@.1.len () == self@.len () |
+| 2 | T10 | 1060 | `it@.1.len () == self@.len ()` | `it.seq().len () == self@.len (),` |
+| 3 | T4 | 1061 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap43/OrderedTableMtEph.rs` (delegated) — Iter@896
 
@@ -2314,21 +2222,16 @@ Deletions (12):
 | 11 | D5 | Debug for OrderedTableStEphGhostIterator | 1960–1964 |
 | 12 | D5 | Display for OrderedTableStEphGhostIterator | 1966–1970 |
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 1658 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 1660 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 1892 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 1894 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 1659 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
-| 2 | U-OTHER | 1893 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
+| 2 | T10 | 1659 | `it@.1.len () == self.tree.inner@.len ()` | `it.seq().len () == self.tree.inner@.len (),` |
+| 3 | T4 | 1660 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 1892 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 1893 | `it@.1.len () == self.tree.inner@.len ()` | `it.seq().len () == self.tree.inner@.len (),` |
+| 6 | T4 | 1894 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap43/OrderedTableStPer.rs` (delegated) — Iter@1392
 
@@ -2349,192 +2252,147 @@ Deletions (12):
 | 11 | D5 | Debug for OrderedTableStPerGhostIterator | 1581–1585 |
 | 12 | D5 | Display for OrderedTableStPerGhostIterator | 1587–1591 |
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T1 | 1239 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 2 | T4 | 1241 | `iter_invariant (& it)` | `<remove>` |
-| 3 | T1 | 1494 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
-| 4 | T4 | 1496 | `iter_invariant (& it)` | `<remove>` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 1240 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
-| 2 | U-OTHER | 1495 | unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len () |
+| 2 | T10 | 1240 | `it@.1.len () == self.tree.inner@.len ()` | `it.seq().len () == self.tree.inner@.len (),` |
+| 3 | T4 | 1241 | `iter_invariant (& it)` | `<remove>` |
+| 4 | T1 | 1494 | `it@.0 == 0` | `IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),` |
+| 5 | T10 | 1495 | `it@.1.len () == self.tree.inner@.len ()` | `it.seq().len () == self.tree.inner@.len (),` |
+| 6 | T4 | 1496 | `iter_invariant (& it)` | `<remove>` |
 
 ### `Chap57/DijkstraStEphF64.rs` (delegated)
 
-Unresolved (4):
+Transforms (4):
 
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 262 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 272 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-OTHER | 275 | unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j… |
-| 4 | U-OTHER | 277 | unrecognized `it`-bearing clause: forall | e : (usize, usize, f64) | #[trigger] used_edges.contains (e) ==> (e.0 != v |… |
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 262 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T10 | 272 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 3 | T10 | 275 | `forall \| j : int \| 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger]…` | `forall \| j : int \| 0 <= j<it.seq().len () ==> graph@.A.contains ((v, (#[trigg…` |
+| 4 | T10 | 277 | `forall \| e : (usize, usize, f64) \| #[trigger] used_edges.contains (e) ==> (e.…` | `forall \| e : (usize, usize, f64) \| #[trigger] used_edges.contains (e) ==> (e.…` |
 
 ### `Chap57/DijkstraStEphU64.rs` (delegated)
 
-Unresolved (4):
+Transforms (4):
 
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 252 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 262 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-OTHER | 265 | unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger] it@.1[j… |
-| 4 | U-OTHER | 267 | unrecognized `it`-bearing clause: forall | e : (usize, usize, i128) | #[trigger] used_edges.contains (e) ==> (e.0 != v … |
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 252 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T10 | 262 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 3 | T10 | 265 | `forall \| j : int \| 0 <= j<it@.1.len () ==> graph@.A.contains ((v, (#[trigger]…` | `forall \| j : int \| 0 <= j<it.seq().len () ==> graph@.A.contains ((v, (#[trigg…` |
+| 4 | T10 | 267 | `forall \| e : (usize, usize, i128) \| #[trigger] used_edges.contains (e) ==> (e…` | `forall \| e : (usize, usize, i128) \| #[trigger] used_edges.contains (e) ==> (e…` |
 
 ### `Chap58/BellmanFordStEphF64.rs` (delegated)
 
-Transforms (2):
+Transforms (4):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T6 | 133 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 2 | T6 | 227 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 132 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 226 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
+| 1 | T10 | 132 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T6 | 133 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 3 | T10 | 226 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 4 | T6 | 227 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap58/BellmanFordStEphI64.rs` (delegated)
 
-Transforms (2):
+Transforms (4):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T6 | 157 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 2 | T6 | 252 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 156 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 251 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
+| 1 | T10 | 156 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T6 | 157 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 3 | T10 | 251 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 4 | T6 | 252 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap59/JohnsonStEphF64.rs` (delegated)
-
-Transforms (3):
-
-| # | Class | Line | Old | New |
-|--:|-------|-----:|-----|-----|
-| 1 | T6 | 199 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 2 | T3 | 288 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
-| 3 | T6 | 295 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (3):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 195 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 287 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 3 | U-OTHER | 291 | unrecognized `it`-bearing clause: edges@.len () <= it@.0 |
-
-### `Chap59/JohnsonStEphI64.rs` (delegated)
-
-Transforms (3):
-
-| # | Class | Line | Old | New |
-|--:|-------|-----:|-----|-----|
-| 1 | T6 | 203 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 2 | T3 | 290 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
-| 3 | T6 | 297 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (3):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 199 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 289 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 3 | U-OTHER | 293 | unrecognized `it`-bearing clause: edges@.len () <= it@.0 |
-
-### `Chap62/StarPartitionMtEph.rs` (delegated)
-
-Transforms (1):
-
-| # | Class | Line | Old | New |
-|--:|-------|-----:|-----|-----|
-| 1 | T6 | 224 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (4):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 207 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 208 | unrecognized `it`-bearing clause: it_seq == it@.1 |
-| 3 | U-OTHER | 211 | unrecognized `it`-bearing clause: merge_done ==> it@.0>= it_seq.len () |
-| 4 | U-OTHER | 216 | unrecognized `it`-bearing clause: forall | idx : int | 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_seq[idx].… |
-
-### `Chap65/PrimStEph.rs` (delegated)
-
-Transforms (2):
-
-| # | Class | Line | Old | New |
-|--:|-------|-----:|-----|-----|
-| 1 | T3 | 482 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
-| 2 | T6 | 484 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (5):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 409 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 410 | unrecognized `it`-bearing clause: it@.1.no_duplicates () |
-| 3 | U-OTHER | 416 | unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.1[j])@)) |
-| 4 | U-OTHER | 418 | unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | #[trigger] used_pairs.contains (e) ==> (e.0 != u@|| (exis… |
-| 5 | U-OTHER | 481 | unrecognized `it`-bearing clause: it@.0 <= le_seq.len () |
-
-### `Chap66/BoruvkaMtEph.rs` (delegated)
 
 Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
-| 1 | T6 | 267 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 2 | T6 | 481 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T6 | 574 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 4 | T6 | 759 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 5 | T4 | 1091 | `iter_invariant (& it)` | `<remove>` |
-| 6 | T6 | 1094 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 1 | T10 | 195 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T6 | 199 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 3 | T10 | 287 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 4 | T3 | 288 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
+| 5 | T9 | 291 | `edges@.len () <= it@.0` | `edges@.len () <= it.index(),` |
+| 6 | T6 | 295 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
-Unresolved (9):
+### `Chap59/JohnsonStEphI64.rs` (delegated)
 
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 265 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 2 | U-OTHER | 266 | unrecognized `it`-bearing clause: it_seq == it@.1 |
-| 3 | U-OTHER | 479 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 4 | U-OTHER | 480 | unrecognized `it`-bearing clause: it_seq == it@.1 |
-| 5 | U-OTHER | 567 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 6 | U-OTHER | 568 | unrecognized `it`-bearing clause: it_seq == it@.1 |
-| 7 | U-OTHER | 757 | unrecognized `it`-bearing clause: it@.0 <= it@.1.len () |
-| 8 | U-OTHER | 758 | unrecognized `it`-bearing clause: it_seq == it@.1 |
-| 9 | U-OTHER | 1092 | unrecognized `it`-bearing clause: iter_seq == it@.1 |
+Transforms (6):
+
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 199 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T6 | 203 | `it@.1.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 3 | T10 | 289 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 4 | T3 | 290 | `it@.1 == arcs_seq` | `it.seq() == arcs_seq,` |
+| 5 | T9 | 293 | `edges@.len () <= it@.0` | `edges@.len () <= it.index(),` |
+| 6 | T6 | 297 | `arcs_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+
+### `Chap62/StarPartitionMtEph.rs` (delegated)
+
+Transforms (5):
+
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 207 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T10 | 208 | `it_seq == it@.1` | `it_seq == it.seq(),` |
+| 3 | T9 | 211 | `merge_done ==> it@.0>= it_seq.len ()` | `merge_done ==> it.index()>= it_seq.len (),` |
+| 4 | T9 | 216 | `forall \| idx : int \| 0 <= idx<it@.0 ==> #[trigger] merged@.contains_key (it_s…` | `forall \| idx : int \| 0 <= idx<it.index() ==> #[trigger] merged@.contains_key …` |
+| 5 | T6 | 224 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+
+### `Chap65/PrimStEph.rs` (delegated)
+
+Transforms (7):
+
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 409 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T10 | 410 | `it@.1.no_duplicates ()` | `it.seq().no_duplicates (),` |
+| 3 | T10 | 416 | `forall \| j : int \| 0 <= j<it@.1.len () ==> DA.contains ((u@, (#[trigger] it@.…` | `forall \| j : int \| 0 <= j<it.seq().len () ==> DA.contains ((u@, (#[trigger] i…` |
+| 4 | T10 | 418 | `forall \| e : (V::V, V::V) \| #[trigger] used_pairs.contains (e) ==> (e.0 != u@…` | `forall \| e : (V::V, V::V) \| #[trigger] used_pairs.contains (e) ==> (e.0 != u@…` |
+| 5 | T9 | 481 | `it@.0 <= le_seq.len ()` | `it.index() <= le_seq.len (),` |
+| 6 | T3 | 482 | `it@.1 == le_seq` | `it.seq() == le_seq,` |
+| 7 | T6 | 484 | `le_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+
+### `Chap66/BoruvkaMtEph.rs` (delegated)
+
+Transforms (15):
+
+| # | Class | Line | Old | New |
+|--:|-------|-----:|-----|-----|
+| 1 | T10 | 265 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 2 | T10 | 266 | `it_seq == it@.1` | `it_seq == it.seq(),` |
+| 3 | T6 | 267 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T10 | 479 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 5 | T10 | 480 | `it_seq == it@.1` | `it_seq == it.seq(),` |
+| 6 | T6 | 481 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 7 | T10 | 567 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 8 | T10 | 568 | `it_seq == it@.1` | `it_seq == it.seq(),` |
+| 9 | T6 | 574 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 10 | T10 | 757 | `it@.0 <= it@.1.len ()` | `it.index() <= it.seq().len (),` |
+| 11 | T10 | 758 | `it_seq == it@.1` | `it_seq == it.seq(),` |
+| 12 | T6 | 759 | `it_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 13 | T4 | 1091 | `iter_invariant (& it)` | `<remove>` |
+| 14 | T10 | 1092 | `iter_seq == it@.1` | `iter_seq == it.seq(),` |
+| 15 | T6 | 1094 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `Chap66/BoruvkaStEph.rs` (delegated)
 
-Transforms (4):
+Transforms (6):
 
 | # | Class | Line | Old | New |
 |--:|-------|-----:|-----|-----|
 | 1 | T4 | 228 | `iter_invariant (& it)` | `<remove>` |
-| 2 | T6 | 235 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-| 3 | T4 | 535 | `iter_invariant (& it)` | `<remove>` |
-| 4 | T6 | 538 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
-
-Unresolved (2):
-
-| # | Code | Line | Message |
-|--:|------|-----:|---------|
-| 1 | U-OTHER | 229 | unrecognized `it`-bearing clause: iter_seq == it@.1 |
-| 2 | U-OTHER | 536 | unrecognized `it`-bearing clause: iter_seq == it@.1 |
+| 2 | T10 | 229 | `iter_seq == it@.1` | `iter_seq == it.seq(),` |
+| 3 | T6 | 235 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
+| 4 | T4 | 535 | `iter_invariant (& it)` | `<remove>` |
+| 5 | T10 | 536 | `iter_seq == it@.1` | `iter_seq == it.seq(),` |
+| 6 | T6 | 538 | `iter_seq.len () - it@.0` | `IteratorSpec::decrease(&it).unwrap(),` |
 
 ### `vstdplus/hash_map_with_view_plus.rs` (delegated) — Iter@170
 

@@ -1,0 +1,9 @@
+# veracity-iterator-upgrade --detect
+# root: /home/milnes/projects/veracity/tests/fixtures/iterator-upgrade-detect/T10
+# tool_sha: 3b75fc744d1a4c714b34c3993380f3537f864453
+# generated: 2026-05-23T17:07:38Z
+# totals: files=1 D=1 T=1 U=0
+manifest:1:1: warning: manifest: scanned 1 of ? — inventory not found
+fixture.rs:1:1: summary: delegated, D=1 T=1 U=0
+fixture.rs:6:1: warning: D6: FooIter [6-6]
+fixture.rs:15:17: info: T10: it@.1.no_duplicates ()  →  it.seq().no_duplicates (),

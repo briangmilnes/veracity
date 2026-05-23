@@ -128,6 +128,8 @@ enum TClass {
     T6,
     T7,
     T8,
+    T9,
+    T10,
 }
 
 impl TClass {
@@ -141,6 +143,8 @@ impl TClass {
             TClass::T6 => "T6",
             TClass::T7 => "T7",
             TClass::T8 => "T8",
+            TClass::T9 => "T9",
+            TClass::T10 => "T10",
         }
     }
 }
@@ -1073,6 +1077,43 @@ impl ScanVisitor {
             return;
         }
 
+        // T9/T10 — generic substitution fallback (Deferral 1, plan §13a.1).
+        // Fires on any expression that contains `it@.0` or `it@.1` as an
+        // AST sub-expression (`view_field_index_of_it == Some(idx)` somewhere
+        // in the tree) and is not already covered by T1–T8.
+        //
+        // Priority: if `it@.1` appears, emit T10 — its new-text applies BOTH
+        // substitutions (`it@.0` → `it.index()` AND `it@.1` → `it.seq()`)
+        // so mixed expressions produce a single finding, not two.
+        let has_idx_0 = expr_contains_view_index_of_it(e, 0);
+        let has_idx_1 = expr_contains_view_index_of_it(e, 1);
+        if has_idx_1 {
+            let old = render_expr(e);
+            let new = substitute_it_views(&old);
+            self.transforms.push(Transform {
+                class: TClass::T10,
+                line,
+                col_start,
+                col_end,
+                old,
+                new: format!("{},", new),
+            });
+            return;
+        }
+        if has_idx_0 {
+            let old = render_expr(e);
+            let new = substitute_it_views(&old);
+            self.transforms.push(Transform {
+                class: TClass::T9,
+                line,
+                col_start,
+                col_end,
+                old,
+                new: format!("{},", new),
+            });
+            return;
+        }
+
         // U-OTHER: any expression that mentions the literal `it` identifier as the
         // loop iterator but doesn't match any pattern above.
         if expr_mentions_it_identifier(e) {
@@ -1084,6 +1125,72 @@ impl ScanVisitor {
             });
         }
     }
+}
+
+/// AST-level recursive check: does any sub-expression of `e` match
+/// `Expr::Field { base: Expr::View { expr: Path("it") }, member: Unnamed(idx) }`?
+/// This is the same shape `view_field_index_of_it` checks, applied recursively
+/// rather than only at the top level.
+fn expr_contains_view_index_of_it(e: &Expr, idx: u32) -> bool {
+    struct Walk { idx: u32, found: bool }
+    impl<'ast> Visit<'ast> for Walk {
+        fn visit_expr_field(&mut self, node: &'ast verus_syn::ExprField) {
+            if let Expr::View(v) = &*node.base {
+                if let Expr::Path(p) = &*v.expr {
+                    let segs = &p.path.segments;
+                    if segs.len() == 1 && segs[0].ident == "it" {
+                        if let Member::Unnamed(i) = &node.member {
+                            if i.index == self.idx {
+                                self.found = true;
+                            }
+                        }
+                    }
+                }
+            }
+            verus_syn::visit::visit_expr_field(self, node);
+        }
+    }
+    let mut w = Walk { idx, found: false };
+    w.visit_expr(e);
+    w.found
+}
+
+/// Token-aware text substitution: replace `it@.0` → `it.index()` and
+/// `it@.1` → `it.seq()` only when the left and right neighbors are non-
+/// identifier characters. This protects against `seq[i]@.0`, `old(it)@.0`,
+/// or hypothetical `pit@.0`-style false positives in the rendered text.
+fn substitute_it_views(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if i + 4 < chars.len()
+            && chars[i] == 'i'
+            && chars[i + 1] == 't'
+            && chars[i + 2] == '@'
+            && chars[i + 3] == '.'
+            && (chars[i + 4] == '0' || chars[i + 4] == '1')
+        {
+            let left_ok = i == 0 || !is_ident_char(chars[i - 1]);
+            let right_ok = i + 5 >= chars.len() || !is_ident_char(chars[i + 5]);
+            if left_ok && right_ok {
+                if chars[i + 4] == '0' {
+                    out.push_str("it.index()");
+                } else {
+                    out.push_str("it.seq()");
+                }
+                i += 5;
+                continue;
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+fn is_ident_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
 }
 
 // ==== Pattern matchers ====
