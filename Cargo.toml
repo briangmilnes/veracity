@@ -243,3 +243,7 @@ path = "src/bin/analyze_alg_analysis.rs"
 [[bin]]
 name = "veracity-tocify"
 path = "src/bin/tocify.rs"
+
+[[bin]]
+name = "veracity-iterator-upgrade"
+path = "src/bin/iterator_upgrade.rs"

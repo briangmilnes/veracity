@@ -1,0 +1,6171 @@
+{
+  "tool": "veracity-iterator-upgrade",
+  "mode": "detect",
+  "root": "/home/milnes/projects/veracity/tests/fixtures/APAS-VERUS",
+  "generated": "2026-05-23T00:34:01Z",
+  "files": [
+    {
+      "path": "src/Chap05/MappingStEph.rs",
+      "chap": "05",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "MappingStEphIter",
+          "line_start": 505,
+          "line_end": 510
+        },
+        {
+          "class": "D7",
+          "ident": "View for MappingStEphIter",
+          "line_start": 512,
+          "line_end": 515
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 517,
+          "line_end": 519
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for MappingStEphIter",
+          "line_start": 521,
+          "line_end": 544
+        },
+        {
+          "class": "D1",
+          "ident": "MappingStEphGhostIterator",
+          "line_start": 546,
+          "line_end": 553
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for MappingStEphIter",
+          "line_start": 555,
+          "line_end": 561
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for MappingStEphGhostIterator",
+          "line_start": 563,
+          "line_end": 600
+        },
+        {
+          "class": "D2",
+          "ident": "View for MappingStEphGhostIterator",
+          "line_start": 602,
+          "line_end": 608
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for MappingStEphIter",
+          "line_start": 701,
+          "line_end": 703
+        },
+        {
+          "class": "D9",
+          "ident": "Display for MappingStEphIter",
+          "line_start": 705,
+          "line_end": 707
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for MappingStEphGhostIterator",
+          "line_start": 709,
+          "line_end": 711
+        },
+        {
+          "class": "D5",
+          "ident": "Display for MappingStEphGhostIterator",
+          "line_start": 713,
+          "line_end": 715
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 235,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 239,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 616,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 236,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 238,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Chain",
+          "line": 505,
+          "col": 1,
+          "message": "MappingStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 617,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == Set::new (| p : (X::V, Y::V) | self@.dom ().contains (p.0) && self@[p.0] == p.1)"
+        },
+        {
+          "code": "Other",
+          "line": 619,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap05/RelationStEph.rs",
+      "chap": "05",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "RelationStEphIter",
+          "line_start": 297,
+          "line_end": 302
+        },
+        {
+          "class": "D7",
+          "ident": "View for RelationStEphIter",
+          "line_start": 304,
+          "line_end": 307
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 309,
+          "line_end": 311
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for RelationStEphIter",
+          "line_start": 313,
+          "line_end": 336
+        },
+        {
+          "class": "D1",
+          "ident": "RelationStEphGhostIterator",
+          "line_start": 338,
+          "line_end": 345
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for RelationStEphIter",
+          "line_start": 347,
+          "line_end": 353
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for RelationStEphGhostIterator",
+          "line_start": 355,
+          "line_end": 392
+        },
+        {
+          "class": "D2",
+          "ident": "View for RelationStEphGhostIterator",
+          "line_start": 394,
+          "line_end": 400
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for RelationStEphIter",
+          "line_start": 471,
+          "line_end": 473
+        },
+        {
+          "class": "D9",
+          "ident": "Display for RelationStEphIter",
+          "line_start": 475,
+          "line_end": 477
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for RelationStEphGhostIterator",
+          "line_start": 479,
+          "line_end": 481
+        },
+        {
+          "class": "D5",
+          "ident": "Display for RelationStEphGhostIterator",
+          "line_start": 483,
+          "line_end": 485
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 156,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 159,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 408,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 157,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 158,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Chain",
+          "line": 297,
+          "col": 1,
+          "message": "RelationStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 409,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, p : Pair<X, Y> | p@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 410,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap05/SetMtEph.rs",
+      "chap": "05",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "SetMtEphIter",
+          "line_start": 942,
+          "line_end": 946
+        },
+        {
+          "class": "D7",
+          "ident": "View for SetMtEphIter",
+          "line_start": 948,
+          "line_end": 951
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 953,
+          "line_end": 955
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for SetMtEphIter",
+          "line_start": 957,
+          "line_end": 980
+        },
+        {
+          "class": "D1",
+          "ident": "SetMtEphGhostIterator",
+          "line_start": 982,
+          "line_end": 988
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for SetMtEphIter",
+          "line_start": 990,
+          "line_end": 996
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for SetMtEphGhostIterator",
+          "line_start": 998,
+          "line_end": 1035
+        },
+        {
+          "class": "D2",
+          "ident": "View for SetMtEphGhostIterator",
+          "line_start": 1037,
+          "line_end": 1043
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for SetMtEphIter",
+          "line_start": 1259,
+          "line_end": 1263
+        },
+        {
+          "class": "D9",
+          "ident": "Display for SetMtEphIter",
+          "line_start": 1265,
+          "line_end": 1269
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for SetMtEphGhostIterator",
+          "line_start": 1271,
+          "line_end": 1275
+        },
+        {
+          "class": "D5",
+          "ident": "Display for SetMtEphGhostIterator",
+          "line_start": 1277,
+          "line_end": 1281
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 162,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 166,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T3",
+          "line": 572,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == it_seq",
+          "new": "it.seq() == it_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 585,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 1051,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 163,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 164,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Other",
+          "line": 165,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)"
+        },
+        {
+          "code": "Other",
+          "line": 573,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 578,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: spawned_views.len () == it@.0"
+        },
+        {
+          "code": "Chain",
+          "line": 942,
+          "col": 1,
+          "message": "SetMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 1052,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 1053,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap05/SetStEph.rs",
+      "chap": "05",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "SetStEphIter",
+          "line_start": 800,
+          "line_end": 803
+        },
+        {
+          "class": "D7",
+          "ident": "View for SetStEphIter",
+          "line_start": 805,
+          "line_end": 810
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 812,
+          "line_end": 814
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for SetStEphIter",
+          "line_start": 816,
+          "line_end": 841
+        },
+        {
+          "class": "D1",
+          "ident": "SetStEphGhostIterator",
+          "line_start": 843,
+          "line_end": 849
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for SetStEphIter",
+          "line_start": 851,
+          "line_end": 857
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for SetStEphGhostIterator",
+          "line_start": 859,
+          "line_end": 896
+        },
+        {
+          "class": "D2",
+          "ident": "View for SetStEphGhostIterator",
+          "line_start": 898,
+          "line_end": 904
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for SetStEphIter",
+          "line_start": 986,
+          "line_end": 990
+        },
+        {
+          "class": "D9",
+          "ident": "Display for SetStEphIter",
+          "line_start": 992,
+          "line_end": 996
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for SetStEphGhostIterator",
+          "line_start": 998,
+          "line_end": 1002
+        },
+        {
+          "class": "D5",
+          "ident": "Display for SetStEphGhostIterator",
+          "line_start": 1004,
+          "line_end": 1008
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 142,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 146,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 912,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 915,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 143,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 144,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        },
+        {
+          "code": "Other",
+          "line": 145,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: forall | j : int | 0 <= j<it@.1.len () ==> self@.contains (#[trigger] it@.1[j]@)"
+        },
+        {
+          "code": "Chain",
+          "line": 800,
+          "col": 1,
+          "message": "SetStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 913,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : T | k@).to_set () == self@"
+        },
+        {
+          "code": "Other",
+          "line": 914,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/DirGraphMtEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "DirGraphMtEphIter",
+          "line_start": 749,
+          "line_end": 753
+        },
+        {
+          "class": "D7",
+          "ident": "View for DirGraphMtEphIter",
+          "line_start": 755,
+          "line_end": 758
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 760,
+          "line_end": 762
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for DirGraphMtEphIter",
+          "line_start": 764,
+          "line_end": 787
+        },
+        {
+          "class": "D1",
+          "ident": "DirGraphMtEphGhostIterator",
+          "line_start": 789,
+          "line_end": 795
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for DirGraphMtEphIter",
+          "line_start": 797,
+          "line_end": 803
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for DirGraphMtEphGhostIterator",
+          "line_start": 805,
+          "line_end": 842
+        },
+        {
+          "class": "D2",
+          "ident": "View for DirGraphMtEphGhostIterator",
+          "line_start": 844,
+          "line_end": 850
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for DirGraphMtEphIter",
+          "line_start": 1265,
+          "line_end": 1267
+        },
+        {
+          "class": "D9",
+          "ident": "Display for DirGraphMtEphIter",
+          "line_start": 1269,
+          "line_end": 1271
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for DirGraphMtEphGhostIterator",
+          "line_start": 1273,
+          "line_end": 1275
+        },
+        {
+          "class": "D5",
+          "ident": "Display for DirGraphMtEphGhostIterator",
+          "line_start": 1277,
+          "line_end": 1279
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 858,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 861,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Chain",
+          "line": 749,
+          "col": 1,
+          "message": "DirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 859,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 860,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/DirGraphStEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "DirGraphStEphIter",
+          "line_start": 608,
+          "line_end": 612
+        },
+        {
+          "class": "D7",
+          "ident": "View for DirGraphStEphIter",
+          "line_start": 614,
+          "line_end": 617
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 619,
+          "line_end": 621
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for DirGraphStEphIter",
+          "line_start": 623,
+          "line_end": 646
+        },
+        {
+          "class": "D1",
+          "ident": "DirGraphStEphGhostIterator",
+          "line_start": 648,
+          "line_end": 654
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for DirGraphStEphIter",
+          "line_start": 656,
+          "line_end": 662
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for DirGraphStEphGhostIterator",
+          "line_start": 664,
+          "line_end": 701
+        },
+        {
+          "class": "D2",
+          "ident": "View for DirGraphStEphGhostIterator",
+          "line_start": 703,
+          "line_end": 709
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for DirGraphStEphIter",
+          "line_start": 801,
+          "line_end": 803
+        },
+        {
+          "class": "D9",
+          "ident": "Display for DirGraphStEphIter",
+          "line_start": 805,
+          "line_end": 807
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for DirGraphStEphGhostIterator",
+          "line_start": 809,
+          "line_end": 811
+        },
+        {
+          "class": "D5",
+          "ident": "Display for DirGraphStEphGhostIterator",
+          "line_start": 813,
+          "line_end": 815
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 300,
+          "col_start": 21,
+          "col_end": 35,
+          "old": "it@.1 == u_seq",
+          "new": "it.seq() == u_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 305,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "u_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 361,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == arcs_seq",
+          "new": "it.seq() == arcs_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 366,
+          "col_start": 31,
+          "col_end": 53,
+          "old": "arcs_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 419,
+          "col_start": 21,
+          "col_end": 38,
+          "old": "it@.1 == arcs_seq",
+          "new": "it.seq() == arcs_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 424,
+          "col_start": 31,
+          "col_end": 53,
+          "old": "arcs_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 478,
+          "col_start": 21,
+          "col_end": 35,
+          "old": "it@.1 == u_seq",
+          "new": "it.seq() == u_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 483,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "u_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 540,
+          "col_start": 21,
+          "col_end": 35,
+          "old": "it@.1 == u_seq",
+          "new": "it.seq() == u_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 546,
+          "col_start": 31,
+          "col_end": 50,
+          "old": "u_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 717,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 720,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 299,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 302,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))"
+        },
+        {
+          "code": "Other",
+          "line": 360,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 363,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: out@== Set::new (| w : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.0 == v_view && arcs_seq[i]@.1 == w)"
+        },
+        {
+          "code": "Other",
+          "line": 418,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= arcs_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 421,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: inn@== Set::new (| u : V::V | exists | i : int | # ![trigger arcs_seq[i]] 0 <= i<it@.0 && arcs_seq[i]@.1 == v_view && arcs_seq[i]@.0 == u)"
+        },
+        {
+          "code": "Other",
+          "line": 477,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 480,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: out_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_plus (u_seq[i]@).contains (w))"
+        },
+        {
+          "code": "Other",
+          "line": 539,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 542,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: in_neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_n_minus (u_seq[i]@).contains (w))"
+        },
+        {
+          "code": "Chain",
+          "line": 608,
+          "col": 1,
+          "message": "DirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 718,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 719,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/LabDirGraphMtEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LabDirGraphMtEphIter",
+          "line_start": 645,
+          "line_end": 649
+        },
+        {
+          "class": "D7",
+          "ident": "View for LabDirGraphMtEphIter",
+          "line_start": 651,
+          "line_end": 654
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 656,
+          "line_end": 658
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LabDirGraphMtEphIter",
+          "line_start": 660,
+          "line_end": 683
+        },
+        {
+          "class": "D1",
+          "ident": "LabDirGraphMtEphGhostIterator",
+          "line_start": 685,
+          "line_end": 691
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LabDirGraphMtEphIter",
+          "line_start": 693,
+          "line_end": 699
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LabDirGraphMtEphGhostIterator",
+          "line_start": 701,
+          "line_end": 738
+        },
+        {
+          "class": "D2",
+          "ident": "View for LabDirGraphMtEphGhostIterator",
+          "line_start": 740,
+          "line_end": 746
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LabDirGraphMtEphIter",
+          "line_start": 992,
+          "line_end": 994
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LabDirGraphMtEphIter",
+          "line_start": 996,
+          "line_end": 998
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LabDirGraphMtEphGhostIterator",
+          "line_start": 1000,
+          "line_end": 1002
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LabDirGraphMtEphGhostIterator",
+          "line_start": 1004,
+          "line_end": 1006
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 317,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 321,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 380,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 383,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 421,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 424,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 754,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 757,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 316,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 319,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)"
+        },
+        {
+          "code": "Other",
+          "line": 379,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 382,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)"
+        },
+        {
+          "code": "Other",
+          "line": 420,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 423,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)"
+        },
+        {
+          "code": "Chain",
+          "line": 645,
+          "col": 1,
+          "message": "LabDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 755,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 756,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/LabDirGraphStEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LabDirGraphStEphIter",
+          "line_start": 477,
+          "line_end": 481
+        },
+        {
+          "class": "D7",
+          "ident": "View for LabDirGraphStEphIter",
+          "line_start": 483,
+          "line_end": 486
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 488,
+          "line_end": 490
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LabDirGraphStEphIter",
+          "line_start": 492,
+          "line_end": 515
+        },
+        {
+          "class": "D1",
+          "ident": "LabDirGraphStEphGhostIterator",
+          "line_start": 517,
+          "line_end": 523
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LabDirGraphStEphIter",
+          "line_start": 525,
+          "line_end": 531
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LabDirGraphStEphGhostIterator",
+          "line_start": 533,
+          "line_end": 570
+        },
+        {
+          "class": "D2",
+          "ident": "View for LabDirGraphStEphGhostIterator",
+          "line_start": 572,
+          "line_end": 578
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LabDirGraphStEphIter",
+          "line_start": 637,
+          "line_end": 639
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LabDirGraphStEphIter",
+          "line_start": 641,
+          "line_end": 643
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LabDirGraphStEphGhostIterator",
+          "line_start": 645,
+          "line_end": 647
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LabDirGraphStEphGhostIterator",
+          "line_start": 649,
+          "line_end": 651
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 226,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 230,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 287,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 290,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 328,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 331,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 377,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 381,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 432,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == la_seq",
+          "new": "it.seq() == la_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 437,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "la_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 586,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 589,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 225,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 228,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: arcs@== Set::new (| e : (V::V, V::V) | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == e.0 && la_seq[i]@.1 == e.1)"
+        },
+        {
+          "code": "Other",
+          "line": 286,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 289,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)"
+        },
+        {
+          "code": "Other",
+          "line": 327,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 330,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 ==> ! (la_seq[i]@.0 == from_view && la_seq[i]@.1 == to_view)"
+        },
+        {
+          "code": "Other",
+          "line": 376,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 379,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.0 == v_view && la_seq[i]@.1 == w)"
+        },
+        {
+          "code": "Other",
+          "line": 431,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= la_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 434,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: neighbors@== Set::new (| u : V::V | exists | i : int | # ![trigger la_seq[i]] 0 <= i<it@.0 && la_seq[i]@.1 == v_view && la_seq[i]@.0 == u)"
+        },
+        {
+          "code": "Chain",
+          "line": 477,
+          "col": 1,
+          "message": "LabDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 587,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 588,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/LabUnDirGraphMtEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LabUnDirGraphMtEphIter",
+          "line_start": 587,
+          "line_end": 591
+        },
+        {
+          "class": "D7",
+          "ident": "View for LabUnDirGraphMtEphIter",
+          "line_start": 593,
+          "line_end": 596
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 598,
+          "line_end": 600
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LabUnDirGraphMtEphIter",
+          "line_start": 602,
+          "line_end": 625
+        },
+        {
+          "class": "D1",
+          "ident": "LabUnDirGraphMtEphGhostIterator",
+          "line_start": 627,
+          "line_end": 633
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LabUnDirGraphMtEphIter",
+          "line_start": 635,
+          "line_end": 641
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LabUnDirGraphMtEphGhostIterator",
+          "line_start": 643,
+          "line_end": 680
+        },
+        {
+          "class": "D2",
+          "ident": "View for LabUnDirGraphMtEphGhostIterator",
+          "line_start": 682,
+          "line_end": 688
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LabUnDirGraphMtEphIter",
+          "line_start": 980,
+          "line_end": 982
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LabUnDirGraphMtEphIter",
+          "line_start": 984,
+          "line_end": 986
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LabUnDirGraphMtEphGhostIterator",
+          "line_start": 988,
+          "line_end": 990
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LabUnDirGraphMtEphGhostIterator",
+          "line_start": 992,
+          "line_end": 994
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 284,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 288,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 350,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 355,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 394,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 399,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 696,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 699,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 283,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 286,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)"
+        },
+        {
+          "code": "Other",
+          "line": 349,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 352,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))"
+        },
+        {
+          "code": "Other",
+          "line": 393,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 396,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))"
+        },
+        {
+          "code": "Chain",
+          "line": 587,
+          "col": 1,
+          "message": "LabUnDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 697,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 698,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/LabUnDirGraphStEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LabUnDirGraphStEphIter",
+          "line_start": 433,
+          "line_end": 437
+        },
+        {
+          "class": "D7",
+          "ident": "View for LabUnDirGraphStEphIter",
+          "line_start": 439,
+          "line_end": 442
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 444,
+          "line_end": 446
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LabUnDirGraphStEphIter",
+          "line_start": 448,
+          "line_end": 471
+        },
+        {
+          "class": "D1",
+          "ident": "LabUnDirGraphStEphGhostIterator",
+          "line_start": 473,
+          "line_end": 479
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LabUnDirGraphStEphIter",
+          "line_start": 481,
+          "line_end": 487
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LabUnDirGraphStEphGhostIterator",
+          "line_start": 489,
+          "line_end": 526
+        },
+        {
+          "class": "D2",
+          "ident": "View for LabUnDirGraphStEphGhostIterator",
+          "line_start": 528,
+          "line_end": 534
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LabUnDirGraphStEphIter",
+          "line_start": 604,
+          "line_end": 606
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LabUnDirGraphStEphIter",
+          "line_start": 608,
+          "line_end": 610
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LabUnDirGraphStEphGhostIterator",
+          "line_start": 612,
+          "line_end": 614
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LabUnDirGraphStEphGhostIterator",
+          "line_start": 616,
+          "line_end": 618
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 219,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 223,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 285,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 290,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 330,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 335,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 377,
+          "col_start": 21,
+          "col_end": 36,
+          "old": "it@.1 == le_seq",
+          "new": "it.seq() == le_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 384,
+          "col_start": 27,
+          "col_end": 47,
+          "old": "le_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 542,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 545,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 218,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 221,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | e : (V::V, V::V) | edges@.contains (e) == (exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && le_seq[i]@.0 == e.0 && le_seq[i]@.1 == e.1)"
+        },
+        {
+          "code": "Other",
+          "line": 284,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 287,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))"
+        },
+        {
+          "code": "Other",
+          "line": 329,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 332,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: forall | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 ==> ! ((le_seq[i]@.0 == v1_view && le_seq[i]@.1 == v2_view) || (le_seq[i]@.0 == v2_view && le_seq[i]@.1 == v1_view))"
+        },
+        {
+          "code": "Other",
+          "line": 376,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= le_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 379,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger le_seq[i]] 0 <= i<it@.0 && ((le_seq[i]@.0 == v_view && le_seq[i]@.1 == w) || (le_seq[i]@.1 == v_view && le_seq[i]@.0 == w)))"
+        },
+        {
+          "code": "Chain",
+          "line": 433,
+          "col": 1,
+          "message": "LabUnDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 543,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 544,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/UnDirGraphMtEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "UnDirGraphMtEphIter",
+          "line_start": 457,
+          "line_end": 461
+        },
+        {
+          "class": "D7",
+          "ident": "View for UnDirGraphMtEphIter",
+          "line_start": 463,
+          "line_end": 466
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 468,
+          "line_end": 470
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for UnDirGraphMtEphIter",
+          "line_start": 472,
+          "line_end": 495
+        },
+        {
+          "class": "D1",
+          "ident": "UnDirGraphMtEphGhostIterator",
+          "line_start": 497,
+          "line_end": 503
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for UnDirGraphMtEphIter",
+          "line_start": 505,
+          "line_end": 511
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for UnDirGraphMtEphGhostIterator",
+          "line_start": 513,
+          "line_end": 550
+        },
+        {
+          "class": "D2",
+          "ident": "View for UnDirGraphMtEphGhostIterator",
+          "line_start": 552,
+          "line_end": 558
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for UnDirGraphMtEphIter",
+          "line_start": 870,
+          "line_end": 872
+        },
+        {
+          "class": "D9",
+          "ident": "Display for UnDirGraphMtEphIter",
+          "line_start": 874,
+          "line_end": 876
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for UnDirGraphMtEphGhostIterator",
+          "line_start": 878,
+          "line_end": 880
+        },
+        {
+          "class": "D5",
+          "ident": "Display for UnDirGraphMtEphGhostIterator",
+          "line_start": 882,
+          "line_end": 884
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 566,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 569,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Chain",
+          "line": 457,
+          "col": 1,
+          "message": "UnDirGraphMtEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 567,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 568,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap06/UnDirGraphStEph.rs",
+      "chap": "06",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "UnDirGraphStEphIter",
+          "line_start": 374,
+          "line_end": 378
+        },
+        {
+          "class": "D7",
+          "ident": "View for UnDirGraphStEphIter",
+          "line_start": 380,
+          "line_end": 383
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 385,
+          "line_end": 387
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for UnDirGraphStEphIter",
+          "line_start": 389,
+          "line_end": 412
+        },
+        {
+          "class": "D1",
+          "ident": "UnDirGraphStEphGhostIterator",
+          "line_start": 414,
+          "line_end": 420
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for UnDirGraphStEphIter",
+          "line_start": 422,
+          "line_end": 428
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for UnDirGraphStEphGhostIterator",
+          "line_start": 430,
+          "line_end": 467
+        },
+        {
+          "class": "D2",
+          "ident": "View for UnDirGraphStEphGhostIterator",
+          "line_start": 469,
+          "line_end": 475
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for UnDirGraphStEphIter",
+          "line_start": 566,
+          "line_end": 568
+        },
+        {
+          "class": "D9",
+          "ident": "Display for UnDirGraphStEphIter",
+          "line_start": 570,
+          "line_end": 572
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for UnDirGraphStEphGhostIterator",
+          "line_start": 574,
+          "line_end": 576
+        },
+        {
+          "class": "D5",
+          "ident": "Display for UnDirGraphStEphGhostIterator",
+          "line_start": 578,
+          "line_end": 580
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 249,
+          "col_start": 21,
+          "col_end": 39,
+          "old": "it@.1 == edges_seq",
+          "new": "it.seq() == edges_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 255,
+          "col_start": 27,
+          "col_end": 50,
+          "old": "edges_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T3",
+          "line": 313,
+          "col_start": 21,
+          "col_end": 35,
+          "old": "it@.1 == u_seq",
+          "new": "it.seq() == u_seq,"
+        },
+        {
+          "class": "T6",
+          "line": 317,
+          "col_start": 27,
+          "col_end": 46,
+          "old": "u_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T1",
+          "line": 483,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 486,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 248,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= edges_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 251,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: ng@== Set::new (| w : V::V | exists | i : int | # ![trigger edges_seq[i]] 0 <= i<it@.0 && ((edges_seq[i]@.0 == v_view && edges_seq[i]@.1 == w) || (edges_seq[i]@.1 == v_view && edges_seq[i]@.0 == w)))"
+        },
+        {
+          "code": "Other",
+          "line": 312,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= u_seq.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 315,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: neighbors@== Set::new (| w : V::V | exists | i : int | # ![trigger u_seq[i]] 0 <= i<it@.0 && self.spec_ng (u_seq[i]@).contains (w))"
+        },
+        {
+          "code": "Chain",
+          "line": 374,
+          "col": 1,
+          "message": "UnDirGraphStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 484,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map (| i : int, k : V | k@).to_set () == self@.V"
+        },
+        {
+          "code": "Other",
+          "line": 485,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.no_duplicates ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap17/MathSeq.rs",
+      "chap": "17",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "MathSeqIter",
+          "line_start": 560,
+          "line_end": 563
+        },
+        {
+          "class": "D7",
+          "ident": "View for MathSeqIter",
+          "line_start": 565,
+          "line_end": 568
+        },
+        {
+          "class": "D1",
+          "ident": "MathSeqGhostIterator",
+          "line_start": 570,
+          "line_end": 576
+        },
+        {
+          "class": "D2",
+          "ident": "View for MathSeqGhostIterator",
+          "line_start": 578,
+          "line_end": 581
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 583,
+          "line_end": 585
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for MathSeqIter",
+          "line_start": 587,
+          "line_end": 610
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for MathSeqIter",
+          "line_start": 612,
+          "line_end": 617
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for MathSeqGhostIterator",
+          "line_start": 619,
+          "line_end": 652
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for MathSeqIter",
+          "line_start": 773,
+          "line_end": 777
+        },
+        {
+          "class": "D9",
+          "ident": "Display for MathSeqIter",
+          "line_start": 779,
+          "line_end": 783
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for MathSeqGhostIterator",
+          "line_start": 785,
+          "line_end": 789
+        },
+        {
+          "class": "D5",
+          "ident": "Display for MathSeqGhostIterator",
+          "line_start": 791,
+          "line_end": 795
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 235,
+          "col_start": 21,
+          "col_end": 40,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 551,
+          "col_start": 21,
+          "col_end": 40,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 661,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 672,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T3",
+          "line": 673,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "it@.1 == self.data@",
+          "new": "it.seq() == self.data@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeq.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqIter",
+          "line_start": 1526,
+          "line_end": 1530
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqGhostIterator",
+          "line_start": 1532,
+          "line_end": 1538
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqIter",
+          "line_start": 1540,
+          "line_end": 1545
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqGhostIterator",
+          "line_start": 1547,
+          "line_end": 1553
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1555,
+          "line_end": 1557
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqIter",
+          "line_start": 1559,
+          "line_end": 1583
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqIter",
+          "line_start": 1585,
+          "line_end": 1591
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqGhostIterator",
+          "line_start": 1593,
+          "line_end": 1630
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqIter",
+          "line_start": 1708,
+          "line_end": 1712
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqIter",
+          "line_start": 1714,
+          "line_end": 1718
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqGhostIterator",
+          "line_start": 1720,
+          "line_end": 1724
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqGhostIterator",
+          "line_start": 1726,
+          "line_end": 1730
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 1512,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeqMtEph.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqMtEphIter",
+          "line_start": 1422,
+          "line_end": 1425
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqMtEphIter",
+          "line_start": 1427,
+          "line_end": 1430
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1432,
+          "line_end": 1434
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqMtEphIter",
+          "line_start": 1436,
+          "line_end": 1460
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqMtEphGhostIterator",
+          "line_start": 1462,
+          "line_end": 1468
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqMtEphGhostIterator",
+          "line_start": 1470,
+          "line_end": 1473
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqMtEphIter",
+          "line_start": 1475,
+          "line_end": 1480
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqMtEphGhostIterator",
+          "line_start": 1482,
+          "line_end": 1515
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqMtEphIter",
+          "line_start": 1957,
+          "line_end": 1961
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqMtEphIter",
+          "line_start": 1963,
+          "line_end": 1967
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqMtEphGhostIterator",
+          "line_start": 1969,
+          "line_end": 1973
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqMtEphGhostIterator",
+          "line_start": 1975,
+          "line_end": 1979
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 644,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1524,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1535,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1536,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeqMtEphSlice.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqMtEphSliceIter",
+          "line_start": 1551,
+          "line_end": 1554
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqMtEphSliceIter",
+          "line_start": 1556,
+          "line_end": 1559
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1561,
+          "line_end": 1563
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqMtEphSliceIter",
+          "line_start": 1565,
+          "line_end": 1588
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1590,
+          "line_end": 1596
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1598,
+          "line_end": 1601
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqMtEphSliceIter",
+          "line_start": 1603,
+          "line_end": 1608
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1610,
+          "line_end": 1643
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqMtEphSliceIter",
+          "line_start": 1751,
+          "line_end": 1755
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqMtEphSliceIter",
+          "line_start": 1757,
+          "line_end": 1761
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1763,
+          "line_end": 1767
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1769,
+          "line_end": 1773
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 348,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1654,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeqMtPer.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqMtPerIter",
+          "line_start": 1735,
+          "line_end": 1738
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqMtPerIter",
+          "line_start": 1740,
+          "line_end": 1743
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1745,
+          "line_end": 1747
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqMtPerIter",
+          "line_start": 1749,
+          "line_end": 1773
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqMtPerGhostIterator",
+          "line_start": 1775,
+          "line_end": 1781
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqMtPerGhostIterator",
+          "line_start": 1783,
+          "line_end": 1786
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqMtPerIter",
+          "line_start": 1788,
+          "line_end": 1793
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqMtPerGhostIterator",
+          "line_start": 1795,
+          "line_end": 1828
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqMtPerIter",
+          "line_start": 1928,
+          "line_end": 1932
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqMtPerIter",
+          "line_start": 1934,
+          "line_end": 1938
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqMtPerGhostIterator",
+          "line_start": 1940,
+          "line_end": 1944
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqMtPerGhostIterator",
+          "line_start": 1946,
+          "line_end": 1950
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 893,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1838,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1849,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1850,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeqStEph.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqStEphIter",
+          "line_start": 944,
+          "line_end": 947
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqStEphIter",
+          "line_start": 949,
+          "line_end": 952
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqStEphGhostIterator",
+          "line_start": 954,
+          "line_end": 960
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqStEphGhostIterator",
+          "line_start": 962,
+          "line_end": 965
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 967,
+          "line_end": 969
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqStEphIter",
+          "line_start": 971,
+          "line_end": 995
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqStEphIter",
+          "line_start": 997,
+          "line_end": 1002
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqStEphGhostIterator",
+          "line_start": 1004,
+          "line_end": 1037
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqStEphIter",
+          "line_start": 1120,
+          "line_end": 1124
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqStEphIter",
+          "line_start": 1126,
+          "line_end": 1130
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqStEphGhostIterator",
+          "line_start": 1132,
+          "line_end": 1136
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqStEphGhostIterator",
+          "line_start": 1138,
+          "line_end": 1142
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 935,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1046,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1057,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1058,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/ArraySeqStPer.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqStPerIter",
+          "line_start": 924,
+          "line_end": 927
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqStPerIter",
+          "line_start": 929,
+          "line_end": 932
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 934,
+          "line_end": 936
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqStPerIter",
+          "line_start": 938,
+          "line_end": 962
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqStPerGhostIterator",
+          "line_start": 964,
+          "line_end": 970
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqStPerGhostIterator",
+          "line_start": 972,
+          "line_end": 978
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqStPerIter",
+          "line_start": 980,
+          "line_end": 985
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqStPerGhostIterator",
+          "line_start": 987,
+          "line_end": 1020
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqStPerIter",
+          "line_start": 1094,
+          "line_end": 1098
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqStPerIter",
+          "line_start": 1100,
+          "line_end": 1104
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqStPerGhostIterator",
+          "line_start": 1106,
+          "line_end": 1110
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqStPerGhostIterator",
+          "line_start": 1112,
+          "line_end": 1116
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 915,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/LinkedListStEph.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LinkedListStEphIter",
+          "line_start": 775,
+          "line_end": 778
+        },
+        {
+          "class": "D7",
+          "ident": "View for LinkedListStEphIter",
+          "line_start": 780,
+          "line_end": 783
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 785,
+          "line_end": 787
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LinkedListStEphIter",
+          "line_start": 789,
+          "line_end": 814
+        },
+        {
+          "class": "D1",
+          "ident": "LinkedListStEphGhostIterator",
+          "line_start": 816,
+          "line_end": 822
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LinkedListStEphIter",
+          "line_start": 824,
+          "line_end": 829
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LinkedListStEphGhostIterator",
+          "line_start": 831,
+          "line_end": 859
+        },
+        {
+          "class": "D2",
+          "ident": "View for LinkedListStEphGhostIterator",
+          "line_start": 861,
+          "line_end": 864
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LinkedListStEphIter",
+          "line_start": 939,
+          "line_end": 943
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LinkedListStEphIter",
+          "line_start": 945,
+          "line_end": 949
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LinkedListStEphGhostIterator",
+          "line_start": 951,
+          "line_end": 955
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LinkedListStEphGhostIterator",
+          "line_start": 957,
+          "line_end": 961
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 766,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap18/LinkedListStPer.rs",
+      "chap": "18",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "LinkedListStPerIter",
+          "line_start": 757,
+          "line_end": 760
+        },
+        {
+          "class": "D7",
+          "ident": "View for LinkedListStPerIter",
+          "line_start": 762,
+          "line_end": 765
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 767,
+          "line_end": 769
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for LinkedListStPerIter",
+          "line_start": 771,
+          "line_end": 796
+        },
+        {
+          "class": "D1",
+          "ident": "LinkedListStPerGhostIterator",
+          "line_start": 798,
+          "line_end": 804
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for LinkedListStPerIter",
+          "line_start": 806,
+          "line_end": 811
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for LinkedListStPerGhostIterator",
+          "line_start": 813,
+          "line_end": 841
+        },
+        {
+          "class": "D2",
+          "ident": "View for LinkedListStPerGhostIterator",
+          "line_start": 843,
+          "line_end": 846
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for LinkedListStPerIter",
+          "line_start": 921,
+          "line_end": 925
+        },
+        {
+          "class": "D9",
+          "ident": "Display for LinkedListStPerIter",
+          "line_start": 927,
+          "line_end": 931
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for LinkedListStPerGhostIterator",
+          "line_start": 933,
+          "line_end": 937
+        },
+        {
+          "class": "D5",
+          "ident": "Display for LinkedListStPerGhostIterator",
+          "line_start": 939,
+          "line_end": 943
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 748,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap19/ArraySeqMtEph.rs",
+      "chap": "19",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqMtEphIter",
+          "line_start": 1579,
+          "line_end": 1582
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqMtEphIter",
+          "line_start": 1584,
+          "line_end": 1587
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1589,
+          "line_end": 1591
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqMtEphIter",
+          "line_start": 1593,
+          "line_end": 1617
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqMtEphGhostIterator",
+          "line_start": 1619,
+          "line_end": 1625
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqMtEphGhostIterator",
+          "line_start": 1627,
+          "line_end": 1630
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqMtEphIter",
+          "line_start": 1632,
+          "line_end": 1637
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqMtEphGhostIterator",
+          "line_start": 1639,
+          "line_end": 1672
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqMtEphIter",
+          "line_start": 1765,
+          "line_end": 1769
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqMtEphIter",
+          "line_start": 1771,
+          "line_end": 1775
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqMtEphGhostIterator",
+          "line_start": 1777,
+          "line_end": 1781
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqMtEphGhostIterator",
+          "line_start": 1783,
+          "line_end": 1787
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 1029,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1681,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1693,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1694,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap19/ArraySeqMtEphSlice.rs",
+      "chap": "19",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqMtEphSliceIter",
+          "line_start": 1580,
+          "line_end": 1583
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqMtEphSliceIter",
+          "line_start": 1585,
+          "line_end": 1588
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1590,
+          "line_end": 1592
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqMtEphSliceIter",
+          "line_start": 1594,
+          "line_end": 1617
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1619,
+          "line_end": 1625
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1627,
+          "line_end": 1630
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqMtEphSliceIter",
+          "line_start": 1632,
+          "line_end": 1637
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1639,
+          "line_end": 1672
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqMtEphSliceIter",
+          "line_start": 1778,
+          "line_end": 1782
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqMtEphSliceIter",
+          "line_start": 1784,
+          "line_end": 1788
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1790,
+          "line_end": 1794
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqMtEphSliceGhostIterator",
+          "line_start": 1796,
+          "line_end": 1800
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 448,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1683,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap19/ArraySeqStEph.rs",
+      "chap": "19",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqStEphIter",
+          "line_start": 1025,
+          "line_end": 1028
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqStEphIter",
+          "line_start": 1030,
+          "line_end": 1033
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1035,
+          "line_end": 1037
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqStEphIter",
+          "line_start": 1039,
+          "line_end": 1063
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqStEphGhostIterator",
+          "line_start": 1065,
+          "line_end": 1071
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqStEphGhostIterator",
+          "line_start": 1073,
+          "line_end": 1079
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqStEphIter",
+          "line_start": 1081,
+          "line_end": 1086
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqStEphGhostIterator",
+          "line_start": 1088,
+          "line_end": 1121
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqStEphIter",
+          "line_start": 1214,
+          "line_end": 1218
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqStEphIter",
+          "line_start": 1220,
+          "line_end": 1224
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqStEphGhostIterator",
+          "line_start": 1226,
+          "line_end": 1230
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqStEphGhostIterator",
+          "line_start": 1232,
+          "line_end": 1236
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 1008,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1130,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1141,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1142,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap19/ArraySeqStPer.rs",
+      "chap": "19",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "ArraySeqStPerIter",
+          "line_start": 1027,
+          "line_end": 1030
+        },
+        {
+          "class": "D7",
+          "ident": "View for ArraySeqStPerIter",
+          "line_start": 1032,
+          "line_end": 1035
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1037,
+          "line_end": 1039
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for ArraySeqStPerIter",
+          "line_start": 1041,
+          "line_end": 1065
+        },
+        {
+          "class": "D1",
+          "ident": "ArraySeqStPerGhostIterator",
+          "line_start": 1067,
+          "line_end": 1073
+        },
+        {
+          "class": "D2",
+          "ident": "View for ArraySeqStPerGhostIterator",
+          "line_start": 1075,
+          "line_end": 1081
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for ArraySeqStPerIter",
+          "line_start": 1083,
+          "line_end": 1088
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for ArraySeqStPerGhostIterator",
+          "line_start": 1090,
+          "line_end": 1123
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for ArraySeqStPerIter",
+          "line_start": 1215,
+          "line_end": 1219
+        },
+        {
+          "class": "D9",
+          "ident": "Display for ArraySeqStPerIter",
+          "line_start": 1221,
+          "line_end": 1225
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for ArraySeqStPerGhostIterator",
+          "line_start": 1227,
+          "line_end": 1231
+        },
+        {
+          "class": "D5",
+          "ident": "Display for ArraySeqStPerGhostIterator",
+          "line_start": 1233,
+          "line_end": 1237
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 1018,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 1132,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 1143,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 1144,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap23/BalBinTreeStEph.rs",
+      "chap": "23",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "in_order_iter_invariant<…>",
+          "line_start": 396,
+          "line_end": 398
+        },
+        {
+          "class": "D10",
+          "ident": "pre_order_iter_invariant<…>",
+          "line_start": 400,
+          "line_end": 402
+        },
+        {
+          "class": "D10",
+          "ident": "post_order_iter_invariant<…>",
+          "line_start": 404,
+          "line_end": 406
+        },
+        {
+          "class": "D6",
+          "ident": "InOrderIter",
+          "line_start": 511,
+          "line_end": 515
+        },
+        {
+          "class": "D6",
+          "ident": "PreOrderIter",
+          "line_start": 517,
+          "line_end": 521
+        },
+        {
+          "class": "D6",
+          "ident": "PostOrderIter",
+          "line_start": 523,
+          "line_end": 527
+        },
+        {
+          "class": "D7",
+          "ident": "View for InOrderIter",
+          "line_start": 529,
+          "line_end": 534
+        },
+        {
+          "class": "D7",
+          "ident": "View for PreOrderIter",
+          "line_start": 536,
+          "line_end": 541
+        },
+        {
+          "class": "D7",
+          "ident": "View for PostOrderIter",
+          "line_start": 543,
+          "line_end": 548
+        },
+        {
+          "class": "D1",
+          "ident": "InOrderGhostIterator",
+          "line_start": 550,
+          "line_end": 555
+        },
+        {
+          "class": "D1",
+          "ident": "PreOrderGhostIterator",
+          "line_start": 557,
+          "line_end": 562
+        },
+        {
+          "class": "D1",
+          "ident": "PostOrderGhostIterator",
+          "line_start": 564,
+          "line_end": 569
+        },
+        {
+          "class": "D2",
+          "ident": "View for InOrderGhostIterator",
+          "line_start": 571,
+          "line_end": 574
+        },
+        {
+          "class": "D2",
+          "ident": "View for PreOrderGhostIterator",
+          "line_start": 576,
+          "line_end": 579
+        },
+        {
+          "class": "D2",
+          "ident": "View for PostOrderGhostIterator",
+          "line_start": 581,
+          "line_end": 584
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for InOrderIter",
+          "line_start": 586,
+          "line_end": 610
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for PreOrderIter",
+          "line_start": 612,
+          "line_end": 636
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for PostOrderIter",
+          "line_start": 638,
+          "line_end": 662
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for InOrderIter",
+          "line_start": 664,
+          "line_end": 669
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for InOrderGhostIterator",
+          "line_start": 671,
+          "line_end": 704
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for PreOrderIter",
+          "line_start": 706,
+          "line_end": 711
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for PreOrderGhostIterator",
+          "line_start": 713,
+          "line_end": 746
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for PostOrderIter",
+          "line_start": 748,
+          "line_end": 753
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for PostOrderGhostIterator",
+          "line_start": 755,
+          "line_end": 788
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for InOrderIter",
+          "line_start": 876,
+          "line_end": 880
+        },
+        {
+          "class": "D9",
+          "ident": "Display for InOrderIter",
+          "line_start": 882,
+          "line_end": 886
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for PreOrderIter",
+          "line_start": 888,
+          "line_end": 892
+        },
+        {
+          "class": "D9",
+          "ident": "Display for PreOrderIter",
+          "line_start": 894,
+          "line_end": 898
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for PostOrderIter",
+          "line_start": 900,
+          "line_end": 904
+        },
+        {
+          "class": "D9",
+          "ident": "Display for PostOrderIter",
+          "line_start": 906,
+          "line_end": 910
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for InOrderGhostIterator",
+          "line_start": 912,
+          "line_end": 916
+        },
+        {
+          "class": "D5",
+          "ident": "Display for InOrderGhostIterator",
+          "line_start": 918,
+          "line_end": 922
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for PreOrderGhostIterator",
+          "line_start": 924,
+          "line_end": 928
+        },
+        {
+          "class": "D5",
+          "ident": "Display for PreOrderGhostIterator",
+          "line_start": 930,
+          "line_end": 934
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for PostOrderGhostIterator",
+          "line_start": 936,
+          "line_end": 940
+        },
+        {
+          "class": "D5",
+          "ident": "Display for PostOrderGhostIterator",
+          "line_start": 942,
+          "line_end": 946
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 347,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 349,
+          "col_start": 17,
+          "col_end": 45,
+          "old": "in_order_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 361,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 363,
+          "col_start": 17,
+          "col_end": 46,
+          "old": "pre_order_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 375,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 377,
+          "col_start": 17,
+          "col_end": 47,
+          "old": "post_order_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 348,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_in_order ()"
+        },
+        {
+          "code": "Other",
+          "line": 362,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_pre_order ()"
+        },
+        {
+          "code": "Other",
+          "line": 376,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_post_order ()"
+        },
+        {
+          "code": "Chain",
+          "line": 511,
+          "col": 1,
+          "message": "InOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Chain",
+          "line": 517,
+          "col": 1,
+          "message": "PreOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Chain",
+          "line": 523,
+          "col": 1,
+          "message": "PostOrderIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap23/PrimTreeSeqStPer.rs",
+      "chap": "23",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "PrimTreeSeqStIter",
+          "line_start": 616,
+          "line_end": 619
+        },
+        {
+          "class": "D7",
+          "ident": "View for PrimTreeSeqStIter",
+          "line_start": 621,
+          "line_end": 624
+        },
+        {
+          "class": "D1",
+          "ident": "PrimTreeSeqStGhostIterator",
+          "line_start": 626,
+          "line_end": 632
+        },
+        {
+          "class": "D2",
+          "ident": "View for PrimTreeSeqStGhostIterator",
+          "line_start": 634,
+          "line_end": 637
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for PrimTreeSeqStIter",
+          "line_start": 639,
+          "line_end": 663
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for PrimTreeSeqStIter",
+          "line_start": 665,
+          "line_end": 670
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for PrimTreeSeqStGhostIterator",
+          "line_start": 672,
+          "line_end": 705
+        },
+        {
+          "class": "D10",
+          "ident": "prim_tree_seq_iter_invariant<…>",
+          "line_start": 735,
+          "line_end": 737
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for PrimTreeSeqStIter",
+          "line_start": 1043,
+          "line_end": 1047
+        },
+        {
+          "class": "D9",
+          "ident": "Display for PrimTreeSeqStIter",
+          "line_start": 1049,
+          "line_end": 1053
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for PrimTreeSeqStGhostIterator",
+          "line_start": 1055,
+          "line_end": 1059
+        },
+        {
+          "class": "D5",
+          "ident": "Display for PrimTreeSeqStGhostIterator",
+          "line_start": 1061,
+          "line_end": 1065
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 115,
+          "col_start": 17,
+          "col_end": 50,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T1",
+          "line": 580,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T2",
+          "line": 581,
+          "col_start": 17,
+          "col_end": 35,
+          "old": "it@.1 == self.seq@",
+          "new": "it.seq() == self.seq@,"
+        },
+        {
+          "class": "T8",
+          "line": 715,
+          "col_start": 17,
+          "col_end": 50,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/AVLTreeSeq.rs",
+      "chap": "37",
+      "style": "Custom",
+      "deletions": [
+        {
+          "class": "D1",
+          "ident": "AVLTreeSeqGhostIterator",
+          "line_start": 1195,
+          "line_end": 1200
+        },
+        {
+          "class": "D2",
+          "ident": "View for AVLTreeSeqGhostIterator",
+          "line_start": 1209,
+          "line_end": 1212
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for AVLTreeSeqIter",
+          "line_start": 1251,
+          "line_end": 1256
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for AVLTreeSeqGhostIterator",
+          "line_start": 1258,
+          "line_end": 1291
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for AVLTreeSeqGhostIterator",
+          "line_start": 1426,
+          "line_end": 1430
+        },
+        {
+          "class": "D5",
+          "ident": "Display for AVLTreeSeqGhostIterator",
+          "line_start": 1432,
+          "line_end": 1436
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 434,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 436,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 1299,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1301,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 435,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()"
+        },
+        {
+          "code": "Custom",
+          "line": 1188,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIter"
+        },
+        {
+          "code": "Custom",
+          "line": 1202,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIter"
+        },
+        {
+          "code": "Custom",
+          "line": 1214,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for iter_invariant<…>"
+        },
+        {
+          "code": "Custom",
+          "line": 1219,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIter"
+        },
+        {
+          "code": "Other",
+          "line": 1300,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.map_values (| t : T | t@) =~= self.spec_avltreeseq_seq ()"
+        },
+        {
+          "code": "Custom",
+          "line": 1411,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIter"
+        },
+        {
+          "code": "Custom",
+          "line": 1420,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIter"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/AVLTreeSeqMtPer.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "AVLTreeSeqMtPerIter",
+          "line_start": 823,
+          "line_end": 827
+        },
+        {
+          "class": "D6",
+          "ident": "AVLTreeSeqMtPerBorrowIter",
+          "line_start": 829,
+          "line_end": 834
+        },
+        {
+          "class": "D1",
+          "ident": "AVLTreeSeqMtPerGhostIterator",
+          "line_start": 836,
+          "line_end": 841
+        },
+        {
+          "class": "D7",
+          "ident": "View for AVLTreeSeqMtPerBorrowIter",
+          "line_start": 843,
+          "line_end": 848
+        },
+        {
+          "class": "D2",
+          "ident": "View for AVLTreeSeqMtPerGhostIterator",
+          "line_start": 850,
+          "line_end": 853
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 855,
+          "line_end": 857
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for AVLTreeSeqMtPerBorrowIter",
+          "line_start": 860,
+          "line_end": 890
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for AVLTreeSeqMtPerBorrowIter",
+          "line_start": 892,
+          "line_end": 897
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for AVLTreeSeqMtPerGhostIterator",
+          "line_start": 899,
+          "line_end": 932
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for AVLTreeSeqMtPerIter",
+          "line_start": 950,
+          "line_end": 963
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for AVLTreeSeqMtPerIter",
+          "line_start": 1026,
+          "line_end": 1032
+        },
+        {
+          "class": "D9",
+          "ident": "Display for AVLTreeSeqMtPerIter",
+          "line_start": 1034,
+          "line_end": 1038
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for AVLTreeSeqMtPerBorrowIter",
+          "line_start": 1040,
+          "line_end": 1044
+        },
+        {
+          "class": "D9",
+          "ident": "Display for AVLTreeSeqMtPerBorrowIter",
+          "line_start": 1046,
+          "line_end": 1050
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for AVLTreeSeqMtPerGhostIterator",
+          "line_start": 1052,
+          "line_end": 1056
+        },
+        {
+          "class": "D5",
+          "ident": "Display for AVLTreeSeqMtPerGhostIterator",
+          "line_start": 1058,
+          "line_end": 1062
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 342,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 344,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 940,
+          "col_start": 17,
+          "col_end": 30,
+          "old": "it@.0 == 0int",
+          "new": "IteratorSpec::remaining(&it).len() + 0int == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 942,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        },
+        {
+          "code": "Other",
+          "line": 343,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq ()"
+        },
+        {
+          "code": "Other",
+          "line": 941,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1 =~= self.spec_seq ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/AVLTreeSeqStEph.rs",
+      "chap": "37",
+      "style": "Custom",
+      "deletions": [
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for AVLTreeSeqStEphGhostIterator",
+          "line_start": 455,
+          "line_end": 492
+        },
+        {
+          "class": "D1",
+          "ident": "AVLTreeSeqStEphGhostIterator",
+          "line_start": 1276,
+          "line_end": 1281
+        },
+        {
+          "class": "D2",
+          "ident": "View for AVLTreeSeqStEphGhostIterator",
+          "line_start": 1283,
+          "line_end": 1288
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for AVLTreeSeqIterStEph",
+          "line_start": 1320,
+          "line_end": 1326
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for AVLTreeSeqStEphGhostIterator",
+          "line_start": 1420,
+          "line_end": 1424
+        },
+        {
+          "class": "D5",
+          "ident": "Display for AVLTreeSeqStEphGhostIterator",
+          "line_start": 1426,
+          "line_end": 1430
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T3",
+          "line": 443,
+          "col_start": 13,
+          "col_end": 32,
+          "old": "it@.1 == old (it)@.1",
+          "new": "it.seq() == old (it)@.1,"
+        },
+        {
+          "class": "T8",
+          "line": 503,
+          "col_start": 17,
+          "col_end": 52,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T8",
+          "line": 880,
+          "col_start": 17,
+          "col_end": 52,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 442,
+          "col": 13,
+          "message": "unrecognized `it`-bearing clause: it@.0 == old (it)@.0"
+        },
+        {
+          "code": "Custom",
+          "line": 512,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqIterStEph"
+        },
+        {
+          "code": "Custom",
+          "line": 523,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqIterStEph"
+        },
+        {
+          "code": "Custom",
+          "line": 533,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for avltreeseqsteph_iter_invariant<…>"
+        },
+        {
+          "code": "Custom",
+          "line": 1290,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqIterStEph"
+        },
+        {
+          "code": "Custom",
+          "line": 1475,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqIterStEph"
+        },
+        {
+          "code": "Custom",
+          "line": 1481,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqIterStEph"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/AVLTreeSeqStPer.rs",
+      "chap": "37",
+      "style": "Custom",
+      "deletions": [
+        {
+          "class": "D1",
+          "ident": "AVLTreeSeqStPerGhostIterator",
+          "line_start": 953,
+          "line_end": 958
+        },
+        {
+          "class": "D2",
+          "ident": "View for AVLTreeSeqStPerGhostIterator",
+          "line_start": 967,
+          "line_end": 972
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for AVLTreeSeqStPerIter",
+          "line_start": 1012,
+          "line_end": 1018
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for AVLTreeSeqStPerGhostIterator",
+          "line_start": 1020,
+          "line_end": 1057
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for AVLTreeSeqStPerGhostIterator",
+          "line_start": 1136,
+          "line_end": 1140
+        },
+        {
+          "class": "D5",
+          "ident": "Display for AVLTreeSeqStPerGhostIterator",
+          "line_start": 1142,
+          "line_end": 1146
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T8",
+          "line": 385,
+          "col_start": 17,
+          "col_end": 52,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        },
+        {
+          "class": "T3",
+          "line": 929,
+          "col_start": 13,
+          "col_end": 32,
+          "old": "it@.1 == old (it)@.1",
+          "new": "it.seq() == old (it)@.1,"
+        },
+        {
+          "class": "T8",
+          "line": 1069,
+          "col_start": 17,
+          "col_end": 52,
+          "old": "iter_invariant(&it) (constructor ensures triple)",
+          "new": "IteratorSpec::remaining(&it) == self.seq@.as_ref(),\nIteratorSpec::decrease(&it) is Some,\nIteratorSpec::initial_value_relation(&it, &it),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Custom",
+          "line": 98,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for avltreeseqstper_iter_invariant<…>"
+        },
+        {
+          "code": "Other",
+          "line": 928,
+          "col": 13,
+          "message": "unrecognized `it`-bearing clause: it@.0 == old (it)@.0"
+        },
+        {
+          "code": "Custom",
+          "line": 945,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for AVLTreeSeqStPerIter"
+        },
+        {
+          "code": "Custom",
+          "line": 960,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for View for AVLTreeSeqStPerIter"
+        },
+        {
+          "code": "Custom",
+          "line": 974,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Iterator for AVLTreeSeqStPerIter"
+        },
+        {
+          "code": "Custom",
+          "line": 1124,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Debug for AVLTreeSeqStPerIter"
+        },
+        {
+          "code": "Custom",
+          "line": 1130,
+          "col": 1,
+          "message": "custom-style file: hand-port IteratorSpecImpl required for Display for AVLTreeSeqStPerIter"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/BSTSetAVLMtEph.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "bstsetavlmteph_iter_invariant<…>",
+          "line_start": 51,
+          "line_end": 53
+        },
+        {
+          "class": "D6",
+          "ident": "BSTSetAVLMtEphIter",
+          "line_start": 546,
+          "line_end": 550
+        },
+        {
+          "class": "D7",
+          "ident": "View for BSTSetAVLMtEphIter",
+          "line_start": 559,
+          "line_end": 564
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for BSTSetAVLMtEphIter",
+          "line_start": 572,
+          "line_end": 603
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for BSTSetAVLMtEphIter",
+          "line_start": 605,
+          "line_end": 610
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for BSTSetAVLMtEphIter",
+          "line_start": 700,
+          "line_end": 704
+        },
+        {
+          "class": "D9",
+          "ident": "Display for BSTSetAVLMtEphIter",
+          "line_start": 706,
+          "line_end": 710
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 148,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 148,
+          "col_start": 33,
+          "col_end": 67,
+          "old": "bstsetavlmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 652,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 652,
+          "col_start": 33,
+          "col_end": 67,
+          "old": "bstsetavlmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 663,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 663,
+          "col_start": 33,
+          "col_end": 67,
+          "old": "bstsetavlmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/BSTSetBBAlphaMtEph.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "bstsetbbalphamteph_iter_invariant<…>",
+          "line_start": 51,
+          "line_end": 53
+        },
+        {
+          "class": "D6",
+          "ident": "BSTSetBBAlphaMtEphIter",
+          "line_start": 499,
+          "line_end": 503
+        },
+        {
+          "class": "D7",
+          "ident": "View for BSTSetBBAlphaMtEphIter",
+          "line_start": 512,
+          "line_end": 517
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for BSTSetBBAlphaMtEphIter",
+          "line_start": 525,
+          "line_end": 556
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for BSTSetBBAlphaMtEphIter",
+          "line_start": 558,
+          "line_end": 563
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for BSTSetBBAlphaMtEphIter",
+          "line_start": 652,
+          "line_end": 656
+        },
+        {
+          "class": "D9",
+          "ident": "Display for BSTSetBBAlphaMtEphIter",
+          "line_start": 658,
+          "line_end": 662
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 148,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 148,
+          "col_start": 33,
+          "col_end": 71,
+          "old": "bstsetbbalphamteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 605,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 605,
+          "col_start": 33,
+          "col_end": 71,
+          "old": "bstsetbbalphamteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/BSTSetPlainMtEph.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "bstsetplainmteph_iter_invariant<…>",
+          "line_start": 51,
+          "line_end": 53
+        },
+        {
+          "class": "D6",
+          "ident": "BSTSetPlainMtEphIter",
+          "line_start": 499,
+          "line_end": 503
+        },
+        {
+          "class": "D7",
+          "ident": "View for BSTSetPlainMtEphIter",
+          "line_start": 512,
+          "line_end": 517
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for BSTSetPlainMtEphIter",
+          "line_start": 525,
+          "line_end": 556
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for BSTSetPlainMtEphIter",
+          "line_start": 558,
+          "line_end": 563
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for BSTSetPlainMtEphIter",
+          "line_start": 652,
+          "line_end": 656
+        },
+        {
+          "class": "D9",
+          "ident": "Display for BSTSetPlainMtEphIter",
+          "line_start": 658,
+          "line_end": 662
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 148,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 148,
+          "col_start": 33,
+          "col_end": 69,
+          "old": "bstsetplainmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 605,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 605,
+          "col_start": 33,
+          "col_end": 69,
+          "old": "bstsetplainmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/BSTSetRBMtEph.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "bstsetrbmteph_iter_invariant<…>",
+          "line_start": 50,
+          "line_end": 52
+        },
+        {
+          "class": "D6",
+          "ident": "BSTSetRBMtEphIter",
+          "line_start": 545,
+          "line_end": 549
+        },
+        {
+          "class": "D7",
+          "ident": "View for BSTSetRBMtEphIter",
+          "line_start": 558,
+          "line_end": 563
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for BSTSetRBMtEphIter",
+          "line_start": 571,
+          "line_end": 602
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for BSTSetRBMtEphIter",
+          "line_start": 604,
+          "line_end": 609
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for BSTSetRBMtEphIter",
+          "line_start": 699,
+          "line_end": 703
+        },
+        {
+          "class": "D9",
+          "ident": "Display for BSTSetRBMtEphIter",
+          "line_start": 705,
+          "line_end": 709
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 147,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 147,
+          "col_start": 33,
+          "col_end": 66,
+          "old": "bstsetrbmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 651,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 651,
+          "col_start": 33,
+          "col_end": 66,
+          "old": "bstsetrbmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 662,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 662,
+          "col_start": 33,
+          "col_end": 66,
+          "old": "bstsetrbmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap37/BSTSetSplayMtEph.rs",
+      "chap": "37",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "bstsetsplaymteph_iter_invariant<…>",
+          "line_start": 51,
+          "line_end": 53
+        },
+        {
+          "class": "D6",
+          "ident": "BSTSetSplayMtEphIter",
+          "line_start": 563,
+          "line_end": 567
+        },
+        {
+          "class": "D7",
+          "ident": "View for BSTSetSplayMtEphIter",
+          "line_start": 576,
+          "line_end": 581
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for BSTSetSplayMtEphIter",
+          "line_start": 589,
+          "line_end": 620
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for BSTSetSplayMtEphIter",
+          "line_start": 622,
+          "line_end": 627
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for BSTSetSplayMtEphIter",
+          "line_start": 717,
+          "line_end": 721
+        },
+        {
+          "class": "D9",
+          "ident": "Display for BSTSetSplayMtEphIter",
+          "line_start": 723,
+          "line_end": 727
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 148,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 148,
+          "col_start": 33,
+          "col_end": 69,
+          "old": "bstsetsplaymteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 669,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 669,
+          "col_start": 33,
+          "col_end": 69,
+          "old": "bstsetsplaymteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 680,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 680,
+          "col_start": 33,
+          "col_end": 69,
+          "old": "bstsetsplaymteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap41/AVLTreeSetMtEph.rs",
+      "chap": "41",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "avltreesetmteph_iter_invariant<…>",
+          "line_start": 81,
+          "line_end": 83
+        },
+        {
+          "class": "D6",
+          "ident": "AVLTreeSetMtEphIter",
+          "line_start": 535,
+          "line_end": 539
+        },
+        {
+          "class": "D7",
+          "ident": "View for AVLTreeSetMtEphIter",
+          "line_start": 547,
+          "line_end": 552
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for AVLTreeSetMtEphIter",
+          "line_start": 559,
+          "line_end": 590
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for AVLTreeSetMtEphIter",
+          "line_start": 592,
+          "line_end": 597
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for AVLTreeSetMtEphIter",
+          "line_start": 684,
+          "line_end": 688
+        },
+        {
+          "class": "D9",
+          "ident": "Display for AVLTreeSetMtEphIter",
+          "line_start": 690,
+          "line_end": 694
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 240,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 240,
+          "col_start": 33,
+          "col_end": 68,
+          "old": "avltreesetmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 639,
+          "col_start": 21,
+          "col_end": 31,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 639,
+          "col_start": 33,
+          "col_end": 68,
+          "old": "avltreesetmteph_iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/AugOrderedTableMtEph.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 404,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 405,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 904,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 905,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/AugOrderedTableStEph.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 952,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 954,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 969,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 971,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 953,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 970,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/AugOrderedTableStPer.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 1014,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1016,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 1032,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1034,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 1015,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 1033,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.base_table.tree.inner@.len ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/OrderedSetStEph.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "OrderedSetStEphIter",
+          "line_start": 1005,
+          "line_end": 1008
+        },
+        {
+          "class": "D7",
+          "ident": "View for OrderedSetStEphIter",
+          "line_start": 1010,
+          "line_end": 1013
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1015,
+          "line_end": 1017
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for OrderedSetStEphIter",
+          "line_start": 1019,
+          "line_end": 1042
+        },
+        {
+          "class": "D1",
+          "ident": "OrderedSetStEphGhostIterator",
+          "line_start": 1044,
+          "line_end": 1048
+        },
+        {
+          "class": "D2",
+          "ident": "View for OrderedSetStEphGhostIterator",
+          "line_start": 1050,
+          "line_end": 1053
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for OrderedSetStEphIter",
+          "line_start": 1055,
+          "line_end": 1060
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for OrderedSetStEphGhostIterator",
+          "line_start": 1062,
+          "line_end": 1095
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for OrderedSetStEphIter",
+          "line_start": 1185,
+          "line_end": 1189
+        },
+        {
+          "class": "D9",
+          "ident": "Display for OrderedSetStEphIter",
+          "line_start": 1191,
+          "line_end": 1195
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for OrderedSetStEphGhostIterator",
+          "line_start": 1197,
+          "line_end": 1201
+        },
+        {
+          "class": "D5",
+          "ident": "Display for OrderedSetStEphGhostIterator",
+          "line_start": 1203,
+          "line_end": 1207
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 980,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 982,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 1103,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1105,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 981,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
+        },
+        {
+          "code": "Chain",
+          "line": 1005,
+          "col": 1,
+          "message": "OrderedSetStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 1104,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/OrderedSetStPer.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "OrderedSetStPerIter",
+          "line_start": 1072,
+          "line_end": 1075
+        },
+        {
+          "class": "D7",
+          "ident": "View for OrderedSetStPerIter",
+          "line_start": 1077,
+          "line_end": 1080
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1082,
+          "line_end": 1084
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for OrderedSetStPerIter",
+          "line_start": 1086,
+          "line_end": 1109
+        },
+        {
+          "class": "D1",
+          "ident": "OrderedSetStPerGhostIterator",
+          "line_start": 1111,
+          "line_end": 1115
+        },
+        {
+          "class": "D2",
+          "ident": "View for OrderedSetStPerGhostIterator",
+          "line_start": 1117,
+          "line_end": 1120
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for OrderedSetStPerIter",
+          "line_start": 1122,
+          "line_end": 1127
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for OrderedSetStPerGhostIterator",
+          "line_start": 1129,
+          "line_end": 1162
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for OrderedSetStPerIter",
+          "line_start": 1241,
+          "line_end": 1245
+        },
+        {
+          "class": "D9",
+          "ident": "Display for OrderedSetStPerIter",
+          "line_start": 1247,
+          "line_end": 1251
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for OrderedSetStPerGhostIterator",
+          "line_start": 1253,
+          "line_end": 1257
+        },
+        {
+          "class": "D5",
+          "ident": "Display for OrderedSetStPerGhostIterator",
+          "line_start": 1259,
+          "line_end": 1263
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 1059,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1061,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 1060,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self@.len ()"
+        },
+        {
+          "code": "Chain",
+          "line": 1072,
+          "col": 1,
+          "message": "OrderedSetStPerIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/OrderedTableMtEph.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 71,
+          "line_end": 73
+        },
+        {
+          "class": "D6",
+          "ident": "OrderedTableMtEphIter",
+          "line_start": 896,
+          "line_end": 902
+        },
+        {
+          "class": "D7",
+          "ident": "View for OrderedTableMtEphIter",
+          "line_start": 904,
+          "line_end": 909
+        },
+        {
+          "class": "D1",
+          "ident": "OrderedTableMtEphGhostIterator",
+          "line_start": 911,
+          "line_end": 917
+        },
+        {
+          "class": "D2",
+          "ident": "View for OrderedTableMtEphGhostIterator",
+          "line_start": 919,
+          "line_end": 925
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for OrderedTableMtEphIter",
+          "line_start": 927,
+          "line_end": 932
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for OrderedTableMtEphGhostIterator",
+          "line_start": 934,
+          "line_end": 967
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for OrderedTableMtEphIter",
+          "line_start": 969,
+          "line_end": 1000
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for OrderedTableMtEphIter",
+          "line_start": 1109,
+          "line_end": 1113
+        },
+        {
+          "class": "D9",
+          "ident": "Display for OrderedTableMtEphIter",
+          "line_start": 1115,
+          "line_end": 1119
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for OrderedTableMtEphGhostIterator",
+          "line_start": 1121,
+          "line_end": 1125
+        },
+        {
+          "class": "D5",
+          "ident": "Display for OrderedTableMtEphGhostIterator",
+          "line_start": 1127,
+          "line_end": 1131
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 82,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 83,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 398,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 399,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Class",
+          "line": 1,
+          "col": 1,
+          "message": "observed custom-style iterator in a non-pinned file — review pin list"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/OrderedTableStEph.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "OrderedTableStEphIter",
+          "line_start": 1790,
+          "line_end": 1794
+        },
+        {
+          "class": "D7",
+          "ident": "View for OrderedTableStEphIter",
+          "line_start": 1796,
+          "line_end": 1799
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1801,
+          "line_end": 1803
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for OrderedTableStEphIter",
+          "line_start": 1805,
+          "line_end": 1828
+        },
+        {
+          "class": "D1",
+          "ident": "OrderedTableStEphGhostIterator",
+          "line_start": 1830,
+          "line_end": 1836
+        },
+        {
+          "class": "D2",
+          "ident": "View for OrderedTableStEphGhostIterator",
+          "line_start": 1838,
+          "line_end": 1841
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for OrderedTableStEphIter",
+          "line_start": 1843,
+          "line_end": 1848
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for OrderedTableStEphGhostIterator",
+          "line_start": 1850,
+          "line_end": 1883
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for OrderedTableStEphIter",
+          "line_start": 1948,
+          "line_end": 1952
+        },
+        {
+          "class": "D9",
+          "ident": "Display for OrderedTableStEphIter",
+          "line_start": 1954,
+          "line_end": 1958
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for OrderedTableStEphGhostIterator",
+          "line_start": 1960,
+          "line_end": 1964
+        },
+        {
+          "class": "D5",
+          "ident": "Display for OrderedTableStEphGhostIterator",
+          "line_start": 1966,
+          "line_end": 1970
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 1658,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1660,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 1892,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1894,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 1659,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
+        },
+        {
+          "code": "Chain",
+          "line": 1790,
+          "col": 1,
+          "message": "OrderedTableStEphIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 1893,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap43/OrderedTableStPer.rs",
+      "chap": "43",
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "OrderedTableStPerIter",
+          "line_start": 1392,
+          "line_end": 1396
+        },
+        {
+          "class": "D7",
+          "ident": "View for OrderedTableStPerIter",
+          "line_start": 1398,
+          "line_end": 1401
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 1403,
+          "line_end": 1405
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for OrderedTableStPerIter",
+          "line_start": 1407,
+          "line_end": 1430
+        },
+        {
+          "class": "D1",
+          "ident": "OrderedTableStPerGhostIterator",
+          "line_start": 1432,
+          "line_end": 1438
+        },
+        {
+          "class": "D2",
+          "ident": "View for OrderedTableStPerGhostIterator",
+          "line_start": 1440,
+          "line_end": 1443
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for OrderedTableStPerIter",
+          "line_start": 1445,
+          "line_end": 1450
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for OrderedTableStPerGhostIterator",
+          "line_start": 1452,
+          "line_end": 1485
+        },
+        {
+          "class": "D9",
+          "ident": "Debug for OrderedTableStPerIter",
+          "line_start": 1569,
+          "line_end": 1573
+        },
+        {
+          "class": "D9",
+          "ident": "Display for OrderedTableStPerIter",
+          "line_start": 1575,
+          "line_end": 1579
+        },
+        {
+          "class": "D5",
+          "ident": "Debug for OrderedTableStPerGhostIterator",
+          "line_start": 1581,
+          "line_end": 1585
+        },
+        {
+          "class": "D5",
+          "ident": "Display for OrderedTableStPerGhostIterator",
+          "line_start": 1587,
+          "line_end": 1591
+        }
+      ],
+      "transforms": [
+        {
+          "class": "T1",
+          "line": 1239,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1241,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T1",
+          "line": 1494,
+          "col_start": 17,
+          "col_end": 27,
+          "old": "it@.0 == 0",
+          "new": "IteratorSpec::remaining(&it).len() + 0 == it.seq().len(),"
+        },
+        {
+          "class": "T4",
+          "line": 1496,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 1240,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
+        },
+        {
+          "code": "Chain",
+          "line": 1392,
+          "col": 1,
+          "message": "OrderedTableStPerIter wraps another APAS *Iter — deletion order depends on inner collection migration"
+        },
+        {
+          "code": "Other",
+          "line": 1495,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.1.len () == self.tree.inner@.len ()"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap65/KruskalStEph.rs",
+      "chap": "65",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap66/BoruvkaMtEph.rs",
+      "chap": "66",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T6",
+          "line": 267,
+          "col_start": 23,
+          "col_end": 43,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T6",
+          "line": 481,
+          "col_start": 23,
+          "col_end": 43,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T6",
+          "line": 574,
+          "col_start": 23,
+          "col_end": 43,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T6",
+          "line": 759,
+          "col_start": 23,
+          "col_end": 43,
+          "old": "it_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T4",
+          "line": 1091,
+          "col_start": 17,
+          "col_end": 36,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T6",
+          "line": 1094,
+          "col_start": 23,
+          "col_end": 45,
+          "old": "iter_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 265,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 266,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 479,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 480,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 567,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 568,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 757,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it@.0 <= it@.1.len ()"
+        },
+        {
+          "code": "Other",
+          "line": 758,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: it_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 1092,
+          "col": 17,
+          "message": "unrecognized `it`-bearing clause: iter_seq == it@.1"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/Chap66/BoruvkaStEph.rs",
+      "chap": "66",
+      "style": "Delegated",
+      "deletions": [],
+      "transforms": [
+        {
+          "class": "T4",
+          "line": 228,
+          "col_start": 21,
+          "col_end": 40,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T6",
+          "line": 235,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "iter_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        },
+        {
+          "class": "T4",
+          "line": 535,
+          "col_start": 21,
+          "col_end": 40,
+          "old": "iter_invariant (& it)",
+          "new": "<remove>"
+        },
+        {
+          "class": "T6",
+          "line": 538,
+          "col_start": 27,
+          "col_end": 49,
+          "old": "iter_seq.len () - it@.0",
+          "new": "IteratorSpec::decrease(&it).unwrap(),"
+        }
+      ],
+      "unresolved": [
+        {
+          "code": "Other",
+          "line": 229,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: iter_seq == it@.1"
+        },
+        {
+          "code": "Other",
+          "line": 536,
+          "col": 21,
+          "message": "unrecognized `it`-bearing clause: iter_seq == it@.1"
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "path": "src/vstdplus/hash_map_with_view_plus.rs",
+      "chap": null,
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "HashMapWithViewPlusIter",
+          "line_start": 170,
+          "line_end": 175
+        },
+        {
+          "class": "D7",
+          "ident": "View for HashMapWithViewPlusIter",
+          "line_start": 177,
+          "line_end": 182
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 184,
+          "line_end": 186
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for HashMapWithViewPlusIter",
+          "line_start": 188,
+          "line_end": 214
+        },
+        {
+          "class": "D1",
+          "ident": "HashMapWithViewPlusGhostIterator",
+          "line_start": 216,
+          "line_end": 223
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for HashMapWithViewPlusIter",
+          "line_start": 225,
+          "line_end": 231
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for HashMapWithViewPlusGhostIterator",
+          "line_start": 233,
+          "line_end": 270
+        },
+        {
+          "class": "D2",
+          "ident": "View for HashMapWithViewPlusGhostIterator",
+          "line_start": 272,
+          "line_end": 278
+        }
+      ],
+      "transforms": [],
+      "unresolved": [],
+      "skip_reason": null
+    },
+    {
+      "path": "src/vstdplus/hash_set_with_view_plus.rs",
+      "chap": null,
+      "style": "Delegated",
+      "deletions": [
+        {
+          "class": "D6",
+          "ident": "HashSetWithViewPlusIter",
+          "line_start": 166,
+          "line_end": 169
+        },
+        {
+          "class": "D7",
+          "ident": "View for HashSetWithViewPlusIter",
+          "line_start": 171,
+          "line_end": 176
+        },
+        {
+          "class": "D10",
+          "ident": "iter_invariant<…>",
+          "line_start": 178,
+          "line_end": 180
+        },
+        {
+          "class": "D8",
+          "ident": "Iterator for HashSetWithViewPlusIter",
+          "line_start": 182,
+          "line_end": 205
+        },
+        {
+          "class": "D1",
+          "ident": "HashSetWithViewPlusGhostIterator",
+          "line_start": 207,
+          "line_end": 213
+        },
+        {
+          "class": "D3",
+          "ident": "ForLoopGhostIteratorNew for HashSetWithViewPlusIter",
+          "line_start": 215,
+          "line_end": 221
+        },
+        {
+          "class": "D4",
+          "ident": "ForLoopGhostIterator for HashSetWithViewPlusGhostIterator",
+          "line_start": 223,
+          "line_end": 260
+        },
+        {
+          "class": "D2",
+          "ident": "View for HashSetWithViewPlusGhostIterator",
+          "line_start": 262,
+          "line_end": 268
+        }
+      ],
+      "transforms": [],
+      "unresolved": [],
+      "skip_reason": null
+    }
+  ],
+  "summary": {
+    "files": 50,
+    "deletions": 500,
+    "transforms": 206,
+    "unresolved": 156
+  }
+}
