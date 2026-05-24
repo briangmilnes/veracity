@@ -261,7 +261,31 @@ struct FileFindings {
     transforms: Vec<Transform>,
     unresolved: Vec<UnresolvedFinding>,
     chain_backing: Option<String>, // backing-ident string for U-CHAIN files
+    /// Per-file wrapper info: every D6 wrapper struct found in this file.
+    /// Some files (e.g., Chap23/BalBinTreeStEph.rs) define multiple
+    /// wrappers — `PreOrderIter`, `PostOrderIter`, `InOrderIter` etc. —
+    /// each of which needs its own usage-site rewrite.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    wrapper_infos: Vec<WrapperInfo>,
     skip_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WrapperInfo {
+    /// The wrapper's struct name, e.g. "ArraySeqStEphIter".
+    name: String,
+    /// The wrapper's generic parameter names in order. Lifetimes carry
+    /// the leading apostrophe (e.g. "'a"). Used at apply time to map
+    /// use-site generic arguments to positions inside `inner_type_text`.
+    params: Vec<String>,
+    /// The inner type's full source text (path + generics) canonical-spaced,
+    /// using the WRAPPER's parameter names. At apply time, the wrapper's
+    /// params get substituted with the use-site's args, producing the final
+    /// substitution text.
+    /// E.g. for `pub struct FooIter<K, V> { pub inner: IntoIter<Pair<K, V>> }`,
+    /// stored as `"IntoIter<Pair<K, V>>"`. At use site `FooIter<X, Y>`,
+    /// substitutes K→X, V→Y to produce `"IntoIter<Pair<X, Y>>"`.
+    inner_type_text: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -566,6 +590,13 @@ fn scan_file(path: &Path, root: &Path) -> Result<Option<FileFindings>> {
     let outside_findings = scan_outside_verus(&content, open, close, &v.iter_idents, &v.ghost_iter_idents);
     let mut deletions = v.deletions;
     deletions.extend(outside_findings);
+
+    // Filter: D6–D10 only apply when this file's wrapper is delegated.
+    // If the file has no delegated wrapper (custom-style or no wrapper at all),
+    // drop D6–D10 findings. D1–D5 still apply.
+    if v.delegated_iter_idents.is_empty() {
+        deletions.retain(|d| !matches!(d.class, DClass::D6 | DClass::D7 | DClass::D8 | DClass::D9 | DClass::D10));
+    }
     deletions.sort_by_key(|d| (d.line_start, d.class));
 
     // Pinned classification. Emit U-CLASS only when observed looks custom but the
@@ -621,6 +652,7 @@ fn scan_file(path: &Path, root: &Path) -> Result<Option<FileFindings>> {
         transforms: v.transforms,
         unresolved,
         chain_backing: v.chain_backing_ident,
+        wrapper_infos: v.wrapper_infos,
         skip_reason: None,
     };
 
@@ -762,6 +794,11 @@ struct ScanVisitor {
 
     // Idents we discover for the outside-verus! pass to consult.
     iter_idents: BTreeSet<String>,
+    // *Iter idents that are DELEGATED (single std-iter or APAS-iter field).
+    // D6-D10 only fire for these — custom wrappers keep their View, their
+    // Iterator impl, their iter_invariant predicate (those become the
+    // IteratorSpecImpl hand-port per the iterator standard).
+    delegated_iter_idents: BTreeSet<String>,
     ghost_iter_idents: BTreeSet<String>,
 
     // Did we observe a custom-style iterator? (i.e., *Iter struct with non-std field.)
@@ -772,6 +809,11 @@ struct ScanVisitor {
 
     // For U-CHAIN: the backing-iter type ident when the wrapper's sole field is an APAS *Iter.
     chain_backing_ident: Option<String>,
+
+    // Wrapper info for this file's D6 struct(s). Some files (BalBinTreeStEph)
+    // define multiple wrappers (PreOrderIter, PostOrderIter, InOrderIter);
+    // each is recorded so the apply pass can substitute usages.
+    wrapper_infos: Vec<WrapperInfo>,
 }
 
 impl ScanVisitor {
@@ -783,10 +825,12 @@ impl ScanVisitor {
             transforms: Vec::new(),
             unresolved: Vec::new(),
             iter_idents: BTreeSet::new(),
+            delegated_iter_idents: BTreeSet::new(),
             ghost_iter_idents: BTreeSet::new(),
             observed_custom: false,
             iter_line: None,
             chain_backing_ident: None,
+            wrapper_infos: Vec::new(),
         }
     }
 
@@ -849,10 +893,22 @@ impl<'ast> Visit<'ast> for ScanVisitor {
             if self.iter_line.is_none() {
                 self.iter_line = Some(line_start);
             }
+            // Record wrapper info: name + params + inner type text. The
+            // apply pass uses (params, inner_type_text) to do parametric
+            // substitution at use sites: rename the wrapper's params to
+            // the use-site's args in the inner type text.
+            if let Some((params, inner_type_text)) = wrapper_inner_info(node) {
+                self.wrapper_infos.push(WrapperInfo {
+                    name: name.clone(),
+                    params,
+                    inner_type_text,
+                });
+            }
             // D6 if delegated (single std-iter or APAS-iter field).
             let (is_delegated, has_apas_chain, backing) = classify_iter_struct(node);
             if is_delegated {
                 self.iter_idents.insert(name.clone());
+                self.delegated_iter_idents.insert(name.clone());
                 self.deletions.push(Deletion {
                     class: DClass::D6,
                     ident: name.clone(),
@@ -875,17 +931,15 @@ impl<'ast> Visit<'ast> for ScanVisitor {
                     });
                 }
             } else {
-                // Non-delegated: this is the custom-style iterator type.
+                // Non-delegated *Iter struct = custom-style iterator. Per
+                // plan §4 D6 does NOT fire for custom files (regardless of
+                // whether they're in the pin list). Track the ident so
+                // outside-verus! Debug/Display (D9 / D5) detection knows
+                // the struct exists, but do NOT emit a deletion or wrapper
+                // rewrite for it. The file's actual iter() return type and
+                // body stay as-is.
                 self.iter_idents.insert(name.clone());
                 self.observed_custom = true;
-                // We still record a finding so the report mentions the struct, even if
-                // pinned-custom logic later converts it to U-CUSTOM.
-                self.deletions.push(Deletion {
-                    class: DClass::D6,
-                    ident: name.clone(),
-                    line_start,
-                    line_end,
-                });
             }
         }
         verus_syn::visit::visit_item_struct(self, node);
@@ -911,12 +965,17 @@ impl<'ast> Visit<'ast> for ScanVisitor {
                     });
                 }
                 "View" if on_iter => {
-                    self.deletions.push(Deletion {
-                        class: DClass::D7,
-                        ident: format!("View for {}", ident_s),
-                        line_start,
-                        line_end,
-                    });
+                    // D7 only fires for delegated wrappers — custom wrappers
+                    // keep their View impl (it becomes part of the
+                    // IteratorSpecImpl hand-port).
+                    if self.delegated_iter_idents.contains(ident) {
+                        self.deletions.push(Deletion {
+                            class: DClass::D7,
+                            ident: format!("View for {}", ident_s),
+                            line_start,
+                            line_end,
+                        });
+                    }
                 }
                 "ForLoopGhostIteratorNew" if on_iter => {
                     self.deletions.push(Deletion {
@@ -935,14 +994,16 @@ impl<'ast> Visit<'ast> for ScanVisitor {
                     });
                 }
                 "Iterator" if on_iter => {
-                    // D8 — the std::iter::Iterator impl for the wrapper (which has fn next
-                    // with an ensures clause we no longer need).
-                    self.deletions.push(Deletion {
-                        class: DClass::D8,
-                        ident: format!("Iterator for {}", ident_s),
-                        line_start,
-                        line_end,
-                    });
+                    // D8 only fires for delegated wrappers — custom wrappers
+                    // keep their Iterator impl (hand-port to IteratorSpecImpl).
+                    if self.delegated_iter_idents.contains(ident) {
+                        self.deletions.push(Deletion {
+                            class: DClass::D8,
+                            ident: format!("Iterator for {}", ident_s),
+                            line_start,
+                            line_end,
+                        });
+                    }
                 }
                 _ => {
                     // Debug/Display inside verus! is rare; we still cover the outside-pass.
@@ -1542,6 +1603,53 @@ fn impl_trait_last(it: &ItemImpl) -> Option<String> {
     it.trait_
         .as_ref()
         .and_then(|(_, p, _)| p.segments.last().map(|s| s.ident.to_string()))
+}
+
+/// For a *Iter wrapper struct with one non-PhantomData field, return
+/// (params, inner_type_text) — the wrapper's generic param names and the
+/// inner type's source text using those param names.
+fn wrapper_inner_info(node: &ItemStruct) -> Option<(Vec<String>, String)> {
+    let fields = match &node.fields {
+        Fields::Named(named) => &named.named,
+        Fields::Unnamed(_) | Fields::Unit => return None,
+    };
+    let mut data_fields = Vec::new();
+    for f in fields {
+        if let Type::Path(tp) = &f.ty {
+            if let Some(seg) = tp.path.segments.last() {
+                if seg.ident == "PhantomData" {
+                    continue;
+                }
+            }
+        }
+        data_fields.push(&f.ty);
+    }
+    if data_fields.len() != 1 {
+        return None;
+    }
+    let ty = data_fields[0];
+    if let Type::Path(_) = ty {
+        use quote::ToTokens;
+        let raw = ty.to_token_stream().to_string();
+        let inner_type_text = canonical_spacing(&raw);
+        let params = wrapper_param_names(node);
+        Some((params, inner_type_text))
+    } else {
+        None
+    }
+}
+
+/// Names of a struct's generic params in order. Lifetimes carry leading `'`.
+fn wrapper_param_names(node: &ItemStruct) -> Vec<String> {
+    let mut out = Vec::new();
+    for gp in node.generics.params.iter() {
+        match gp {
+            verus_syn::GenericParam::Type(t) => out.push(t.ident.to_string()),
+            verus_syn::GenericParam::Lifetime(l) => out.push(format!("'{}", l.lifetime.ident)),
+            verus_syn::GenericParam::Const(c) => out.push(c.ident.to_string()),
+        }
+    }
+    out
 }
 
 // Returns (is_delegated, has_apas_chain, backing_ident_if_apas_chain).
@@ -2538,6 +2646,12 @@ fn run_apply(
 ) -> Result<()> {
     let mode_label = if dry_run { "dry-run-apply" } else { "apply" };
 
+    // Build the global wrapper map for D6-companion rewrites. Each delegated
+    // file's *Iter wrapper resolves (transitively, through chains) to its
+    // final non-wrapper inner type — typically a std iter like
+    // std::slice::Iter or std::collections::hash_set::Iter.
+    let wrapper_map: BTreeMap<String, (Vec<String>, String)> = build_wrapper_map(findings);
+
     // Build per-file rewrite plans.
     let mut plans: Vec<FileRewritePlan> = Vec::new();
     let mut u_skipped: Vec<UFinding> = Vec::new();
@@ -2692,6 +2806,16 @@ fn run_apply(
             });
         }
 
+        // D6-companion: rewrite references to any wrapper struct deleted by
+        // a D6 finding. Replace `Type::Path` segments mentioning a wrapper
+        // name with the resolved inner-type path, and replace
+        // `Expr::Struct` constructors of a wrapper with the value of its
+        // `inner` field. Reuses the existing Substitute machinery so the
+        // line/col ranges are honored bottom-up alongside the D/T rewrites.
+        if !wrapper_map.is_empty() {
+            rewrites.extend(collect_wrapper_rewrites(&abs_path, &content, &wrapper_map));
+        }
+
         // Sort rewrites bottom-up by (line_start, col_start), so applying
         // them in order keeps earlier line numbers stable.
         rewrites.sort_by(|a, b| {
@@ -2802,6 +2926,500 @@ fn run_apply(
         std::process::exit(2);
     }
     Ok(())
+}
+
+/// Wrapper map keyed by name; value is (params, inner_type_text). The apply
+/// pass does parametric substitution at use sites: param[i] → use-arg[i] in
+/// inner_type_text. Chained wrappers are recorded directly; transitive
+/// resolution happens lazily at apply time (substitute and recurse).
+fn build_wrapper_map(findings: &[FileFindings]) -> BTreeMap<String, (Vec<String>, String)> {
+    let mut out: BTreeMap<String, (Vec<String>, String)> = BTreeMap::new();
+    for f in findings {
+        if matches!(f.style, Style::Delegated) {
+            for w in &f.wrapper_infos {
+                out.insert(w.name.clone(), (w.params.clone(), w.inner_type_text.clone()));
+            }
+        }
+    }
+    out
+}
+
+/// Substitute wrapper params with use-site args inside `template` at the
+/// token level. Lifetime params and type params are matched separately by
+/// kind, not raw position — so `Wrapper<'a, T>` used at site `Wrapper<X>`
+/// (lifetime elided) maps 'a→'_, T→X. The output is re-rendered and
+/// canonical-spaced.
+fn substitute_params(template: &str, params: &[String], args: &[String]) -> String {
+    use proc_macro2::TokenStream;
+
+    let stream: TokenStream = match template.parse() {
+        Ok(s) => s,
+        Err(_) => return template.to_string(),
+    };
+
+    // Categorize.
+    let mut wrap_lifes: Vec<&str> = Vec::new();
+    let mut wrap_types: Vec<&str> = Vec::new();
+    for p in params {
+        if let Some(rest) = p.strip_prefix('\'') {
+            wrap_lifes.push(rest);
+        } else {
+            wrap_types.push(p.as_str());
+        }
+    }
+    let mut use_lifes: Vec<&str> = Vec::new();
+    let mut use_types: Vec<&str> = Vec::new();
+    for a in args {
+        if a.starts_with('\'') {
+            use_lifes.push(a.as_str());
+        } else {
+            use_types.push(a.as_str());
+        }
+    }
+
+    let mut life_map: BTreeMap<String, String> = BTreeMap::new();
+    for (i, l) in wrap_lifes.iter().enumerate() {
+        let v = use_lifes.get(i).copied().unwrap_or("'_");
+        life_map.insert(l.to_string(), v.to_string());
+    }
+    let mut type_map: BTreeMap<String, String> = BTreeMap::new();
+    for (i, t) in wrap_types.iter().enumerate() {
+        if let Some(v) = use_types.get(i) {
+            type_map.insert(t.to_string(), v.to_string());
+        }
+        // If use site didn't supply this type arg, leave the param name
+        // unsubstituted — Rust will reject it at the use site, which is the
+        // right behavior (the use is malformed).
+    }
+
+    let rendered = render_stream_with_subst(stream, &type_map, &life_map);
+    canonical_spacing(&rendered)
+}
+
+fn render_stream_with_subst(
+    stream: proc_macro2::TokenStream,
+    type_map: &BTreeMap<String, String>,
+    life_map: &BTreeMap<String, String>,
+) -> String {
+    use proc_macro2::{TokenTree, Delimiter, Spacing};
+    let mut out = String::new();
+    let mut iter = stream.into_iter().peekable();
+    while let Some(tt) = iter.next() {
+        match tt {
+            TokenTree::Ident(id) => {
+                let name = id.to_string();
+                if let Some(repl) = type_map.get(&name) {
+                    out.push_str(repl);
+                } else {
+                    out.push_str(&name);
+                }
+                out.push(' ');
+            }
+            TokenTree::Punct(p) => {
+                // Lifetime: `'` followed by an Ident with Joint spacing.
+                if p.as_char() == '\'' && p.spacing() == Spacing::Joint {
+                    if let Some(TokenTree::Ident(next_id)) = iter.peek() {
+                        let lname = next_id.to_string();
+                        let _ = iter.next();
+                        if let Some(repl) = life_map.get(&lname) {
+                            out.push_str(repl);
+                        } else {
+                            out.push('\'');
+                            out.push_str(&lname);
+                        }
+                        out.push(' ');
+                        continue;
+                    }
+                }
+                out.push(p.as_char());
+                // Honor Punct spacing: Joint = no space after (so `:` + `:` → `::`).
+                if p.spacing() == Spacing::Alone {
+                    out.push(' ');
+                }
+            }
+            TokenTree::Literal(lit) => {
+                out.push_str(&lit.to_string());
+                out.push(' ');
+            }
+            TokenTree::Group(g) => {
+                let (open, close) = match g.delimiter() {
+                    Delimiter::Parenthesis => ("(", ")"),
+                    Delimiter::Brace => ("{", "}"),
+                    Delimiter::Bracket => ("[", "]"),
+                    Delimiter::None => ("", ""),
+                };
+                out.push_str(open);
+                out.push_str(&render_stream_with_subst(g.stream(), type_map, life_map));
+                out.push_str(close);
+                out.push(' ');
+            }
+        }
+    }
+    out
+}
+
+/// Look up `name` in the wrapper map and produce the substituted inner type
+/// text for a use site with `use_args`. Recurses through chained wrappers.
+/// Returns None if `name` is not a known wrapper.
+fn resolve_wrapper_at_use(
+    wrapper_map: &BTreeMap<String, (Vec<String>, String)>,
+    name: &str,
+    use_args: &[String],
+) -> Option<String> {
+    let (params, template) = wrapper_map.get(name)?;
+    // Pass ALL params and ALL args — substitute_params matches them by KIND
+    // (lifetime vs type), so mismatched lengths from elided lifetimes
+    // (`SetMtEphIter<U>` for wrapper `<'a, T>`) work correctly.
+    let subst = substitute_params(template, params, use_args);
+    // If the substituted text's leading path is itself a wrapper, recurse.
+    // Take the last path segment up to first `<` and check the map.
+    let head = strip_generics(&subst);
+    let head_last = head.split("::").last().unwrap_or(&head).to_string();
+    if let Some((_inner_params, _)) = wrapper_map.get(&head_last) {
+        // Extract the substituted text's generic args and recurse.
+        let nested_args = extract_top_generic_args(&subst);
+        if let Some(further) = resolve_wrapper_at_use(wrapper_map, &head_last, &nested_args) {
+            return Some(further);
+        }
+    }
+    Some(subst)
+}
+
+/// From a type-path text like `Foo<'a, K, V>` extract the top-level generic
+/// args as a Vec<String>: `["'a", "K", "V"]`. Returns empty when no `<...>`.
+/// Uses `syn::parse_str::<syn::Type>` to do the parse properly — no manual
+/// bracket counting on the raw bytes.
+fn extract_top_generic_args(text: &str) -> Vec<String> {
+    let parsed: syn::Type = match syn::parse_str(text) {
+        Ok(t) => t,
+        Err(_) => return Vec::new(),
+    };
+    if let syn::Type::Path(tp) = parsed {
+        if let Some(seg) = tp.path.segments.last() {
+            return syn_path_segment_generic_args(seg);
+        }
+    }
+    Vec::new()
+}
+
+/// Per-file pass: re-parse the verus! block, walk types and struct exprs,
+/// emit Substitute rewrites that replace wrapper-name usages with the
+/// resolved inner type. Outside the verus! block, also walk Rust types so
+/// `Debug for FooIter` impls get cleaned up — but those are usually deleted
+/// by D9 anyway; emitting redundant rewrites here is harmless because they
+/// hit already-deleted lines.
+fn collect_wrapper_rewrites(
+    abs_path: &Path,
+    content: &str,
+    wrapper_map: &BTreeMap<String, (Vec<String>, String)>,
+) -> Vec<Rewrite> {
+    let mut out: Vec<Rewrite> = Vec::new();
+
+    let (open, close, brace_line) = match find_verus_block(content) {
+        Some(x) => x,
+        None => return out,
+    };
+
+    let inner = &content[open + 1..close - 1];
+    let verus_file = match verus_syn::parse_file(inner) {
+        Ok(f) => f,
+        Err(_) => return out,
+    };
+
+    struct WrapperVisit<'a> {
+        wrapper_map: &'a BTreeMap<String, (Vec<String>, String)>,
+        brace_line: usize,
+        inner: &'a str,
+        rewrites: Vec<Rewrite>,
+    }
+    impl<'a> WrapperVisit<'a> {
+        fn outer_line(&self, sp: proc_macro2::Span) -> usize {
+            self.brace_line + sp.start().line.saturating_sub(1)
+        }
+        fn outer_line_end(&self, sp: proc_macro2::Span) -> usize {
+            self.brace_line + sp.end().line.saturating_sub(1)
+        }
+        fn span_text(&self, sp: proc_macro2::Span) -> String {
+            let s_b = line_col_to_byte(self.inner, sp.start().line, sp.start().column + 1);
+            let e_b = line_col_to_byte(self.inner, sp.end().line, sp.end().column + 1);
+            if s_b >= self.inner.len() || e_b > self.inner.len() || s_b >= e_b {
+                return String::new();
+            }
+            self.inner[s_b..e_b].to_string()
+        }
+    }
+    impl<'ast, 'a> Visit<'ast> for WrapperVisit<'a> {
+        fn visit_type_path(&mut self, node: &'ast verus_syn::TypePath) {
+            if let Some(seg) = node.path.segments.last() {
+                let ident = seg.ident.to_string();
+                if self.wrapper_map.contains_key(&ident) {
+                    // Extract use-site generic args from the path segment.
+                    let use_args = path_segment_generic_args(seg);
+                    // Resolve to the substituted inner type (recursive
+                    // through chains). Resolve bare `Iter`/`IntoIter` heads
+                    // to the std::* qualified form so cross-file callers
+                    // that lack the `use` statement still resolve.
+                    let resolved = resolve_wrapper_at_use(self.wrapper_map, &ident, &use_args)
+                        .unwrap_or_else(|| ident.clone());
+                    let resolved = qualify_std_iter_head(&resolved);
+                    // Replace the ENTIRE Type::Path (path + its generics).
+                    let sp = node.path.span();
+                    let line = self.outer_line(sp);
+                    let line_end = self.outer_line_end(sp);
+                    let col_start = sp.start().column + 1;
+                    let col_end = sp.end().column + 1;
+                    self.rewrites.push(Rewrite {
+                        class: "D6-COMP".to_string(),
+                        kind: RewriteKind::Substitute,
+                        line_start: line,
+                        line_end,
+                        col_start: Some(col_start),
+                        col_end: Some(col_end),
+                        old_text: ident.clone(),
+                        new_text: resolved,
+                        skip_reason: None,
+                    });
+                }
+            }
+            verus_syn::visit::visit_type_path(self, node);
+        }
+
+        fn visit_expr_struct(&mut self, node: &'ast verus_syn::ExprStruct) {
+            if let Some(seg) = node.path.segments.last() {
+                let ident = seg.ident.to_string();
+                if self.wrapper_map.contains_key(&ident) {
+                    // The struct expression `WrapperName { inner: <expr> }`
+                    // becomes just `<expr>`. Capture <expr>'s span and use
+                    // its source text as the new_text.
+                    let inner_field_text: Option<String> = node
+                        .fields
+                        .iter()
+                        .find(|fv| match &fv.member {
+                            Member::Named(n) => n == "inner",
+                            _ => false,
+                        })
+                        .map(|fv| self.span_text(fv.expr.span()));
+                    if let Some(new_text) = inner_field_text {
+                        // Whole-struct-expression span.
+                        let sp = node.span();
+                        let line = self.outer_line(sp);
+                        let line_end = self.outer_line_end(sp);
+                        let col_start = sp.start().column + 1;
+                        let col_end = sp.end().column + 1;
+                        self.rewrites.push(Rewrite {
+                            class: "D6-COMP".to_string(),
+                            kind: RewriteKind::Substitute,
+                            line_start: line,
+                            line_end,
+                            col_start: Some(col_start),
+                            col_end: Some(col_end),
+                            old_text: format!("{}{{...}}", ident),
+                            new_text,
+                            skip_reason: None,
+                        });
+                    }
+                }
+            }
+            verus_syn::visit::visit_expr_struct(self, node);
+        }
+    }
+
+    let mut wv = WrapperVisit {
+        wrapper_map,
+        brace_line,
+        inner,
+        rewrites: Vec::new(),
+    };
+    wv.visit_file(&verus_file);
+    out.extend(wv.rewrites);
+
+    // Outside-verus! pass: walk the OUTER file with plain `syn` to catch
+    // type references / struct constructors in Debug/Display impls and
+    // IntoIterator impls written outside `verus!{ ... }`.
+    out.extend(collect_wrapper_rewrites_outside_verus(content, wrapper_map));
+
+    let _ = abs_path; // currently unused; kept for future per-file logging.
+    out
+}
+
+fn collect_wrapper_rewrites_outside_verus(
+    content: &str,
+    wrapper_map: &BTreeMap<String, (Vec<String>, String)>,
+) -> Vec<Rewrite> {
+    let mut out: Vec<Rewrite> = Vec::new();
+    // syn parses the outer file; the verus! macro body becomes an opaque
+    // Item::Macro that syn doesn't recurse into. So this walk only sees
+    // outside-verus! items.
+    let file = match syn::parse_file(content) {
+        Ok(f) => f,
+        Err(_) => return out,
+    };
+
+    struct OuterVisit<'a> {
+        wrapper_map: &'a BTreeMap<String, (Vec<String>, String)>,
+        content: &'a str,
+        rewrites: Vec<Rewrite>,
+    }
+    impl<'a> OuterVisit<'a> {
+        fn span_to_lc(&self, sp: proc_macro2::Span) -> (usize, usize, usize, usize) {
+            (
+                sp.start().line,
+                sp.start().column + 1,
+                sp.end().line,
+                sp.end().column + 1,
+            )
+        }
+        fn span_text(&self, sp: proc_macro2::Span) -> String {
+            let s_b = line_col_to_byte(self.content, sp.start().line, sp.start().column + 1);
+            let e_b = line_col_to_byte(self.content, sp.end().line, sp.end().column + 1);
+            if s_b >= self.content.len() || e_b > self.content.len() || s_b >= e_b {
+                return String::new();
+            }
+            self.content[s_b..e_b].to_string()
+        }
+    }
+    impl<'ast, 'a> syn::visit::Visit<'ast> for OuterVisit<'a> {
+        fn visit_type_path(&mut self, node: &'ast syn::TypePath) {
+            if let Some(seg) = node.path.segments.last() {
+                let ident = seg.ident.to_string();
+                if self.wrapper_map.contains_key(&ident) {
+                    // Use-site generic args from the syn segment.
+                    let use_args = syn_path_segment_generic_args(seg);
+                    let resolved = resolve_wrapper_at_use(self.wrapper_map, &ident, &use_args)
+                        .unwrap_or_else(|| ident.clone());
+                    let resolved = qualify_std_iter_head(&resolved);
+                    let sp = node.path.span();
+                    let (line, col_start, line_end, col_end) = self.span_to_lc(sp);
+                    self.rewrites.push(Rewrite {
+                        class: "D6-COMP".to_string(),
+                        kind: RewriteKind::Substitute,
+                        line_start: line,
+                        line_end,
+                        col_start: Some(col_start),
+                        col_end: Some(col_end),
+                        old_text: ident.clone(),
+                        new_text: resolved,
+                        skip_reason: None,
+                    });
+                }
+            }
+            syn::visit::visit_type_path(self, node);
+        }
+
+        fn visit_expr_struct(&mut self, node: &'ast syn::ExprStruct) {
+            if let Some(seg) = node.path.segments.last() {
+                let ident = seg.ident.to_string();
+                if self.wrapper_map.contains_key(&ident) {
+                    let inner_field_text: Option<String> = node
+                        .fields
+                        .iter()
+                        .find(|fv| match &fv.member {
+                            syn::Member::Named(n) => n == "inner",
+                            _ => false,
+                        })
+                        .map(|fv| self.span_text(fv.expr.span()));
+                    if let Some(new_text) = inner_field_text {
+                        let sp = node.span();
+                        let (line, col_start, line_end, col_end) = self.span_to_lc(sp);
+                        self.rewrites.push(Rewrite {
+                            class: "D6-COMP".to_string(),
+                            kind: RewriteKind::Substitute,
+                            line_start: line,
+                            line_end,
+                            col_start: Some(col_start),
+                            col_end: Some(col_end),
+                            old_text: format!("{}{{...}}", ident),
+                            new_text,
+                            skip_reason: None,
+                        });
+                    }
+                }
+            }
+            syn::visit::visit_expr_struct(self, node);
+        }
+    }
+
+    let mut ov = OuterVisit {
+        wrapper_map,
+        content,
+        rewrites: Vec::new(),
+    };
+    syn::visit::Visit::visit_file(&mut ov, &file);
+    out.extend(ov.rewrites);
+    out
+}
+
+/// Strip leading-to-first-`<` generic args from a path string.
+/// "std::slice::Iter<'a, T>" → "std::slice::Iter".
+/// "IntoIter<Pair<K, V>>" → "IntoIter".
+/// "Foo" → "Foo".
+fn strip_generics(s: &str) -> String {
+    match s.find('<') {
+        Some(i) => s[..i].trim().to_string(),
+        None => s.trim().to_string(),
+    }
+}
+
+/// Resolve a path that may have been written as a bare ident (relying on a
+/// `use` statement) to its fully-qualified std::* form. Used when a D6
+/// wrapper's inner type is bare `Iter` or `IntoIter` — the substitution at
+/// use sites in OTHER files needs the qualified form because those files
+/// may not have the same `use` statement.
+fn resolve_std_iter_path(path: &str) -> String {
+    let stripped = strip_generics(path);
+    match stripped.as_str() {
+        "IntoIter" => "std::vec::IntoIter".to_string(),
+        "Iter" => "std::slice::Iter".to_string(),
+        _ => stripped,
+    }
+}
+
+/// Like resolve_std_iter_path but operates on a full type-with-generics
+/// text. Replaces a bare `IntoIter` / `Iter` head with its std::* form,
+/// preserves the generic args.
+fn qualify_std_iter_head(s: &str) -> String {
+    let head = match s.find('<') {
+        Some(i) => s[..i].trim().to_string(),
+        None => s.trim().to_string(),
+    };
+    let tail = match s.find('<') {
+        Some(i) => &s[i..],
+        None => "",
+    };
+    let qualified = match head.as_str() {
+        "IntoIter" => "std::vec::IntoIter".to_string(),
+        "Iter" => "std::slice::Iter".to_string(),
+        _ => head,
+    };
+    format!("{}{}", qualified, tail)
+}
+
+/// Extract the generic-argument source strings from a `PathSegment`.
+/// For `Foo<'a, K, V>` returns `["'a", "K", "V"]`. Returns empty when the
+/// segment has no `<...>`.
+fn path_segment_generic_args(seg: &verus_syn::PathSegment) -> Vec<String> {
+    use quote::ToTokens;
+    match &seg.arguments {
+        verus_syn::PathArguments::AngleBracketed(ab) => ab
+            .args
+            .iter()
+            .map(|a| canonical_spacing(&a.to_token_stream().to_string()))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Same as `path_segment_generic_args` but for plain `syn::PathSegment`.
+fn syn_path_segment_generic_args(seg: &syn::PathSegment) -> Vec<String> {
+    use quote::ToTokens;
+    match &seg.arguments {
+        syn::PathArguments::AngleBracketed(ab) => ab
+            .args
+            .iter()
+            .map(|a| canonical_spacing(&a.to_token_stream().to_string()))
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 fn class_active(class: &str, only: &Option<BTreeSet<String>>) -> bool {
